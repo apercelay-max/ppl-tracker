@@ -129,6 +129,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         const workout = getWorkout(session.dayId);
         if (!workout) return;
         const currentEx = workout.exercises[session.currentExerciseIndex];
+        if (!currentEx) return;
         const isLastSet = session.currentSetIndex === currentEx.sets - 1;
 
         if (isLastSet) {
