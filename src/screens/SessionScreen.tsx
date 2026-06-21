@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getWorkout } from '../data/workouts';
 import { ExerciseCard } from '../components/ExerciseCard';
 import { RestTimer } from '../components/RestTimer';
+import { StatsPanel } from '../components/StatsPanel';
 import { SetEntry, Exercise } from '../data/types';
 
 interface SessionScreenProps {
@@ -20,6 +21,13 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
   const advanceSession = useWorkoutStore((s) => s.advanceSession);
   const startTimer = useWorkoutStore((s) => s.startTimer);
   const timerIsRunning = useWorkoutStore((s) => s.timer.isRunning);
+  const [isWide, setIsWide] = useState(() => window.innerWidth >= 700);
+
+  useEffect(() => {
+    const h = () => setIsWide(window.innerWidth >= 700);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
 
   // Démarre la séance si nécessaire
   useEffect(() => {
@@ -115,39 +123,46 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
   const progressPct = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
 
   return (
-    <div style={container}>
+    <div style={{ ...container, flexDirection: isWide ? 'row' : 'column' }}>
 
-      {/* ── Header fixe ── */}
-      <div style={headerBar}>
-        <button onClick={handleAbandon} style={backBtn}>✕</button>
-        <div style={{ flex: 1 }}>
-          <p style={{ color: '#fff', fontSize: 17, fontWeight: 800, lineHeight: '20px' }}>{workout.name}</p>
-          <p style={{ color: '#555', fontSize: 12 }}>{completedSets} / {totalSets} séries</p>
+      {/* Main content (header + exercises) */}
+      <div style={isWide ? mainArea : { display: 'contents' }}>
+
+        {/* Header fixe */}
+        <div style={headerBar}>
+          <button onClick={handleAbandon} style={backBtn}>✕</button>
+          <div style={{ flex: 1 }}>
+            <p style={{ color: '#fff', fontSize: 17, fontWeight: 800, lineHeight: '20px' }}>{workout.name}</p>
+            <p style={{ color: '#555', fontSize: 12 }}>{completedSets} / {totalSets} séries</p>
+          </div>
+          <div style={{ width: 48, height: 6, background: '#1e1e1e', borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
+            <div style={{ height: '100%', width: `${progressPct}%`, background: '#4CAF50', borderRadius: 3, transition: 'width 0.3s' }} />
+          </div>
         </div>
-        {/* Mini progress bar */}
-        <div style={{ width: 48, height: 6, background: '#1e1e1e', borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
-          <div style={{ height: '100%', width: `${progressPct}%`, background: '#4CAF50', borderRadius: 3, transition: 'width 0.3s' }} />
+
+        {/* Liste des exercices */}
+        <div style={scrollArea}>
+          <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 16px 60px' }}>
+            {exercises.map((exercise, idx) => (
+              <ExerciseCard
+                key={exercise.id}
+                exercise={exercise}
+                setEntries={session.exerciseProgress[exercise.id] ?? []}
+                currentSetIndex={idx === currentExIdx ? currentSetIdx : 0}
+                isActive={idx === currentExIdx}
+                currentWeek={currentWeek}
+                onSetComplete={(setIndex, entry) => handleSetComplete(exercise.id, setIndex, entry)}
+              />
+            ))}
+          </div>
         </div>
+
       </div>
 
-      {/* ── Liste des exercices ── */}
-      <div style={scrollArea}>
-        <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 16px 60px' }}>
-          {exercises.map((exercise, idx) => (
-            <ExerciseCard
-              key={exercise.id}
-              exercise={exercise}
-              setEntries={session.exerciseProgress[exercise.id] ?? []}
-              currentSetIndex={idx === currentExIdx ? currentSetIdx : 0}
-              isActive={idx === currentExIdx}
-              currentWeek={currentWeek}
-              onSetComplete={(setIndex, entry) => handleSetComplete(exercise.id, setIndex, entry)}
-            />
-          ))}
-        </div>
-      </div>
+      {/* Stats panel / bottom bar */}
+      <StatsPanel startTime={session.startTime} compact={!isWide} />
 
-      {/* ── Timer de repos ── */}
+      {/* Timer de repos */}
       <RestTimer
         nextExercise={nextInfo.exercise}
         nextSetNumber={nextInfo.setNumber}
@@ -162,6 +177,9 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
 
 const container: React.CSSProperties = {
   height: '100dvh', display: 'flex', flexDirection: 'column', background: '#0a0a0a',
+};
+const mainArea: React.CSSProperties = {
+  flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden',
 };
 const headerBar: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 12,
