@@ -66,6 +66,7 @@ interface WorkoutStore {
   startTimer: (seconds: number) => void;
   skipTimer: () => void;
   reduceTimer: (secondsToRemove: number) => void;
+  addTimer: (secondsToAdd: number) => void;
 
   setCurrentWeek: (week: number) => void;
   advanceSession: () => void;
@@ -189,7 +190,16 @@ export const useWorkoutStore = create<WorkoutStore>()(
         if (!timer.endTimestamp) return;
         const newEnd = Math.max(Date.now() + 1000, timer.endTimestamp - secondsToRemove * 1000);
         set({ timer: { ...timer, endTimestamp: newEnd } });
-        // Reprogramme la notification
+        const remaining = Math.ceil((newEnd - Date.now()) / 1000);
+        scheduleRestNotification(remaining);
+      },
+
+      // ── Timer : ajouter N secondes ───────────────────────────────────────
+      addTimer: (secondsToAdd) => {
+        const { timer } = get();
+        if (!timer.endTimestamp) return;
+        const newEnd = timer.endTimestamp + secondsToAdd * 1000;
+        set({ timer: { ...timer, endTimestamp: newEnd } });
         const remaining = Math.ceil((newEnd - Date.now()) / 1000);
         scheduleRestNotification(remaining);
       },
