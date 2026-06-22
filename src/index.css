@@ -5,10 +5,80 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* ── CSS Variables ─────────────────────────────────────────────────────────── */
+
+:root {
+  --bg-base: #0d0d0f;
+  --bg-surface: #111113;
+  --bg-card: #161618;
+  --bg-elevated: #1c1c1f;
+  --bg-higher: #18181b;
+  --border-subtle: #161618;
+  --border: #1c1c1f;
+  --border-mid: #222228;
+  --border-strong: #242428;
+  --text-primary: #ffffff;
+  --text-secondary: #c0c0cc;
+  --text-muted: #555560;
+  --text-dim: #333340;
+  --text-micro: #252528;
+  --overlay-bg: rgba(0,0,0,0.93);
+  --bg-red-tint: #1a0c0c;
+  --bg-red-input: #1e1010;
+  --bg-gold-tint: #12100a;
+  --bg-green-tint: #0d1f0d;
+  --bg-blue-tint: #0d0d14;
+  --border-gold-tint: #2a2010;
+  --border-green-tint: #1a3a1a;
+  --border-blue-tint: #1a1a28;
+  --border-ss-tint: #1a1e18;
+  --text-gold-label: #7a5a1a;
+  --text-gold-body: #4a3a10;
+  --text-gold-footer: #3a2a08;
+  --text-ss-label: #3a5a3a;
+  --text-ss-body: #2a3a2a;
+  --scrollbar-track: #111;
+  --scrollbar-thumb: #2a2a2a;
+}
+
+[data-theme="light"] {
+  --bg-base: #f2f2f7;
+  --bg-surface: #ffffff;
+  --bg-card: #f6f6fb;
+  --bg-elevated: #ebebf2;
+  --bg-higher: #e4e4ec;
+  --border-subtle: #e8e8f0;
+  --border: #dddde8;
+  --border-mid: #d4d4e0;
+  --border-strong: #c8c8d8;
+  --text-primary: #0d0d16;
+  --text-secondary: #2a2a3c;
+  --text-muted: #777788;
+  --text-dim: #aaaabc;
+  --text-micro: #ccccda;
+  --overlay-bg: rgba(180,180,205,0.9);
+  --bg-red-tint: #fff0f0;
+  --bg-red-input: #fff4f4;
+  --bg-gold-tint: #fffaee;
+  --bg-green-tint: #f0fff4;
+  --bg-blue-tint: #f0f0ff;
+  --border-gold-tint: #e8d8a0;
+  --border-green-tint: #a8dca8;
+  --border-blue-tint: #c0c0f0;
+  --border-ss-tint: #b8dcb8;
+  --text-gold-label: #6b4800;
+  --text-gold-body: #4a3000;
+  --text-gold-footer: #3a2400;
+  --text-ss-label: #1a6a1a;
+  --text-ss-body: #1a4a1a;
+  --scrollbar-track: #e0e0e8;
+  --scrollbar-thumb: #b8b8c8;
+}
+
 html, body, #root {
   height: 100%;
-  background: #0d0d0f;
-  color: #f0f0f0;
+  background: var(--bg-base);
+  color: var(--text-primary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
@@ -24,10 +94,12 @@ input, button {
 button { cursor: pointer; }
 
 ::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: #111; }
-::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 2px; }
 
 .tabular { font-variant-numeric: tabular-nums; }
+
+/* ── Animations ─────────────────────────────────────────────────────────────── */
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px) scale(0.98); }
@@ -70,7 +142,7 @@ button { cursor: pointer; }
 }
 .workout-card:hover {
   transform: translateY(-2px) scale(1.005);
-  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.12);
 }
 .workout-card:active {
   transform: translateY(0) scale(0.99);
@@ -96,37 +168,24 @@ button { cursor: pointer; }
   transform: scale(1.1);
   box-shadow: 0 6px 18px rgba(224, 48, 48, 0.45);
 }
-.validate-btn:not(:disabled):active {
-  transform: scale(0.92);
-}
+.validate-btn:not(:disabled):active { transform: scale(0.92); }
 
-.week-btn {
-  transition: color 0.15s, background 0.15s;
-}
+.week-btn { transition: color 0.15s, background 0.15s; }
 .week-btn:not(:disabled):hover {
-  color: #fff;
-  background: #222;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
 }
-.week-btn:disabled {
-  opacity: 0.25;
-  cursor: not-allowed;
-}
+.week-btn:disabled { opacity: 0.25; cursor: not-allowed; }
 
 .resume-btn {
   animation: glowPulse 2.5s ease-in-out infinite;
   transition: transform 0.15s ease;
 }
-.resume-btn:hover {
-  transform: scale(1.02);
-}
+.resume-btn:hover { transform: scale(1.02); }
 
-.timer-btn {
-  transition: background 0.15s, transform 0.1s;
-}
-.timer-btn:hover { background: #2a2a2a !important; }
+.timer-btn { transition: background 0.15s, transform 0.1s; }
+.timer-btn:hover { background: var(--bg-elevated) !important; }
 .timer-btn:active { transform: scale(0.96); }
 
-.warmup-check {
-  transition: background 0.2s, border-color 0.2s, transform 0.15s;
-}
+.warmup-check { transition: background 0.2s, border-color 0.2s, transform 0.15s; }
 .warmup-check:active { transform: scale(0.9); }
