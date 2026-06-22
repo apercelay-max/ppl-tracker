@@ -12,100 +12,164 @@ interface ExerciseCardProps {
   onSetComplete: (setIndex: number, entry: SetEntry) => void;
 }
 
+const getWarmupSets = (defaultWeight: string): { label: string; weight: string; reps: string }[] => {
+  const w = parseFloat(defaultWeight);
+  if (!isNaN(w) && w > 20) {
+    const r = (pct: number) => `${Math.max(20, Math.round(w * pct / 2.5) * 2.5)}`;
+    return [
+      { label: 'Activation', weight: 'barre', reps: '10' },
+      { label: 'Potentiation', weight: r(0.5), reps: '6' },
+      { label: 'Spécifique', weight: r(0.75), reps: '3' },
+    ];
+  }
+  return [
+    { label: 'Activation', weight: '', reps: '15' },
+    { label: 'Montée en charge', weight: '', reps: '8' },
+    { label: 'Spécifique', weight: '', reps: '4' },
+  ];
+};
+
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   exercise, setEntries, currentSetIndex, isActive, currentWeek, onSetComplete,
 }) => {
   const [notesOpen, setNotesOpen] = useState(false);
+  const [warmupOpen, setWarmupOpen] = useState(false);
+  const [warmupDone, setWarmupDone] = useState([false, false, false]);
 
   const weekIdx = currentWeek <= 2 ? 0 : currentWeek <= 4 ? 1 : currentWeek <= 6 ? 2 : currentWeek === 7 ? 3 : 4;
   const weekData = PROGRESSION_WEEKS[weekIdx];
   const completedCount = setEntries.filter((s) => s.completed).length;
   const allDone = completedCount === exercise.sets;
+  const warmupSets = getWarmupSets(exercise.defaultWeight ?? '');
+  const toggleWarmupDone = (i: number) => setWarmupDone((d) => d.map((v, j) => (j === i ? !v : v)));
 
-  const restLabel =
-    exercise.restMode === 'superset' && exercise.supersetOrder === 1
-      ? '↪ enchaîné'
-      : exercise.restMode === 'bilateral'
-      ? `${exercise.bilateralRestSeconds}s / ${exercise.restSeconds}s`
-      : `${exercise.restSeconds}s`;
+  const restLabel = exercise.restMode === 'superset' && exercise.supersetOrder === 1
+    ? '↪ enchaîné'
+    : exercise.restMode === 'bilateral'
+    ? `${exercise.bilateralRestSeconds}s / ${exercise.restSeconds}s`
+    : '3:00';
 
   return (
-    <div
-      className={isActive ? 'exercise-active' : ''}
-      style={{
-        background: isActive ? '#131313' : '#0f0f0f',
-        borderRadius: 18, padding: 16, marginBottom: 10,
-        border: isActive ? '1px solid rgba(76,175,80,0.45)' : allDone ? '1px solid #1a2a1a' : '1px solid #161616',
-        opacity: allDone && !isActive ? 0.5 : 1,
-        transition: 'border-color 0.3s, opacity 0.3s, background 0.3s',
-      }}
-    >
+    <div className={isActive ? 'exercise-active' : ''} style={{
+      background: isActive ? '#161618' : '#111113',
+      borderRadius: 20, padding: '16px 14px', marginBottom: 10,
+      border: isActive ? '1px solid rgba(224,48,48,0.4)' : allDone ? '1px solid #1e2a1e' : '1px solid #1c1c1f',
+      opacity: allDone && !isActive ? 0.55 : 1,
+      transition: 'border-color 0.3s, opacity 0.3s, background 0.3s',
+    }}>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: '#444', fontSize: 10, fontWeight: 700, letterSpacing: 1.5 }}>{exercise.muscleGroup}</span>
+          <span style={{ color: '#3a3a44', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase' }}>{exercise.muscleGroup}</span>
           {exercise.isSuperset && (
-            <span style={{ background: '#1a2a1a', borderRadius: 6, padding: '2px 7px', border: '1px solid #2a4a2a', color: '#5a9a5a', fontSize: 10, fontWeight: 700 }}>⟳ SS</span>
+            <span style={{ background: 'rgba(224,48,48,0.12)', borderRadius: 6, padding: '2px 7px', border: '1px solid rgba(224,48,48,0.2)', color: '#e03030', fontSize: 10, fontWeight: 700 }}>⟳ SS</span>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {allDone && <span className="check-pop" style={{ color: '#4CAF50', fontSize: 14 }}>✓</span>}
-          <span style={{ color: '#333', fontSize: 12 }}>{restLabel}</span>
+          {allDone && <span style={{ color: '#4CAF50', fontSize: 14 }} className="check-pop">✓</span>}
+          <span style={{ color: '#333', fontSize: 11 }}>{restLabel}</span>
         </div>
       </div>
 
-      <p style={{ color: isActive ? '#fff' : '#ccc', fontSize: 17, fontWeight: 700, marginBottom: 12, lineHeight: '22px', transition: 'color 0.3s' }}>{exercise.name}</p>
+      <p style={{ color: isActive ? '#ffffff' : '#c0c0cc', fontSize: 18, fontWeight: 800, marginBottom: 14, lineHeight: '22px', letterSpacing: -0.3, transition: 'color 0.3s' }}>{exercise.name}</p>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <div style={targetBadge}>
-          <span style={targetLabel}>REPS</span>
-          <span style={targetValue}>{exercise.targetReps}</span>
-        </div>
-        <div style={targetBadge}>
-          <span style={targetLabel}>SÉRIES</span>
-          <span style={targetValue}>{exercise.sets}</span>
-        </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+        <div style={targetBadge}><span style={targetLabel}>REPS</span><span style={targetValue}>{exercise.targetReps}</span></div>
+        <div style={targetBadge}><span style={targetLabel}>SÉRIES</span><span style={targetValue}>{exercise.sets}</span></div>
         <div style={{ ...targetBadge, background: '#0d1f0d', border: '1px solid #1a3a1a' }}>
-          <span style={{ ...targetLabel, color: '#4CAF50' }}>RIR</span>
-          <span style={{ ...targetValue, color: '#6dcc6d' }}>{weekData.rir.replace('RIR ', '')}</span>
+          <span style={{ ...targetLabel, color: '#3a8a3a' }}>RIR</span>
+          <span style={{ ...targetValue, color: '#5dcc5d' }}>{weekData.rir.replace('RIR ', '')}</span>
         </div>
         {completedCount > 0 && (
-          <div style={{ ...targetBadge, background: '#0d1f0d', border: '1px solid #1a3a1a' }}>
-            <span style={{ ...targetLabel, color: '#4CAF50' }}>FAIT</span>
-            <span style={{ ...targetValue, color: '#4CAF50' }}>{completedCount}/{exercise.sets}</span>
+          <div style={{ ...targetBadge, background: allDone ? '#0d1f0d' : '#1a1009', border: allDone ? '1px solid #1a3a1a' : '1px solid #3a2a0a' }}>
+            <span style={{ ...targetLabel, color: allDone ? '#3a8a3a' : '#a07030' }}>FAIT</span>
+            <span style={{ ...targetValue, color: allDone ? '#4CAF50' : '#f5a623' }}>{completedCount}/{exercise.sets}</span>
           </div>
         )}
       </div>
 
+      {isActive && !allDone && (
+        <div style={{ marginBottom: 12 }}>
+          <button onClick={() => setWarmupOpen(!warmupOpen)} style={{
+            display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+            background: warmupOpen ? '#10101a' : '#0d0d14', borderRadius: 10, padding: '9px 12px',
+            border: `1px solid ${warmupOpen ? '#2a2a4a' : '#1a1a28'}`,
+            cursor: 'pointer', marginBottom: warmupOpen ? 8 : 0, transition: 'background 0.2s, border-color 0.2s',
+          }}>
+            <span style={{ fontSize: 13 }}>🔥</span>
+            <span style={{ color: '#5560cc', fontSize: 10, fontWeight: 700, letterSpacing: 1.5 }}>ÉCHAUFFEMENT</span>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ color: '#2a2a50', fontSize: 10, fontWeight: 700, background: '#14142a', borderRadius: 6, padding: '2px 6px' }}>
+                {warmupDone.filter(Boolean).length}/3
+              </span>
+              <span style={{ color: '#3a3a60', fontSize: 10 }}>{warmupOpen ? '▴' : '▾'}</span>
+            </div>
+          </button>
+          {warmupOpen && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {warmupSets.map((ws, i) => (
+                <button key={i} className="warmup-check" onClick={() => toggleWarmupDone(i)} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
+                  background: warmupDone[i] ? 'rgba(85,96,204,0.08)' : '#0d0d14',
+                  borderRadius: 10, border: `1px solid ${warmupDone[i] ? 'rgba(85,96,204,0.25)' : '#18182a'}`,
+                  cursor: 'pointer', width: '100%', textAlign: 'left', opacity: warmupDone[i] ? 0.5 : 1,
+                }}>
+                  <div style={{
+                    width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+                    background: warmupDone[i] ? '#5560cc' : 'transparent',
+                    border: `1.5px solid ${warmupDone[i] ? '#5560cc' : '#2a2a4a'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {warmupDone[i] && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>✓</span>}
+                  </div>
+                  <span style={{ color: '#4a4a7a', fontSize: 11, flex: 1 }}>{ws.label}</span>
+                  {ws.weight && <span style={{ color: '#6066aa', fontSize: 12, fontWeight: 700 }}>{ws.weight} kg</span>}
+                  <span style={{ color: '#3a3a70', fontSize: 11 }}>× {ws.reps}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {exercise.notes && (
-        <button onClick={() => setNotesOpen(!notesOpen)} style={{ display: 'flex', alignItems: 'flex-start', width: '100%', background: '#0d0d0d', borderRadius: 10, padding: '8px 12px', marginBottom: 12, cursor: 'pointer', border: '1px solid #1a1a1a' }}>
+        <button onClick={() => setNotesOpen(!notesOpen)} style={{ display: 'flex', alignItems: 'flex-start', width: '100%', background: '#0d0d0f', borderRadius: 10, padding: '8px 12px', marginBottom: 12, cursor: 'pointer', border: '1px solid #1c1c20' }}>
           <span style={{ color: '#333', marginRight: 6, fontSize: 11 }}>{notesOpen ? '▾' : '▸'}</span>
-          <span style={{ flex: 1, textAlign: 'left', color: '#555', fontSize: 12, fontStyle: 'italic', lineHeight: '17px' }}>
+          <span style={{ flex: 1, textAlign: 'left', color: '#505060', fontSize: 12, fontStyle: 'italic', lineHeight: '17px' }}>
             {notesOpen ? exercise.notes : exercise.notes.slice(0, 70) + (exercise.notes.length > 70 ? '…' : '')}
           </span>
         </button>
       )}
 
       {(isActive || allDone) ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 12 }}>
           {setEntries.map((entry, idx) => (
-            <SetRow key={idx} setNumber={idx + 1} targetReps={exercise.targetReps} defaultWeight={exercise.defaultWeight ?? ''} entry={entry} isCurrent={isActive && idx === currentSetIndex} onComplete={(e) => onSetComplete(idx, e)} />
+            <SetRow key={idx} setNumber={idx + 1} targetReps={exercise.targetReps}
+              defaultWeight={exercise.defaultWeight ?? ''} entry={entry}
+              isCurrent={isActive && idx === currentSetIndex}
+              onComplete={(e) => onSetComplete(idx, e)} />
           ))}
         </div>
       ) : (
         <div style={{ padding: '8px 0 12px', textAlign: 'center' }}>
-          <span style={{ color: '#333', fontSize: 13 }}>{exercise.sets} × {exercise.targetReps}</span>
+          <span style={{ color: '#2a2a30', fontSize: 13 }}>{exercise.sets} × {exercise.targetReps}</span>
         </div>
       )}
 
       <div style={{ display: 'flex', gap: 4 }}>
         {setEntries.map((entry, idx) => (
-          <div key={idx} style={{ flex: 1, height: 3, borderRadius: 2, background: entry.completed ? '#4CAF50' : (isActive && idx === currentSetIndex) ? '#3a3a3a' : '#1a1a1a', transition: 'background 0.4s ease', boxShadow: entry.completed ? '0 0 6px rgba(76,175,80,0.4)' : 'none' }} />
+          <div key={idx} style={{
+            flex: 1, height: 3, borderRadius: 2,
+            background: entry.completed ? '#4CAF50' : (isActive && idx === currentSetIndex) ? '#3a1818' : '#18181b',
+            transition: 'background 0.4s ease',
+            boxShadow: entry.completed ? '0 0 6px rgba(76,175,80,0.35)' : 'none',
+          }} />
         ))}
       </div>
     </div>
   );
 };
 
-const targetBadge: React.CSSProperties = { flex: 1, background: '#171717', borderRadius: 10, padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, border: '1px solid #222' };
-const targetLabel: React.CSSProperties = { color: '#444', fontSize: 9, fontWeight: 700, letterSpacing: 1 };
-const targetValue: React.CSSProperties = { color: '#ccc', fontSize: 14, fontWeight: 700 };
+const targetBadge: React.CSSProperties = { flex: 1, background: '#18181b', borderRadius: 10, padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, border: '1px solid #242428' };
+const targetLabel: React.CSSProperties = { color: '#3a3a44', fontSize: 9, fontWeight: 700, letterSpacing: 1 };
+const targetValue: React.CSSProperties = { color: '#c8c8d4', fontSize: 14, fontWeight: 700 };
