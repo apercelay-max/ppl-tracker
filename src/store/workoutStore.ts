@@ -1,15 +1,5 @@
 /**
  * workoutStore.ts — Web version
- *
- * Différences vs. version React Native :
- *   - Persist via localStorage (zustand par défaut sur web — pas besoin d'AsyncStorage)
- *   - Notifications : Web Notifications API + setTimeout (pas expo-notifications)
- *   - Vibration : navigator.vibrate() (pas expo-haptics)
- *
- * Stratégie timer background (même principe) :
- *   On stocke endTimestamp = Date.now() + durée*1000.
- *   Sur visibilitychange (onglet revient au premier plan), on recalcule
- *   remaining = endTimestamp - Date.now() → toujours exact.
  */
 
 import { create } from 'zustand';
@@ -22,8 +12,6 @@ import {
   TimerState,
 } from '../data/types';
 import { getWorkout } from '../data/workouts';
-
-// ─── Notifications Web ────────────────────────────────────────────────────────
 
 let notifTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -40,23 +28,19 @@ const scheduleRestNotification = (seconds: number) => {
 };
 
 const cancelRestNotification = () => {
-  if (notifTimeoutId) {
-    clearTimeout(notifTimeoutId);
-    notifTimeoutId = null;
-  }
+  if (notifTimeoutId) { clearTimeout(notifTimeoutId); notifTimeoutId = null; }
 };
 
 const vibrate = () => {
   if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
 };
 
-// ─── Types du store ───────────────────────────────────────────────────────────
-
 interface WorkoutStore {
   session: WorkoutSession | null;
   timer: TimerState;
   currentWeek: number;
   history: HistoryEntry[];
+  theme: 'dark' | 'light';
 
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
@@ -69,10 +53,9 @@ interface WorkoutStore {
   addTimer: (secondsToAdd: number) => void;
 
   setCurrentWeek: (week: number) => void;
+  setTheme: (t: 'dark' | 'light') => void;
   advanceSession: () => void;
 }
-
-// ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useWorkoutStore = create<WorkoutStore>()(
   persist(
@@ -81,17 +64,12 @@ export const useWorkoutStore = create<WorkoutStore>()(
       timer: { isRunning: false, endTimestamp: null, totalSeconds: 0 },
       currentWeek: 1,
       history: [],
+      theme: 'dark',
 
-      // ── Démarrer une séance ──────────────────────────────────────────────
       startSession: (dayId) => {
         const workout = getWorkout(dayId);
         if (!workout) return;
-
-        // Demande permission notifications au premier lancement
-        if (Notification.permission === 'default') {
-          Notification.requestPermission();
-        }
-
+        if (Notification.permission === 'default') Notification.requestPermission();
         const exerciseProgress: ExerciseProgress = {};
         for (const ex of workout.exercises) {
           exerciseProgress[ex.id] = Array.from({ length: ex.sets }, () => ({
@@ -100,7 +78,6 @@ export const useWorkoutStore = create<WorkoutStore>()(
             completed: false,
           }));
         }
-
         set({
           session: {
             dayId,
@@ -113,7 +90,6 @@ export const useWorkoutStore = create<WorkoutStore>()(
         });
       },
 
-      // ── Valider une série ────────────────────────────────────────────────
       completeSet: (exerciseId, setIndex, entry) => {
         const { session } = get();
         if (!session) return;
@@ -123,7 +99,6 @@ export const useWorkoutStore = create<WorkoutStore>()(
         set({ session: { ...session, exerciseProgress: updated } });
       },
 
-      // ── Avancer dans la séance (série ou exercice suivant) ───────────────
       advanceSession: () => {
         const { session } = get();
         if (!session) return;
@@ -132,7 +107,6 @@ export const useWorkoutStore = create<WorkoutStore>()(
         const currentEx = workout.exercises[session.currentExerciseIndex];
         if (!currentEx) return;
         const isLastSet = session.currentSetIndex === currentEx.sets - 1;
-
         if (isLastSet) {
           const nextIdx = session.currentExerciseIndex + 1;
           if (nextIdx >= workout.exercises.length) {
@@ -145,7 +119,6 @@ export const useWorkoutStore = create<WorkoutStore>()(
         }
       },
 
-      // ── Terminer la séance ───────────────────────────────────────────────
       finishSession: () => {
         const { session, history } = get();
         if (!session) return;
@@ -163,13 +136,11 @@ export const useWorkoutStore = create<WorkoutStore>()(
         cancelRestNotification();
       },
 
-      // ── Abandonner la séance ─────────────────────────────────────────────
       abandonSession: () => {
         set({ session: null, timer: { isRunning: false, endTimestamp: null, totalSeconds: 0 } });
         cancelRestNotification();
       },
 
-      // ── Timer : démarrer ─────────────────────────────────────────────────
       startTimer: (seconds) => {
         if (seconds <= 0) return;
         const endTimestamp = Date.now() + seconds * 1000;
@@ -178,41 +149,37 @@ export const useWorkoutStore = create<WorkoutStore>()(
         vibrate();
       },
 
-      // ── Timer : passer ───────────────────────────────────────────────────
       skipTimer: () => {
         set({ timer: { isRunning: false, endTimestamp: null, totalSeconds: 0 } });
         cancelRestNotification();
       },
 
-      // ── Timer : raccourcir de N secondes ─────────────────────────────────
       reduceTimer: (secondsToRemove) => {
         const { timer } = get();
         if (!timer.endTimestamp) return;
         const newEnd = Math.max(Date.now() + 1000, timer.endTimestamp - secondsToRemove * 1000);
         set({ timer: { ...timer, endTimestamp: newEnd } });
-        const remaining = Math.ceil((newEnd - Date.now()) / 1000);
-        scheduleRestNotification(remaining);
+        scheduleRestNotification(Math.ceil((newEnd - Date.now()) / 1000));
       },
 
-      // ── Timer : ajouter N secondes ───────────────────────────────────────
       addTimer: (secondsToAdd) => {
         const { timer } = get();
         if (!timer.endTimestamp) return;
         const newEnd = timer.endTimestamp + secondsToAdd * 1000;
         set({ timer: { ...timer, endTimestamp: newEnd } });
-        const remaining = Math.ceil((newEnd - Date.now()) / 1000);
-        scheduleRestNotification(remaining);
+        scheduleRestNotification(Math.ceil((newEnd - Date.now()) / 1000));
       },
 
       setCurrentWeek: (week) => set({ currentWeek: Math.min(8, Math.max(1, week)) }),
+      setTheme: (t) => set({ theme: t }),
     }),
     {
       name: 'ppl-tracker-store',
-      // localStorage par défaut sur web — pas besoin d'AsyncStorage
       partialize: (state) => ({
         session: state.session,
         currentWeek: state.currentWeek,
         history: state.history,
+        theme: state.theme,
       }),
     }
   )
