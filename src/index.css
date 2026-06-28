@@ -5,38 +5,38 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ── CSS Variables ─────────────────────────────────────────────────────────── */
+/* ââ CSS Variables âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ */
 
 :root {
-  --bg-base: #0d0d0f;
-  --bg-surface: #111113;
-  --bg-card: #161618;
-  --bg-elevated: #1c1c1f;
-  --bg-higher: #18181b;
-  --border-subtle: #161618;
-  --border: #1c1c1f;
-  --border-mid: #222228;
-  --border-strong: #242428;
+  --bg-base: #111114;
+  --bg-surface: #15151a;
+  --bg-card: #19191f;
+  --bg-elevated: #202028;
+  --bg-higher: #1c1c24;
+  --border-subtle: #1d1d24;
+  --border: #22222c;
+  --border-mid: #28282e;
+  --border-strong: #2e2e38;
   --text-primary: #ffffff;
-  --text-secondary: #c0c0cc;
-  --text-muted: #555560;
-  --text-dim: #333340;
-  --text-micro: #252528;
-  --overlay-bg: rgba(0,0,0,0.93);
-  --bg-red-tint: #1a0c0c;
-  --bg-red-input: #1e1010;
-  --bg-gold-tint: #12100a;
-  --bg-green-tint: #0d1f0d;
-  --bg-blue-tint: #0d0d14;
-  --border-gold-tint: #2a2010;
-  --border-green-tint: #1a3a1a;
-  --border-blue-tint: #1a1a28;
-  --border-ss-tint: #1a1e18;
-  --text-gold-label: #7a5a1a;
-  --text-gold-body: #4a3a10;
-  --text-gold-footer: #3a2a08;
-  --text-ss-label: #3a5a3a;
-  --text-ss-body: #2a3a2a;
+  --text-secondary: #c8c8d8;
+  --text-muted: #7a7a90;
+  --text-dim: #50506a;
+  --text-micro: #38383e;
+  --overlay-bg: rgba(0,0,0,0.88);
+  --bg-red-tint: #1c0e0e;
+  --bg-red-input: #211010;
+  --bg-gold-tint: #141008;
+  --bg-green-tint: #0e200e;
+  --bg-blue-tint: #0e0e18;
+  --border-gold-tint: #2e2210;
+  --border-green-tint: #1c3e1c;
+  --border-blue-tint: #1c1c2e;
+  --border-ss-tint: #1c2018;
+  --text-gold-label: #8a6820;
+  --text-gold-body: #5a4418;
+  --text-gold-footer: #443010;
+  --text-ss-label: #446844;
+  --text-ss-body: #2e422e;
   --scrollbar-track: #111;
   --scrollbar-thumb: #2a2a2a;
 }
@@ -99,7 +99,7 @@ button { cursor: pointer; }
 
 .tabular { font-variant-numeric: tabular-nums; }
 
-/* ── Animations ─────────────────────────────────────────────────────────────── */
+/* ââ Animations âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ */
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px) scale(0.98); }
@@ -135,6 +135,24 @@ button { cursor: pointer; }
   50%       { opacity: 0.7; }
 }
 .amber-pulse { animation: amberPulse 1.8s ease-in-out infinite; }
+
+/* ââ IrisÃ© animÃ© (titre PPL Tracker) âââââââââââââââââââââââââââââââââââââââââ */
+@keyframes irise {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.titre-irise {
+  background: linear-gradient(
+    270deg,
+    #ff3cac, #e03030, #ff8c00, #7928ca, #4353ff, #39c5bb, #7928ca, #e03030, #ff3cac
+  );
+  background-size: 400% 400%;
+  animation: irise 5s ease infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
 
 .workout-card {
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
