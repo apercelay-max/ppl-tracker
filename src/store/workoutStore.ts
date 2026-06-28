@@ -11,7 +11,7 @@ const scheduleRestNotification = (seconds: number) => {
   if (notifTimeoutId) clearTimeout(notifTimeoutId);
   notifTimeoutId = setTimeout(() => {
     if (Notification.permission === 'granted') {
-      new Notification('\u{1F4AA} Repos termin\u00E9 !', { body: "C'est reparti \u2014 s\u00E9rie suivante.", silent: false });
+      new Notification('\u{1F4AA} Repos terminÃ© !', { body: "C'est reparti â sÃ©rie suivante.", silent: false });
     }
   }, seconds * 1000);
 };
@@ -24,12 +24,39 @@ const vibrate = () => {
   try { if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]); } catch (_) {}
 };
 
+// ââ Wake Lock ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+let wakeLockSentinel: WakeLockSentinel | null = null;
+
+const requestWakeLock = async () => {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLockSentinel = await (navigator as Navigator & { wakeLock: { request: (type: string) => Promise<WakeLockSentinel> } }).wakeLock.request('screen');
+      wakeLockSentinel.addEventListener('release', () => { wakeLockSentinel = null; });
+    }
+  } catch (_) {}
+};
+
+const releaseWakeLock = () => {
+  if (wakeLockSentinel) { wakeLockSentinel.release(); wakeLockSentinel = null; }
+};
+
+// Re-acquire wake lock after visibility change (navigateur la libÃ¨re en arriÃ¨re-plan)
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && wakeLockSentinel === null) {
+      // Re-acquire seulement si une session est active (vÃ©rif dans le store)
+      requestWakeLock();
+    }
+  });
+}
+
 interface WorkoutStore {
   session: WorkoutSession | null;
   timer: TimerState;
   currentWeek: number;
   history: HistoryEntry[];
   theme: 'dark' | 'light';
+  wakeLockEnabled: boolean;
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
   finishSession: () => void;
@@ -40,6 +67,7 @@ interface WorkoutStore {
   addTimer: (secondsToAdd: number) => void;
   setCurrentWeek: (week: number) => void;
   setTheme: (t: 'dark' | 'light') => void;
+  setWakeLockEnabled: (enabled: boolean) => void;
   advanceSession: () => void;
 }
 
@@ -51,6 +79,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       currentWeek: 1,
       history: [],
       theme: 'dark',
+      wakeLockEnabled: true,
 
       startSession: (dayId) => {
         const workout = getWorkout(dayId);
@@ -70,6 +99,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
             currentExerciseIndex: 0, currentSetIndex: 0, isComplete: false,
           },
         });
+        if (get().wakeLockEnabled) requestWakeLock();
       },
 
       completeSet: (exerciseId, setIndex, entry) => {
@@ -78,6 +108,13 @@ export const useWorkoutStore = create<WorkoutStore>()(
         const updated = { ...session.exerciseProgress };
         updated[exerciseId] = [...updated[exerciseId]];
         updated[exerciseId][setIndex] = { ...entry, completed: true };
+
+        // Reporter le poids sur la sÃ©rie suivante (mÃªme exercice)
+        const nextIdx = setIndex + 1;
+        if (nextIdx < updated[exerciseId].length && !updated[exerciseId][nextIdx].completed) {
+          updated[exerciseId][nextIdx] = { ...updated[exerciseId][nextIdx], weight: entry.weight };
+        }
+
         set({ session: { ...session, exerciseProgress: updated } });
       },
 
@@ -109,11 +146,13 @@ export const useWorkoutStore = create<WorkoutStore>()(
         };
         set({ session: { ...session, isComplete: true }, history: [entry, ...history].slice(0, 50) });
         cancelRestNotification();
+        releaseWakeLock();
       },
 
       abandonSession: () => {
         set({ session: null, timer: { isRunning: false, endTimestamp: null, totalSeconds: 0 } });
         cancelRestNotification();
+        releaseWakeLock();
       },
 
       startTimer: (seconds) => {
@@ -147,12 +186,16 @@ export const useWorkoutStore = create<WorkoutStore>()(
 
       setCurrentWeek: (week) => set({ currentWeek: Math.min(8, Math.max(1, week)) }),
       setTheme: (t) => set({ theme: t }),
+      setWakeLockEnabled: (enabled) => {
+        set({ wakeLockEnabled: enabled });
+        if (enabled) { requestWakeLock(); } else { releaseWakeLock(); }
+      },
     }),
     {
       name: 'ppl-tracker-store',
       partialize: (state) => ({
         session: state.session, currentWeek: state.currentWeek,
-        history: state.history, theme: state.theme,
+        history: state.history, theme: state.theme, wakeLockEnabled: state.wakeLockEnabled,
       }),
     }
   )
