@@ -1,17 +1,17 @@
 /**
- * useRestTimer.ts — Web version
+ * useRestTimer.ts â Web version
  *
- * Même logique endTimestamp que la version RN, mais :
- *   - AppState → document.visibilitychange
+ * MÃªme logique endTimestamp que la version RN, mais :
+ *   - AppState â document.visibilitychange
  *   - setInterval reste le moteur du countdown foreground
  *
  * Robustesse background :
- *   Les navigateurs throttlent les setInterval en arrière-plan (ex: Chrome les
- *   limite à 1 Hz). En stockant endTimestamp, la valeur recalculée au retour
- *   sur l'onglet est toujours exacte — pas de dérive.
+ *   Les navigateurs throttlent les setInterval en arriÃ¨re-plan (ex: Chrome les
+ *   limite Ã  1 Hz). En stockant endTimestamp, la valeur recalculÃ©e au retour
+ *   sur l'onglet est toujours exacte â pas de dÃ©rive.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 
 interface UseRestTimerReturn {
@@ -40,6 +40,9 @@ export const useRestTimer = (onComplete: () => void): UseRestTimerReturn => {
     return Math.max(0, Math.ceil((timer.endTimestamp - Date.now()) / 1000));
   }, [timer.endTimestamp]);
 
+  // State local pour forcer le re-render Ã  chaque tick
+  const [secondsLeft, setSecondsLeft] = useState(() => calcRemaining());
+
   const handleComplete = useCallback(() => {
     if (hasCompletedRef.current) return;
     hasCompletedRef.current = true;
@@ -49,21 +52,23 @@ export const useRestTimer = (onComplete: () => void): UseRestTimerReturn => {
     onComplete();
   }, [skipTimer, onComplete]);
 
-  // ── setInterval principal (foreground) ──────────────────────────────────
+  // ââ setInterval principal (foreground) ââââââââââââââââââââââââââââââââââ
   useEffect(() => {
     if (!timer.isRunning || !timer.endTimestamp) {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      setSecondsLeft(0);
       return;
     }
 
     hasCompletedRef.current = false;
 
     const tick = () => {
-      if (calcRemaining() <= 0) {
+      const remaining = calcRemaining();
+      setSecondsLeft(remaining);
+      if (remaining <= 0) {
         clearInterval(intervalRef.current!);
         handleComplete();
       }
-      // Force re-render via store subscription (calcRemaining lu dans le rendu)
     };
 
     tick();
@@ -71,19 +76,25 @@ export const useRestTimer = (onComplete: () => void): UseRestTimerReturn => {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [timer.isRunning, timer.endTimestamp]);
 
-  // ── visibilitychange : recalcul au retour sur l'onglet ──────────────────
+  // ââ visibilitychange : recalcul au retour sur l'onglet ââââââââââââââââââ
   useEffect(() => {
     const onVisible = () => {
       if (!document.hidden && timer.isRunning && timer.endTimestamp) {
-        if (calcRemaining() <= 0) handleComplete();
-        // L'interval reprend automatiquement (il était throttlé, pas arrêté)
+        const remaining = calcRemaining();
+        setSecondsLeft(remaining);
+        if (remaining <= 0) handleComplete();
       }
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [timer.isRunning, timer.endTimestamp, calcRemaining, handleComplete]);
 
-  const secondsLeft = timer.isRunning && timer.endTimestamp ? calcRemaining() : 0;
+  // Sync si le endTimestamp change (addTimer / reduceTimer)
+  useEffect(() => {
+    if (timer.isRunning && timer.endTimestamp) {
+      setSecondsLeft(calcRemaining());
+    }
+  }, [timer.endTimestamp]);
 
   return {
     secondsLeft,
