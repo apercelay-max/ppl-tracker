@@ -19,6 +19,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay }) => {
   const session = useWorkoutStore((s) => s.session);
   const theme = useWorkoutStore((s) => s.theme);
   const setTheme = useWorkoutStore((s) => s.setTheme);
+  const wakeLockEnabled = useWorkoutStore((s) => s.waKeLockEnabled);
+  const setWakeLockEnabled = useWorkoutStore((s) => s.setWakeLockEnabled);
 
   const weekIdx = currentWeek <= 2 ? 0 : currentWeek <= 4 ? 1 : currentWeek <= 6 ? 2 : currentWeek === 7 ? 3 : 4;
   const weekData = PROGRESSION_WEEKS[weekIdx];
@@ -27,6 +29,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay }) => {
     : null;
   const cycleProgress = ((currentWeek - 1) / 7) * 100;
 
+  const wakeLockSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator;
+
   return (
     <div style={container}>
       <div style={scroll}>
@@ -34,18 +38,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay }) => {
         {/* Header */}
         <div style={headerSection}>
           <div style={logoRow}>
-            <div style={logoBadge}><span style={{ fontSize: 22, lineHeight: 1 }}>⚡</span></div>
+            <div style={logoBadge}><span style={{ fontSize: 22, lineHeight: 1 }}>â¥</span></div>
             <div>
-              <h1 style={titleStyle}>PPL Tracker</h1>
-              <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Strict V10 · Hypertrophie</p>
+              <h1 className="titre-irise" style={titleStyle}>PPL Tracker</h1>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Strict V10 Â· Hypertrophie</p>
             </div>
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              style={themeToggle}
-              title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
-            >
-              {theme === 'dark' ? '☀️' : '🌙'}
-            </button>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+              {wakeLockSupported && (
+                <button
+                  onClick={() => setWakeLockEnabled(!wakeLockEnabled)}
+                  style={{ ...themeToggle, background: wakeLockEnabled ? 'rgba(76,175,80,0.12)' : 'var(--bg-elevated)', borderColor: wakeLockEnabled ? 'rgba(76,175,80,0.3)' : 'var(--border)' }}
+                  title={wakeLockEnabled ? 'Ãcran toujours allumÃ© (actif)' : 'Ãcran toujours allumÃ© (inactif)'}
+                >
+                  {wakeLockEnabled ? 'ð' : 'ð'}
+                </button>
+              )}
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                style={themeToggle}
+                title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+              >
+                {theme === 'dark' ? '#¯¹O' : 'ð'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -57,12 +72,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay }) => {
               <p style={{ color: 'var(--text-secondary)', fontSize: 15, fontWeight: 700, marginTop: 2 }}>{weekData.phase}</p>
             </div>
             <div style={weekSelectorRow}>
-              <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek - 1)} disabled={currentWeek <= 1}>‹</button>
+              <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek - 1)} disabled={currentWeek <= 1}>âº</button>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, minWidth: 28 }}>
                 <span style={{ color: 'var(--text-muted)', fontSize: 9, fontWeight: 700, letterSpacing: 1 }}>SEM.</span>
-                <span style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 18, lineHeight: '1' }}>{currentWeek}</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 18, lineHeight: '1' }}>{constWeek}</span>
               </div>
-              <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek + 1)} disabled={currentWeek >= 8}>›</button>
+              <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek + 1)} disabled={currentWeek >= 8}>â»</button>
             </div>
           </div>
 
@@ -91,24 +106,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay }) => {
               }} />
             ))}
           </div>
-          <p style={{ color: 'var(--text-micro)', fontSize: 10 }}>Semaine {currentWeek} / 8 · {Math.round(cycleProgress)}% du cycle</p>
+          <p style={{ color: 'var(--text-micro)', fontSize: 10 }}>Semaine {currentWeek} / 8 Â· {Math.round(cycleProgress)}% du cycle</p>
         </div>
 
         {/* Reprise */}
         {resumeWorkout && (
           <button className="resume-btn" style={resumeCard} onClick={() => onSelectDay(resumeWorkout.id)}>
-            <div style={resumeIcon}><span style={{ fontSize: 16 }}>▶</span></div>
+            <div style={resumeIcon}><span style={{ fontSize: 16 }}>â¶</span></div>
             <div style={{ textAlign: 'left', flex: 1 }}>
-              <p style={{ color: '#e03030', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>SÉANCE EN COURS</p>
+              <p style={{ color: '#e03030', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>SÃANCE EN COURS</p>
               <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800 }}>{resumeWorkout.name}</p>
               <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>Appuie pour reprendre</p>
             </div>
-            <span style={{ color: '#e03030', fontSize: 22, fontWeight: 200, flexShrink: 0, opacity: 0.8 }}>›</span>
+            <span style={{ color: '#e03030', fontSize: 22, fontWeight: 200, flexShrink: 0, opacity: 0.8 }}>â»</span>
           </button>
         )}
 
-        {/* Séances */}
-        <p style={{ ...sectionLabel, marginBottom: 10 }}>SÉANCES</p>
+        {/* SÃ©ances */}
+        <p style={{ ...sectionLabel, marginBottom: 10 }}>SÃANCES</p>
         <div>
           {WORKOUTS.map((workout, idx) => {
             const accent = DAY_ACCENT[workout.id];
@@ -127,7 +142,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay }) => {
                   borderRight: `1px solid ${accent}22`,
                 }}>
                   <span style={{ color: accent, fontSize: 10, fontWeight: 800, letterSpacing: 1.5 }}>{typeLabel}</span>
-                  <span style={{ color: `${accent}60`, fontSize: 11, fontWeight: 700 }}>J{workout.dayNumber}</span>
+                  <span style={{ color: `${accent}60`, fontSize: 11, fontWeight: 700 }}>J${workout.dayNumber}</span>
                 </div>
                 <div style={{ flex: 1, padding: '14px 14px', textAlign: 'left' }}>
                   <p style={{ color: 'var(--text-primary)', fontSize: 18, fontWeight: 800, marginBottom: 3, letterSpacing: -0.3 }}>{workout.name}</p>
@@ -141,7 +156,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay }) => {
                     <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>{workout.estimatedDuration}</span>
                   </div>
                 </div>
-                <span style={{ color: accent, fontSize: 22, fontWeight: 200, paddingRight: 14, flexShrink: 0, opacity: 0.6 }}>›</span>
+                <span style={{ color: accent, fontSize: 22, fontWeight: 200, paddingRight: 14, flexShrink: 0, opacity: 0.6 }}>â»</span>
               </button>
             );
           })}
@@ -149,18 +164,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay }) => {
 
         {/* Nutrition */}
         <div style={nutritionCard}>
-          <p style={{ color: 'var(--text-gold-label)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>🥩 Nutrition post-training</p>
+          <p style={{ color: 'var(--text-gold-label)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>ð¥© Nutrition post-training</p>
           <p style={{ color: 'var(--text-gold-body)', fontSize: 12, lineHeight: '18px' }}>
-            Dans les <strong style={{ color: '#a07030' }}>30 min</strong> après la séance :
-            30-40g protéines · 50-80g glucides.
+            Dans les <strong style={{ color: '#a07030' }}>30 min</strong> aprÃ¨s la sÃ©ance :
+            30-40g protÃ©ines Â· 50-80g glucides.
           </p>
         </div>
 
         {/* Superset */}
         <div style={{ background: 'var(--bg-green-tint)', borderRadius: 14, padding: 14, marginTop: 8, border: '1px solid var(--border-ss-tint)' }}>
-          <p style={{ color: 'var(--text-ss-label)', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>⟳ Règle Superset</p>
+          <p style={{ color: 'var(--text-ss-label)', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>â» RÃ¨gle Superset</p>
           <p style={{ color: 'var(--text-ss-body)', fontSize: 12, lineHeight: '17px' }}>
-            Enchaîne les deux exercices SS sans repos. Le minuteur de 3 min démarre uniquement après la paire. Push A & B uniquement.
+            EnchbÃ®ne les deux exercices SS sans repos. Le minuteur de 3 min dÃ©marre uniquement aprÃ¨s la paire. Push A & B uniquement.
           </p>
         </div>
 
@@ -169,7 +184,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay }) => {
   );
 };
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
+// âââ Styles ââââââââââââââââââââââââââââââââââââââââââââââ
 
 const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto', background: 'var(--bg-base)' };
 const scroll: React.CSSProperties = { maxWidth: 480, margin: '0 auto', padding: '0 16px 80px' };
@@ -188,12 +203,8 @@ const logoBadge: React.CSSProperties = {
 };
 const titleStyle: React.CSSProperties = {
   fontSize: 24, fontWeight: 800, letterSpacing: -0.5,
-  background: 'linear-gradient(135deg, #ffffff 30%, #e03030 70%, #9b27af)',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
 };
 const themeToggle: React.CSSProperties = {
-  marginLeft: 'auto',
   width: 36, height: 36,
   background: 'var(--bg-elevated)', borderRadius: 10,
   border: '1px solid var(--border)',
