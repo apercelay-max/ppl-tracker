@@ -75,7 +75,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay }) => {
               <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek - 1)} disabled={currentWeek <= 1}>âº</button>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, minWidth: 28 }}>
                 <span style={{ color: 'var(--text-muted)', fontSize: 9, fontWeight: 700, letterSpacing: 1 }}>SEM.</span>
-                <span style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 18, lineHeight: '1' }}>{constWeek}</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 18, lineHeight: '1' }}>{currentWeek}</span>
               </div>
               <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek + 1)} disabled={currentWeek >= 8}>â»</button>
             </div>
