@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SetEntry } from '../data/types';
 
 interface SetRowProps {
@@ -29,9 +29,16 @@ export const SetRow: React.FC<SetRowProps> = ({
   const [weight, setWeight] = useState(entry.weight || defaultWeight || '');
   const [reps, setReps] = useState(entry.reps || '');
 
+  // Sync le poids depuis le store (report automatique de la sÃ©rie prÃ©cÃ©dente)
+  useEffect(() => {
+    if (!entry.completed && entry.weight) {
+      setWeight(entry.weight);
+    }
+  }, [entry.weight, entry.completed]);
+
   const handleValidate = () => { if (!reps) return; onComplete({ weight, reps, completed: true }); };
 
-  // ── Série validée ────────────────────────────────────────────────────────
+  // â SÃ©rie validÃ©e ââââââââââââââââââââââââââââââââââââââââ
   if (entry.completed) {
     const outOfRange = isRepOutOfRange(entry.reps, targetReps);
     return (
@@ -43,7 +50,7 @@ export const SetRow: React.FC<SetRowProps> = ({
 
         <div style={donePillWeight}>
           <span style={{ color: 'var(--text-muted)', fontSize: 9, letterSpacing: 0.5 }}>KG</span>
-          <span style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 15 }}>{entry.weight || '—'}</span>
+          <span style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 15 }}>{entry.weight || 'â'}</span>
         </div>
 
         <div style={{
@@ -57,7 +64,7 @@ export const SetRow: React.FC<SetRowProps> = ({
             style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontWeight: 700, fontSize: 15 }}
           >
             {entry.reps}
-            {outOfRange && <span style={{ fontSize: 9, marginLeft: 2, verticalAlign: 'super' }}>⚠</span>}
+            {outOfRange && <span style={{ fontSize: 9, marginLeft: 2, verticalAlign: 'super' }}>â¢</span>}
           </span>
         </div>
 
@@ -65,23 +72,26 @@ export const SetRow: React.FC<SetRowProps> = ({
           className="check-pop"
           style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontSize: 13, width: 20, textAlign: 'center', flexShrink: 0, fontWeight: 700 }}
         >
-          {outOfRange ? '!' : '✓'}
+          {outOfRange ? '!' : 'â'}
         </span>
       </div>
     );
   }
 
-  // ── Série future ─────────────────────────────────────────────────────────
+  // â SÃ©rie future ââââââââââââââââââââââââââââââââââââââââ
   if (!isCurrent) {
     return (
       <div style={rowPending}>
         <span style={{ color: 'var(--text-micro)', fontSize: 12, fontWeight: 700, width: 22, textAlign: 'center', flexShrink: 0 }}>{setNumber}</span>
         <span style={{ color: 'var(--text-micro)', fontSize: 13 }}>{targetReps} reps</span>
+        {entry.weight ? (
+          <span style={{ color: 'var(--text-dim)', fontSize: 12, marginLeft: 'auto' }}>{entry.weight} kg</span>
+        ) : null}
       </div>
     );
   }
 
-  // ── Série active ─────────────────────────────────────────────────────────
+  // â SÃ©rie active ââââââââââââââââââââââââââââââââââââââââ
   return (
     <div style={rowActive}>
       <div style={activeNumBadge}>
@@ -120,13 +130,13 @@ export const SetRow: React.FC<SetRowProps> = ({
         onClick={handleValidate}
         disabled={!reps}
       >
-        ✓
+        â
       </button>
     </div>
   );
 };
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
+// âââ Styles ââââââââââââââââââââââââââââââââââââââââââââââ
 
 const rowDone: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 8, padding: '9px 6px',
