@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+trainimport { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { WorkoutSession, ExerciseProgress, SetEntry, HistoryEntry, TimerState } from '../data/types';
 import { getWorkout } from '../data/workouts';
@@ -40,13 +40,9 @@ const releaseWakeLock = () => {
   if (wakeLockSentinel) { wakeLockSentinel.release(); wakeLockSentinel = null; }
 };
 
-// Re-acquire wake lock after visibility change (navigateur la libÃ¨re en arriÃ¨re-plan)
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && wakeLockSentinel === null) {
-      // Re-acquire seulement si une session est active (vÃ©rif dans le store)
-      requestWakeLock();
-    }
+    if (!document.hidden && wakeLockSentinel === null) requestWakeLock();
   });
 }
 
@@ -57,8 +53,13 @@ interface WorkoutStore {
   history: HistoryEntry[];
   theme: 'dark' | 'light';
   wakeLockEnabled: boolean;
+  customRestSeconds: Record<string, number>;
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
+  editSet: (exerciseId: string, setIndex: number) => void;
+  skipSet: () => void;
+  skipExercise: () => void;
+  addSet: (exerciseId: string) => void;
   finishSession: () => void;
   abandonSession: () => void;
   startTimer: (seconds: number) => void;
@@ -69,6 +70,7 @@ interface WorkoutStore {
   setTheme: (t: 'dark' | 'light') => void;
   setWakeLockEnabled: (enabled: boolean) => void;
   advanceSession: () => void;
+  saveCustomRest: (exerciseId: string, seconds: number) => void;
 }
 
 export const useWorkoutStore = create<WorkoutStore>()(
@@ -80,6 +82,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       history: [],
       theme: 'dark',
       wakeLockEnabled: true,
+      customRestSeconds: {},
 
       startSession: (dayId) => {
         const workout = getWorkout(dayId);
@@ -108,13 +111,83 @@ export const useWorkoutStore = create<WorkoutStore>()(
         const updated = { ...session.exerciseProgress };
         updated[exerciseId] = [...updated[exerciseId]];
         updated[exerciseId][setIndex] = { ...entry, completed: true };
-
-        // Reporter le poids sur la sÃ©rie suivante (mÃªme exercice)
+        // Reporter le poids sur la sÃ©rie suivante
         const nextIdx = setIndex + 1;
         if (nextIdx < updated[exerciseId].length && !updated[exerciseId][nextIdx].completed) {
           updated[exerciseId][nextIdx] = { ...updated[exerciseId][nextIdx], weight: entry.weight };
         }
+        set({ session: { ...session, exerciseProgress: updated } });
+      },
 
+      // Remettre une sÃ©rie en mode Ã©dition
+      editSet: (exerciseId, setIndex) => {
+        const { session } = get();
+        if (!session) return;
+        const workout = getWorkout(session.dayId);
+        if (!workout) return;
+        const updated = { ...session.exerciseProgress };
+        updated[exerciseId] = [...updated[exerciseId]];
+        updated[exerciseId][setIndex] = { ...updated[exerciseId][setIndex], completed: false };
+        const exIdx = workout.exercises.findIndex(e => e.id === exerciseId);
+        set({
+          session: {
+            ...session,
+            exerciseProgress: updated,
+            currentExerciseIndex: exIdx >= 0 ? exIdx : session.currentExerciseIndex,
+            currentSetIndex: setIndex,
+          },
+          timer: { isRunning: false, endTimestamp: null, totalSeconds: 0 },
+        });
+        cancelRestNotification();
+      },
+
+      // Passer la sÃ©rie courante (marquÃ©e skip)
+      skipSet: () => {
+        const { session } = get();
+        if (!session) return;
+        const workout = getWorkout(session.dayId);
+        if (!workout) return;
+        const currentEx = workout.exercises[session.currentExerciseIndex];
+        if (!currentEx) return;
+        const updated = { ...session.exerciseProgress };
+        updated[currentEx.id] = [...updated[currentEx.id]];
+        updated[currentEx.id][session.currentSetIndex] = { weight: '', reps: 'â', completed: true };
+        set({ session: { ...session, exerciseProgress: updated } });
+        get().advanceSession();
+      },
+
+      // Passer tout l'exercice courant
+      skipExercise: () => {
+        const { session } = get();
+        if (!session) return;
+        const workout = getWorkout(session.dayId);
+        if (!workout) return;
+        const currentEx = workout.exercises[session.currentExerciseIndex];
+        if (!currentEx) return;
+        const updated = { ...session.exerciseProgress };
+        updated[currentEx.id] = updated[currentEx.id].map(e =>
+          e.completed ? e : { weight: '', reps: 'â', completed: true }
+        );
+        const nextIdx = session.currentExerciseIndex + 1;
+        if (nextIdx >= workout.exercises.length) {
+          set({ session: { ...session, exerciseProgress: updated } });
+          get().finishSession();
+        } else {
+          set({ session: { ...session, exerciseProgress: updated, currentExerciseIndex: nextIdx, currentSetIndex: 0 } });
+        }
+        get().skipTimer();
+      },
+
+      // Ajouter une sÃ©rie Ã  un exercice
+      addSet: (exerciseId) => {
+        const { session } = get();
+        if (!session) return;
+        const updated = { ...session.exerciseProgress };
+        const lastEntry = updated[exerciseId]?.[updated[exerciseId].length - 1];
+        updated[exerciseId] = [
+          ...(updated[exerciseId] ?? []),
+          { weight: lastEntry?.weight ?? '', reps: '', completed: false },
+        ];
         set({ session: { ...session, exerciseProgress: updated } });
       },
 
@@ -125,7 +198,8 @@ export const useWorkoutStore = create<WorkoutStore>()(
         if (!workout) return;
         const currentEx = workout.exercises[session.currentExerciseIndex];
         if (!currentEx) return;
-        const isLastSet = session.currentSetIndex === currentEx.sets - 1;
+        const totalSets = session.exerciseProgress[currentEx.id]?.length ?? currentEx.sets;
+        const isLastSet = session.currentSetIndex === totalSets - 1;
         if (isLastSet) {
           const nextIdx = session.currentExerciseIndex + 1;
           if (nextIdx >= workout.exercises.length) { get().finishSession(); }
@@ -190,12 +264,23 @@ export const useWorkoutStore = create<WorkoutStore>()(
         set({ wakeLockEnabled: enabled });
         if (enabled) { requestWakeLock(); } else { releaseWakeLock(); }
       },
+
+      // Sauvegarder le temps de repos custom pour un exercice
+      saveCustomRest: (exerciseId, seconds) => {
+        set((state) => ({
+          customRestSeconds: { ...state.customRestSeconds, [exerciseId]: Math.max(30, seconds) },
+        }));
+      },
     }),
     {
       name: 'ppl-tracker-store',
       partialize: (state) => ({
-        session: state.session, currentWeek: state.currentWeek,
-        history: state.history, theme: state.theme, wakeLockEnabled: state.wakeLockEnabled,
+        session: state.session,
+        currentWeek: state.currentWeek,
+        history: state.history,
+        theme: state.theme,
+        wakeLockEnabled: state.wakeLockEnabled,
+        customRestSeconds: state.customRestSeconds,
       }),
     }
   )
