@@ -24,13 +24,13 @@ const getWarmupSets = (defaultWeight: string): { label: string; weight: string; 
     return [
       { label: 'Activation', weight: 'barre', reps: '10' },
       { label: 'Potentiation', weight: r(0.5), reps: '6' },
-      { label: 'SpÃ©cifique', weight: r(0.75), reps: '3' },
+      { label: 'Spécifique', weight: r(0.75), reps: '3' },
     ];
   }
   return [
     { label: 'Activation', weight: '', reps: '15' },
-    { label: 'MontÃ©e en charge', weight: '', reps: '8' },
-    { label: 'SpÃ©cifique', weight: '', reps: '4' },
+    { label: 'Montée en charge', weight: '', reps: '8' },
+    { label: 'Spécifique', weight: '', reps: '4' },
   ];
 };
 
@@ -51,7 +51,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
   const restLabel =
     exercise.restMode === 'superset' && exercise.supersetOrder === 1
-      ? 'âª enchaÃ®nÃ©'
+      ? '↪ enchaîné'
       : exercise.restMode === 'bilateral'
       ? `${exercise.bilateralRestSeconds}s / ${exercise.restSeconds}s`
       : '3:00';
@@ -81,11 +81,11 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
             {exercise.muscleGroup}
           </span>
           {exercise.isSuperset && (
-            <span style={{ background: 'rgba(224,48,48,0.12)', borderRadius: 6, padding: '2px 7px', border: '1px solid rgba(224,48,48,0.2)', color: '#e03030', fontSize: 10, fontWeight: 700 }}>â³ SS</span>
+            <span style={{ background: 'rgba(224,48,48,0.12)', borderRadius: 6, padding: '2px 7px', border: '1px solid rgba(224,48,48,0.2)', color: '#e03030', fontSize: 10, fontWeight: 700 }}>⟳ SS</span>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {allDone && <span style={{ color: '#4CAF50', fontSize: 14 }} className="check-pop">â</span>}
+          {allDone && <span style={{ color: '#4CAF50', fontSize: 14 }} className="check-pop">✓</span>}
           <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>{restLabel}</span>
         </div>
       </div>
@@ -107,7 +107,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           <span style={targetValue}>{exercise.targetReps}</span>
         </div>
         <div style={targetBadge}>
-          <span style={targetLabel}>SÃRIES</span>
+          <span style={targetLabel}>SÉRIES</span>
           <span style={targetValue}>{totalSets}</span>
         </div>
         <div style={{ ...targetBadge, background: 'var(--bg-green-tint)', border: '1px solid var(--border-green-tint)' }}>
@@ -126,7 +126,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         )}
       </div>
 
-      {/* Ãchauffement */}
+      {/* Échauffement */}
       {isActive && !allDone && (
         <div style={{ marginBottom: 12 }}>
           <button
@@ -140,13 +140,13 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
               transition: 'background 0.2s, border-color 0.2s',
             }}
           >
-            <span style={{ fontSize: 13 }}>ð¥</span>
-            <span style={{ color: '#5560cc', fontSize: 10, fontWeight: 700, letterSpacing: 1.5 }}>ÃCHAUFFEMENT</span>
+            <span style={{ fontSize: 13 }}>🔥</span>
+            <span style={{ color: '#5560cc', fontSize: 10, fontWeight: 700, letterSpacing: 1.5 }}>ÉCHAUFFEMENT</span>
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, background: 'var(--bg-elevated)', borderRadius: 6, padding: '2px 6px' }}>
                 {warmupDone.filter(Boolean).length}/3
               </span>
-              <span style={{ color: 'var(--text-dim)', fontSize: 10 }}>{warmupOpen ? 'â´' : 'â¾'}</span>
+              <span style={{ color: 'var(--text-dim)', fontSize: 10 }}>{warmupOpen ? '▴' : '▾'}</span>
             </div>
           </button>
           {warmupOpen && (
@@ -159,11 +159,11 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                   cursor: 'pointer', width: '100%', textAlign: 'left', opacity: warmupDone[i] ? 0.5 : 1,
                 }}>
                   <div style={{ width: 18, height: 18, borderRadius: 5, flexShrink: 0, background: warmupDone[i] ? '#5560cc' : 'transparent', border: `1.5px solid ${warmupDone[i] ? '#5560cc' : 'var(--border-strong)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {warmupDone[i] && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>â</span>}
+                    {warmupDone[i] && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>✓</span>}
                   </div>
                   <span style={{ color: 'var(--text-muted)', fontSize: 11, flex: 1 }}>{ws.label}</span>
                   {ws.weight && <span style={{ color: '#6066aa', fontSize: 12, fontWeight: 700 }}>{ws.weight} kg</span>}
-                  <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>Ã {ws.reps}</span>
+                  <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>× {ws.reps}</span>
                 </button>
               ))}
             </div>
@@ -178,14 +178,14 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           background: 'var(--bg-base)', borderRadius: 10, padding: '8px 12px', marginBottom: 12,
           cursor: 'pointer', border: '1px solid var(--border)',
         }}>
-          <span style={{ color: 'var(--text-dim)', marginRight: 6, fontSize: 11 }}>{notesOpen ? 'â¾' : 'â¸'}</span>
+          <span style={{ color: 'var(--text-dim)', marginRight: 6, fontSize: 11 }}>{notesOpen ? '▾' : '▸'}</span>
           <span style={{ flex: 1, textAlign: 'left', color: 'var(--text-muted)', fontSize: 12, fontStyle: 'italic', lineHeight: '17px' }}>
-            {notesOpen ? exercise.notes : exercise.notes.slice(0, 70) + (exercise.notes.length > 70 ? 'â¦' : '')}
+            {notesOpen ? exercise.notes : exercise.notes.slice(0, 70) + (exercise.notes.length > 70 ? '…' : '')}
           </span>
         </button>
       )}
 
-      {/* SÃ©ries */}
+      {/* Séries */}
       {(isActive || allDone) ? (
         <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 12 }}>
           {setEntries.map((entry, idx) => (
@@ -203,21 +203,21 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         </div>
       ) : (
         <div style={{ padding: '8px 0 12px', textAlign: 'center' }}>
-          <span style={{ color: 'var(--text-micro)', fontSize: 13 }}>{totalSets} Ã {exercise.targetReps}</span>
+          <span style={{ color: 'var(--text-micro)', fontSize: 13 }}>{totalSets} × {exercise.targetReps}</span>
         </div>
       )}
 
-      {/* Actions skip/add â seulement si exercice actif */}
+      {/* Actions skip/add — seulement si exercice actif */}
       {isActive && !allDone && (
         <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
           {onSkipSet && (
-            <button onClick={onSkipSet} style={actionBtn}>â­ Passer sÃ©rie</button>
+            <button onClick={onSkipSet} style={actionBtn}>⏭ Passer série</button>
           )}
           {onSkipExercise && (
-            <button onClick={onSkipExercise} style={{ ...actionBtn, color: '#b84040' }}>â© Passer exercice</button>
+            <button onClick={onSkipExercise} style={{ ...actionBtn, color: '#b84040' }}>⏩ Passer exercice</button>
           )}
           {onAddSet && (
-            <button onClick={onAddSet} style={{ ...actionBtn, color: '#4CAF50' }}>ï¼ SÃ©rie</button>
+            <button onClick={onAddSet} style={{ ...actionBtn, color: '#4CAF50' }}>＋ Série</button>
           )}
         </div>
       )}
@@ -227,9 +227,9 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         {setEntries.map((entry, idx) => (
           <div key={idx} style={{
             flex: 1, height: 3, borderRadius: 2,
-            background: entry.completed ? (entry.reps === 'â' ? '#555' : '#4CAF50') : (isActive && idx === currentSetIndex) ? '#3a1818' : 'var(--bg-elevated)',
+            background: entry.completed ? (entry.reps === '—' ? '#555' : '#4CAF50') : (isActive && idx === currentSetIndex) ? '#3a1818' : 'var(--bg-elevated)',
             transition: 'background 0.4s ease',
-            boxShadow: entry.completed && entry.reps !== 'â' ? '0 0 6px rgba(76,175,80,0.35)' : 'none',
+            boxShadow: entry.completed && entry.reps !== '—' ? '0 0 6px rgba(76,175,80,0.35)' : 'none',
           }} />
         ))}
       </div>
@@ -237,7 +237,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   );
 };
 
-// âââ Styles ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Styles ──────────────────────────────────────────────────────────────────
 
 const targetBadge: React.CSSProperties = { flex: 1, background: 'var(--bg-higher)', borderRadius: 10, padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, border: '1px solid var(--border-strong)' };
 const targetLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 9, fontWeight: 700, letterSpacing: 1 };
@@ -247,4 +247,3 @@ const actionBtn: React.CSSProperties = {
   borderRadius: 10, padding: '8px 4px', color: 'var(--text-muted)',
   fontSize: 11, fontWeight: 700, cursor: 'pointer', letterSpacing: 0.2,
 };
-
