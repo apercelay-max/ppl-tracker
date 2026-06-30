@@ -1,10 +1,10 @@
-// ─── Types principaux ───────────────────────────────────────────────────────
+// ââ Types principaux ââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 /**
  * restMode:
- *  - 'normal'    → repos simple après la série
- *  - 'superset'  → pas de repos entre les deux exercices SS, repos après la paire
- *  - 'bilateral' → 45 s entre jambe gauche/droite, puis 120 s après la paire
+ *  - 'normal'    â repos simple aprÃ¨s la sÃ©rie
+ *  - 'superset'  â pas de repos entre les deux exercices SS, repos aprÃ¨s la paire
+ *  - 'bilateral' â 45 s entre jambe gauche/droite, puis 120 s aprÃ¨s la paire
  */
 export type RestMode = 'normal' | 'superset' | 'bilateral';
 
@@ -14,20 +14,20 @@ export interface Exercise {
   muscleGroup: string;
   sets: number;
   targetReps: string;        // "6-10" | "AMRAP" | "45 s" | "Max sec" | "10/jambe"
-  restSeconds: number;       // Durée de repos après l'exercice (ou après la paire SS)
+  restSeconds: number;       // DurÃ©e de repos aprÃ¨s l'exercice (ou aprÃ¨s la paire SS)
   restMode: RestMode;
   bilateralRestSeconds?: number; // Pour restMode=bilateral : repos inter-jambes (ex: 45)
   isSuperset: boolean;
-  supersetGroupId?: string;  // ID partagé entre les deux exos d'un SS
-  supersetOrder?: 1 | 2;     // 1 = pas de repos après, 2 = repos après
-  defaultWeight?: string;    // Suggestion de départ (ex: "PDC", "45", "20")
+  supersetGroupId?: string;  // ID partagÃ© entre les deux exos d'un SS
+  supersetOrder?: 1 | 2;     // 1 = pas de repos aprÃ¨s, 2 = repos aprÃ¨s
+  defaultWeight?: string;    // Suggestion de dÃ©part (ex: "PDC", "45", "20")
   notes: string;
 }
 
 export interface WorkoutDay {
   id: string;
   dayNumber: number;         // 1, 2, 3, 5, 6, 7
-  name: string;              // "Pull A", "Push B"…
+  name: string;              // "Pull A", "Push B"â¦
   focus: string;
   muscleGroups: string;
   estimatedDuration: string;
@@ -41,11 +41,11 @@ export interface ProgressionWeek {
   objective: string;
 }
 
-// ─── State de session ────────────────────────────────────────────────────────
+// ââ State de session âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 export interface SetEntry {
-  weight: string;   // Saisie libre ("PDC", "45.5", …)
-  reps: string;     // Saisie libre ("10", "AMRAP", "45 s", …)
+  weight: string;   // Saisie libre ("PDC", "45.5", â¦)
+  reps: string;     // Saisie libre ("10", "AMRAP", "45 s", â¦)
   completed: boolean;
 }
 
@@ -62,7 +62,7 @@ export interface WorkoutSession {
   isComplete: boolean;
 }
 
-// ─── History ─────────────────────────────────────────────────────────────────
+// ââ History ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 export interface HistoryEntry {
   id: string;
@@ -70,12 +70,15 @@ export interface HistoryEntry {
   date: number;                  // timestamp ms
   exerciseProgress: ExerciseProgress;
   durationMs: number;
+  rpe?: number;                  // Auto-Ã©valuation sÃ©ance (1-10)
+  tonnage?: number;              // Total kg soulevÃ©s (poids Ã reps sommÃ©s)
+  trainingLoad?: number;         // Charge d'entraÃ®nement : RPE Ã durÃ©e en minutes
 }
 
-// ─── Timer ───────────────────────────────────────────────────────────────────
+// ââ Timer ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 export interface TimerState {
   isRunning: boolean;
-  endTimestamp: number | null;   // Date.now() + duration*1000 au démarrage
-  totalSeconds: number;          // Durée initiale (pour la progress bar)
+  endTimestamp: number | null;   // Date.now() + duration*1000 au dÃ©marrage
+  totalSeconds: number;          // DurÃ©e initiale (pour la progress bar)
 }
