@@ -1,4 +1,4 @@
-trainimport { create } from 'zustand';
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { WorkoutSession, ExerciseProgress, SetEntry, HistoryEntry, TimerState } from '../data/types';
 import { getWorkout } from '../data/workouts';
@@ -71,6 +71,7 @@ interface WorkoutStore {
   setWakeLockEnabled: (enabled: boolean) => void;
   advanceSession: () => void;
   saveCustomRest: (exerciseId: string, seconds: number) => void;
+  updateLastSessionRPE: (rpe: number, tonnage: number, trainingLoad: number) => void;
 }
 
 export const useWorkoutStore = create<WorkoutStore>()(
@@ -270,6 +271,16 @@ export const useWorkoutStore = create<WorkoutStore>()(
         set((state) => ({
           customRestSeconds: { ...state.customRestSeconds, [exerciseId]: Math.max(30, seconds) },
         }));
+      },
+
+      // Mettre Ã  jour le RPE + charge d'entraÃ®nement de la derniÃ¨re sÃ©ance
+      updateLastSessionRPE: (rpe, tonnage, trainingLoad) => {
+        set((state) => {
+          if (state.history.length === 0) return state;
+          const updated = [...state.history];
+          updated[0] = { ...updated[0], rpe, tonnage, trainingLoad };
+          return { history: updated };
+        });
       },
     }),
     {
