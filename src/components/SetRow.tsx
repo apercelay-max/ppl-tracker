@@ -8,6 +8,7 @@ interface SetRowProps {
   entry: SetEntry;
   isCurrent: boolean;
   onComplete: (entry: SetEntry) => void;
+  onEdit?: () => void;
 }
 
 const parseTargetRange = (targetReps: string): [number, number] | null => {
@@ -24,21 +25,35 @@ const isRepOutOfRange = (reps: string, targetReps: string): boolean => {
 };
 
 export const SetRow: React.FC<SetRowProps> = ({
-  setNumber, targetReps, defaultWeight, entry, isCurrent, onComplete,
+  setNumber, targetReps, defaultWeight, entry, isCurrent, onComplete, onEdit,
 }) => {
   const [weight, setWeight] = useState(entry.weight || defaultWeight || '');
   const [reps, setReps] = useState(entry.reps || '');
 
-  // Sync le poids depuis le store (report automatique de la sÃ©rie prÃ©cÃ©dente)
   useEffect(() => {
-    if (!entry.completed && entry.weight) {
-      setWeight(entry.weight);
+    if (!entry.completed) {
+      setWeight(entry.weight || defaultWeight || '');
+      setReps(entry.reps || '');
     }
-  }, [entry.weight, entry.completed]);
+  }, [entry.completed, entry.weight, entry.reps, defaultWeight]);
 
   const handleValidate = () => { if (!reps) return; onComplete({ weight, reps, completed: true }); };
 
-  // â SÃ©rie validÃ©e ââââââââââââââââââââââââââââââââââââââââ
+  // ââ SÃ©rie sautÃ©e âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  if (entry.completed && entry.reps === 'â') {
+    return (
+      <div style={{ ...rowDone, opacity: 0.45 }}>
+        <div style={doneNumBadge}>
+          <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>S</span>
+          <span style={{ color: 'var(--text-dim)', fontSize: 13, fontWeight: 800 }}>{setNumber}</span>
+        </div>
+        <span style={{ flex: 1, color: 'var(--text-dim)', fontSize: 13, fontStyle: 'italic' }}>passÃ©e</span>
+        {onEdit && <button onClick={onEdit} style={editBtn} title="Modifier">â</button>}
+      </div>
+    );
+  }
+
+  // ââ SÃ©rie validÃ©e ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   if (entry.completed) {
     const outOfRange = isRepOutOfRange(entry.reps, targetReps);
     return (
@@ -47,138 +62,75 @@ export const SetRow: React.FC<SetRowProps> = ({
           <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>S</span>
           <span style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontSize: 13, fontWeight: 800 }}>{setNumber}</span>
         </div>
-
         <div style={donePillWeight}>
           <span style={{ color: 'var(--text-muted)', fontSize: 9, letterSpacing: 0.5 }}>KG</span>
           <span style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 15 }}>{entry.weight || 'â'}</span>
         </div>
-
         <div style={{
           ...donePillReps,
           borderColor: outOfRange ? 'rgba(245,166,35,0.3)' : 'rgba(76,175,80,0.2)',
           background: outOfRange ? 'rgba(245,166,35,0.08)' : 'rgba(76,175,80,0.06)',
         }}>
           <span style={{ color: outOfRange ? '#a06a00' : '#3a7a3a', fontSize: 9, letterSpacing: 0.5 }}>REPS</span>
-          <span
-            className={outOfRange ? 'amber-pulse' : ''}
-            style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontWeight: 700, fontSize: 15 }}
-          >
+          <span className={outOfRange ? 'amber-pulse' : ''} style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontWeight: 700, fontSize: 15 }}>
             {entry.reps}
-            {outOfRange && <span style={{ fontSize: 9, marginLeft: 2, verticalAlign: 'super' }}>â¢</span>}
+            {outOfRange && <span style={{ fontSize: 9, marginLeft: 2, verticalAlign: 'super' }}>â </span>}
           </span>
         </div>
-
-        <span
-          className="check-pop"
-          style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontSize: 13, width: 20, textAlign: 'center', flexShrink: 0, fontWeight: 700 }}
-        >
+        <span className="check-pop" style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontSize: 13, width: 20, textAlign: 'center', flexShrink: 0, fontWeight: 700 }}>
           {outOfRange ? '!' : 'â'}
         </span>
+        {onEdit && <button onClick={onEdit} style={editBtn} title="Modifier cette sÃ©rie">â</button>}
       </div>
     );
   }
 
-  // â SÃ©rie future ââââââââââââââââââââââââââââââââââââââââ
+  // ââ SÃ©rie future âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   if (!isCurrent) {
     return (
       <div style={rowPending}>
         <span style={{ color: 'var(--text-micro)', fontSize: 12, fontWeight: 700, width: 22, textAlign: 'center', flexShrink: 0 }}>{setNumber}</span>
         <span style={{ color: 'var(--text-micro)', fontSize: 13 }}>{targetReps} reps</span>
-        {entry.weight ? (
-          <span style={{ color: 'var(--text-dim)', fontSize: 12, marginLeft: 'auto' }}>{entry.weight} kg</span>
-        ) : null}
       </div>
     );
   }
 
-  // â SÃ©rie active ââââââââââââââââââââââââââââââââââââââââ
+  // ââ SÃ©rie active âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   return (
     <div style={rowActive}>
       <div style={activeNumBadge}>
         <span style={{ color: '#e03030', fontSize: 14, fontWeight: 800 }}>{setNumber}</span>
       </div>
-
       <div className="input-field" style={inputWrapper}>
-        <input
-          style={inputField}
-          type="text" inputMode="decimal"
-          value={weight} onChange={(e) => setWeight(e.target.value)}
-          placeholder="kg" onFocus={(e) => e.target.select()}
-        />
+        <input style={inputField} type="text" inputMode="decimal" value={weight}
+          onChange={(e) => setWeight(e.target.value)} placeholder="kg" onFocus={(e) => e.target.select()} />
         <span style={inputUnit}>kg</span>
       </div>
-
       <div className="input-field" style={inputWrapper}>
-        <input
-          style={inputField}
-          type="text" inputMode="numeric"
-          value={reps} onChange={(e) => setReps(e.target.value)}
-          placeholder={targetReps} onFocus={(e) => e.target.select()}
-          onKeyDown={(e) => e.key === 'Enter' && handleValidate()}
-        />
+        <input style={inputField} type="text" inputMode="numeric" value={reps}
+          onChange={(e) => setReps(e.target.value)} placeholder={targetReps} onFocus={(e) => e.target.select()}
+          onKeyDown={(e) => e.key === 'Enter' && handleValidate()} />
         <span style={inputUnit}>{targetReps}</span>
       </div>
-
-      <button
-        className="validate-btn"
-        style={{
-          ...validateBtn,
-          background: reps ? 'linear-gradient(135deg, #e03030, #b71c1c)' : 'var(--bg-elevated)',
-          cursor: reps ? 'pointer' : 'not-allowed',
-          boxShadow: reps ? '0 4px 14px rgba(224,48,48,0.35)' : 'none',
-        }}
-        onClick={handleValidate}
-        disabled={!reps}
-      >
-        â
-      </button>
+      <button className="validate-btn" style={{
+        ...validateBtn,
+        background: reps ? 'linear-gradient(135deg, #e03030, #b71c1c)' : 'var(--bg-elevated)',
+        cursor: reps ? 'pointer' : 'not-allowed',
+        boxShadow: reps ? '0 4px 14px rgba(224,48,48,0.35)' : 'none',
+      }} onClick={handleValidate} disabled={!reps}>â</button>
     </div>
   );
 };
 
-// âââ Styles ââââââââââââââââââââââââââââââââââââââââââââââ
-
-const rowDone: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 8, padding: '9px 6px',
-  borderBottom: '1px solid var(--border-subtle)',
-};
-const doneNumBadge: React.CSSProperties = {
-  width: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, flexShrink: 0,
-};
-const donePillWeight: React.CSSProperties = {
-  flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
-  borderRadius: 10, padding: '5px 8px',
-  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
-};
-const donePillReps: React.CSSProperties = {
-  flex: 1, borderRadius: 10, padding: '5px 8px',
-  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
-  border: '1px solid',
-};
+const rowDone: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, padding: '9px 6px', borderBottom: '1px solid var(--border-subtle)' };
+const doneNumBadge: React.CSSProperties = { width: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, flexShrink: 0 };
+const donePillWeight: React.CSSProperties = { flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', borderRadius: 10, padding: '5px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 };
+const donePillReps: React.CSSProperties = { flex: 1, borderRadius: 10, padding: '5px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, border: '1px solid' };
+const editBtn: React.CSSProperties = { width: 28, height: 28, borderRadius: 8, flexShrink: 0, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', color: 'var(--text-dim)', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' };
 const rowPending: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, padding: '7px 6px' };
-const activeNumBadge: React.CSSProperties = {
-  width: 28, height: 28, borderRadius: 8,
-  background: 'rgba(224,48,48,0.12)', border: '1px solid rgba(224,48,48,0.25)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-};
-const rowActive: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 8, padding: '10px 8px',
-  background: 'var(--bg-red-tint)',
-  borderRadius: 12, border: '1px solid #3a1818', marginBottom: 2,
-};
-const inputWrapper: React.CSSProperties = {
-  flex: 1, display: 'flex', alignItems: 'center',
-  background: 'var(--bg-red-input)', borderRadius: 10,
-  padding: '8px 10px', border: '1px solid rgba(224,48,48,0.2)',
-  transition: 'border-color 0.15s, box-shadow 0.15s',
-};
-const inputField: React.CSSProperties = {
-  flex: 1, background: 'none', color: 'var(--text-primary)',
-  fontSize: 16, fontWeight: 600, width: 0,
-};
+const activeNumBadge: React.CSSProperties = { width: 28, height: 28, borderRadius: 8, background: 'rgba(224,48,48,0.12)', border: '1px solid rgba(224,48,48,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
+const rowActive: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, padding: '10px 8px', background: 'var(--bg-red-tint)', borderRadius: 12, border: '1px solid #3a1818', marginBottom: 2 };
+const inputWrapper: React.CSSProperties = { flex: 1, display: 'flex', alignItems: 'center', background: 'var(--bg-red-input)', borderRadius: 10, padding: '8px 10px', border: '1px solid rgba(224,48,48,0.2)', transition: 'border-color 0.15s, box-shadow 0.15s' };
+const inputField: React.CSSProperties = { flex: 1, background: 'none', color: 'var(--text-primary)', fontSize: 16, fontWeight: 600, width: 0 };
 const inputUnit: React.CSSProperties = { color: 'rgba(224,48,48,0.5)', fontSize: 11, marginLeft: 4, flexShrink: 0 };
-const validateBtn: React.CSSProperties = {
-  width: 42, height: 42, borderRadius: 12, color: '#fff', fontSize: 16, fontWeight: 800,
-  flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-  transition: 'background 0.2s, box-shadow 0.2s, transform 0.1s',
-};
+const validateBtn: React.CSSProperties = { width: 42, height: 42, borderRadius: 12, color: '#fff', fontSize: 16, fontWeight: 800, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s, box-shadow 0.2s, transform 0.1s' };
