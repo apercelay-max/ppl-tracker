@@ -5,23 +5,23 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ââ CSS Variables âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ */
+/* ─── CSS Variables ──────────────────────────────────────────────────────── */
 
 :root {
-  --bg-base: #111114;
-  --bg-surface: #15151a;
-  --bg-card: #19191f;
-  --bg-elevated: #202028;
-  --bg-higher: #1c1c24;
-  --border-subtle: #1d1d24;
-  --border: #22222c;
-  --border-mid: #28282e;
-  --border-strong: #2e2e38;
+  --bg-base: #0a0a0d;
+  --bg-surface: #17171e;
+  --bg-card: #1e1e27;
+  --bg-elevated: #292935;
+  --bg-higher: #2e2e3c;
+  --border-subtle: #24242f;
+  --border: #2e2e3c;
+  --border-mid: #363648;
+  --border-strong: #40405a;
   --text-primary: #ffffff;
-  --text-secondary: #c8c8d8;
-  --text-muted: #7a7a90;
-  --text-dim: #50506a;
-  --text-micro: #38383e;
+  --text-secondary: #d6d6e6;
+  --text-muted: #9797b0;
+  --text-dim: #6c6c88;
+  --text-micro: #4e4e66;
   --overlay-bg: rgba(0,0,0,0.88);
   --bg-red-tint: #1c0e0e;
   --bg-red-input: #211010;
@@ -99,7 +99,7 @@ button { cursor: pointer; }
 
 .tabular { font-variant-numeric: tabular-nums; }
 
-/* ââ Animations âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ */
+/* ─── Animations ─────────────────────────────────────────────────────────── */
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px) scale(0.98); }
@@ -136,7 +136,7 @@ button { cursor: pointer; }
 }
 .amber-pulse { animation: amberPulse 1.8s ease-in-out infinite; }
 
-/* ââ IrisÃ© animÃ© (titre PPL Tracker) âââââââââââââââââââââââââââââââââââââââââ */
+/* ─── Iridescent animé (titre PPL Tracker) ──────────────────────────────── */
 @keyframes irise {
   0%   { background-position: 0% 50%; }
   50%  { background-position: 100% 50%; }
@@ -207,3 +207,14 @@ button { cursor: pointer; }
 
 .warmup-check { transition: background 0.2s, border-color 0.2s, transform 0.15s; }
 .warmup-check:active { transform: scale(0.9); }
+
+/* ─── Barre de repos inline (entre les séries) ──────────────────────────── */
+@keyframes restBarBlink {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(76,175,80,0); border-color: rgba(76,175,80,0.35); }
+  50%       { box-shadow: 0 0 0 5px rgba(76,175,80,0.18); border-color: rgba(76,175,80,0.85); }
+}
+.rest-bar-blink { animation: restBarBlink 0.8s ease-in-out infinite; }
+
+.rest-bar-btn { transition: background 0.15s, transform 0.1s; }
+.rest-bar-btn:hover { background: var(--bg-higher) !important; }
+.rest-bar-btn:active { transform: scale(0.94); }
