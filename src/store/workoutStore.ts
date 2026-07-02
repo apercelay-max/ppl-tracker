@@ -52,6 +52,10 @@ export interface HomeSectionsVisible {
   supersetRule: boolean;
 }
 
+export type HomeSectionKey = 'cycle' | 'seances' | 'nutrition' | 'supersetRule';
+
+const DEFAULT_HOME_ORDER: HomeSectionKey[] = ['cycle', 'seances', 'nutrition', 'supersetRule'];
+
 interface WorkoutStore {
   session: WorkoutSession | null;
   timer: TimerState;
@@ -63,6 +67,7 @@ interface WorkoutStore {
   accentTheme: string;
   fontScale: 'sm' | 'md' | 'lg';
   homeSections: HomeSectionsVisible;
+  homeSectionOrder: HomeSectionKey[];
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
   editSet: (exerciseId: string, setIndex: number) => void;
@@ -84,6 +89,7 @@ interface WorkoutStore {
   setAccentTheme: (id: string) => void;
   setFontScale: (s: 'sm' | 'md' | 'lg') => void;
   setHomeSectionVisible: (key: keyof HomeSectionsVisible, visible: boolean) => void;
+  moveHomeSection: (key: HomeSectionKey, direction: 'up' | 'down') => void;
 }
 
 export const useWorkoutStore = create<WorkoutStore>()(
@@ -99,6 +105,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       accentTheme: 'red',
       fontScale: 'md',
       homeSections: { cycle: true, nutrition: true, supersetRule: true },
+      homeSectionOrder: DEFAULT_HOME_ORDER,
 
       startSession: (dayId) => {
         const workout = getWorkout(dayId);
@@ -302,6 +309,18 @@ export const useWorkoutStore = create<WorkoutStore>()(
       setFontScale: (s) => set({ fontScale: s }),
       setHomeSectionVisible: (key, visible) =>
         set((state) => ({ homeSections: { ...state.homeSections, [key]: visible } })),
+
+      moveHomeSection: (key, direction) => {
+        set((state) => {
+          const order = [...state.homeSectionOrder];
+          const idx = order.indexOf(key);
+          if (idx === -1) return state;
+          const swapWith = direction === 'up' ? idx - 1 : idx + 1;
+          if (swapWith < 0 || swapWith >= order.length) return state;
+          [order[idx], order[swapWith]] = [order[swapWith], order[idx]];
+          return { homeSectionOrder: order };
+        });
+      },
     }),
     {
       name: 'ppl-tracker-store',
@@ -315,6 +334,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         accentTheme: state.accentTheme,
         fontScale: state.fontScale,
         homeSections: state.homeSections,
+        homeSectionOrder: state.homeSectionOrder,
       }),
     }
   )
