@@ -1,6 +1,7 @@
 import React from 'react';
 import { WORKOUTS, PROGRESSION_WEEKS } from '../data/workouts';
 import { useWorkoutStore } from '../store/workoutStore';
+import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
 
 const DAY_ACCENT: Record<string, string> = {
   'pull-a': '#7c6fcd', 'push-a': '#e03030', 'legs-a': '#e8a020',
@@ -23,6 +24,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const setWakeLockEnabled = useWorkoutStore((s) => s.setWakeLockEnabled);
   const homeSections = useWorkoutStore((s) => s.homeSections);
   const homeSectionOrder = useWorkoutStore((s) => s.homeSectionOrder);
+  const iconSize = useWorkoutStore((s) => s.iconSize);
+  const iconSizes = ICON_SIZE_PRESETS[iconSize];
 
   const weekIdx = currentWeek <= 2 ? 0 : currentWeek <= 4 ? 1 : currentWeek <= 6 ? 2 : currentWeek === 7 ? 3 : 4;
   const weekData = PROGRESSION_WEEKS[weekIdx];
@@ -155,7 +158,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
         {/* Header */}
         <div style={headerSection}>
           <div style={logoRow}>
-            <div style={logoBadge}><span style={{ fontSize: 22, lineHeight: 1 }}>⚡</span></div>
+            <div style={{ ...logoBadge, width: iconSizes.logo, height: iconSizes.logo }}><span style={{ fontSize: iconSizes.logo * 0.46, lineHeight: 1 }}>⚡</span></div>
             <div>
               <h1 className="titre-irise" style={titleStyle}>PPL Tracker</h1>
               <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Strict V10 · Hypertrophie</p>
@@ -163,14 +166,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               <button
                 onClick={onOpenSettings}
-                style={themeToggle}
+                style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
                 title="Réglages"
               >
                 ⚙️
               </button>
               <button
                 onClick={onOpenDashboard}
-                style={themeToggle}
+                style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
                 title="Dashboard"
               >
                 📊
@@ -178,7 +181,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
               {wakeLockSupported && (
                 <button
                   onClick={() => setWakeLockEnabled(!wakeLockEnabled)}
-                  style={{ ...themeToggle, background: wakeLockEnabled ? 'rgba(76,175,80,0.12)' : 'var(--bg-elevated)', borderColor: wakeLockEnabled ? 'rgba(76,175,80,0.3)' : 'var(--border)' }}
+                  style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header, background: wakeLockEnabled ? 'rgba(76,175,80,0.12)' : 'var(--bg-elevated)', borderColor: wakeLockEnabled ? 'rgba(76,175,80,0.3)' : 'var(--border)' }}
                   title={wakeLockEnabled ? 'Écran toujours allumé (actif)' : 'Écran toujours allumé (inactif)'}
                 >
                   {wakeLockEnabled ? '🔆' : '🔅'}
@@ -186,7 +189,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
               )}
               <button
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                style={themeToggle}
+                style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
                 title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
               >
                 {theme === 'dark' ? '☀️' : '🌙'}
@@ -198,7 +201,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
         {/* Reprise */}
         {resumeWorkout && (
           <button className="resume-btn" style={resumeCard} onClick={() => onSelectDay(resumeWorkout.id)}>
-            <div style={resumeIcon}><span style={{ fontSize: 16 }}>▶</span></div>
+            <div style={{ ...resumeIcon, width: iconSizes.resume, height: iconSizes.resume }}><span style={{ fontSize: iconSizes.resume * 0.4 }}>▶</span></div>
             <div style={{ textAlign: 'left', flex: 1 }}>
               <p style={{ color: 'var(--brand-1)', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>SÉANCE EN COURS</p>
               <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800 }}>{resumeWorkout.name}</p>
@@ -228,20 +231,22 @@ const headerSection: React.CSSProperties = {
 };
 const logoRow: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 14 };
 const logoBadge: React.CSSProperties = {
-  width: 48, height: 48, borderRadius: 14,
+  width: 48, height: 48, borderRadius: 'var(--icon-radius)',
   background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   boxShadow: '0 4px 16px rgba(var(--brand-1-rgb),0.3)',
+  transition: 'width 0.2s, height 0.2s, border-radius 0.2s',
 };
 const titleStyle: React.CSSProperties = {
   fontSize: 24, fontWeight: 800, letterSpacing: -0.5,
 };
 const themeToggle: React.CSSProperties = {
   width: 36, height: 36,
-  background: 'var(--bg-elevated)', borderRadius: 10,
+  background: 'var(--bg-elevated)', borderRadius: 'var(--icon-radius)',
   border: '1px solid var(--border)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   fontSize: 16, cursor: 'pointer', flexShrink: 0,
+  transition: 'width 0.2s, height 0.2s, border-radius 0.2s',
 };
 const sectionLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 2 };
 const weekCard: React.CSSProperties = {
@@ -271,7 +276,7 @@ const resumeCard: React.CSSProperties = {
 };
 const resumeIcon: React.CSSProperties = {
   width: 40, height: 40, background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))',
-  borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+  borderRadius: 'var(--icon-radius)', display: 'flex', alignItems: 'center', justifyContent: 'center',
   color: '#fff', flexShrink: 0, boxShadow: '0 4px 12px rgba(var(--brand-1-rgb),0.35)',
 };
 const workoutCard: React.CSSProperties = {

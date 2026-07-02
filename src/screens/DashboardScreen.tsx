@@ -195,7 +195,7 @@ const headerRow: React.CSSProperties = {
   borderBottom: '1px solid var(--border-subtle)', marginBottom: 18,
 };
 const backBtn: React.CSSProperties = {
-  width: 36, height: 36, background: 'var(--bg-elevated)', borderRadius: 10,
+  width: 36, height: 36, background: 'var(--bg-elevated)', borderRadius: 'var(--icon-radius)',
   color: 'var(--text-muted)', fontSize: 14, fontWeight: 700, cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   flexShrink: 0, border: '1px solid var(--border-strong)',

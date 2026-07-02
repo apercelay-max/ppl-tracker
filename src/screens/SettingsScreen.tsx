@@ -2,6 +2,8 @@ import React from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ACCENT_PRESETS } from '../data/accents';
 import type { HomeSectionKey } from '../store/workoutStore';
+import { ICON_SHAPE_RADIUS, ICON_SHAPE_LABEL, ICON_SIZE_LABEL } from '../data/iconPrefs';
+import type { IconShape, IconSize } from '../data/iconPrefs';
 
 interface SettingsScreenProps { onBack: () => void; }
 
@@ -10,6 +12,9 @@ const FONT_SCALES: { id: 'sm' | 'md' | 'lg'; label: string; preview: number }[] 
   { id: 'md', label: 'Normal', preview: 15 },
   { id: 'lg', label: 'Grand', preview: 18 },
 ];
+
+const ICON_SHAPES: IconShape[] = ['square', 'rounded', 'circle'];
+const ICON_SIZES: IconSize[] = ['sm', 'md', 'lg'];
 
 const SECTION_META: Record<HomeSectionKey, { label: string; desc: string; toggleable: boolean }> = {
   cycle: { label: 'Cycle en cours', desc: 'La carte semaine / RIR / objectif.', toggleable: true },
@@ -27,6 +32,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const setHomeSectionVisible = useWorkoutStore((s) => s.setHomeSectionVisible);
   const homeSectionOrder = useWorkoutStore((s) => s.homeSectionOrder);
   const moveHomeSection = useWorkoutStore((s) => s.moveHomeSection);
+  const iconShape = useWorkoutStore((s) => s.iconShape);
+  const setIconShape = useWorkoutStore((s) => s.setIconShape);
+  const iconSize = useWorkoutStore((s) => s.iconSize);
+  const setIconSize = useWorkoutStore((s) => s.setIconSize);
 
   return (
     <div style={container}>
@@ -77,6 +86,54 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
             >
               <span style={{ fontSize: f.preview, fontWeight: 800 }}>Aa</span>
               <span style={{ fontSize: 10, fontWeight: 700 }}>{f.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Forme des icônes */}
+        <p style={{ ...sectionLabel, marginTop: 24 }}>FORME DES ICÔNES</p>
+        <div style={segmentRow}>
+          {ICON_SHAPES.map((shape) => (
+            <button
+              key={shape}
+              onClick={() => setIconShape(shape)}
+              style={{
+                ...segmentBtn,
+                background: iconShape === shape ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                color: iconShape === shape ? '#fff' : 'var(--text-muted)',
+              }}
+            >
+              <span style={{
+                display: 'block', width: 24, height: 24,
+                borderRadius: ICON_SHAPE_RADIUS[shape],
+                background: iconShape === shape ? '#fff' : 'var(--text-muted)',
+              }} />
+              <span style={{ fontSize: 10, fontWeight: 700 }}>{ICON_SHAPE_LABEL[shape]}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Taille des icônes */}
+        <p style={{ ...sectionLabel, marginTop: 24 }}>TAILLE DES ICÔNES</p>
+        <div style={segmentRow}>
+          {ICON_SIZES.map((sz) => (
+            <button
+              key={sz}
+              onClick={() => setIconSize(sz)}
+              style={{
+                ...segmentBtn,
+                background: iconSize === sz ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                color: iconSize === sz ? '#fff' : 'var(--text-muted)',
+              }}
+            >
+              <span style={{
+                display: 'block',
+                width: sz === 'sm' ? 18 : sz === 'md' ? 24 : 30,
+                height: sz === 'sm' ? 18 : sz === 'md' ? 24 : 30,
+                borderRadius: ICON_SHAPE_RADIUS[iconShape],
+                background: iconSize === sz ? '#fff' : 'var(--text-muted)',
+              }} />
+              <span style={{ fontSize: 10, fontWeight: 700 }}>{ICON_SIZE_LABEL[sz]}</span>
             </button>
           ))}
         </div>
@@ -142,7 +199,7 @@ const headerRow: React.CSSProperties = {
   borderBottom: '1px solid var(--border-subtle)', marginBottom: 20,
 };
 const backBtn: React.CSSProperties = {
-  width: 36, height: 36, background: 'var(--bg-elevated)', borderRadius: 10,
+  width: 36, height: 36, background: 'var(--bg-elevated)', borderRadius: 'var(--icon-radius)',
   color: 'var(--text-muted)', fontSize: 14, fontWeight: 700, cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   flexShrink: 0, border: '1px solid var(--border-strong)',
