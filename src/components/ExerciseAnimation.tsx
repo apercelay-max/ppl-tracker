@@ -679,7 +679,7 @@ export const ExerciseAnimation: React.FC<Props> = ({ exerciseId, size = 60 }) =>
   return (
     <div style={{
       width: size, height: size,
-      borderRadius: 12,
+      borderRadius: 'var(--icon-radius)',
       background: 'rgba(var(--brand-1-rgb),0.06)',
       border: '1px solid rgba(var(--brand-1-rgb),0.15)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',

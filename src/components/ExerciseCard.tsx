@@ -3,6 +3,8 @@ import { Exercise, SetEntry } from '../data/types';
 import { PROGRESSION_WEEKS } from '../data/workouts';
 import { SetRow } from './SetRow';
 import { ExerciseAnimation } from './ExerciseAnimation';
+import { useWorkoutStore } from '../store/workoutStore';
+import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -43,6 +45,8 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   const [notesOpen, setNotesOpen] = useState(false);
   const [warmupOpen, setWarmupOpen] = useState(false);
   const [warmupDone, setWarmupDone] = useState([false, false, false]);
+  const iconSize = useWorkoutStore((s) => s.iconSize);
+  const animSize = ICON_SIZE_PRESETS[iconSize].anim;
 
   const weekIdx = currentWeek <= 2 ? 0 : currentWeek <= 4 ? 1 : currentWeek <= 6 ? 2 : currentWeek === 7 ? 3 : 4;
   const weekData = PROGRESSION_WEEKS[weekIdx];
@@ -94,7 +98,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
       {/* Nom + Animation */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        <ExerciseAnimation exerciseId={exercise.id} size={54} />
+        <ExerciseAnimation exerciseId={exercise.id} size={animSize} />
         <p style={{
           color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
           fontSize: 18, fontWeight: 800, lineHeight: '22px', letterSpacing: -0.3,
