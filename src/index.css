@@ -8,6 +8,9 @@
 /* ─── CSS Variables ──────────────────────────────────────────────────────── */
 
 :root {
+  --brand-1: #e03030;
+  --brand-2: #9b27af;
+  --brand-1-rgb: 224,48,48;
   --bg-base: #0a0a0d;
   --bg-surface: #17171e;
   --bg-card: #1e1e27;
@@ -84,6 +87,11 @@ html, body, #root {
   overscroll-behavior: none;
 }
 
+/* ─── Taille du texte (réglage utilisateur) ─────────────────────────────── */
+:root[data-font-scale="sm"] #root { zoom: 0.92; }
+:root[data-font-scale="md"] #root { zoom: 1; }
+:root[data-font-scale="lg"] #root { zoom: 1.14; }
+
 input, button {
   font-family: inherit;
   border: none;
@@ -121,13 +129,13 @@ button { cursor: pointer; }
 .check-pop { animation: checkPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
 @keyframes glowPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(224, 48, 48, 0); }
-  50%       { box-shadow: 0 0 20px 4px rgba(224, 48, 48, 0.15); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--brand-1-rgb), 0); }
+  50%       { box-shadow: 0 0 20px 4px rgba(var(--brand-1-rgb), 0.15); }
 }
 
 @keyframes borderGlow {
-  0%, 100% { border-color: rgba(224, 48, 48, 0.35); }
-  50%       { border-color: rgba(224, 48, 48, 0.75); }
+  0%, 100% { border-color: rgba(var(--brand-1-rgb), 0.35); }
+  50%       { border-color: rgba(var(--brand-1-rgb), 0.75); }
 }
 
 @keyframes amberPulse {
@@ -175,8 +183,8 @@ button { cursor: pointer; }
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .input-field:focus-within {
-  border-color: rgba(224, 48, 48, 0.5) !important;
-  box-shadow: 0 0 0 3px rgba(224, 48, 48, 0.1) !important;
+  border-color: rgba(var(--brand-1-rgb), 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(var(--brand-1-rgb), 0.1) !important;
 }
 
 .validate-btn {
@@ -184,7 +192,7 @@ button { cursor: pointer; }
 }
 .validate-btn:not(:disabled):hover {
   transform: scale(1.1);
-  box-shadow: 0 6px 18px rgba(224, 48, 48, 0.45);
+  box-shadow: 0 6px 18px rgba(var(--brand-1-rgb), 0.45);
 }
 .validate-btn:not(:disabled):active { transform: scale(0.92); }
 
