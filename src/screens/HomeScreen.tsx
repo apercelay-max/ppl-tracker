@@ -11,9 +11,9 @@ const DAY_TYPE_LABEL: Record<string, string> = {
   'pull-b': 'PULL', 'push-b': 'PUSH', 'legs-b': 'LEGS',
 };
 
-interface HomeScreenProps { onSelectDay: (dayId: string) => void; }
+interface HomeScreenProps { onSelectDay: (dayId: string) => void; onOpenDashboard: () => void; }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashboard }) => {
   const currentWeek = useWorkoutStore((s) => s.currentWeek);
   const setCurrentWeek = useWorkoutStore((s) => s.setCurrentWeek);
   const session = useWorkoutStore((s) => s.session);
@@ -44,6 +44,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay }) => {
               <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Strict V10 · Hypertrophie</p>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+              <button
+                onClick={onOpenDashboard}
+                style={themeToggle}
+                title="Dashboard"
+              >
+                📊
+              </button>
               {wakeLockSupported && (
                 <button
                   onClick={() => setWakeLockEnabled(!wakeLockEnabled)}

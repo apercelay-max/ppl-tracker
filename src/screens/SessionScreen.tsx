@@ -5,7 +5,8 @@ import { ExerciseCard } from '../components/ExerciseCard';
 import { InlineRestBar } from '../components/InlineRestBar';
 import { StatsPanel } from '../components/StatsPanel';
 import { useRestTimer } from '../hooks/useRestTimer';
-import { SetEntry, Exercise } from '../data/types';
+import { computeTonnage, computeTrainingLoad } from '../utils/training';
+import { SetEntry, Exercise, ExerciseProgress } from '../data/types';
 
 const DEFAULT_REST = 180;
 
@@ -175,6 +176,9 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
   const restBarLabel = nextInfo.exercise
     ? (stayingSameExercise ? `Série ${nextInfo.setNumber}` : `Ensuite : ${nextInfo.exercise.name}`)
     : undefined;
+  // Quand on change d'exercice, on affiche la note technique du prochain
+  // exercice pendant le repos, pour que Léo la lise avant d'attaquer.
+  const restBarNote = !stayingSameExercise ? nextInfo.exercise?.notes : undefined;
 
   const restBarNode = timerIsRunning ? (
     <InlineRestBar
@@ -183,6 +187,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
       progress={progress}
       finished={secondsLeft <= 0}
       nextLabel={restBarLabel}
+      nextNote={restBarNote}
       onSkip={handleSkipRest}
       onReduce={handleReduceRest}
       onAdd={handleAddRest}
@@ -285,14 +290,24 @@ const ssLabel: React.CSSProperties = {
 
 // ─── Écran de fin ────────────────────────────────────────────────────────────
 
+const RPE_LABELS: Record<number, string> = {
+  1: 'Très facile', 2: 'Très facile', 3: 'Facile', 4: 'Facile',
+  5: 'Modéré', 6: 'Modéré', 7: 'Dur', 8: 'Dur', 9: 'Très dur', 10: 'Maximal',
+};
+
 const CompletionScreen: React.FC<{
   workout: NonNullable<ReturnType<typeof getWorkout>>;
-  session: { startTime: number; exerciseProgress: Record<string, { reps: string; completed: boolean }[]>; dayId: string; isComplete: boolean; currentExerciseIndex: number; currentSetIndex: number };
+  session: { startTime: number; exerciseProgress: ExerciseProgress; dayId: string; isComplete: boolean; currentExerciseIndex: number; currentSetIndex: number };
   onBack: () => void;
 }> = ({ workout, session, onBack }) => {
+  const updateLastSessionRPE = useWorkoutStore((s) => s.updateLastSessionRPE);
+  const [rpe, setRpe] = useState<number | null>(null);
+
   const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
-  const durationMin = Math.round((Date.now() - session.startTime) / 60000);
+  const durationMs = Date.now() - session.startTime;
+  const durationMin = Math.round(durationMs / 60000);
   const cal = Math.round(5.5 * durationMin);
+  const tonnage = computeTonnage(session.exerciseProgress);
 
   const allEntries = workout.exercises.flatMap((ex) =>
     (session.exerciseProgress[ex.id] ?? []).filter((e) => e.completed && e.reps !== '—').map((e) => ({ reps: e.reps, targetReps: ex.targetReps }))
@@ -306,6 +321,12 @@ const CompletionScreen: React.FC<{
     return { emoji: '🎯', title: 'Exécution parfaite !', detail: 'Toutes les séries dans la plage cible. +2.5 kg envisageable la semaine prochaine.', color: '#4CAF50' };
   };
   const rec = getRec();
+
+  const handleSelectRpe = (value: number) => {
+    setRpe(value);
+    const trainingLoad = computeTrainingLoad(value, durationMs);
+    updateLastSessionRPE(value, tonnage, trainingLoad);
+  };
 
   return (
     <div style={completeScreen}>
@@ -333,6 +354,38 @@ const CompletionScreen: React.FC<{
             <span style={{ color: '#9b27af', fontSize: 20, fontWeight: 200 }}>{totalSets}</span>
             <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>SÉRIES</span>
           </div>
+          {tonnage > 0 && (
+            <div style={statBlock}>
+              <span style={{ fontSize: 22 }}>🏋️</span>
+              <span style={{ color: '#5560cc', fontSize: 20, fontWeight: 200 }}>{tonnage}<span style={{ fontSize: 11 }}> kg</span></span>
+              <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>TONNAGE</span>
+            </div>
+          )}
+        </div>
+
+        <div style={rpeCard}>
+          <p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 10 }}>
+            RESSENTI DE LA SÉANCE (RPE)
+          </p>
+          <div style={{ display: 'flex', gap: 5, marginBottom: rpe ? 8 : 0 }}>
+            {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                onClick={() => handleSelectRpe(n)}
+                style={{
+                  ...rpeBtn,
+                  background: rpe === n ? 'linear-gradient(135deg, #e03030, #9b27af)' : 'var(--bg-elevated)',
+                  color: rpe === n ? '#fff' : 'var(--text-muted)',
+                  border: rpe === n ? '1px solid transparent' : '1px solid var(--border-strong)',
+                }}
+              >{n}</button>
+            ))}
+          </div>
+          {rpe && (
+            <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+              {RPE_LABELS[rpe]} · charge : <strong style={{ color: 'var(--text-secondary)' }}>{computeTrainingLoad(rpe, durationMs)}</strong>
+            </p>
+          )}
         </div>
 
         <div style={{ borderRadius: 16, padding: 16, marginBottom: 12, border: `1px solid ${rec.color}30`, background: `${rec.color}08` }}>
@@ -389,6 +442,15 @@ const statBlock: React.CSSProperties = {
   flex: 1, background: 'var(--bg-surface)', border: '1px solid var(--border)',
   borderRadius: 16, padding: '14px 8px',
   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+};
+const rpeCard: React.CSSProperties = {
+  background: 'var(--bg-surface)', border: '1px solid var(--border)',
+  borderRadius: 16, padding: 14, marginBottom: 12,
+};
+const rpeBtn: React.CSSProperties = {
+  flex: 1, height: 34, borderRadius: 9,
+  fontSize: 13, fontWeight: 700, cursor: 'pointer',
+  transition: 'background 0.15s, border-color 0.15s',
 };
 const completeBtnStyle: React.CSSProperties = {
   width: '100%', background: 'linear-gradient(135deg, #e03030, #9b27af)',
