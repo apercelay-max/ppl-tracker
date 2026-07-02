@@ -55,7 +55,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
   if (!workout || !session || session.dayId !== dayId) {
     return (
       <div style={{ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)' }}>
-        <p style={{ color: 'var(--text-dim)' }}>Chargementâ¦</p>
+        <p style={{ color: 'var(--text-dim)' }}>Chargement…</p>
       </div>
     );
   }
@@ -82,19 +82,19 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
     completeSet(exerciseId, setIndex, entry);
     const exercise = exercises.find((e) => e.id === exerciseId);
     if (!exercise) return;
-    // Superset order 1 â pas de timer, on enchaÃ®ne
+    // Superset order 1 → pas de timer, on enchaîne
     if (exercise.restMode === 'superset' && exercise.supersetOrder === 1) {
       advanceSession();
       return;
     }
-    // Utiliser le temps custom si dispo, sinon dÃ©faut
+    // Utiliser le temps custom si dispo, sinon défaut
     const restSecs = customRestSeconds[exerciseId] ?? DEFAULT_REST;
     timerExerciseRef.current = exerciseId;
     startTimer(restSecs);
   }, [exercises, completeSet, advanceSession, startTimer, customRestSeconds]);
 
   const handleTimerComplete = useCallback(() => {
-    // Sauvegarder le temps rÃ©el restant comme nouveau temps custom
+    // Sauvegarder le temps réel restant comme nouveau temps custom
     if (timerExerciseRef.current) {
       const store = useWorkoutStore.getState();
       const timer = store.timer;
@@ -110,7 +110,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
   }, [advanceSession, saveCustomRest]);
 
   const handleAbandon = () => {
-    if (window.confirm('Abandonner la sÃ©ance ?')) { abandonSession(); onBack(); }
+    if (window.confirm('Abandonner la séance ?')) { abandonSession(); onBack(); }
   };
 
   const totalSets = exercises.reduce((sum, ex) => sum + (session.exerciseProgress[ex.id]?.length ?? ex.sets), 0);
@@ -136,10 +136,10 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
     <div style={{ ...container, flexDirection: isWide ? 'row' : 'column' }}>
       <div style={isWide ? mainArea : { display: 'contents' }}>
         <div style={headerBar}>
-          <button onClick={handleAbandon} style={backBtn}>â</button>
+          <button onClick={handleAbandon} style={backBtn}>←</button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800, lineHeight: '20px', letterSpacing: -0.3 }}>{workout.name}</p>
-            <p style={{ color: 'var(--text-dim)', fontSize: 12 }}>{completedSets}/{totalSets} sÃ©ries</p>
+            <p style={{ color: 'var(--text-dim)', fontSize: 12 }}>{completedSets}/{totalSets} séries</p>
           </div>
           <div style={{ width: 52, height: 5, background: 'var(--bg-elevated)', borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
             <div style={{ height: '100%', width: `${progressPct}%`, background: 'linear-gradient(90deg, #e03030, #9b27af)', borderRadius: 3, transition: 'width 0.3s', boxShadow: '0 0 8px rgba(224,48,48,0.4)' }} />
@@ -151,10 +151,10 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
           <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 16px 80px' }}>
             {groupedExercises.map((item) => {
               if (Array.isArray(item)) {
-                // Groupe superset â encadrÃ© rouge foncÃ©
+                // Groupe superset → encadré rouge foncé
                 return (
                   <div key={item[0].supersetGroupId} style={ssGroup}>
-                    <div style={ssLabel}><span style={{ fontSize: 10 }}>â³</span> SUPERSET</div>
+                    <div style={ssLabel}><span style={{ fontSize: 10 }}>⟳</span> SUPERSET</div>
                     {item.map((exercise, idx) => {
                       const exIdx = exercises.indexOf(exercise);
                       return (
@@ -209,7 +209,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
   );
 };
 
-// ââ Styles groupes SS âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Styles groupes SS ─────────────────────────────────────────────────────
 
 const ssGroup: React.CSSProperties = {
   border: '2px solid #7a1010',
@@ -225,7 +225,7 @@ const ssLabel: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 4,
 };
 
-// ââ Ãcran de fin ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Écran de fin ────────────────────────────────────────────────────────────
 
 const CompletionScreen: React.FC<{
   workout: NonNullable<ReturnType<typeof getWorkout>>;
@@ -237,15 +237,15 @@ const CompletionScreen: React.FC<{
   const cal = Math.round(5.5 * durationMin);
 
   const allEntries = workout.exercises.flatMap((ex) =>
-    (session.exerciseProgress[ex.id] ?? []).filter((e) => e.completed && e.reps !== 'â').map((e) => ({ reps: e.reps, targetReps: ex.targetReps }))
+    (session.exerciseProgress[ex.id] ?? []).filter((e) => e.completed && e.reps !== '—').map((e) => ({ reps: e.reps, targetReps: ex.targetReps }))
   );
   const outOfRangeCount = allEntries.filter((e) => isRepOutOfRange(e.reps, e.targetReps)).length;
   const pct = allEntries.length > 0 ? outOfRangeCount / allEntries.length : 0;
 
   const getRec = () => {
-    if (pct > 0.35) return { emoji: 'âï¸', title: 'Calibration poids requise', detail: `${outOfRangeCount} sÃ©rie(s) hors plage cible. Ajuste les charges de Â±2.5 kg.`, color: '#f5a623' };
-    if (pct > 0.1) return { emoji: 'ð', title: 'Bonne sÃ©ance, quelques ajustements', detail: `${outOfRangeCount} sÃ©rie(s) lÃ©gÃ¨rement hors cible. Surveille la semaine prochaine.`, color: '#e8a020' };
-    return { emoji: 'ð', title: 'ExÃ©cution parfaite !', detail: 'Toutes les sÃ©ries dans la plage cible. +2.5 kg envisageable la semaine prochaine.', color: '#4CAF50' };
+    if (pct > 0.35) return { emoji: '⚖️', title: 'Calibration poids requise', detail: `${outOfRangeCount} série(s) hors plage cible. Ajuste les charges de ±2.5 kg.`, color: '#f5a623' };
+    if (pct > 0.1) return { emoji: '👍', title: 'Bonne séance, quelques ajustements', detail: `${outOfRangeCount} série(s) légèrement hors cible. Surveille la semaine prochaine.`, color: '#e8a020' };
+    return { emoji: '🎯', title: 'Exécution parfaite !', detail: 'Toutes les séries dans la plage cible. +2.5 kg envisageable la semaine prochaine.', color: '#4CAF50' };
   };
   const rec = getRec();
 
@@ -253,27 +253,27 @@ const CompletionScreen: React.FC<{
     <div style={completeScreen}>
       <div style={{ maxWidth: 400, width: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={trophyBadge}><span style={{ fontSize: 44 }}>ð</span></div>
-          <h2 style={{ color: 'var(--text-primary)', fontSize: 24, fontWeight: 800, marginBottom: 6, letterSpacing: -0.5 }}>SÃ©ance terminÃ©e !</h2>
+          <div style={trophyBadge}><span style={{ fontSize: 44 }}>🏆</span></div>
+          <h2 style={{ color: 'var(--text-primary)', fontSize: 24, fontWeight: 800, marginBottom: 6, letterSpacing: -0.5 }}>Séance terminée !</h2>
           <p style={{ color: '#e03030', fontSize: 17, fontWeight: 700, marginBottom: 2 }}>{workout.name}</p>
-          <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>{totalSets} sÃ©ries Â· {durationMin} min</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>{totalSets} séries · {durationMin} min</p>
         </div>
 
         <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
           <div style={statBlock}>
-            <span style={{ fontSize: 22 }}>â±</span>
+            <span style={{ fontSize: 22 }}>⏱</span>
             <span style={{ color: '#4CAF50', fontSize: 20, fontWeight: 200 }}>{durationMin}<span style={{ fontSize: 11 }}> min</span></span>
-            <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>DURÃE</span>
+            <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>DURÉE</span>
           </div>
           <div style={statBlock}>
-            <span style={{ fontSize: 22 }}>ð¥</span>
+            <span style={{ fontSize: 22 }}>🔥</span>
             <span style={{ color: '#e8a020', fontSize: 20, fontWeight: 200 }}>{cal}<span style={{ fontSize: 11 }}> kcal</span></span>
             <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>CALORIES</span>
           </div>
           <div style={statBlock}>
-            <span style={{ fontSize: 22 }}>ðª</span>
+            <span style={{ fontSize: 22 }}>💪</span>
             <span style={{ color: '#9b27af', fontSize: 20, fontWeight: 200 }}>{totalSets}</span>
-            <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>SÃRIES</span>
+            <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>SÉRIES</span>
           </div>
         </div>
 
@@ -286,20 +286,20 @@ const CompletionScreen: React.FC<{
         </div>
 
         <div style={{ background: 'var(--bg-gold-tint)', borderRadius: 14, padding: 14, marginBottom: 20, border: '1px solid var(--border-gold-tint)' }}>
-          <p style={{ color: 'var(--text-gold-label)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>ð¥© Nutrition maintenant</p>
+          <p style={{ color: 'var(--text-gold-label)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>🥩 Nutrition maintenant</p>
           <p style={{ color: 'var(--text-gold-body)', fontSize: 13, lineHeight: '19px' }}>
-            <strong style={{ color: '#e8a020' }}>30-40g</strong> protÃ©ines + <strong style={{ color: '#e8a020' }}>50-80g</strong> glucides dans les <strong style={{ color: '#e8a020' }}>30 minutes</strong>.
+            <strong style={{ color: '#e8a020' }}>30-40g</strong> protéines + <strong style={{ color: '#e8a020' }}>50-80g</strong> glucides dans les <strong style={{ color: '#e8a020' }}>30 minutes</strong>.
           </p>
-          <p style={{ color: 'var(--text-gold-footer)', fontSize: 11, marginTop: 6 }}>~{cal} kcal dÃ©pensÃ©es Â· hydrate-toi !</p>
+          <p style={{ color: 'var(--text-gold-footer)', fontSize: 11, marginTop: 6 }}>~{cal} kcal dépensées · hydrate-toi !</p>
         </div>
 
-        <button style={completeBtnStyle} onClick={onBack}>Retour Ã  l'accueil</button>
+        <button style={completeBtnStyle} onClick={onBack}>Retour à l'accueil</button>
       </div>
     </div>
   );
 };
 
-// âââ Styles ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Styles ──────────────────────────────────────────────────────────────────
 
 const container: React.CSSProperties = { height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg-base)' };
 const mainArea: React.CSSProperties = { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' };
