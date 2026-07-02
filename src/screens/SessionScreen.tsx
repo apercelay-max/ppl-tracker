@@ -2,8 +2,9 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getWorkout } from '../data/workouts';
 import { ExerciseCard } from '../components/ExerciseCard';
-import { RestTimer } from '../components/RestTimer';
+import { InlineRestBar } from '../components/InlineRestBar';
 import { StatsPanel } from '../components/StatsPanel';
+import { useRestTimer } from '../hooks/useRestTimer';
 import { SetEntry, Exercise } from '../data/types';
 
 const DEFAULT_REST = 180;
@@ -27,6 +28,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
   const session = useWorkoutStore((s) => s.session);
   const currentWeek = useWorkoutStore((s) => s.currentWeek);
   const customRestSeconds = useWorkoutStore((s) => s.customRestSeconds);
+  const timer = useWorkoutStore((s) => s.timer);
   const startSession = useWorkoutStore((s) => s.startSession);
   const completeSet = useWorkoutStore((s) => s.completeSet);
   const editSet = useWorkoutStore((s) => s.editSet);
@@ -36,6 +38,9 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
   const abandonSession = useWorkoutStore((s) => s.abandonSession);
   const advanceSession = useWorkoutStore((s) => s.advanceSession);
   const startTimer = useWorkoutStore((s) => s.startTimer);
+  const skipTimer = useWorkoutStore((s) => s.skipTimer);
+  const reduceTimer = useWorkoutStore((s) => s.reduceTimer);
+  const addTimer = useWorkoutStore((s) => s.addTimer);
   const saveCustomRest = useWorkoutStore((s) => s.saveCustomRest);
   const [isWide, setIsWide] = useState(() => window.innerWidth >= 700);
 
@@ -51,6 +56,47 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
   useEffect(() => {
     if (!session || session.dayId !== dayId || session.isComplete) startSession(dayId);
   }, [dayId]);
+
+  const handleTimerComplete = useCallback(() => {
+    // Sauvegarder le temps réel restant comme nouveau temps custom
+    if (timerExerciseRef.current) {
+      const store = useWorkoutStore.getState();
+      const t = store.timer;
+      if (t.endTimestamp) {
+        const remaining = Math.max(0, Math.ceil((t.endTimestamp - Date.now()) / 1000));
+        const used = (t.totalSeconds ?? DEFAULT_REST) - remaining;
+        if (Math.abs(used - (t.totalSeconds ?? DEFAULT_REST)) > 15) {
+          saveCustomRest(timerExerciseRef.current, used > 0 ? used : t.totalSeconds ?? DEFAULT_REST);
+        }
+      }
+    }
+    advanceSession();
+  }, [advanceSession, saveCustomRest]);
+
+  const { secondsLeft, isRunning: timerIsRunning, progress, formattedTime } = useRestTimer(handleTimerComplete);
+
+  const handleSkipRest = useCallback(() => {
+    if (timerExerciseRef.current && timer.totalSeconds) {
+      const used = timer.totalSeconds - Math.max(0, secondsLeft);
+      if (used > 30) saveCustomRest(timerExerciseRef.current, used);
+    }
+    skipTimer();
+    handleTimerComplete();
+  }, [skipTimer, handleTimerComplete, timer.totalSeconds, secondsLeft, saveCustomRest]);
+
+  const handleReduceRest = useCallback(() => {
+    reduceTimer(30);
+    if (timerExerciseRef.current && timer.totalSeconds) {
+      saveCustomRest(timerExerciseRef.current, Math.max(30, (timer.totalSeconds ?? 0) - 30));
+    }
+  }, [reduceTimer, timer.totalSeconds, saveCustomRest]);
+
+  const handleAddRest = useCallback(() => {
+    addTimer(30);
+    if (timerExerciseRef.current && timer.totalSeconds) {
+      saveCustomRest(timerExerciseRef.current, (timer.totalSeconds ?? 0) + 30);
+    }
+  }, [addTimer, timer.totalSeconds, saveCustomRest]);
 
   if (!workout || !session || session.dayId !== dayId) {
     return (
@@ -93,22 +139,6 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
     startTimer(restSecs);
   }, [exercises, completeSet, advanceSession, startTimer, customRestSeconds]);
 
-  const handleTimerComplete = useCallback(() => {
-    // Sauvegarder le temps réel restant comme nouveau temps custom
-    if (timerExerciseRef.current) {
-      const store = useWorkoutStore.getState();
-      const timer = store.timer;
-      if (timer.endTimestamp) {
-        const remaining = Math.max(0, Math.ceil((timer.endTimestamp - Date.now()) / 1000));
-        const used = (timer.totalSeconds ?? DEFAULT_REST) - remaining;
-        if (Math.abs(used - (timer.totalSeconds ?? DEFAULT_REST)) > 15) {
-          saveCustomRest(timerExerciseRef.current, used > 0 ? used : timer.totalSeconds ?? DEFAULT_REST);
-        }
-      }
-    }
-    advanceSession();
-  }, [advanceSession, saveCustomRest]);
-
   const handleAbandon = () => {
     if (window.confirm('Abandonner la séance ?')) { abandonSession(); onBack(); }
   };
@@ -131,6 +161,33 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
       i++;
     }
   }
+
+  // ── Barre de repos inline : toujours injectée dans la carte de l'exercice
+  // actuellement actif (garanti visible), soit entre deux séries du même
+  // exercice, soit après la dernière série avant de passer au suivant.
+  const stayingSameExercise = currentEx && nextInfo.exercise?.id === currentEx.id;
+  const restBarTargetExerciseId = currentEx?.id;
+  const restBarTargetIndex = currentEx
+    ? (stayingSameExercise
+        ? (nextInfo.setNumber ?? 1) - 1
+        : (session.exerciseProgress[currentEx.id]?.length ?? 0))
+    : undefined;
+  const restBarLabel = nextInfo.exercise
+    ? (stayingSameExercise ? `Série ${nextInfo.setNumber}` : `Ensuite : ${nextInfo.exercise.name}`)
+    : undefined;
+
+  const restBarNode = timerIsRunning ? (
+    <InlineRestBar
+      secondsLeft={secondsLeft}
+      formattedTime={formattedTime}
+      progress={progress}
+      finished={secondsLeft <= 0}
+      nextLabel={restBarLabel}
+      onSkip={handleSkipRest}
+      onReduce={handleReduceRest}
+      onAdd={handleAddRest}
+    />
+  ) : null;
 
   return (
     <div style={{ ...container, flexDirection: isWide ? 'row' : 'column' }}>
@@ -157,6 +214,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
                     <div style={ssLabel}><span style={{ fontSize: 10 }}>⟳</span> SUPERSET</div>
                     {item.map((exercise, idx) => {
                       const exIdx = exercises.indexOf(exercise);
+                      const isRestTarget = exercise.id === restBarTargetExerciseId;
                       return (
                         <ExerciseCard
                           key={exercise.id}
@@ -170,6 +228,8 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
                           onSkipSet={exIdx === currentExIdx ? skipSet : undefined}
                           onSkipExercise={exIdx === currentExIdx ? skipExercise : undefined}
                           onAddSet={() => addSet(exercise.id)}
+                          restBar={isRestTarget ? restBarNode : null}
+                          restBarIndex={isRestTarget ? restBarTargetIndex : undefined}
                         />
                       );
                     })}
@@ -179,6 +239,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
               // Exercice normal
               const exercise = item;
               const exIdx = exercises.indexOf(exercise);
+              const isRestTarget = exercise.id === restBarTargetExerciseId;
               return (
                 <ExerciseCard
                   key={exercise.id}
@@ -192,6 +253,8 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
                   onSkipSet={exIdx === currentExIdx ? skipSet : undefined}
                   onSkipExercise={exIdx === currentExIdx ? skipExercise : undefined}
                   onAddSet={() => addSet(exercise.id)}
+                  restBar={isRestTarget ? restBarNode : null}
+                  restBarIndex={isRestTarget ? restBarTargetIndex : undefined}
                 />
               );
             })}
@@ -200,11 +263,6 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
       </div>
 
       <StatsPanel startTime={session.startTime} compact={!isWide} />
-      <RestTimer
-        nextExercise={nextInfo.exercise}
-        nextSetNumber={nextInfo.setNumber}
-        onTimerComplete={handleTimerComplete}
-      />
     </div>
   );
 };
