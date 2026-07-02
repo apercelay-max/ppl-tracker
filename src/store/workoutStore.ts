@@ -68,6 +68,8 @@ interface WorkoutStore {
   fontScale: 'sm' | 'md' | 'lg';
   homeSections: HomeSectionsVisible;
   homeSectionOrder: HomeSectionKey[];
+  iconShape: 'square' | 'rounded' | 'circle';
+  iconSize: 'sm' | 'md' | 'lg';
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
   editSet: (exerciseId: string, setIndex: number) => void;
@@ -90,6 +92,8 @@ interface WorkoutStore {
   setFontScale: (s: 'sm' | 'md' | 'lg') => void;
   setHomeSectionVisible: (key: keyof HomeSectionsVisible, visible: boolean) => void;
   moveHomeSection: (key: HomeSectionKey, direction: 'up' | 'down') => void;
+  setIconShape: (shape: 'square' | 'rounded' | 'circle') => void;
+  setIconSize: (size: 'sm' | 'md' | 'lg') => void;
 }
 
 export const useWorkoutStore = create<WorkoutStore>()(
@@ -106,6 +110,8 @@ export const useWorkoutStore = create<WorkoutStore>()(
       fontScale: 'md',
       homeSections: { cycle: true, nutrition: true, supersetRule: true },
       homeSectionOrder: DEFAULT_HOME_ORDER,
+      iconShape: 'rounded',
+      iconSize: 'md',
 
       startSession: (dayId) => {
         const workout = getWorkout(dayId);
@@ -321,6 +327,9 @@ export const useWorkoutStore = create<WorkoutStore>()(
           return { homeSectionOrder: order };
         });
       },
+
+      setIconShape: (shape) => set({ iconShape: shape }),
+      setIconSize: (size) => set({ iconSize: size }),
     }),
     {
       name: 'ppl-tracker-store',
@@ -335,6 +344,8 @@ export const useWorkoutStore = create<WorkoutStore>()(
         fontScale: state.fontScale,
         homeSections: state.homeSections,
         homeSectionOrder: state.homeSectionOrder,
+        iconShape: state.iconShape,
+        iconSize: state.iconSize,
       }),
     }
   )
