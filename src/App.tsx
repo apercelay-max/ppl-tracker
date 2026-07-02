@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { HomeScreen } from './screens/HomeScreen';
 import { SessionScreen } from './screens/SessionScreen';
+import { DashboardScreen } from './screens/DashboardScreen';
 import { useWorkoutStore } from './store/workoutStore';
 
-type View = 'home' | 'session';
+type View = 'home' | 'session' | 'dashboard';
 
 export default function App() {
   const [view, setView] = useState<View>('home');
@@ -23,10 +24,21 @@ export default function App() {
     setView('session');
   };
 
-  const handleBack = () => setView('home');
+  const handleBack = () => {
+    setView('home');
+  };
+
+  const handleOpenDashboard = () => {
+    setView('dashboard');
+  };
 
   if (view === 'session' && selectedDayId) {
     return <SessionScreen dayId={selectedDayId} onBack={handleBack} />;
   }
-  return <HomeScreen onSelectDay={handleSelectDay} />;
+
+  if (view === 'dashboard') {
+    return <DashboardScreen onBack={handleBack} />;
+  }
+
+  return <HomeScreen onSelectDay={handleSelectDay} onOpenDashboard={handleOpenDashboard} />;
 }
