@@ -74,8 +74,8 @@ export const RestTimer: React.FC<RestTimerProps> = ({ nextExercise, nextSetNumbe
   return (
     <div style={overlay}>
       <div className={`fade-in${finished ? ' timer-blink' : ''}`} style={card}>
-        <p style={label}>{finished ? 'ð C\'EST PARTI !' : 'â¸ RÃCUPÃRATION'}</p>
-        <div style={{ position: 'relative', width: CKCLE_SIZE, height: CIRCLE_SIZE, margin: '0 auto 20px' }}>
+        <p style={label}>{finished ? '🎉 C\'EST PARTI !' : '⏸ RÉCUPÉRATION'}</p>
+        <div style={{ position: 'relative', width: CIRCLE_SIZE, height: CIRCLE_SIZE, margin: '0 auto 20px' }}>
           <svg width={CIRCLE_SIZE} height={CIRCLE_SIZE} style={{ position: 'absolute', inset: 0 }}>
             <circle cx={CIRCLE_SIZE/2} cy={CIRCLE_SIZE/2} r={RADIUS} fill="none" style={{ stroke: 'var(--bg-elevated)' }} strokeWidth={10} />
             <circle cx={CIRCLE_SIZE/2} cy={CIRCLE_SIZE/2} r={RADIUS} fill="none"
@@ -87,20 +87,20 @@ export const RestTimer: React.FC<RestTimerProps> = ({ nextExercise, nextSetNumbe
           </svg>
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <span className="tabular" style={{ fontSize: 50, fontWeight: 200, color: arcColor, letterSpacing: -2, textShadow: `0 0 24px ${glowColor}` }}>{finished ? '0:00' : formattedTime}</span>
-            <span style={{ color: 'var(--text-dim)', fontSize: 10, letterSpacing: 1.5, marginTop: 4, fontWeight: 700 }}>{ finished ? 'TERMINÃ' : 'REPOS' }</span>
+            <span style={{ color: 'var(--text-dim)', fontSize: 10, letterSpacing: 1.5, marginTop: 4, fontWeight: 700 }}>{ finished ? 'TERMINÉ' : 'REPOS' }</span>
           </div>
         </div>
         {nextExercise && (
           <div style={nextBox}>
             <p style={{ color: 'var(--text-micro)', fontSize: 9, fontWeight: 700, letterSpacing: 2, marginBottom: 6 }}>PROCHAIN</p>
             <p style={{ color: 'var(--text-secondary)', fontSize: 15, fontWeight: 700, marginBottom: 3 }}>{nextExercise.name}</p>
-            <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>SÃ©rie {nextSetNumber} Â· {nextExercise.targetReps} reps</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Série {nextSetNumber} · {nextExercise.targetReps} reps</p>
           </div>
         )}
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="timer-btn" style={btnAdjust} onClick={handleReduce}>â30s</button>
+          <button className="timer-btn" style={btnAdjust} onClick={handleReduce}>-30s</button>
           <button className="timer-btn" style={{ ...btnSkip, ...(finished ? btnSkipReady : {}) }} onClick={handleSkip}>
-            {finished ? 'Allons-y ! 0ðª' : 'Passer â'}
+            {finished ? 'Allons-y ! 💪' : 'Passer ⏭'}
           </button>
           <button className="timer-btn" style={btnAdjust} onClick={handleAdd}>+30s</button>
         </div>

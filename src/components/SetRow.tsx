@@ -39,21 +39,21 @@ export const SetRow: React.FC<SetRowProps> = ({
 
   const handleValidate = () => { if (!reps) return; onComplete({ weight, reps, completed: true }); };
 
-  // ââ SÃ©rie sautÃ©e âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-  if (entry.completed && entry.reps === 'â') {
+  // ── Série sautée ──────────────────────────────────────────────────────
+  if (entry.completed && entry.reps === '—') {
     return (
       <div style={{ ...rowDone, opacity: 0.45 }}>
         <div style={doneNumBadge}>
           <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>S</span>
           <span style={{ color: 'var(--text-dim)', fontSize: 13, fontWeight: 800 }}>{setNumber}</span>
         </div>
-        <span style={{ flex: 1, color: 'var(--text-dim)', fontSize: 13, fontStyle: 'italic' }}>passÃ©e</span>
-        {onEdit && <button onClick={onEdit} style={editBtn} title="Modifier">â</button>}
+        <span style={{ flex: 1, color: 'var(--text-dim)', fontSize: 13, fontStyle: 'italic' }}>passée</span>
+        {onEdit && <button onClick={onEdit} style={editBtn} title="Modifier">✎</button>}
       </div>
     );
   }
 
-  // ââ SÃ©rie validÃ©e ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ── Série validée ─────────────────────────────────────────────────────
   if (entry.completed) {
     const outOfRange = isRepOutOfRange(entry.reps, targetReps);
     return (
@@ -64,7 +64,7 @@ export const SetRow: React.FC<SetRowProps> = ({
         </div>
         <div style={donePillWeight}>
           <span style={{ color: 'var(--text-muted)', fontSize: 9, letterSpacing: 0.5 }}>KG</span>
-          <span style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 15 }}>{entry.weight || 'â'}</span>
+          <span style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 15 }}>{entry.weight || '—'}</span>
         </div>
         <div style={{
           ...donePillReps,
@@ -74,18 +74,18 @@ export const SetRow: React.FC<SetRowProps> = ({
           <span style={{ color: outOfRange ? '#a06a00' : '#3a7a3a', fontSize: 9, letterSpacing: 0.5 }}>REPS</span>
           <span className={outOfRange ? 'amber-pulse' : ''} style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontWeight: 700, fontSize: 15 }}>
             {entry.reps}
-            {outOfRange && <span style={{ fontSize: 9, marginLeft: 2, verticalAlign: 'super' }}>â </span>}
+            {outOfRange && <span style={{ fontSize: 9, marginLeft: 2, verticalAlign: 'super' }}>⚠</span>}
           </span>
         </div>
         <span className="check-pop" style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontSize: 13, width: 20, textAlign: 'center', flexShrink: 0, fontWeight: 700 }}>
-          {outOfRange ? '!' : 'â'}
+          {outOfRange ? '!' : '✓'}
         </span>
-        {onEdit && <button onClick={onEdit} style={editBtn} title="Modifier cette sÃ©rie">â</button>}
+        {onEdit && <button onClick={onEdit} style={editBtn} title="Modifier cette série">✎</button>}
       </div>
     );
   }
 
-  // ââ SÃ©rie future âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ── Série future ─────────────────────────────────────────────────────
   if (!isCurrent) {
     return (
       <div style={rowPending}>
@@ -95,7 +95,7 @@ export const SetRow: React.FC<SetRowProps> = ({
     );
   }
 
-  // ââ SÃ©rie active âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ── Série active ─────────────────────────────────────────────────────
   return (
     <div style={rowActive}>
       <div style={activeNumBadge}>
@@ -117,7 +117,7 @@ export const SetRow: React.FC<SetRowProps> = ({
         background: reps ? 'linear-gradient(135deg, #e03030, #b71c1c)' : 'var(--bg-elevated)',
         cursor: reps ? 'pointer' : 'not-allowed',
         boxShadow: reps ? '0 4px 14px rgba(224,48,48,0.35)' : 'none',
-      }} onClick={handleValidate} disabled={!reps}>â</button>
+      }} onClick={handleValidate} disabled={!reps}>✓</button>
     </div>
   );
 };
