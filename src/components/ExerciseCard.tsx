@@ -15,6 +15,8 @@ interface ExerciseCardProps {
   onSkipSet?: () => void;
   onSkipExercise?: () => void;
   onAddSet?: () => void;
+  restBar?: React.ReactNode;
+  restBarIndex?: number;
 }
 
 const getWarmupSets = (defaultWeight: string): { label: string; weight: string; reps: string }[] => {
@@ -36,7 +38,7 @@ const getWarmupSets = (defaultWeight: string): { label: string; weight: string; 
 
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   exercise, setEntries, currentSetIndex, isActive, currentWeek, onSetComplete,
-  onEditSet, onSkipSet, onSkipExercise, onAddSet,
+  onEditSet, onSkipSet, onSkipExercise, onAddSet, restBar, restBarIndex,
 }) => {
   const [notesOpen, setNotesOpen] = useState(false);
   const [warmupOpen, setWarmupOpen] = useState(false);
@@ -189,17 +191,20 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       {(isActive || allDone) ? (
         <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 12 }}>
           {setEntries.map((entry, idx) => (
-            <SetRow
-              key={idx}
-              setNumber={idx + 1}
-              targetReps={exercise.targetReps}
-              defaultWeight={exercise.defaultWeight ?? ''}
-              entry={entry}
-              isCurrent={isActive && idx === currentSetIndex}
-              onComplete={(e) => onSetComplete(idx, e)}
-              onEdit={onEditSet ? () => onEditSet(idx) : undefined}
-            />
+            <React.Fragment key={idx}>
+              {restBarIndex === idx && restBar}
+              <SetRow
+                setNumber={idx + 1}
+                targetReps={exercise.targetReps}
+                defaultWeight={exercise.defaultWeight ?? ''}
+                entry={entry}
+                isCurrent={isActive && idx === currentSetIndex}
+                onComplete={(e) => onSetComplete(idx, e)}
+                onEdit={onEditSet ? () => onEditSet(idx) : undefined}
+              />
+            </React.Fragment>
           ))}
+          {restBarIndex === setEntries.length && restBar}
         </div>
       ) : (
         <div style={{ padding: '8px 0 12px', textAlign: 'center' }}>
