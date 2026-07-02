@@ -5,6 +5,7 @@ import { DashboardScreen } from './screens/DashboardScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { useWorkoutStore } from './store/workoutStore';
 import { getAccent } from './data/accents';
+import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 
 type View = 'home' | 'session' | 'dashboard' | 'settings';
 
@@ -14,6 +15,7 @@ export default function App() {
   const theme = useWorkoutStore((s) => s.theme);
   const accentTheme = useWorkoutStore((s) => s.accentTheme);
   const fontScale = useWorkoutStore((s) => s.fontScale);
+  const iconShape = useWorkoutStore((s) => s.iconShape);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -30,6 +32,10 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-font-scale', fontScale);
   }, [fontScale]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--icon-radius', ICON_SHAPE_RADIUS[iconShape]);
+  }, [iconShape]);
 
   const handleSelectDay = (dayId: string) => {
     const state = useWorkoutStore.getState();
