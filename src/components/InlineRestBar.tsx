@@ -6,13 +6,14 @@ interface InlineRestBarProps {
   progress: number; // 1 -> 0 as time runs out
   finished: boolean;
   nextLabel?: string;
+  nextNote?: string;
   onSkip: () => void;
   onReduce: () => void;
   onAdd: () => void;
 }
 
 export const InlineRestBar: React.FC<InlineRestBarProps> = ({
-  secondsLeft, formattedTime, progress, finished, nextLabel, onSkip, onReduce, onAdd,
+  secondsLeft, formattedTime, progress, finished, nextLabel, nextNote, onSkip, onReduce, onAdd,
 }) => {
   const accentColor = finished ? '#4CAF50' : secondsLeft > 120 ? '#4CAF50' : secondsLeft > 60 ? '#FF9800' : '#e03030';
   const fillPct = Math.max(0, Math.min(100, (1 - progress) * 100));
@@ -35,6 +36,9 @@ export const InlineRestBar: React.FC<InlineRestBarProps> = ({
           {finished ? '▶' : '⏭'}
         </button>
       </div>
+      {nextNote && (
+        <p style={noteText}>💡 {nextNote}</p>
+      )}
     </div>
   );
 };
@@ -72,4 +76,8 @@ const skipBtn: React.CSSProperties = {
 const skipBtnReady: React.CSSProperties = {
   background: 'linear-gradient(135deg, #4CAF50, #2e7d32)',
   boxShadow: '0 3px 14px rgba(76,175,80,0.4)',
+};
+const noteText: React.CSSProperties = {
+  position: 'relative', color: 'var(--text-muted)', fontSize: 11, lineHeight: '15px',
+  fontStyle: 'italic', marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(224,48,48,0.15)',
 };
