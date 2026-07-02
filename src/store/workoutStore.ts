@@ -11,7 +11,7 @@ const scheduleRestNotification = (seconds: number) => {
   if (notifTimeoutId) clearTimeout(notifTimeoutId);
   notifTimeoutId = setTimeout(() => {
     if (Notification.permission === 'granted') {
-      new Notification('\u{1F4AA} Repos terminÃ© !', { body: "C'est reparti â sÃ©rie suivante.", silent: false });
+      new Notification('\u{1F4AA} Repos terminé !', { body: "C'est reparti → série suivante.", silent: false });
     }
   }, seconds * 1000);
 };
@@ -24,7 +24,7 @@ const vibrate = () => {
   try { if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]); } catch (_) {}
 };
 
-// ââ Wake Lock ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Wake Lock ─────────────────────────────────────────────────────────────
 let wakeLockSentinel: WakeLockSentinel | null = null;
 
 const requestWakeLock = async () => {
@@ -112,7 +112,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         const updated = { ...session.exerciseProgress };
         updated[exerciseId] = [...updated[exerciseId]];
         updated[exerciseId][setIndex] = { ...entry, completed: true };
-        // Reporter le poids sur la sÃ©rie suivante
+        // Reporter le poids sur la série suivante
         const nextIdx = setIndex + 1;
         if (nextIdx < updated[exerciseId].length && !updated[exerciseId][nextIdx].completed) {
           updated[exerciseId][nextIdx] = { ...updated[exerciseId][nextIdx], weight: entry.weight };
@@ -120,7 +120,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         set({ session: { ...session, exerciseProgress: updated } });
       },
 
-      // Remettre une sÃ©rie en mode Ã©dition
+      // Remettre une série en mode édition
       editSet: (exerciseId, setIndex) => {
         const { session } = get();
         if (!session) return;
@@ -142,7 +142,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         cancelRestNotification();
       },
 
-      // Passer la sÃ©rie courante (marquÃ©e skip)
+      // Passer la série courante (marquée skip)
       skipSet: () => {
         const { session } = get();
         if (!session) return;
@@ -152,7 +152,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         if (!currentEx) return;
         const updated = { ...session.exerciseProgress };
         updated[currentEx.id] = [...updated[currentEx.id]];
-        updated[currentEx.id][session.currentSetIndex] = { weight: '', reps: 'â', completed: true };
+        updated[currentEx.id][session.currentSetIndex] = { weight: '', reps: '—', completed: true };
         set({ session: { ...session, exerciseProgress: updated } });
         get().advanceSession();
       },
@@ -167,7 +167,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         if (!currentEx) return;
         const updated = { ...session.exerciseProgress };
         updated[currentEx.id] = updated[currentEx.id].map(e =>
-          e.completed ? e : { weight: '', reps: 'â', completed: true }
+          e.completed ? e : { weight: '', reps: '—', completed: true }
         );
         const nextIdx = session.currentExerciseIndex + 1;
         if (nextIdx >= workout.exercises.length) {
@@ -179,7 +179,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         get().skipTimer();
       },
 
-      // Ajouter une sÃ©rie Ã  un exercice
+      // Ajouter une série à un exercice
       addSet: (exerciseId) => {
         const { session } = get();
         if (!session) return;
@@ -273,7 +273,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         }));
       },
 
-      // Mettre Ã  jour le RPE + charge d'entraÃ®nement de la derniÃ¨re sÃ©ance
+      // Mettre à jour le RPE + charge d'entraînement de la dernière séance
       updateLastSessionRPE: (rpe, tonnage, trainingLoad) => {
         set((state) => {
           if (state.history.length === 0) return state;
