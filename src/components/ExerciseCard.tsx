@@ -68,7 +68,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         background: isActive ? 'var(--bg-card)' : 'var(--bg-surface)',
         borderRadius: 20, padding: '16px 14px', marginBottom: 10,
         border: isActive
-          ? '1px solid rgba(224,48,48,0.4)'
+          ? '1px solid rgba(var(--brand-1-rgb),0.4)'
           : allDone
           ? '1px solid #1e2a1e'
           : '1px solid var(--border)',

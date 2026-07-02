@@ -23,7 +23,7 @@ export const EXERCISE_ANIM_MAP: Record<string, string> = {
   'legs-b-5': 'plank',
 };
 
-const C = '#e03030';
+const C = 'var(--brand-1)';
 const G = '#7a7a90';
 const EQ = '#404050';
 const W = 2.5;
@@ -680,8 +680,8 @@ export const ExerciseAnimation: React.FC<Props> = ({ exerciseId, size = 60 }) =>
     <div style={{
       width: size, height: size,
       borderRadius: 12,
-      background: 'rgba(224,48,48,0.06)',
-      border: '1px solid rgba(224,48,48,0.15)',
+      background: 'rgba(var(--brand-1-rgb),0.06)',
+      border: '1px solid rgba(var(--brand-1-rgb),0.15)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       overflow: 'hidden', flexShrink: 0,
     }}>
