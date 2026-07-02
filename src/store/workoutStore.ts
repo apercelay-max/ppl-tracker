@@ -46,6 +46,12 @@ if (typeof document !== 'undefined') {
   });
 }
 
+export interface HomeSectionsVisible {
+  cycle: boolean;
+  nutrition: boolean;
+  supersetRule: boolean;
+}
+
 interface WorkoutStore {
   session: WorkoutSession | null;
   timer: TimerState;
@@ -54,6 +60,9 @@ interface WorkoutStore {
   theme: 'dark' | 'light';
   wakeLockEnabled: boolean;
   customRestSeconds: Record<string, number>;
+  accentTheme: string;
+  fontScale: 'sm' | 'md' | 'lg';
+  homeSections: HomeSectionsVisible;
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
   editSet: (exerciseId: string, setIndex: number) => void;
@@ -72,6 +81,9 @@ interface WorkoutStore {
   advanceSession: () => void;
   saveCustomRest: (exerciseId: string, seconds: number) => void;
   updateLastSessionRPE: (rpe: number, tonnage: number, trainingLoad: number) => void;
+  setAccentTheme: (id: string) => void;
+  setFontScale: (s: 'sm' | 'md' | 'lg') => void;
+  setHomeSectionVisible: (key: keyof HomeSectionsVisible, visible: boolean) => void;
 }
 
 export const useWorkoutStore = create<WorkoutStore>()(
@@ -84,6 +96,9 @@ export const useWorkoutStore = create<WorkoutStore>()(
       theme: 'dark',
       wakeLockEnabled: true,
       customRestSeconds: {},
+      accentTheme: 'red',
+      fontScale: 'md',
+      homeSections: { cycle: true, nutrition: true, supersetRule: true },
 
       startSession: (dayId) => {
         const workout = getWorkout(dayId);
@@ -282,6 +297,11 @@ export const useWorkoutStore = create<WorkoutStore>()(
           return { history: updated };
         });
       },
+
+      setAccentTheme: (id) => set({ accentTheme: id }),
+      setFontScale: (s) => set({ fontScale: s }),
+      setHomeSectionVisible: (key, visible) =>
+        set((state) => ({ homeSections: { ...state.homeSections, [key]: visible } })),
     }),
     {
       name: 'ppl-tracker-store',
@@ -292,6 +312,9 @@ export const useWorkoutStore = create<WorkoutStore>()(
         theme: state.theme,
         wakeLockEnabled: state.wakeLockEnabled,
         customRestSeconds: state.customRestSeconds,
+        accentTheme: state.accentTheme,
+        fontScale: state.fontScale,
+        homeSections: state.homeSections,
       }),
     }
   )
