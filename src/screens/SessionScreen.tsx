@@ -207,7 +207,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
             <p style={{ color: 'var(--text-dim)', fontSize: 12 }}>{completedSets}/{totalSets} séries</p>
           </div>
           <div style={{ width: 52, height: 5, background: 'var(--bg-elevated)', borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
-            <div style={{ height: '100%', width: `${progressPct}%`, background: 'linear-gradient(90deg, #e03030, #9b27af)', borderRadius: 3, transition: 'width 0.3s', boxShadow: '0 0 8px rgba(224,48,48,0.4)' }} />
+            <div style={{ height: '100%', width: `${progressPct}%`, background: 'linear-gradient(90deg, var(--brand-1), var(--brand-2))', borderRadius: 3, transition: 'width 0.3s', boxShadow: '0 0 8px rgba(var(--brand-1-rgb),0.4)' }} />
           </div>
           <span style={{ color: 'var(--text-dim)', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{Math.round(progressPct)}%</span>
         </div>
@@ -337,7 +337,7 @@ const CompletionScreen: React.FC<{
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={trophyBadge}><span style={{ fontSize: 44 }}>🏆</span></div>
           <h2 style={{ color: 'var(--text-primary)', fontSize: 24, fontWeight: 800, marginBottom: 6, letterSpacing: -0.5 }}>Séance terminée !</h2>
-          <p style={{ color: '#e03030', fontSize: 17, fontWeight: 700, marginBottom: 2 }}>{workout.name}</p>
+          <p style={{ color: 'var(--brand-1)', fontSize: 17, fontWeight: 700, marginBottom: 2 }}>{workout.name}</p>
           <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>{totalSets} séries · {durationMin} min</p>
         </div>
 
@@ -377,7 +377,7 @@ const CompletionScreen: React.FC<{
                 onClick={() => handleSelectRpe(n)}
                 style={{
                   ...rpeBtn,
-                  background: rpe === n ? 'linear-gradient(135deg, #e03030, #9b27af)' : 'var(--bg-elevated)',
+                  background: rpe === n ? 'linear-gradient(135deg, var(--brand-1), var(--brand-2))' : 'var(--bg-elevated)',
                   color: rpe === n ? '#fff' : 'var(--text-muted)',
                   border: rpe === n ? '1px solid transparent' : '1px solid var(--border-strong)',
                 }}
@@ -456,8 +456,8 @@ const rpeBtn: React.CSSProperties = {
   transition: 'background 0.15s, border-color 0.15s',
 };
 const completeBtnStyle: React.CSSProperties = {
-  width: '100%', background: 'linear-gradient(135deg, #e03030, #9b27af)',
+  width: '100%', background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))',
   borderRadius: 16, padding: '16px 32px',
   color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer',
-  boxShadow: '0 4px 20px rgba(224,48,48,0.3)',
+  boxShadow: '0 4px 20px rgba(var(--brand-1-rgb),0.3)',
 };

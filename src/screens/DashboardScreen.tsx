@@ -118,7 +118,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onBack }) => {
             {/* Charge d'entraînement hebdo */}
             <div style={chartCard}>
               <p style={sectionLabel}>CHARGE D'ENTRAÎNEMENT / SEMAINE</p>
-              <WeeklyBarChart buckets={buckets} valueFn={(b) => b.trainingLoad} color="#e03030" />
+              <WeeklyBarChart buckets={buckets} valueFn={(b) => b.trainingLoad} color="var(--brand-1)" />
             </div>
 
             {/* Tonnage hebdo */}

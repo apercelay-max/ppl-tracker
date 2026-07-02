@@ -11,9 +11,9 @@ const DAY_TYPE_LABEL: Record<string, string> = {
   'pull-b': 'PULL', 'push-b': 'PUSH', 'legs-b': 'LEGS',
 };
 
-interface HomeScreenProps { onSelectDay: (dayId: string) => void; onOpenDashboard: () => void; }
+interface HomeScreenProps { onSelectDay: (dayId: string) => void; onOpenDashboard: () => void; onOpenSettings: () => void; }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashboard }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashboard, onOpenSettings }) => {
   const currentWeek = useWorkoutStore((s) => s.currentWeek);
   const setCurrentWeek = useWorkoutStore((s) => s.setCurrentWeek);
   const session = useWorkoutStore((s) => s.session);
@@ -21,6 +21,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const setTheme = useWorkoutStore((s) => s.setTheme);
   const wakeLockEnabled = useWorkoutStore((s) => s.wakeLockEnabled);
   const setWakeLockEnabled = useWorkoutStore((s) => s.setWakeLockEnabled);
+  const homeSections = useWorkoutStore((s) => s.homeSections);
 
   const weekIdx = currentWeek <= 2 ? 0 : currentWeek <= 4 ? 1 : currentWeek <= 6 ? 2 : currentWeek === 7 ? 3 : 4;
   const weekData = PROGRESSION_WEEKS[weekIdx];
@@ -44,6 +45,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
               <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Strict V10 · Hypertrophie</p>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+              <button
+                onClick={onOpenSettings}
+                style={themeToggle}
+                title="Réglages"
+              >
+                ⚙️
+              </button>
               <button
                 onClick={onOpenDashboard}
                 style={themeToggle}
@@ -72,6 +80,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
         </div>
 
         {/* Semaine courante */}
+        {homeSections.cycle && (
         <div style={weekCard}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div>
@@ -95,7 +104,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
             </div>
             <div style={weekMetric}>
               <span style={weekMetricLabel}>REPOS</span>
-              <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5, color: '#e03030' }}>3:00</span>
+              <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5, color: 'var(--brand-1)' }}>3:00</span>
             </div>
             <div style={{ ...weekMetric, flex: 2 }}>
               <span style={weekMetricLabel}>OBJECTIF</span>
@@ -107,25 +116,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
             {Array.from({ length: 8 }, (_, i) => (
               <div key={i} style={{
                 flex: 1, height: i + 1 === currentWeek ? 6 : 4, borderRadius: 3,
-                background: i + 1 < currentWeek ? '#e03030' : i + 1 === currentWeek ? '#ffffff' : 'var(--border-strong)',
+                background: i + 1 < currentWeek ? 'var(--brand-1)' : i + 1 === currentWeek ? '#ffffff' : 'var(--border-strong)',
                 transition: 'background 0.3s, height 0.3s',
-                boxShadow: i + 1 < currentWeek ? '0 0 6px rgba(224,48,48,0.4)' : 'none',
+                boxShadow: i + 1 < currentWeek ? '0 0 6px rgba(var(--brand-1-rgb),0.4)' : 'none',
               }} />
             ))}
           </div>
           <p style={{ color: 'var(--text-micro)', fontSize: 10 }}>Semaine {currentWeek} / 8 · {Math.round(cycleProgress)}% du cycle</p>
         </div>
+        )}
 
         {/* Reprise */}
         {resumeWorkout && (
           <button className="resume-btn" style={resumeCard} onClick={() => onSelectDay(resumeWorkout.id)}>
             <div style={resumeIcon}><span style={{ fontSize: 16 }}>▶</span></div>
             <div style={{ textAlign: 'left', flex: 1 }}>
-              <p style={{ color: '#e03030', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>SÉANCE EN COURS</p>
+              <p style={{ color: 'var(--brand-1)', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>SÉANCE EN COURS</p>
               <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800 }}>{resumeWorkout.name}</p>
               <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>Appuie pour reprendre</p>
             </div>
-            <span style={{ color: '#e03030', fontSize: 22, fontWeight: 200, flexShrink: 0, opacity: 0.8 }}>›</span>
+            <span style={{ color: 'var(--brand-1)', fontSize: 22, fontWeight: 200, flexShrink: 0, opacity: 0.8 }}>›</span>
           </button>
         )}
 
@@ -170,6 +180,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
         </div>
 
         {/* Nutrition */}
+        {homeSections.nutrition && (
         <div style={nutritionCard}>
           <p style={{ color: 'var(--text-gold-label)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>🥩 Nutrition post-training</p>
           <p style={{ color: 'var(--text-gold-body)', fontSize: 12, lineHeight: '18px' }}>
@@ -177,14 +188,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
             30-40g protéines · 50-80g glucides.
           </p>
         </div>
+        )}
 
         {/* Superset */}
+        {homeSections.supersetRule && (
         <div style={{ background: 'var(--bg-green-tint)', borderRadius: 14, padding: 14, marginTop: 8, border: '1px solid var(--border-ss-tint)' }}>
           <p style={{ color: 'var(--text-ss-label)', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>⟳ Règle Superset</p>
           <p style={{ color: 'var(--text-ss-body)', fontSize: 12, lineHeight: '17px' }}>
             Enchaîne les deux exercices SS sans repos. Le minuteur de 3 min démarre uniquement après la paire. Push A & B uniquement.
           </p>
         </div>
+        )}
 
       </div>
     </div>
@@ -204,9 +218,9 @@ const headerSection: React.CSSProperties = {
 const logoRow: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 14 };
 const logoBadge: React.CSSProperties = {
   width: 48, height: 48, borderRadius: 14,
-  background: 'linear-gradient(135deg, #e03030, #9b27af)',
+  background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  boxShadow: '0 4px 16px rgba(224,48,48,0.3)',
+  boxShadow: '0 4px 16px rgba(var(--brand-1-rgb),0.3)',
 };
 const titleStyle: React.CSSProperties = {
   fontSize: 24, fontWeight: 800, letterSpacing: -0.5,
@@ -241,13 +255,13 @@ const resumeCard: React.CSSProperties = {
   background: 'var(--bg-red-tint)',
   borderRadius: 18, padding: '14px 16px',
   marginBottom: 20, marginTop: 4,
-  border: '1px solid rgba(224,48,48,0.2)',
+  border: '1px solid rgba(var(--brand-1-rgb),0.2)',
   width: '100%', cursor: 'pointer',
 };
 const resumeIcon: React.CSSProperties = {
-  width: 40, height: 40, background: 'linear-gradient(135deg, #e03030, #b71c1c)',
+  width: 40, height: 40, background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))',
   borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
-  color: '#fff', flexShrink: 0, boxShadow: '0 4px 12px rgba(224,48,48,0.35)',
+  color: '#fff', flexShrink: 0, boxShadow: '0 4px 12px rgba(var(--brand-1-rgb),0.35)',
 };
 const workoutCard: React.CSSProperties = {
   display: 'flex', alignItems: 'center',
