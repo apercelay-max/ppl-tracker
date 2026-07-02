@@ -1,7 +1,7 @@
 import React from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ACCENT_PRESETS } from '../data/accents';
-import type { HomeSectionsVisible } from '../store/workoutStore';
+import type { HomeSectionKey } from '../store/workoutStore';
 
 interface SettingsScreenProps { onBack: () => void; }
 
@@ -11,11 +11,12 @@ const FONT_SCALES: { id: 'sm' | 'md' | 'lg'; label: string; preview: number }[] 
   { id: 'lg', label: 'Grand', preview: 18 },
 ];
 
-const HOME_SECTION_LABELS: { key: keyof HomeSectionsVisible; label: string; desc: string }[] = [
-  { key: 'cycle', label: 'Cycle en cours', desc: 'La carte semaine / RIR / objectif en haut de l’accueil.' },
-  { key: 'nutrition', label: 'Conseil nutrition', desc: 'Le rappel protéines/glucides après la séance.' },
-  { key: 'supersetRule', label: 'Règle superset', desc: 'Le rappel sur le fonctionnement des supersets.' },
-];
+const SECTION_META: Record<HomeSectionKey, { label: string; desc: string; toggleable: boolean }> = {
+  cycle: { label: 'Cycle en cours', desc: 'La carte semaine / RIR / objectif.', toggleable: true },
+  seances: { label: 'Liste des séances', desc: 'Les 6 séances PPL — toujours visible.', toggleable: false },
+  nutrition: { label: 'Conseil nutrition', desc: 'Le rappel protéines/glucides après la séance.', toggleable: true },
+  supersetRule: { label: 'Règle superset', desc: 'Le rappel sur le fonctionnement des supersets.', toggleable: true },
+};
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const accentTheme = useWorkoutStore((s) => s.accentTheme);
@@ -24,6 +25,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const setFontScale = useWorkoutStore((s) => s.setFontScale);
   const homeSections = useWorkoutStore((s) => s.homeSections);
   const setHomeSectionVisible = useWorkoutStore((s) => s.setHomeSectionVisible);
+  const homeSectionOrder = useWorkoutStore((s) => s.homeSectionOrder);
+  const moveHomeSection = useWorkoutStore((s) => s.moveHomeSection);
 
   return (
     <div style={container}>
@@ -78,27 +81,50 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
           ))}
         </div>
 
-        {/* Écran d'accueil */}
-        <p style={{ ...sectionLabel, marginTop: 24 }}>ÉCRAN D'ACCUEIL</p>
+        {/* Écran d'accueil : ordre + visibilité */}
+        <p style={{ ...sectionLabel, marginTop: 24 }}>DISPOSITION DE L'ACCUEIL</p>
+        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 12, lineHeight: '15px' }}>
+          Utilise les flèches pour réordonner les blocs, et l'interrupteur pour masquer ceux que tu ne veux pas voir.
+        </p>
         <div style={{ marginBottom: 20 }}>
-          {HOME_SECTION_LABELS.map(({ key, label, desc }) => (
-            <div key={key} style={toggleRow}>
-              <div style={{ flex: 1 }}>
-                <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>{label}</p>
-                <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>{desc}</p>
+          {homeSectionOrder.map((key, idx) => {
+            const meta = SECTION_META[key];
+            const visible = meta.toggleable ? homeSections[key as keyof typeof homeSections] : true;
+            return (
+              <div key={key} style={toggleRow}>
+                <div style={reorderCol}>
+                  <button
+                    onClick={() => moveHomeSection(key, 'up')}
+                    disabled={idx === 0}
+                    style={{ ...reorderBtn, opacity: idx === 0 ? 0.25 : 1 }}
+                  >▲</button>
+                  <button
+                    onClick={() => moveHomeSection(key, 'down')}
+                    disabled={idx === homeSectionOrder.length - 1}
+                    style={{ ...reorderBtn, opacity: idx === homeSectionOrder.length - 1 ? 0.25 : 1 }}
+                  >▼</button>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>{meta.label}</p>
+                  <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>{meta.desc}</p>
+                </div>
+                {meta.toggleable ? (
+                  <button
+                    onClick={() => setHomeSectionVisible(key as keyof typeof homeSections, !visible)}
+                    style={{
+                      ...switchTrack,
+                      background: visible ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                      justifyContent: visible ? 'flex-end' : 'flex-start',
+                    }}
+                  >
+                    <span style={switchThumb} />
+                  </button>
+                ) : (
+                  <span style={{ color: 'var(--text-micro)', fontSize: 10, fontWeight: 700, flexShrink: 0, width: 44, textAlign: 'center' }}>FIXE</span>
+                )}
               </div>
-              <button
-                onClick={() => setHomeSectionVisible(key, !homeSections[key])}
-                style={{
-                  ...switchTrack,
-                  background: homeSections[key] ? 'var(--brand-1)' : 'var(--bg-elevated)',
-                  justifyContent: homeSections[key] ? 'flex-end' : 'flex-start',
-                }}
-              >
-                <span style={switchThumb} />
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
       </div>
@@ -149,4 +175,13 @@ const switchTrack: React.CSSProperties = {
 const switchThumb: React.CSSProperties = {
   width: 20, height: 20, borderRadius: '50%', background: '#fff',
   boxShadow: '0 1px 3px rgba(0,0,0,0.3)', transition: 'transform 0.2s',
+};
+const reorderCol: React.CSSProperties = {
+  display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0,
+};
+const reorderBtn: React.CSSProperties = {
+  width: 26, height: 20, borderRadius: 6,
+  background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+  color: 'var(--text-muted)', fontSize: 9, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
 };

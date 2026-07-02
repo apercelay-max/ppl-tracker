@@ -22,6 +22,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const wakeLockEnabled = useWorkoutStore((s) => s.wakeLockEnabled);
   const setWakeLockEnabled = useWorkoutStore((s) => s.setWakeLockEnabled);
   const homeSections = useWorkoutStore((s) => s.homeSections);
+  const homeSectionOrder = useWorkoutStore((s) => s.homeSectionOrder);
 
   const weekIdx = currentWeek <= 2 ? 0 : currentWeek <= 4 ? 1 : currentWeek <= 6 ? 2 : currentWeek === 7 ? 3 : 4;
   const weekData = PROGRESSION_WEEKS[weekIdx];
@@ -31,6 +32,121 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const cycleProgress = ((currentWeek - 1) / 7) * 100;
 
   const wakeLockSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator;
+
+  const cycleSection = homeSections.cycle && (
+    <div key="cycle" style={weekCard}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div>
+          <p style={sectionLabel}>CYCLE EN COURS</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 15, fontWeight: 700, marginTop: 2 }}>{weekData.phase}</p>
+        </div>
+        <div style={weekSelectorRow}>
+          <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek - 1)} disabled={currentWeek <= 1}>‹</button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, minWidth: 28 }}>
+            <span style={{ color: 'var(--text-muted)', fontSize: 9, fontWeight: 700, letterSpacing: 1 }}>SEM.</span>
+            <span style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 18, lineHeight: '1' }}>{currentWeek}</span>
+          </div>
+          <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek + 1)} disabled={currentWeek >= 8}>›</button>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+        <div style={weekMetric}>
+          <span style={weekMetricLabel}>RIR</span>
+          <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5, color: '#4CAF50' }}>{weekData.rir.replace('RIR ', '')}</span>
+        </div>
+        <div style={weekMetric}>
+          <span style={weekMetricLabel}>REPOS</span>
+          <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5, color: 'var(--brand-1)' }}>3:00</span>
+        </div>
+        <div style={{ ...weekMetric, flex: 2 }}>
+          <span style={weekMetricLabel}>OBJECTIF</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: 11, lineHeight: '14px' }}>{weekData.objective}</span>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 5, alignItems: 'center', marginBottom: 6 }}>
+        {Array.from({ length: 8 }, (_, i) => (
+          <div key={i} style={{
+            flex: 1, height: i + 1 === currentWeek ? 6 : 4, borderRadius: 3,
+            background: i + 1 < currentWeek ? 'var(--brand-1)' : i + 1 === currentWeek ? '#ffffff' : 'var(--border-strong)',
+            transition: 'background 0.3s, height 0.3s',
+            boxShadow: i + 1 < currentWeek ? '0 0 6px rgba(var(--brand-1-rgb),0.4)' : 'none',
+          }} />
+        ))}
+      </div>
+      <p style={{ color: 'var(--text-micro)', fontSize: 10 }}>Semaine {currentWeek} / 8 · {Math.round(cycleProgress)}% du cycle</p>
+    </div>
+  );
+
+  const seancesSection = (
+    <div key="seances">
+      <p style={{ ...sectionLabel, marginBottom: 10 }}>SÉANCES</p>
+      <div>
+        {WORKOUTS.map((workout, idx) => {
+          const accent = DAY_ACCENT[workout.id];
+          const typeLabel = DAY_TYPE_LABEL[workout.id];
+          return (
+            <button
+              key={workout.id}
+              className="workout-card slide-up"
+              style={{ ...workoutCard, animationDelay: `${idx * 0.06}s` }}
+              onClick={() => onSelectDay(workout.id)}
+            >
+              <div style={{
+                width: 48, alignSelf: 'stretch', flexShrink: 0,
+                background: `${accent}15`,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                borderRight: `1px solid ${accent}22`,
+              }}>
+                <span style={{ color: accent, fontSize: 10, fontWeight: 800, letterSpacing: 1.5 }}>{typeLabel}</span>
+                <span style={{ color: `${accent}60`, fontSize: 11, fontWeight: 700 }}>J{workout.dayNumber}</span>
+              </div>
+              <div style={{ flex: 1, padding: '14px 14px', textAlign: 'left' }}>
+                <p style={{ color: 'var(--text-primary)', fontSize: 18, fontWeight: 800, marginBottom: 3, letterSpacing: -0.3 }}>{workout.name}</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 2 }}>{workout.muscleGroups}</p>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
+                  <span style={{
+                    background: `${accent}15`, border: `1px solid ${accent}25`,
+                    borderRadius: 6, padding: '2px 8px',
+                    color: accent, fontSize: 10, fontWeight: 700,
+                  }}>{workout.exercises.length} exercices</span>
+                  <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>{workout.estimatedDuration}</span>
+                </div>
+              </div>
+              <span style={{ color: accent, fontSize: 22, fontWeight: 200, paddingRight: 14, flexShrink: 0, opacity: 0.6 }}>›</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const nutritionSection = homeSections.nutrition && (
+    <div key="nutrition" style={nutritionCard}>
+      <p style={{ color: 'var(--text-gold-label)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>🥩 Nutrition post-training</p>
+      <p style={{ color: 'var(--text-gold-body)', fontSize: 12, lineHeight: '18px' }}>
+        Dans les <strong style={{ color: '#a07030' }}>30 min</strong> après la séance :
+        30-40g protéines · 50-80g glucides.
+      </p>
+    </div>
+  );
+
+  const supersetSection = homeSections.supersetRule && (
+    <div key="supersetRule" style={{ background: 'var(--bg-green-tint)', borderRadius: 14, padding: 14, marginTop: 8, marginBottom: 10, border: '1px solid var(--border-ss-tint)' }}>
+      <p style={{ color: 'var(--text-ss-label)', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>⟳ Règle Superset</p>
+      <p style={{ color: 'var(--text-ss-body)', fontSize: 12, lineHeight: '17px' }}>
+        Enchaîne les deux exercices SS sans repos. Le minuteur de 3 min démarre uniquement après la paire. Push A & B uniquement.
+      </p>
+    </div>
+  );
+
+  const SECTION_MAP: Record<string, React.ReactNode> = {
+    cycle: cycleSection,
+    seances: seancesSection,
+    nutrition: nutritionSection,
+    supersetRule: supersetSection,
+  };
 
   return (
     <div style={container}>
@@ -79,53 +195,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
           </div>
         </div>
 
-        {/* Semaine courante */}
-        {homeSections.cycle && (
-        <div style={weekCard}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div>
-              <p style={sectionLabel}>CYCLE EN COURS</p>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 15, fontWeight: 700, marginTop: 2 }}>{weekData.phase}</p>
-            </div>
-            <div style={weekSelectorRow}>
-              <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek - 1)} disabled={currentWeek <= 1}>‹</button>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, minWidth: 28 }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: 9, fontWeight: 700, letterSpacing: 1 }}>SEM.</span>
-                <span style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 18, lineHeight: '1' }}>{currentWeek}</span>
-              </div>
-              <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek + 1)} disabled={currentWeek >= 8}>›</button>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-            <div style={weekMetric}>
-              <span style={weekMetricLabel}>RIR</span>
-              <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5, color: '#4CAF50' }}>{weekData.rir.replace('RIR ', '')}</span>
-            </div>
-            <div style={weekMetric}>
-              <span style={weekMetricLabel}>REPOS</span>
-              <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5, color: 'var(--brand-1)' }}>3:00</span>
-            </div>
-            <div style={{ ...weekMetric, flex: 2 }}>
-              <span style={weekMetricLabel}>OBJECTIF</span>
-              <span style={{ color: 'var(--text-muted)', fontSize: 11, lineHeight: '14px' }}>{weekData.objective}</span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 5, alignItems: 'center', marginBottom: 6 }}>
-            {Array.from({ length: 8 }, (_, i) => (
-              <div key={i} style={{
-                flex: 1, height: i + 1 === currentWeek ? 6 : 4, borderRadius: 3,
-                background: i + 1 < currentWeek ? 'var(--brand-1)' : i + 1 === currentWeek ? '#ffffff' : 'var(--border-strong)',
-                transition: 'background 0.3s, height 0.3s',
-                boxShadow: i + 1 < currentWeek ? '0 0 6px rgba(var(--brand-1-rgb),0.4)' : 'none',
-              }} />
-            ))}
-          </div>
-          <p style={{ color: 'var(--text-micro)', fontSize: 10 }}>Semaine {currentWeek} / 8 · {Math.round(cycleProgress)}% du cycle</p>
-        </div>
-        )}
-
         {/* Reprise */}
         {resumeWorkout && (
           <button className="resume-btn" style={resumeCard} onClick={() => onSelectDay(resumeWorkout.id)}>
@@ -139,66 +208,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
           </button>
         )}
 
-        {/* Séances */}
-        <p style={{ ...sectionLabel, marginBottom: 10 }}>SÉANCES</p>
-        <div>
-          {WORKOUTS.map((workout, idx) => {
-            const accent = DAY_ACCENT[workout.id];
-            const typeLabel = DAY_TYPE_LABEL[workout.id];
-            return (
-              <button
-                key={workout.id}
-                className="workout-card slide-up"
-                style={{ ...workoutCard, animationDelay: `${idx * 0.06}s` }}
-                onClick={() => onSelectDay(workout.id)}
-              >
-                <div style={{
-                  width: 48, alignSelf: 'stretch', flexShrink: 0,
-                  background: `${accent}15`,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
-                  borderRight: `1px solid ${accent}22`,
-                }}>
-                  <span style={{ color: accent, fontSize: 10, fontWeight: 800, letterSpacing: 1.5 }}>{typeLabel}</span>
-                  <span style={{ color: `${accent}60`, fontSize: 11, fontWeight: 700 }}>J{workout.dayNumber}</span>
-                </div>
-                <div style={{ flex: 1, padding: '14px 14px', textAlign: 'left' }}>
-                  <p style={{ color: 'var(--text-primary)', fontSize: 18, fontWeight: 800, marginBottom: 3, letterSpacing: -0.3 }}>{workout.name}</p>
-                  <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 2 }}>{workout.muscleGroups}</p>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
-                    <span style={{
-                      background: `${accent}15`, border: `1px solid ${accent}25`,
-                      borderRadius: 6, padding: '2px 8px',
-                      color: accent, fontSize: 10, fontWeight: 700,
-                    }}>{workout.exercises.length} exercices</span>
-                    <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>{workout.estimatedDuration}</span>
-                  </div>
-                </div>
-                <span style={{ color: accent, fontSize: 22, fontWeight: 200, paddingRight: 14, flexShrink: 0, opacity: 0.6 }}>›</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Nutrition */}
-        {homeSections.nutrition && (
-        <div style={nutritionCard}>
-          <p style={{ color: 'var(--text-gold-label)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>🥩 Nutrition post-training</p>
-          <p style={{ color: 'var(--text-gold-body)', fontSize: 12, lineHeight: '18px' }}>
-            Dans les <strong style={{ color: '#a07030' }}>30 min</strong> après la séance :
-            30-40g protéines · 50-80g glucides.
-          </p>
-        </div>
-        )}
-
-        {/* Superset */}
-        {homeSections.supersetRule && (
-        <div style={{ background: 'var(--bg-green-tint)', borderRadius: 14, padding: 14, marginTop: 8, border: '1px solid var(--border-ss-tint)' }}>
-          <p style={{ color: 'var(--text-ss-label)', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>⟳ Règle Superset</p>
-          <p style={{ color: 'var(--text-ss-body)', fontSize: 12, lineHeight: '17px' }}>
-            Enchaîne les deux exercices SS sans repos. Le minuteur de 3 min démarre uniquement après la paire. Push A & B uniquement.
-          </p>
-        </div>
-        )}
+        {/* Blocs réordonnables selon les réglages */}
+        {homeSectionOrder.map((key) => SECTION_MAP[key])}
 
       </div>
     </div>
