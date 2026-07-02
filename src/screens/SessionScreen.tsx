@@ -99,6 +99,24 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
     }
   }, [addTimer, timer.totalSeconds, saveCustomRest]);
 
+  // IMPORTANT : ce hook doit rester AVANT les "return" conditionnels
+  // ci-dessous (règle des hooks React — sinon erreur #300 "rendered fewer
+  // hooks than expected" dès qu'on atteint la fin d'une séance).
+  const handleSetComplete = useCallback(async (exerciseId: string, setIndex: number, entry: SetEntry) => {
+    completeSet(exerciseId, setIndex, entry);
+    const exercise = workout?.exercises.find((e) => e.id === exerciseId);
+    if (!exercise) return;
+    // Superset order 1 → pas de timer, on enchaîne
+    if (exercise.restMode === 'superset' && exercise.supersetOrder === 1) {
+      advanceSession();
+      return;
+    }
+    // Utiliser le temps custom si dispo, sinon défaut
+    const restSecs = customRestSeconds[exerciseId] ?? DEFAULT_REST;
+    timerExerciseRef.current = exerciseId;
+    startTimer(restSecs);
+  }, [workout, completeSet, advanceSession, startTimer, customRestSeconds]);
+
   if (!workout || !session || session.dayId !== dayId) {
     return (
       <div style={{ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)' }}>
@@ -124,21 +142,6 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
     return {};
   };
   const nextInfo = getNextInfo();
-
-  const handleSetComplete = useCallback(async (exerciseId: string, setIndex: number, entry: SetEntry) => {
-    completeSet(exerciseId, setIndex, entry);
-    const exercise = exercises.find((e) => e.id === exerciseId);
-    if (!exercise) return;
-    // Superset order 1 → pas de timer, on enchaîne
-    if (exercise.restMode === 'superset' && exercise.supersetOrder === 1) {
-      advanceSession();
-      return;
-    }
-    // Utiliser le temps custom si dispo, sinon défaut
-    const restSecs = customRestSeconds[exerciseId] ?? DEFAULT_REST;
-    timerExerciseRef.current = exerciseId;
-    startTimer(restSecs);
-  }, [exercises, completeSet, advanceSession, startTimer, customRestSeconds]);
 
   const handleAbandon = () => {
     if (window.confirm('Abandonner la séance ?')) { abandonSession(); onBack(); }
