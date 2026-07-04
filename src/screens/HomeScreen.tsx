@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { WORKOUTS, PROGRESSION_WEEKS } from '../data/workouts';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
@@ -35,6 +35,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const cycleProgress = ((currentWeek - 1) / 7) * 100;
 
   const wakeLockSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator;
+
+  // ── Effet holographique du titre ─────────────────────────────────────────
+  // Le dégradé animé (.titre-irise) bouge déjà tout seul en boucle. On
+  // ajoute par-dessus un reflet qui suit le doigt/la souris, comme une
+  // carte holographique, sans toucher à l'animation existante.
+  const titleWrapRef = useRef<HTMLDivElement>(null);
+  const [holoPos, setHoloPos] = useState({ x: 50, y: 50 });
+  const handleTitlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = titleWrapRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setHoloPos({ x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) });
+  };
+  const handleTitlePointerLeave = () => setHoloPos({ x: 50, y: 50 });
 
   const cycleSection = homeSections.cycle && (
     <div key="cycle" style={weekCard}>
@@ -160,7 +175,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
           <div style={logoRow}>
             <div style={{ ...logoBadge, width: iconSizes.logo, height: iconSizes.logo }}><span style={{ fontSize: iconSizes.logo * 0.46, lineHeight: 1 }}>⚡</span></div>
             <div>
-              <h1 className="titre-irise" style={titleStyle}>PPL Tracker</h1>
+              <div
+                ref={titleWrapRef}
+                style={{ position: 'relative', display: 'inline-block' }}
+                onPointerMove={handleTitlePointerMove}
+                onPointerLeave={handleTitlePointerLeave}
+              >
+                <h1 className="titre-irise" style={titleStyle}>PPL Tracker</h1>
+                <h1
+                  aria-hidden
+                  style={{
+                    ...titleStyle,
+                    position: 'absolute', inset: 0, margin: 0, pointerEvents: 'none',
+                    backgroundImage: `radial-gradient(circle at ${holoPos.x}% ${holoPos.y}%, rgba(255,255,255,0.95), rgba(255,255,255,0) 45%)`,
+                    WebkitBackgroundClip: 'text', backgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent', color: 'transparent',
+                    mixBlendMode: 'overlay',
+                    transition: 'background-image 0.08s linear',
+                  }}
+                >PPL Tracker</h1>
+              </div>
               <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Strict V10 · Hypertrophie</p>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>

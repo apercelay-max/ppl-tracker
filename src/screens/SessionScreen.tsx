@@ -1,16 +1,14 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
-import { getWorkout } from '../data/workouts';
+import { getWorkout, PROGRESSION_WEEKS } from '../data/workouts';
 import { ExerciseCard } from '../components/ExerciseCard';
 import { InlineRestBar } from '../components/InlineRestBar';
 import { StatsPanel } from '../components/StatsPanel';
 import { useRestTimer } from '../hooks/useRestTimer';
-import { computeTonnage, computeTrainingLoad } from '../utils/training';
-import { SetEntry, Exercise, ExerciseProgress } from '../data/types';
+import { computeTonnage, computeTrainingLoad, compareSessionToHistory } from '../utils/training';
+import { SetEntry, Exercise, ExerciseProgress, HistoryEntry } from '../data/types';
 
-const DEFAULT_REST = 180;
-
-interface SessionScreenProps { dayId: string; onBack: () => void; }
+interface SessionScreenProps { dayId: string; onBack: () => void; onOpenSettings: () => void; }
 
 const parseTargetRange = (t: string): [number, number] | null => {
   const r = t.match(/^(\d+)-(\d+)/); if (r) return [parseInt(r[1]), parseInt(r[2])];
@@ -24,11 +22,13 @@ const isRepOutOfRange = (reps: string, targetReps: string): boolean => {
   return r < range[0] || r > range[1];
 };
 
-export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) => {
+export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onOpenSettings }) => {
   const workout = getWorkout(dayId);
   const session = useWorkoutStore((s) => s.session);
   const currentWeek = useWorkoutStore((s) => s.currentWeek);
   const customRestSeconds = useWorkoutStore((s) => s.customRestSeconds);
+  const defaultRestSeconds = useWorkoutStore((s) => s.defaultRestSeconds);
+  const history = useWorkoutStore((s) => s.history);
   const timer = useWorkoutStore((s) => s.timer);
   const startSession = useWorkoutStore((s) => s.startSession);
   const completeSet = useWorkoutStore((s) => s.completeSet);
@@ -48,6 +48,21 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
   // Track which exercise triggered the timer (for saving custom rest)
   const timerExerciseRef = useRef<string | null>(null);
 
+  // ── Échauffement cardio 3 min, en tout début de séance ──────────────────
+  const [cardioVisible, setCardioVisible] = useState(true);
+  const [cardioRunning, setCardioRunning] = useState(false);
+  const [cardioSeconds, setCardioSeconds] = useState(180);
+
+  useEffect(() => {
+    if (!cardioRunning || cardioSeconds <= 0) return;
+    const id = setTimeout(() => setCardioSeconds((s) => Math.max(0, s - 1)), 1000);
+    return () => clearTimeout(id);
+  }, [cardioRunning, cardioSeconds]);
+
+  useEffect(() => {
+    if (cardioRunning && cardioSeconds === 0 && 'vibrate' in navigator) navigator.vibrate([150, 80, 150]);
+  }, [cardioRunning, cardioSeconds]);
+
   useEffect(() => {
     const h = () => setIsWide(window.innerWidth >= 700);
     window.addEventListener('resize', h);
@@ -65,14 +80,14 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
       const t = store.timer;
       if (t.endTimestamp) {
         const remaining = Math.max(0, Math.ceil((t.endTimestamp - Date.now()) / 1000));
-        const used = (t.totalSeconds ?? DEFAULT_REST) - remaining;
-        if (Math.abs(used - (t.totalSeconds ?? DEFAULT_REST)) > 15) {
-          saveCustomRest(timerExerciseRef.current, used > 0 ? used : t.totalSeconds ?? DEFAULT_REST);
+        const used = (t.totalSeconds ?? defaultRestSeconds) - remaining;
+        if (Math.abs(used - (t.totalSeconds ?? defaultRestSeconds)) > 15) {
+          saveCustomRest(timerExerciseRef.current, used > 0 ? used : t.totalSeconds ?? defaultRestSeconds);
         }
       }
     }
     advanceSession();
-  }, [advanceSession, saveCustomRest]);
+  }, [advanceSession, saveCustomRest, defaultRestSeconds]);
 
   const { secondsLeft, isRunning: timerIsRunning, progress, formattedTime } = useRestTimer(handleTimerComplete);
 
@@ -111,11 +126,12 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
       advanceSession();
       return;
     }
-    // Utiliser le temps custom si dispo, sinon défaut
-    const restSecs = customRestSeconds[exerciseId] ?? DEFAULT_REST;
+    // Utiliser le temps custom si dispo, sinon le défaut réglé dans les
+    // paramètres (Réglages → Temps de repos par défaut).
+    const restSecs = customRestSeconds[exerciseId] ?? defaultRestSeconds;
     timerExerciseRef.current = exerciseId;
     startTimer(restSecs);
-  }, [workout, completeSet, advanceSession, startTimer, customRestSeconds]);
+  }, [workout, completeSet, advanceSession, startTimer, customRestSeconds, defaultRestSeconds]);
 
   if (!workout || !session || session.dayId !== dayId) {
     return (
@@ -125,9 +141,11 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
     );
   }
 
-  if (session.isComplete) return <CompletionScreen workout={workout} session={session} onBack={onBack} />;
+  if (session.isComplete) return <CompletionScreen workout={workout} session={session} onBack={onBack} history={history} />;
 
   const exercises = workout.exercises;
+  const weekIdx = currentWeek <= 2 ? 0 : currentWeek <= 4 ? 1 : currentWeek <= 6 ? 2 : currentWeek === 7 ? 3 : 4;
+  const weekData = PROGRESSION_WEEKS[weekIdx];
   const currentExIdx = session.currentExerciseIndex;
   const currentSetIdx = session.currentSetIndex;
   const currentEx = exercises[currentExIdx];
@@ -204,8 +222,11 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
           <button onClick={handleAbandon} style={backBtn}>←</button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800, lineHeight: '20px', letterSpacing: -0.3 }}>{workout.name}</p>
-            <p style={{ color: 'var(--text-dim)', fontSize: 12 }}>{completedSets}/{totalSets} séries</p>
+            <p style={{ color: 'var(--text-dim)', fontSize: 12 }}>
+              {completedSets}/{totalSets} séries · SEM. {currentWeek} · RIR {weekData.rir.replace('RIR ', '')}
+            </p>
           </div>
+          <button onClick={onOpenSettings} style={settingsBtn} title="Réglages (sans quitter la séance)">⚙️</button>
           <div style={{ width: 52, height: 5, background: 'var(--bg-elevated)', borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
             <div style={{ height: '100%', width: `${progressPct}%`, background: 'linear-gradient(90deg, var(--brand-1), var(--brand-2))', borderRadius: 3, transition: 'width 0.3s', boxShadow: '0 0 8px rgba(var(--brand-1-rgb),0.4)' }} />
           </div>
@@ -214,6 +235,32 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
 
         <div style={scrollArea}>
           <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 16px 80px' }}>
+            {cardioVisible && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
+              <div style={cardioCard}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: cardioRunning ? 10 : 6 }}>
+                  <span style={{ fontSize: 20 }}>🏃</span>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ color: '#5560cc', fontSize: 12, fontWeight: 800, letterSpacing: 0.5 }}>ÉCHAUFFEMENT CARDIO</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>3 minutes avant d'attaquer, pour monter en température.</p>
+                  </div>
+                </div>
+                {cardioRunning ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 26, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: cardioSeconds === 0 ? '#4CAF50' : '#5560cc', flex: 1, textAlign: 'center' }}>
+                      {cardioSeconds === 0 ? "C'est bon 💪" : `${Math.floor(cardioSeconds / 60)}:${(cardioSeconds % 60).toString().padStart(2, '0')}`}
+                    </span>
+                    <button onClick={() => setCardioVisible(false)} style={cardioBtnPrimary}>
+                      {cardioSeconds === 0 ? 'Commencer la séance' : 'Passer'}
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => setCardioRunning(true)} style={cardioBtnPrimary}>▶ Démarrer</button>
+                    <button onClick={() => setCardioVisible(false)} style={cardioBtnGhost}>Passer</button>
+                  </div>
+                )}
+              </div>
+            )}
             {groupedExercises.map((item) => {
               if (Array.isArray(item)) {
                 // Groupe superset → encadré rouge foncé
@@ -275,6 +322,22 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack }) =
   );
 };
 
+// ─── Échauffement cardio ─────────────────────────────────────────────────
+
+const cardioCard: React.CSSProperties = {
+  background: 'var(--bg-blue-tint)', border: '1px solid var(--border-blue-tint)',
+  borderRadius: 18, padding: '14px 14px', marginBottom: 14,
+};
+const cardioBtnPrimary: React.CSSProperties = {
+  flex: 1, background: 'linear-gradient(135deg, #5560cc, #3d47a0)', color: '#fff',
+  borderRadius: 12, padding: '10px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+  boxShadow: '0 3px 12px rgba(85,96,204,0.3)',
+};
+const cardioBtnGhost: React.CSSProperties = {
+  flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+  color: 'var(--text-muted)', borderRadius: 12, padding: '10px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+};
+
 // ─── Styles groupes SS ─────────────────────────────────────────────────────
 
 const ssGroup: React.CSSProperties = {
@@ -302,7 +365,8 @@ const CompletionScreen: React.FC<{
   workout: NonNullable<ReturnType<typeof getWorkout>>;
   session: { startTime: number; exerciseProgress: ExerciseProgress; dayId: string; isComplete: boolean; currentExerciseIndex: number; currentSetIndex: number };
   onBack: () => void;
-}> = ({ workout, session, onBack }) => {
+  history: HistoryEntry[];
+}> = ({ workout, session, onBack, history }) => {
   const updateLastSessionRPE = useWorkoutStore((s) => s.updateLastSessionRPE);
   const [rpe, setRpe] = useState<number | null>(null);
 
@@ -311,6 +375,7 @@ const CompletionScreen: React.FC<{
   const durationMin = Math.round(durationMs / 60000);
   const cal = Math.round(5.5 * durationMin);
   const tonnage = computeTonnage(session.exerciseProgress);
+  const comparison = compareSessionToHistory(history, session.dayId, tonnage);
 
   const allEntries = workout.exercises.flatMap((ex) =>
     (session.exerciseProgress[ex.id] ?? []).filter((e) => e.completed && e.reps !== '—').map((e) => ({ reps: e.reps, targetReps: ex.targetReps }))
@@ -365,6 +430,30 @@ const CompletionScreen: React.FC<{
             </div>
           )}
         </div>
+
+        {(comparison.tonnagePctVsPrevious !== undefined || comparison.tonnagePctVsFirst !== undefined) && tonnage > 0 && (
+          <div style={progressionCard}>
+            <p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 10 }}>
+              📈 ÉVOLUTION DU TONNAGE
+            </p>
+            {comparison.tonnagePctVsPrevious !== undefined && comparison.previous && (
+              <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: '19px', marginBottom: comparison.tonnagePctVsFirst !== undefined ? 6 : 0 }}>
+                vs {workout.name} précédente ({comparison.previous.tonnage} kg) :{' '}
+                <strong style={{ color: comparison.tonnagePctVsPrevious >= 0 ? '#4CAF50' : '#f5a623' }}>
+                  {comparison.tonnagePctVsPrevious >= 0 ? '+' : ''}{comparison.tonnagePctVsPrevious}%
+                </strong>
+              </p>
+            )}
+            {comparison.tonnagePctVsFirst !== undefined && comparison.first && (
+              <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: '19px' }}>
+                vs ta 1ère {workout.name} ({comparison.first.tonnage} kg) :{' '}
+                <strong style={{ color: comparison.tonnagePctVsFirst >= 0 ? '#4CAF50' : '#f5a623' }}>
+                  {comparison.tonnagePctVsFirst >= 0 ? '+' : ''}{comparison.tonnagePctVsFirst}%
+                </strong>
+              </p>
+            )}
+          </div>
+        )}
 
         <div style={rpeCard}>
           <p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 10 }}>
@@ -428,6 +517,12 @@ const backBtn: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   flexShrink: 0, border: '1px solid var(--border-strong)',
 };
+const settingsBtn: React.CSSProperties = {
+  width: 32, height: 32, background: 'var(--bg-elevated)', borderRadius: 'var(--icon-radius)',
+  fontSize: 14, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  flexShrink: 0, border: '1px solid var(--border-strong)',
+};
 const scrollArea: React.CSSProperties = { flex: 1, overflowY: 'auto' };
 const completeScreen: React.CSSProperties = {
   height: '100dvh', background: 'var(--bg-base)',
@@ -445,6 +540,10 @@ const statBlock: React.CSSProperties = {
   flex: 1, background: 'var(--bg-surface)', border: '1px solid var(--border)',
   borderRadius: 16, padding: '14px 8px',
   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+};
+const progressionCard: React.CSSProperties = {
+  background: 'var(--bg-surface)', border: '1px solid var(--border)',
+  borderRadius: 16, padding: 14, marginBottom: 12,
 };
 const rpeCard: React.CSSProperties = {
   background: 'var(--bg-surface)', border: '1px solid var(--border)',

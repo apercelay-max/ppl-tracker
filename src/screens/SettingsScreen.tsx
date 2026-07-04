@@ -16,6 +16,14 @@ const FONT_SCALES: { id: 'sm' | 'md' | 'lg'; label: string; preview: number }[] 
 const ICON_SHAPES: IconShape[] = ['square', 'rounded', 'circle'];
 const ICON_SIZES: IconSize[] = ['sm', 'md', 'lg'];
 
+const REST_OPTIONS: { seconds: number; label: string }[] = [
+  { seconds: 60, label: '1:00' },
+  { seconds: 90, label: '1:30' },
+  { seconds: 120, label: '2:00' },
+  { seconds: 180, label: '3:00' },
+  { seconds: 240, label: '4:00' },
+];
+
 const SECTION_META: Record<HomeSectionKey, { label: string; desc: string; toggleable: boolean }> = {
   cycle: { label: 'Cycle en cours', desc: 'La carte semaine / RIR / objectif.', toggleable: true },
   seances: { label: 'Liste des séances', desc: 'Les 6 séances PPL — toujours visible.', toggleable: false },
@@ -36,6 +44,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const setIconShape = useWorkoutStore((s) => s.setIconShape);
   const iconSize = useWorkoutStore((s) => s.iconSize);
   const setIconSize = useWorkoutStore((s) => s.setIconSize);
+  const defaultRestSeconds = useWorkoutStore((s) => s.defaultRestSeconds);
+  const setDefaultRestSeconds = useWorkoutStore((s) => s.setDefaultRestSeconds);
 
   return (
     <div style={container}>
@@ -138,6 +148,27 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
           ))}
         </div>
 
+        {/* Temps de repos par défaut */}
+        <p style={{ ...sectionLabel, marginTop: 24 }}>TEMPS DE REPOS PAR DÉFAUT</p>
+        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+          Utilisé quand tu commences une série sans temps personnalisé. Tu peux toujours ajuster +30s/-30s pendant le repos.
+        </p>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+          {REST_OPTIONS.map((opt) => (
+            <button
+              key={opt.seconds}
+              onClick={() => setDefaultRestSeconds(opt.seconds)}
+              style={{
+                ...restBtn,
+                background: defaultRestSeconds === opt.seconds ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                color: defaultRestSeconds === opt.seconds ? '#fff' : 'var(--text-muted)',
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
         {/* Écran d'accueil : ordre + visibilité */}
         <p style={{ ...sectionLabel, marginTop: 24 }}>DISPOSITION DE L'ACCUEIL</p>
         <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 12, lineHeight: '15px' }}>
@@ -235,6 +266,11 @@ const switchThumb: React.CSSProperties = {
 };
 const reorderCol: React.CSSProperties = {
   display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0,
+};
+const restBtn: React.CSSProperties = {
+  flex: 1, padding: '10px 2px', borderRadius: 12, cursor: 'pointer',
+  fontSize: 12, fontWeight: 700, textAlign: 'center',
+  border: '1px solid var(--border-strong)', transition: 'background 0.2s, color 0.2s',
 };
 const reorderBtn: React.CSSProperties = {
   width: 26, height: 20, borderRadius: 6,
