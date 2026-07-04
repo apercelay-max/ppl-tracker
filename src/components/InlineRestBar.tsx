@@ -15,11 +15,21 @@ interface InlineRestBarProps {
 export const InlineRestBar: React.FC<InlineRestBarProps> = ({
   secondsLeft, formattedTime, progress, finished, nextLabel, nextNote, onSkip, onReduce, onAdd,
 }) => {
-  const accentColor = finished ? '#4CAF50' : secondsLeft > 120 ? '#4CAF50' : secondsLeft > 60 ? '#FF9800' : '#e03030';
-  const fillPct = Math.max(0, Math.min(100, (1 - progress) * 100));
+  // progress va de 1 (début du repos) à 0 (temps écoulé). On garde des
+  // couleurs d'urgence universelles (vert/orange/rouge) mais la couleur
+  // "temps large" suit maintenant le thème choisi dans les réglages au
+  // lieu d'un vert fixe.
+  const usesBrand = !finished && progress > 0.5;
+  const accentColor = finished ? '#4CAF50' : usesBrand ? 'var(--brand-1)' : progress > 0.25 ? '#FF9800' : '#e03030';
+  // borderColor a besoin d'une valeur avec alpha : rgba() pour la couleur
+  // de thème (via --brand-1-rgb), suffixe hex sinon.
+  const borderColorValue = usesBrand ? 'rgba(var(--brand-1-rgb),0.4)' : `${accentColor}40`;
+  // La barre se vide au lieu de se remplir : elle démarre pleine (100%)
+  // et rétrécit à mesure que le temps de repos s'écoule.
+  const fillPct = Math.max(0, Math.min(100, progress * 100));
 
   return (
-    <div className={`fade-in${finished ? ' rest-bar-blink' : ''}`} style={{ ...wrap, borderColor: `${accentColor}40` }}>
+    <div className={`fade-in${finished ? ' rest-bar-blink' : ''}`} style={{ ...wrap, borderColor: borderColorValue }}>
       <div style={{ ...fill, width: `${fillPct}%`, background: accentColor }} />
       <div style={content}>
         <button className="rest-bar-btn" onClick={onReduce} style={smallBtn}>-30s</button>
