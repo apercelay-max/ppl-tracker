@@ -1,9 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ACCENT_PRESETS } from '../data/accents';
 import type { HomeSectionKey } from '../store/workoutStore';
 import { ICON_SHAPE_RADIUS, ICON_SHAPE_LABEL, ICON_SIZE_LABEL } from '../data/iconPrefs';
 import type { IconShape, IconSize } from '../data/iconPrefs';
+import { WORKOUTS } from '../data/workouts';
+
+const formatRest = (seconds: number): string => {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+};
 
 interface SettingsScreenProps { onBack: () => void; }
 
@@ -46,6 +53,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const setIconSize = useWorkoutStore((s) => s.setIconSize);
   const defaultRestSeconds = useWorkoutStore((s) => s.defaultRestSeconds);
   const setDefaultRestSeconds = useWorkoutStore((s) => s.setDefaultRestSeconds);
+  const customRestSeconds = useWorkoutStore((s) => s.customRestSeconds);
+  const saveCustomRest = useWorkoutStore((s) => s.saveCustomRest);
+  const clearCustomRest = useWorkoutStore((s) => s.clearCustomRest);
+  const highContrast = useWorkoutStore((s) => s.highContrast);
+  const setHighContrast = useWorkoutStore((s) => s.setHighContrast);
+  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
+  const toggleDay = (id: string) => setExpandedDays((d) => ({ ...d, [id]: !d[id] }));
 
   return (
     <div style={container}>
@@ -98,6 +112,27 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
               <span style={{ fontSize: 10, fontWeight: 700 }}>{f.label}</span>
             </button>
           ))}
+        </div>
+
+        {/* Accessibilité */}
+        <p style={{ ...sectionLabel, marginTop: 24 }}>ACCESSIBILITÉ</p>
+        <div style={toggleRow}>
+          <div style={{ flex: 1 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Contraste élevé</p>
+            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+              Textes et bordures plus marqués, pour mieux distinguer les éléments.
+            </p>
+          </div>
+          <button
+            onClick={() => setHighContrast(!highContrast)}
+            style={{
+              ...switchTrack,
+              background: highContrast ? 'var(--brand-1)' : 'var(--bg-elevated)',
+              justifyContent: highContrast ? 'flex-end' : 'flex-start',
+            }}
+          >
+            <span style={switchThumb} />
+          </button>
         </div>
 
         {/* Forme des icônes */}
@@ -167,6 +202,60 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
               {opt.label}
             </button>
           ))}
+        </div>
+
+        {/* Temps de repos par exercice */}
+        <p style={{ ...sectionLabel, marginTop: 24 }}>TEMPS DE REPOS PAR EXERCICE</p>
+        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+          Remplace le temps par défaut pour un exercice précis. Déplie une séance pour voir ses exercices.
+        </p>
+        <div style={{ marginBottom: 20 }}>
+          {WORKOUTS.map((workout) => {
+            const isOpen = !!expandedDays[workout.id];
+            return (
+              <div key={workout.id} style={dayGroup}>
+                <button onClick={() => toggleDay(workout.id)} style={dayHeaderBtn}>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700, flex: 1, textAlign: 'left' }}>
+                    {workout.name}
+                  </span>
+                  <span style={{ color: 'var(--text-dim)', fontSize: 10 }}>{workout.exercises.length} exercices</span>
+                  <span style={{ color: 'var(--text-dim)', fontSize: 10, marginLeft: 8 }}>{isOpen ? '▴' : '▾'}</span>
+                </button>
+                {isOpen && (
+                  <div style={{ padding: '4px 10px 8px' }}>
+                    {workout.exercises.map((ex) => {
+                      const current = customRestSeconds[ex.id] ?? ex.restSeconds;
+                      const isCustom = customRestSeconds[ex.id] !== undefined;
+                      return (
+                        <div key={ex.id} style={exRestRow}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {ex.name}
+                            </p>
+                            {isCustom && <p style={{ color: 'var(--text-micro)', fontSize: 9, marginTop: 1 }}>Personnalisé</p>}
+                          </div>
+                          <button
+                            onClick={() => saveCustomRest(ex.id, Math.max(30, current - 15))}
+                            style={stepperBtn}
+                          >−</button>
+                          <span style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700, width: 40, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+                            {formatRest(current)}
+                          </span>
+                          <button
+                            onClick={() => saveCustomRest(ex.id, Math.min(300, current + 15))}
+                            style={stepperBtn}
+                          >+</button>
+                          {isCustom && (
+                            <button onClick={() => clearCustomRest(ex.id)} style={resetBtn} title="Revenir au temps d'origine">↺</button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Écran d'accueil : ordre + visibilité */}
@@ -276,5 +365,29 @@ const reorderBtn: React.CSSProperties = {
   width: 26, height: 20, borderRadius: 6,
   background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
   color: 'var(--text-muted)', fontSize: 9, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+};
+const dayGroup: React.CSSProperties = {
+  background: 'var(--bg-surface)', border: '1px solid var(--border)',
+  borderRadius: 14, marginBottom: 8, overflow: 'hidden',
+};
+const dayHeaderBtn: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', width: '100%',
+  padding: '12px 14px', cursor: 'pointer',
+};
+const exRestRow: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 6,
+  padding: '8px 2px', borderTop: '1px solid var(--border-subtle)',
+};
+const stepperBtn: React.CSSProperties = {
+  width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+  background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+  color: 'var(--text-muted)', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+};
+const resetBtn: React.CSSProperties = {
+  width: 28, height: 28, borderRadius: 8, flexShrink: 0, marginLeft: 2,
+  background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+  color: 'var(--brand-1)', fontSize: 13, cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 };

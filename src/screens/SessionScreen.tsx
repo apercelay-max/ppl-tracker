@@ -126,9 +126,10 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
       advanceSession();
       return;
     }
-    // Utiliser le temps custom si dispo, sinon le défaut réglé dans les
-    // paramètres (Réglages → Temps de repos par défaut).
-    const restSecs = customRestSeconds[exerciseId] ?? defaultRestSeconds;
+    // Priorité : temps custom (auto-appris ou réglé à la main dans la
+    // liste "Temps de repos par exercice") → temps propre à l'exercice
+    // (workouts.ts) → défaut global des réglages.
+    const restSecs = customRestSeconds[exerciseId] ?? exercise.restSeconds ?? defaultRestSeconds;
     timerExerciseRef.current = exerciseId;
     startTimer(restSecs);
   }, [workout, completeSet, advanceSession, startTimer, customRestSeconds, defaultRestSeconds]);
