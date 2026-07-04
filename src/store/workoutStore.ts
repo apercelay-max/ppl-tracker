@@ -93,6 +93,7 @@ interface WorkoutStore {
   iconShape: 'square' | 'rounded' | 'circle';
   iconSize: 'sm' | 'md' | 'lg';
   defaultRestSeconds: number;
+  highContrast: boolean;
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
   editSet: (exerciseId: string, setIndex: number) => void;
@@ -110,6 +111,7 @@ interface WorkoutStore {
   setWakeLockEnabled: (enabled: boolean) => void;
   advanceSession: () => void;
   saveCustomRest: (exerciseId: string, seconds: number) => void;
+  clearCustomRest: (exerciseId: string) => void;
   updateLastSessionRPE: (rpe: number, tonnage: number, trainingLoad: number) => void;
   setAccentTheme: (id: string) => void;
   setFontScale: (s: 'sm' | 'md' | 'lg') => void;
@@ -118,6 +120,7 @@ interface WorkoutStore {
   setIconShape: (shape: 'square' | 'rounded' | 'circle') => void;
   setIconSize: (size: 'sm' | 'md' | 'lg') => void;
   setDefaultRestSeconds: (seconds: number) => void;
+  setHighContrast: (enabled: boolean) => void;
 }
 
 export const useWorkoutStore = create<WorkoutStore>()(
@@ -137,6 +140,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       iconShape: 'rounded',
       iconSize: 'md',
       defaultRestSeconds: 180,
+      highContrast: false,
 
       startSession: (dayId) => {
         const workout = getWorkout(dayId);
@@ -319,11 +323,23 @@ export const useWorkoutStore = create<WorkoutStore>()(
         if (enabled) { requestWakeLock(); } else { releaseWakeLock(); }
       },
 
-      // Sauvegarder le temps de repos custom pour un exercice
+      // Sauvegarder le temps de repos custom pour un exercice (appelé
+      // automatiquement pendant une séance, ou manuellement depuis la
+      // liste "Temps de repos par exercice" dans les Réglages).
       saveCustomRest: (exerciseId, seconds) => {
         set((state) => ({
           customRestSeconds: { ...state.customRestSeconds, [exerciseId]: Math.max(30, seconds) },
         }));
+      },
+
+      // Retire le temps custom d'un exercice → il revient à sa valeur
+      // d'origine définie dans workouts.ts.
+      clearCustomRest: (exerciseId) => {
+        set((state) => {
+          const updated = { ...state.customRestSeconds };
+          delete updated[exerciseId];
+          return { customRestSeconds: updated };
+        });
       },
 
       // Mettre à jour le RPE + charge d'entraînement de la dernière séance
@@ -356,6 +372,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       setIconShape: (shape) => set({ iconShape: shape }),
       setIconSize: (size) => set({ iconSize: size }),
       setDefaultRestSeconds: (seconds) => set({ defaultRestSeconds: seconds }),
+      setHighContrast: (enabled) => set({ highContrast: enabled }),
     }),
     {
       name: 'ppl-tracker-store',
@@ -373,6 +390,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         iconShape: state.iconShape,
         iconSize: state.iconSize,
         defaultRestSeconds: state.defaultRestSeconds,
+        highContrast: state.highContrast,
       }),
     }
   )
