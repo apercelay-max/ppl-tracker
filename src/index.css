@@ -79,6 +79,28 @@
   --scrollbar-thumb: #b8b8c8;
 }
 
+/* ─── Contraste élevé (réglage accessibilité) ───────────────────────────── */
+[data-contrast="high"] {
+  --text-secondary: #ffffff;
+  --text-muted: #c8c8dc;
+  --text-dim: #a0a0ba;
+  --text-micro: #82829e;
+  --border-subtle: #40404e;
+  --border: #4c4c5e;
+  --border-mid: #565670;
+  --border-strong: #6a6a86;
+}
+[data-theme="light"][data-contrast="high"] {
+  --text-secondary: #000000;
+  --text-muted: #38384a;
+  --text-dim: #5c5c72;
+  --text-micro: #7c7c92;
+  --border-subtle: #c0c0d2;
+  --border: #adadc4;
+  --border-mid: #9898b4;
+  --border-strong: #8080a0;
+}
+
 html, body, #root {
   height: 100%;
   background: var(--bg-base);

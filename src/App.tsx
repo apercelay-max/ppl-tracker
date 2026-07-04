@@ -19,6 +19,7 @@ export default function App() {
   const accentTheme = useWorkoutStore((s) => s.accentTheme);
   const fontScale = useWorkoutStore((s) => s.fontScale);
   const iconShape = useWorkoutStore((s) => s.iconShape);
+  const highContrast = useWorkoutStore((s) => s.highContrast);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -39,6 +40,10 @@ export default function App() {
   useEffect(() => {
     document.documentElement.style.setProperty('--icon-radius', ICON_SHAPE_RADIUS[iconShape]);
   }, [iconShape]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-contrast', highContrast ? 'high' : 'normal');
+  }, [highContrast]);
 
   const handleSelectDay = (dayId: string) => {
     const state = useWorkoutStore.getState();
