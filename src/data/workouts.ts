@@ -13,7 +13,7 @@ export const PROGRESSION_WEEKS: ProgressionWeek[] = [
     label: 'Sem. 3-4',
     phase: 'Progression reps',
     rir: 'RIR 2',
-    objective: '+1 rep/série, ou +1 kg sur les composés (dips, tractions, squats).',
+    objective: '+1 rep/série, ou +2 % de charge sur les composés (dips, tractions, squats).',
   },
   {
     label: 'Sem. 5-6',
