@@ -1,4 +1,4 @@
-import { ExerciseProgress, HistoryEntry } from '../data/types';
+import { ExerciseProgress, HistoryEntry, SetEntry } from '../data/types';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -107,6 +107,20 @@ export const compareSessionToHistory = (
     }
   }
   return result;
+};
+
+/**
+ * Retrouve les séries de la dernière séance où cet exercice a été fait
+ * (peu importe le jour PPL), pour afficher "Dernière fois : Xkg × Y" sur
+ * chaque ligne de série. `history` est déjà trié du plus récent au plus
+ * ancien (unshift à chaque fin de séance).
+ */
+export const getLastExerciseSets = (history: HistoryEntry[], exerciseId: string): SetEntry[] | null => {
+  for (const entry of history) {
+    const sets = entry.exerciseProgress[exerciseId];
+    if (sets && sets.some((s) => s.completed)) return sets;
+  }
+  return null;
 };
 
 export type LoadStatus = {
