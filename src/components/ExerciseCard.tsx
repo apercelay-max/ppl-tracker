@@ -5,6 +5,7 @@ import { SetRow } from './SetRow';
 import { ExerciseAnimation } from './ExerciseAnimation';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
+import { getLastExerciseSets } from '../utils/training';
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -21,21 +22,10 @@ interface ExerciseCardProps {
   restBarIndex?: number;
 }
 
-const getWarmupSets = (defaultWeight: string): { label: string; weight: string; reps: string }[] => {
-  const w = parseFloat(defaultWeight);
-  if (!isNaN(w) && w > 20) {
-    const r = (pct: number) => `${Math.max(20, Math.round(w * pct / 2.5) * 2.5)}`;
-    return [
-      { label: 'Activation', weight: 'barre', reps: '10' },
-      { label: 'Potentiation', weight: r(0.5), reps: '6' },
-      { label: 'Spécifique', weight: r(0.75), reps: '3' },
-    ];
-  }
-  return [
-    { label: 'Activation', weight: '', reps: '15' },
-    { label: 'Montée en charge', weight: '', reps: '8' },
-    { label: 'Spécifique', weight: '', reps: '4' },
-  ];
+const formatRest = (seconds: number): string => {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({
@@ -43,27 +33,25 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   onEditSet, onSkipSet, onSkipExercise, onAddSet, restBar, restBarIndex,
 }) => {
   const [notesOpen, setNotesOpen] = useState(false);
-  const [warmupOpen, setWarmupOpen] = useState(false);
-  const [warmupDone, setWarmupDone] = useState([false, false, false]);
   const iconSize = useWorkoutStore((s) => s.iconSize);
   const animSize = ICON_SIZE_PRESETS[iconSize].anim;
+  const customRestSeconds = useWorkoutStore((s) => s.customRestSeconds);
+  const history = useWorkoutStore((s) => s.history);
+  const lastTimeSets = getLastExerciseSets(history, exercise.id);
 
   const weekIdx = currentWeek <= 2 ? 0 : currentWeek <= 4 ? 1 : currentWeek <= 6 ? 2 : currentWeek === 7 ? 3 : 4;
   const weekData = PROGRESSION_WEEKS[weekIdx];
   const completedCount = setEntries.filter((s) => s.completed).length;
   const totalSets = setEntries.length;
   const allDone = completedCount === totalSets && totalSets > 0;
-  const warmupSets = getWarmupSets(exercise.defaultWeight ?? '');
 
+  const effectiveRest = customRestSeconds[exercise.id] ?? exercise.restSeconds;
   const restLabel =
     exercise.restMode === 'superset' && exercise.supersetOrder === 1
       ? '↪ enchaîné'
       : exercise.restMode === 'bilateral'
       ? `${exercise.bilateralRestSeconds}s / ${exercise.restSeconds}s`
-      : '3:00';
-
-  const toggleWarmupDone = (i: number) =>
-    setWarmupDone((d) => d.map((v, j) => (j === i ? !v : v)));
+      : formatRest(effectiveRest);
 
   return (
     <div
@@ -132,51 +120,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         )}
       </div>
 
-      {/* Échauffement */}
-      {isActive && !allDone && (
-        <div style={{ marginBottom: 12 }}>
-          <button
-            onClick={() => setWarmupOpen(!warmupOpen)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-              background: warmupOpen ? 'var(--bg-blue-tint)' : 'var(--bg-base)',
-              borderRadius: 10, padding: '9px 12px',
-              border: `1px solid ${warmupOpen ? 'var(--border-blue-tint)' : 'var(--border-subtle)'}`,
-              cursor: 'pointer', marginBottom: warmupOpen ? 8 : 0,
-              transition: 'background 0.2s, border-color 0.2s',
-            }}
-          >
-            <span style={{ fontSize: 13 }}>🔥</span>
-            <span style={{ color: '#5560cc', fontSize: 10, fontWeight: 700, letterSpacing: 1.5 }}>ÉCHAUFFEMENT</span>
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, background: 'var(--bg-elevated)', borderRadius: 6, padding: '2px 6px' }}>
-                {warmupDone.filter(Boolean).length}/3
-              </span>
-              <span style={{ color: 'var(--text-dim)', fontSize: 10 }}>{warmupOpen ? '▴' : '▾'}</span>
-            </div>
-          </button>
-          {warmupOpen && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {warmupSets.map((ws, i) => (
-                <button key={i} className="warmup-check" onClick={() => toggleWarmupDone(i)} style={{
-                  display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
-                  background: warmupDone[i] ? 'rgba(85,96,204,0.08)' : 'var(--bg-base)',
-                  borderRadius: 10, border: `1px solid ${warmupDone[i] ? 'rgba(85,96,204,0.25)' : 'var(--border-subtle)'}`,
-                  cursor: 'pointer', width: '100%', textAlign: 'left', opacity: warmupDone[i] ? 0.5 : 1,
-                }}>
-                  <div style={{ width: 18, height: 18, borderRadius: 5, flexShrink: 0, background: warmupDone[i] ? '#5560cc' : 'transparent', border: `1.5px solid ${warmupDone[i] ? '#5560cc' : 'var(--border-strong)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {warmupDone[i] && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>✓</span>}
-                  </div>
-                  <span style={{ color: 'var(--text-muted)', fontSize: 11, flex: 1 }}>{ws.label}</span>
-                  {ws.weight && <span style={{ color: '#6066aa', fontSize: 12, fontWeight: 700 }}>{ws.weight} kg</span>}
-                  <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>× {ws.reps}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Notes */}
       {exercise.notes && (
         <button onClick={() => setNotesOpen(!notesOpen)} style={{
@@ -205,6 +148,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 isCurrent={isActive && idx === currentSetIndex}
                 onComplete={(e) => onSetComplete(idx, e)}
                 onEdit={onEditSet ? () => onEditSet(idx) : undefined}
+                lastTime={lastTimeSets?.[idx]}
               />
             </React.Fragment>
           ))}
