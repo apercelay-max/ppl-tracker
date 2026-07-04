@@ -12,6 +12,9 @@ type View = 'home' | 'session' | 'dashboard' | 'settings';
 export default function App() {
   const [view, setView] = useState<View>('home');
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
+  // D'où on est venu quand on ouvre les Réglages, pour y retourner sans
+  // jamais toucher à une séance en cours (voir handleOpenSettings).
+  const [settingsReturnView, setSettingsReturnView] = useState<View>('home');
   const theme = useWorkoutStore((s) => s.theme);
   const accentTheme = useWorkoutStore((s) => s.accentTheme);
   const fontScale = useWorkoutStore((s) => s.fontScale);
@@ -55,11 +58,16 @@ export default function App() {
   };
 
   const handleOpenSettings = () => {
+    setSettingsReturnView(view);
     setView('settings');
   };
 
+  const handleBackFromSettings = () => {
+    setView(settingsReturnView);
+  };
+
   if (view === 'session' && selectedDayId) {
-    return <SessionScreen dayId={selectedDayId} onBack={handleBack} />;
+    return <SessionScreen dayId={selectedDayId} onBack={handleBack} onOpenSettings={handleOpenSettings} />;
   }
 
   if (view === 'dashboard') {
@@ -67,7 +75,7 @@ export default function App() {
   }
 
   if (view === 'settings') {
-    return <SettingsScreen onBack={handleBack} />;
+    return <SettingsScreen onBack={handleBackFromSettings} />;
   }
 
   return <HomeScreen onSelectDay={handleSelectDay} onOpenDashboard={handleOpenDashboard} onOpenSettings={handleOpenSettings} />;
