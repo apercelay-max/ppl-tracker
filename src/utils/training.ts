@@ -68,6 +68,47 @@ export const bucketByWeek = (history: HistoryEntry[], weeks = 8): WeekBucket[] =
   return buckets.slice().reverse(); // plus ancien → plus récent
 };
 
+export interface SessionComparison {
+  previous?: { tonnage: number; trainingLoad?: number; date: number };
+  first?: { tonnage: number; trainingLoad?: number; date: number };
+  tonnagePctVsPrevious?: number;
+  tonnagePctVsFirst?: number;
+}
+
+/**
+ * Compare le tonnage (et la charge d'entraînement si dispo) de la séance
+ * qu'on vient de terminer à la séance précédente du même jour (dayId) et
+ * à la toute première séance de ce jour jamais enregistrée. `history`
+ * doit déjà contenir la séance courante en position 0 (c'est le cas juste
+ * après finishSession()).
+ */
+export const compareSessionToHistory = (
+  history: HistoryEntry[],
+  dayId: string,
+  currentTonnage: number
+): SessionComparison => {
+  const sameDay = history.filter((h) => h.dayId === dayId);
+  if (sameDay.length < 2) return {};
+
+  const previous = sameDay[1];
+  const first = sameDay[sameDay.length - 1];
+  const previousTonnage = previous.tonnage ?? computeTonnage(previous.exerciseProgress);
+  const result: SessionComparison = {
+    previous: { tonnage: previousTonnage, trainingLoad: previous.trainingLoad, date: previous.date },
+  };
+  if (previousTonnage) {
+    result.tonnagePctVsPrevious = Math.round(((currentTonnage - previousTonnage) / previousTonnage) * 100);
+  }
+  if (first !== previous) {
+    const firstTonnage = first.tonnage ?? computeTonnage(first.exerciseProgress);
+    result.first = { tonnage: firstTonnage, trainingLoad: first.trainingLoad, date: first.date };
+    if (firstTonnage) {
+      result.tonnagePctVsFirst = Math.round(((currentTonnage - firstTonnage) / firstTonnage) * 100);
+    }
+  }
+  return result;
+};
+
 export type LoadStatus = {
   level: 'up' | 'stable' | 'down' | 'spike';
   label: string;
