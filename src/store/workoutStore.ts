@@ -6,14 +6,36 @@ import { getWorkout } from '../data/workouts';
 const notifSupported = typeof Notification !== 'undefined';
 let notifTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
+// Sur beaucoup de navigateurs mobiles (Chrome/Android notamment), appeler
+// `new Notification()` sur une page contrôlée par un service worker lève
+// une exception (Illegal constructor) — silencieuse dans un setTimeout,
+// donc la notif ne partait jamais quand on quittait l'appli. On passe par
+// le service worker (showNotification) qui, lui, fonctionne même quand
+// l'appli est en arrière-plan, avec repli sur l'ancienne méthode si besoin.
+const fireRestNotification = () => {
+  if (Notification.permission !== 'granted') return;
+  const title = '\u{1F4AA} Repos terminé !';
+  const options: NotificationOptions = {
+    body: "C'est reparti → série suivante.",
+    silent: false,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: 'ppl-rest-timer',
+    renotify: true,
+  };
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready
+      .then((reg) => reg.showNotification(title, options))
+      .catch(() => { try { new Notification(title, options); } catch (_) {} });
+  } else {
+    try { new Notification(title, options); } catch (_) {}
+  }
+};
+
 const scheduleRestNotification = (seconds: number) => {
   if (!notifSupported) return;
   if (notifTimeoutId) clearTimeout(notifTimeoutId);
-  notifTimeoutId = setTimeout(() => {
-    if (Notification.permission === 'granted') {
-      new Notification('\u{1F4AA} Repos terminé !', { body: "C'est reparti → série suivante.", silent: false });
-    }
-  }, seconds * 1000);
+  notifTimeoutId = setTimeout(fireRestNotification, seconds * 1000);
 };
 
 const cancelRestNotification = () => {
@@ -70,6 +92,7 @@ interface WorkoutStore {
   homeSectionOrder: HomeSectionKey[];
   iconShape: 'square' | 'rounded' | 'circle';
   iconSize: 'sm' | 'md' | 'lg';
+  defaultRestSeconds: number;
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
   editSet: (exerciseId: string, setIndex: number) => void;
@@ -94,6 +117,7 @@ interface WorkoutStore {
   moveHomeSection: (key: HomeSectionKey, direction: 'up' | 'down') => void;
   setIconShape: (shape: 'square' | 'rounded' | 'circle') => void;
   setIconSize: (size: 'sm' | 'md' | 'lg') => void;
+  setDefaultRestSeconds: (seconds: number) => void;
 }
 
 export const useWorkoutStore = create<WorkoutStore>()(
@@ -112,6 +136,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       homeSectionOrder: DEFAULT_HOME_ORDER,
       iconShape: 'rounded',
       iconSize: 'md',
+      defaultRestSeconds: 180,
 
       startSession: (dayId) => {
         const workout = getWorkout(dayId);
@@ -330,6 +355,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
 
       setIconShape: (shape) => set({ iconShape: shape }),
       setIconSize: (size) => set({ iconSize: size }),
+      setDefaultRestSeconds: (seconds) => set({ defaultRestSeconds: seconds }),
     }),
     {
       name: 'ppl-tracker-store',
@@ -346,6 +372,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         homeSectionOrder: state.homeSectionOrder,
         iconShape: state.iconShape,
         iconSize: state.iconSize,
+        defaultRestSeconds: state.defaultRestSeconds,
       }),
     }
   )
