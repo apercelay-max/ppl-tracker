@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ACCENT_PRESETS } from '../data/accents';
 import type { HomeSectionKey } from '../store/workoutStore';
@@ -49,6 +49,11 @@ const SECTION_META: Record<HomeSectionKey, { label: string; desc: string; toggle
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const accentTheme = useWorkoutStore((s) => s.accentTheme);
   const setAccentTheme = useWorkoutStore((s) => s.setAccentTheme);
+  const customAccentColor = useWorkoutStore((s) => s.customAccentColor);
+  const setCustomAccentColor = useWorkoutStore((s) => s.setCustomAccentColor);
+  const amoledMode = useWorkoutStore((s) => s.amoledMode);
+  const setAmoledMode = useWorkoutStore((s) => s.setAmoledMode);
+  const theme = useWorkoutStore((s) => s.theme);
   const fontScale = useWorkoutStore((s) => s.fontScale);
   const setFontScale = useWorkoutStore((s) => s.setFontScale);
   const homeSections = useWorkoutStore((s) => s.homeSections);
@@ -77,6 +82,46 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const setCaloriesPerHour = useWorkoutStore((s) => s.setCaloriesPerHour);
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
   const toggleDay = (id: string) => setExpandedDays((d) => ({ ...d, [id]: !d[id] }));
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+
+  // Télécharge tout le contenu du store (séances, historique, réglages…)
+  // dans un fichier JSON, pour pouvoir le garder au chaud ou le remettre
+  // sur un autre téléphone.
+  const handleExport = () => {
+    const raw = localStorage.getItem('ppl-tracker-store');
+    if (!raw) return;
+    const blob = new Blob([raw], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ppl-tracker-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const text = String(reader.result);
+        const parsed = JSON.parse(text);
+        if (!parsed || typeof parsed !== 'object' || !parsed.state) {
+          setImportMsg("Fichier invalide — pas une sauvegarde PPL Tracker.");
+          return;
+        }
+        const ok = window.confirm(
+          'Importer va remplacer toutes tes données actuelles (séances, historique, réglages...) par celles du fichier. Continuer ?'
+        );
+        if (!ok) return;
+        localStorage.setItem('ppl-tracker-store', text);
+        window.location.reload();
+      } catch (_) {
+        setImportMsg('Fichier invalide — impossible de le lire.');
+      }
+    };
+    reader.readAsText(file);
+  };
 
   return (
     <div style={container}>
@@ -110,6 +155,57 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
               <span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }}>{a.label}</span>
             </button>
           ))}
+          <label
+            style={{
+              ...swatchBtn,
+              cursor: 'pointer',
+              border: accentTheme === 'custom' ? `2px solid ${customAccentColor}` : '2px solid transparent',
+            }}
+            title="Couleur perso"
+          >
+            <span style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 40, height: 40, borderRadius: '50%',
+              background: accentTheme === 'custom'
+                ? `linear-gradient(135deg, ${customAccentColor}, ${customAccentColor})`
+                : 'repeating-conic-gradient(#e03030 0% 25%, #2563eb 0% 50%, #16a34a 0% 75%, #ea580c 0% 100%)',
+              boxShadow: accentTheme === 'custom' ? `0 0 0 3px var(--bg-card), 0 0 0 5px ${customAccentColor}` : 'none',
+              fontSize: 16,
+            }}>
+              {accentTheme !== 'custom' && '🎨'}
+            </span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }}>Perso</span>
+            <input
+              type="color"
+              value={customAccentColor}
+              onChange={(e) => setCustomAccentColor(e.target.value)}
+              style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+            />
+          </label>
+        </div>
+
+        {/* Thème */}
+        <p style={{ ...sectionLabel, marginTop: 24 }}>THÈME</p>
+        <div style={toggleRow}>
+          <div style={{ flex: 1 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Noir pur (AMOLED)</p>
+            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+              {theme === 'dark'
+                ? "Fond quasi noir, économise la batterie sur écran OLED."
+                : 'Actif uniquement en thème sombre (☀️/🌙 sur l\'accueil).'}
+            </p>
+          </div>
+          <button
+            onClick={() => setAmoledMode(!amoledMode)}
+            style={{
+              ...switchTrack,
+              background: amoledMode ? 'var(--brand-1)' : 'var(--bg-elevated)',
+              justifyContent: amoledMode ? 'flex-end' : 'flex-start',
+              opacity: theme === 'dark' ? 1 : 0.5,
+            }}
+          >
+            <span style={switchThumb} />
+          </button>
         </div>
 
         {/* Taille du texte */}
@@ -393,6 +489,30 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
             );
           })}
         </div>
+
+        {/* Sauvegarde */}
+        <p style={{ ...sectionLabel, marginTop: 24 }}>SAUVEGARDE</p>
+        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+          Télécharge un fichier avec tout ton historique et tes réglages, ou restaure une sauvegarde précédente.
+        </p>
+        <div style={{ display: 'flex', gap: 8, marginBottom: importMsg ? 8 : 28 }}>
+          <button onClick={handleExport} style={{ ...restBtn, flex: 1, padding: '12px 8px' }}>⬇ Exporter</button>
+          <button onClick={() => importInputRef.current?.click()} style={{ ...restBtn, flex: 1, padding: '12px 8px' }}>⬆ Importer</button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept="application/json"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleImportFile(file);
+              e.target.value = '';
+            }}
+          />
+        </div>
+        {importMsg && (
+          <p style={{ color: '#f5a623', fontSize: 11, marginBottom: 28 }}>{importMsg}</p>
+        )}
 
       </div>
     </div>
