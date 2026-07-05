@@ -1,4 +1,5 @@
-import { ExerciseProgress, HistoryEntry, SetEntry } from '../data/types';
+import { ExerciseProgress, HistoryEntry, SetEntry, WorkoutDay } from '../data/types';
+import { WORKOUTS } from '../data/workouts';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -154,4 +155,124 @@ export const computeLoadStatus = (buckets: WeekBucket[]): LoadStatus | null => {
     return { level: 'down', label: '📉 Charge en baisse', detail: 'Moins de charge que la moyenne récente (deload ou séances manquées ?).' };
   }
   return { level: 'stable', label: '✅ Charge stable', detail: 'Ta charge d\'entraînement est régulière ces dernières semaines.' };
+}
+
+// ─── Progression par exercice ────────────────────────────────────────────────
+
+export interface ExerciseHistoryPoint {
+  date: number;
+  maxWeight: number; // poids numérique max soulevé ce jour-là sur cet exercice
+}
+
+/**
+ * Reconstruit la liste "nom d'exercice" → id, une seule fois, pour les
+ * sélecteurs (dashboard). Ordre = ordre de définition dans workouts.ts.
+ */
+export const ALL_EXERCISES = WORKOUTS.flatMap((w) => w.exercises).reduce(
+  (acc, ex) => (acc.some((e) => e.id === ex.id) ? acc : [...acc, { id: ex.id, name: ex.name, muscleGroup: ex.muscleGroup }]),
+  [] as { id: string; name: string; muscleGroup: string }[]
+);
+
+/**
+ * Historique du poids max (numérique) soulevé sur un exercice donné,
+ * du plus ancien au plus récent (prêt pour un graphique). Ignore les
+ * séries au poids du corps ("PDC") ou non numériques — seule la charge
+ * chiffrée est comparable dans le temps.
+ */
+export const getExerciseWeightHistory = (history: HistoryEntry[], exerciseId: string): ExerciseHistoryPoint[] => {
+  const points: ExerciseHistoryPoint[] = [];
+  for (const entry of history) {
+    const sets = entry.exerciseProgress[exerciseId];
+    if (!sets) continue;
+    let max = 0;
+    for (const s of sets) {
+      if (!s.completed) continue;
+      const w = parseFloat(s.weight);
+      if (!isNaN(w) && w > max) max = w;
+    }
+    if (max > 0) points.push({ date: entry.date, maxWeight: max });
+  }
+  return points.reverse(); // plus ancien → plus récent
 };
+
+// ─── Groupes musculaires pas travaillés récemment ───────────────────────────
+
+// Table exerciceId → groupe musculaire (construite une fois depuis workouts.ts).
+const EXERCISE_MUSCLE_GROUP: Record<string, string> = {};
+for (const w of WORKOUTS) {
+  for (const ex of w.exercises) EXERCISE_MUSCLE_GROUP[ex.id] = ex.muscleGroup;
+}
+
+// Liste ordonnée de tous les groupes musculaires distincts du programme.
+export const ALL_MUSCLE_GROUPS: string[] = Array.from(new Set(WORKOUTS.flatMap((w) => w.exercises.map((e) => e.muscleGroup))));
+
+export interface MuscleGroupStatus {
+  group: string;
+  daysSince: number | null; // null = jamais travaillé
+}
+
+/**
+ * Pour chaque groupe musculaire du programme, calcule le nombre de jours
+ * écoulés depuis la dernière séance où il a été travaillé (au moins une
+ * série complétée). Se base sur l'historique réel, pas sur le cycle
+ * théorique — reflète donc aussi les séances manquées.
+ */
+export const getMuscleGroupsStatus = (history: HistoryEntry[]): MuscleGroupStatus[] => {
+  const now = Date.now();
+  return ALL_MUSCLE_GROUPS.map((group) => {
+    let lastDate: number | null = null;
+    for (const entry of history) {
+      const worked = Object.entries(entry.exerciseProgress).some(
+        ([exId, sets]) => EXERCISE_MUSCLE_GROUP[exId] === group && sets.some((s) => s.completed)
+      );
+      if (worked) { lastDate = entry.date; break; } // history triée du + récent au + ancien
+    }
+    return {
+      group,
+      daysSince: lastDate === null ? null : Math.floor((now - lastDate) / 86400000),
+    };
+  });
+};
+
+// ─── Schéma corps humain (muscles sollicités) ───────────────────────────────
+
+export type BodyRegionKey =
+  | 'front-chest' | 'front-shoulder' | 'front-biceps' | 'front-forearm' | 'front-abs' | 'front-quad' | 'front-calf'
+  | 'back-lats' | 'back-shoulder' | 'back-triceps' | 'back-forearm' | 'back-lowerback' | 'back-glute' | 'back-hamstring' | 'back-calf';
+
+// Un groupe musculaire du programme peut allumer plusieurs zones du schéma
+// (ex: ÉPAULES est visible de face ET de dos).
+const MUSCLE_GROUP_TO_REGIONS: Record<string, BodyRegionKey[]> = {
+  'DOS': ['back-lats'],
+  'BICEPS': ['front-biceps'],
+  'PECS': ['front-chest'],
+  'ÉPAULES': ['front-shoulder', 'back-shoulder'],
+  'TRICEPS': ['back-triceps'],
+  'QUADRICEPS': ['front-quad'],
+  'ISCHIOS & FESSIERS': ['back-hamstring', 'back-glute'],
+  'MOLLETS': ['front-calf', 'back-calf'],
+  'ABDOS & LOMBAIRES': ['front-abs', 'back-lowerback'],
+  'AVANT-BRAS': ['front-forearm', 'back-forearm'],
+  'FESSIERS': ['back-glute'],
+  'ABDOS': ['front-abs'],
+};
+
+/**
+ * Calcule, pour une séance donnée, l'intensité (0-1) de chaque zone du
+ * schéma corporel — basée sur le nombre de séries par groupe musculaire,
+ * normalisé par rapport au groupe le plus travaillé de la séance.
+ */
+export const getWorkoutBodyIntensity = (workout: WorkoutDay): Partial<Record<BodyRegionKey, number>> => {
+  const setsByGroup: Record<string, number> = {};
+  for (const ex of workout.exercises) {
+    setsByGroup[ex.muscleGroup] = (setsByGroup[ex.muscleGroup] ?? 0) + ex.sets;
+  }
+  const maxSets = Math.max(1, ...Object.values(setsByGroup));
+  const result: Partial<Record<BodyRegionKey, number>> = {};
+  for (const [group, sets] of Object.entries(setsByGroup)) {
+    const regions = MUSCLE_GROUP_TO_REGIONS[group] ?? [];
+    const t = sets / maxSets;
+    for (const r of regions) result[r] = Math.max(result[r] ?? 0, t);
+  }
+  return result;
+};;
