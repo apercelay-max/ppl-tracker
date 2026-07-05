@@ -69,8 +69,20 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
     return () => window.removeEventListener('resize', h);
   }, []);
 
+  // Une séance oubliée en arrière-plan (téléphone verrouillé, appli quittée
+  // longtemps…) fausse durée/calories en bas de page car le chrono compte
+  // le temps réel écoulé depuis le lancement. Passé 3h, on propose de la
+  // recommencer plutôt que d'afficher des stats absurdes.
+  const STALE_SESSION_MS = 3 * 60 * 60 * 1000;
   useEffect(() => {
-    if (!session || session.dayId !== dayId || session.isComplete) startSession(dayId);
+    if (!session || session.dayId !== dayId || session.isComplete) {
+      startSession(dayId);
+    } else if (Date.now() - session.startTime > STALE_SESSION_MS) {
+      const restart = window.confirm(
+        'Cette séance a été démarrée il y a plus de 3h (durée/calories faussées). La recommencer à zéro ?'
+      );
+      if (restart) startSession(dayId);
+    }
   }, [dayId]);
 
   const handleTimerComplete = useCallback(() => {

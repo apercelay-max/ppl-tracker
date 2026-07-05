@@ -24,6 +24,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const setWakeLockEnabled = useWorkoutStore((s) => s.setWakeLockEnabled);
   const homeSections = useWorkoutStore((s) => s.homeSections);
   const homeSectionOrder = useWorkoutStore((s) => s.homeSectionOrder);
+  const cycleDoneIds = useWorkoutStore((s) => s.cycleDoneIds);
   const iconSize = useWorkoutStore((s) => s.iconSize);
   const iconSizes = ICON_SIZE_PRESETS[iconSize];
 
@@ -104,11 +105,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
         {WORKOUTS.map((workout, idx) => {
           const accent = DAY_ACCENT[workout.id];
           const typeLabel = DAY_TYPE_LABEL[workout.id];
+          const isDone = cycleDoneIds.includes(workout.id);
           return (
             <button
               key={workout.id}
               className="workout-card slide-up"
-              style={{ ...workoutCard, animationDelay: `${idx * 0.06}s` }}
+              style={{ ...workoutCard, animationDelay: `${idx * 0.06}s`, opacity: isDone ? 0.5 : 1 }}
               onClick={() => onSelectDay(workout.id)}
             >
               <div style={{
@@ -124,11 +126,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
                 <p style={{ color: 'var(--text-primary)', fontSize: 18, fontWeight: 800, marginBottom: 3, letterSpacing: -0.3 }}>{workout.name}</p>
                 <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 2 }}>{workout.muscleGroups}</p>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
-                  <span style={{
-                    background: `${accent}15`, border: `1px solid ${accent}25`,
-                    borderRadius: 6, padding: '2px 8px',
-                    color: accent, fontSize: 10, fontWeight: 700,
-                  }}>{workout.exercises.length} exercices</span>
+                  {isDone ? (
+                    <span style={{
+                      background: 'rgba(76,175,80,0.12)', border: '1px solid rgba(76,175,80,0.3)',
+                      borderRadius: 6, padding: '2px 8px',
+                      color: '#4CAF50', fontSize: 10, fontWeight: 700,
+                    }}>✓ Fait ce cycle</span>
+                  ) : (
+                    <span style={{
+                      background: `${accent}15`, border: `1px solid ${accent}25`,
+                      borderRadius: 6, padding: '2px 8px',
+                      color: accent, fontSize: 10, fontWeight: 700,
+                    }}>{workout.exercises.length} exercices</span>
+                  )}
                   <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>{workout.estimatedDuration}</span>
                 </div>
               </div>
