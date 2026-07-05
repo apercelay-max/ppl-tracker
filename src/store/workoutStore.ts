@@ -14,8 +14,8 @@ let notifTimeoutId: ReturnType<typeof setTimeout> | null = null;
 // l'appli est en arrière-plan, avec repli sur l'ancienne méthode si besoin.
 const fireRestNotification = () => {
   try {
-    const { beepEnabled, beepTone } = useWorkoutStore.getState();
-    if (beepEnabled) playBeep(beepTone);
+    const { beepEnabled, beepTone, beepVolume } = useWorkoutStore.getState();
+    if (beepEnabled) playBeep(beepTone, beepVolume);
   } catch (_) {}
   if (Notification.permission !== 'granted') return;
   const title = '\u{1F4AA} Repos terminé !';
@@ -51,16 +51,24 @@ const vibrate = () => {
 };
 
 // ── Bip de fin de repos (Web Audio, pas besoin de fichier son) ────────────
-export type BeepTone = 'doux' | 'classique' | 'urgent';
+export type BeepTone = 'doux' | 'classique' | 'urgent' | 'melodique' | 'cloche';
 let audioCtx: AudioContext | null = null;
 
-const BEEP_PATTERNS: Record<BeepTone, { freq: number; dur: number; count: number }> = {
-  doux: { freq: 440, dur: 0.18, count: 1 },
-  classique: { freq: 880, dur: 0.12, count: 2 },
-  urgent: { freq: 1046, dur: 0.1, count: 3 },
+interface BeepNote { freq: number; delay: number; dur: number; }
+
+// Chaque tonalité est une petite suite de notes (fréquence, décalage,
+// durée) — ça permet des sons variés (bips répétés, mélodie, cloche qui
+// résonne) sans avoir besoin de fichiers audio.
+const BEEP_PATTERNS: Record<BeepTone, BeepNote[]> = {
+  doux: [{ freq: 440, delay: 0, dur: 0.18 }],
+  classique: [{ freq: 880, delay: 0, dur: 0.12 }, { freq: 880, delay: 0.2, dur: 0.12 }],
+  urgent: [{ freq: 1046, delay: 0, dur: 0.1 }, { freq: 1046, delay: 0.18, dur: 0.1 }, { freq: 1046, delay: 0.36, dur: 0.1 }],
+  melodique: [{ freq: 523, delay: 0, dur: 0.15 }, { freq: 659, delay: 0.16, dur: 0.15 }, { freq: 784, delay: 0.32, dur: 0.3 }],
+  cloche: [{ freq: 660, delay: 0, dur: 0.9 }, { freq: 990, delay: 0, dur: 0.9 }],
 };
 
-const playBeep = (tone: BeepTone) => {
+// volume : 0-100, réglable dans les Réglages
+const playBeep = (tone: BeepTone, volume: number = 70) => {
   try {
     const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!Ctx) return;
@@ -68,19 +76,20 @@ const playBeep = (tone: BeepTone) => {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     const ctx = audioCtx;
     const now = ctx.currentTime;
-    const p = BEEP_PATTERNS[tone] ?? BEEP_PATTERNS.classique;
-    for (let i = 0; i < p.count; i++) {
-      const start = now + i * (p.dur + 0.08);
+    const peak = Math.max(0, Math.min(1, volume / 100)) * 0.35;
+    const notes = BEEP_PATTERNS[tone] ?? BEEP_PATTERNS.classique;
+    for (const note of notes) {
+      const start = now + note.delay;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.value = p.freq;
+      osc.frequency.value = note.freq;
       gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(0.3, start + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + p.dur);
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), start + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + note.dur);
       osc.connect(gain).connect(ctx.destination);
       osc.start(start);
-      osc.stop(start + p.dur + 0.02);
+      osc.stop(start + note.dur + 0.02);
     }
   } catch (_) {}
 };
@@ -136,6 +145,7 @@ interface WorkoutStore {
   cycleDoneIds: string[];
   beepEnabled: boolean;
   beepTone: BeepTone;
+  beepVolume: number;
   caloriesPerHour: number;
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
@@ -166,6 +176,7 @@ interface WorkoutStore {
   setHighContrast: (enabled: boolean) => void;
   setBeepEnabled: (enabled: boolean) => void;
   setBeepTone: (tone: BeepTone) => void;
+  setBeepVolume: (value: number) => void;
   testBeep: () => void;
   setCaloriesPerHour: (value: number) => void;
 }
@@ -191,6 +202,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       cycleDoneIds: [],
       beepEnabled: true,
       beepTone: 'classique',
+      beepVolume: 70,
       caloriesPerHour: 330,
 
       startSession: (dayId) => {
@@ -435,8 +447,12 @@ export const useWorkoutStore = create<WorkoutStore>()(
       setHighContrast: (enabled) => set({ highContrast: enabled }),
 
       setBeepEnabled: (enabled) => set({ beepEnabled: enabled }),
-      setBeepTone: (tone) => { set({ beepTone: tone }); playBeep(tone); },
-      testBeep: () => playBeep(get().beepTone),
+      setBeepTone: (tone) => { set({ beepTone: tone }); playBeep(tone, get().beepVolume); },
+      setBeepVolume: (value) => {
+        const v = Math.max(0, Math.min(100, value));
+        set({ beepVolume: v });
+      },
+      testBeep: () => playBeep(get().beepTone, get().beepVolume),
       setCaloriesPerHour: (value) => set({ caloriesPerHour: Math.max(50, Math.min(1200, value)) }),
     }),
     {
@@ -459,6 +475,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         cycleDoneIds: state.cycleDoneIds,
         beepEnabled: state.beepEnabled,
         beepTone: state.beepTone,
+        beepVolume: state.beepVolume,
         caloriesPerHour: state.caloriesPerHour,
       }),
     }
