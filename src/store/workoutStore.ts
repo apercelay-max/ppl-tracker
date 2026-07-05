@@ -94,6 +94,7 @@ interface WorkoutStore {
   iconSize: 'sm' | 'md' | 'lg';
   defaultRestSeconds: number;
   highContrast: boolean;
+  cycleDoneIds: string[];
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
   editSet: (exerciseId: string, setIndex: number) => void;
@@ -141,6 +142,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       iconSize: 'md',
       defaultRestSeconds: 180,
       highContrast: false,
+      cycleDoneIds: [],
 
       startSession: (dayId) => {
         const workout = getWorkout(dayId);
@@ -159,6 +161,9 @@ export const useWorkoutStore = create<WorkoutStore>()(
             dayId, startTime: Date.now(), exerciseProgress,
             currentExerciseIndex: 0, currentSetIndex: 0, isComplete: false,
           },
+          // Jour 1 du cycle (Pull A) = redémarrage d'un nouveau cycle glissant
+          // → on regrise toutes les séances de l'accueil.
+          cycleDoneIds: workout.dayNumber === 1 ? [] : get().cycleDoneIds,
         });
         if (get().wakeLockEnabled) requestWakeLock();
       },
@@ -276,7 +281,13 @@ export const useWorkoutStore = create<WorkoutStore>()(
           exerciseProgress: session.exerciseProgress,
           durationMs: Date.now() - session.startTime,
         };
-        set({ session: { ...session, isComplete: true }, history: [entry, ...history].slice(0, 50) });
+        set((state) => ({
+          session: { ...session, isComplete: true },
+          history: [entry, ...history].slice(0, 50),
+          cycleDoneIds: state.cycleDoneIds.includes(session.dayId)
+            ? state.cycleDoneIds
+            : [...state.cycleDoneIds, session.dayId],
+        }));
         cancelRestNotification();
         releaseWakeLock();
       },
@@ -391,6 +402,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         iconSize: state.iconSize,
         defaultRestSeconds: state.defaultRestSeconds,
         highContrast: state.highContrast,
+        cycleDoneIds: state.cycleDoneIds,
       }),
     }
   )
