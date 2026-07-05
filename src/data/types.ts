@@ -83,3 +83,16 @@ export interface TimerState {
   endTimestamp: number | null;   // Date.now() + duration*1000 au démarrage
   totalSeconds: number;          // Durée initiale (pour la progress bar)
 }
+
+// ─── Cardio (hors-programme PPL) ────────────────────────────────────────────
+
+export type CardioActivityType = 'velo' | 'marche' | 'course' | 'autre';
+
+export interface CardioEntry {
+  id: string;
+  type: CardioActivityType;
+  date: number;          // timestamp ms
+  durationMin: number;
+  calories: number;      // calculées à l'ajout (durationMin/60 * kcal/h de l'activité)
+  rpe?: number;          // Ressenti 1-10, facultatif
+}
