@@ -13,6 +13,10 @@ let notifTimeoutId: ReturnType<typeof setTimeout> | null = null;
 // le service worker (showNotification) qui, lui, fonctionne même quand
 // l'appli est en arrière-plan, avec repli sur l'ancienne méthode si besoin.
 const fireRestNotification = () => {
+  try {
+    const { beepEnabled, beepTone } = useWorkoutStore.getState();
+    if (beepEnabled) playBeep(beepTone);
+  } catch (_) {}
   if (Notification.permission !== 'granted') return;
   const title = '\u{1F4AA} Repos terminé !';
   const options: NotificationOptions = {
@@ -44,6 +48,41 @@ const cancelRestNotification = () => {
 
 const vibrate = () => {
   try { if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]); } catch (_) {}
+};
+
+// ── Bip de fin de repos (Web Audio, pas besoin de fichier son) ────────────
+export type BeepTone = 'doux' | 'classique' | 'urgent';
+let audioCtx: AudioContext | null = null;
+
+const BEEP_PATTERNS: Record<BeepTone, { freq: number; dur: number; count: number }> = {
+  doux: { freq: 440, dur: 0.18, count: 1 },
+  classique: { freq: 880, dur: 0.12, count: 2 },
+  urgent: { freq: 1046, dur: 0.1, count: 3 },
+};
+
+const playBeep = (tone: BeepTone) => {
+  try {
+    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return;
+    if (!audioCtx) audioCtx = new Ctx();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const ctx = audioCtx;
+    const now = ctx.currentTime;
+    const p = BEEP_PATTERNS[tone] ?? BEEP_PATTERNS.classique;
+    for (let i = 0; i < p.count; i++) {
+      const start = now + i * (p.dur + 0.08);
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = p.freq;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.3, start + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + p.dur);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + p.dur + 0.02);
+    }
+  } catch (_) {}
 };
 
 // ── Wake Lock ─────────────────────────────────────────────────────────────
@@ -95,6 +134,9 @@ interface WorkoutStore {
   defaultRestSeconds: number;
   highContrast: boolean;
   cycleDoneIds: string[];
+  beepEnabled: boolean;
+  beepTone: BeepTone;
+  caloriesPerHour: number;
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
   editSet: (exerciseId: string, setIndex: number) => void;
@@ -122,6 +164,10 @@ interface WorkoutStore {
   setIconSize: (size: 'sm' | 'md' | 'lg') => void;
   setDefaultRestSeconds: (seconds: number) => void;
   setHighContrast: (enabled: boolean) => void;
+  setBeepEnabled: (enabled: boolean) => void;
+  setBeepTone: (tone: BeepTone) => void;
+  testBeep: () => void;
+  setCaloriesPerHour: (value: number) => void;
 }
 
 export const useWorkoutStore = create<WorkoutStore>()(
@@ -143,6 +189,9 @@ export const useWorkoutStore = create<WorkoutStore>()(
       defaultRestSeconds: 180,
       highContrast: false,
       cycleDoneIds: [],
+      beepEnabled: true,
+      beepTone: 'classique',
+      caloriesPerHour: 330,
 
       startSession: (dayId) => {
         const workout = getWorkout(dayId);
@@ -384,6 +433,11 @@ export const useWorkoutStore = create<WorkoutStore>()(
       setIconSize: (size) => set({ iconSize: size }),
       setDefaultRestSeconds: (seconds) => set({ defaultRestSeconds: seconds }),
       setHighContrast: (enabled) => set({ highContrast: enabled }),
+
+      setBeepEnabled: (enabled) => set({ beepEnabled: enabled }),
+      setBeepTone: (tone) => { set({ beepTone: tone }); playBeep(tone); },
+      testBeep: () => playBeep(get().beepTone),
+      setCaloriesPerHour: (value) => set({ caloriesPerHour: Math.max(50, Math.min(1200, value)) }),
     }),
     {
       name: 'ppl-tracker-store',
@@ -403,6 +457,9 @@ export const useWorkoutStore = create<WorkoutStore>()(
         defaultRestSeconds: state.defaultRestSeconds,
         highContrast: state.highContrast,
         cycleDoneIds: state.cycleDoneIds,
+        beepEnabled: state.beepEnabled,
+        beepTone: state.beepTone,
+        caloriesPerHour: state.caloriesPerHour,
       }),
     }
   )
