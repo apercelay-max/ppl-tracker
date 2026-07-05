@@ -73,6 +73,7 @@ export interface HistoryEntry {
   rpe?: number;                  // Auto-évaluation séance (1-10)
   tonnage?: number;              // Total kg soulevés (poids × reps sommés)
   trainingLoad?: number;         // Charge d'entraînement : RPE × durée en minutes
+  note?: string;                 // Ressenti libre noté par l'utilisateur à la fin
 }
 
 // ─── Timer ────────────────────────────────────────────────────────────────
