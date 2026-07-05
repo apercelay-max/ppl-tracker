@@ -120,11 +120,12 @@ export interface HomeSectionsVisible {
   cycle: boolean;
   nutrition: boolean;
   supersetRule: boolean;
+  muscleAlert: boolean;
 }
 
-export type HomeSectionKey = 'cycle' | 'seances' | 'nutrition' | 'supersetRule';
+export type HomeSectionKey = 'cycle' | 'seances' | 'nutrition' | 'supersetRule' | 'muscleAlert';
 
-const DEFAULT_HOME_ORDER: HomeSectionKey[] = ['cycle', 'seances', 'nutrition', 'supersetRule'];
+const DEFAULT_HOME_ORDER: HomeSectionKey[] = ['cycle', 'seances', 'muscleAlert', 'nutrition', 'supersetRule'];
 
 interface WorkoutStore {
   session: WorkoutSession | null;
@@ -168,6 +169,7 @@ interface WorkoutStore {
   saveCustomRest: (exerciseId: string, seconds: number) => void;
   clearCustomRest: (exerciseId: string) => void;
   updateLastSessionRPE: (rpe: number, tonnage: number, trainingLoad: number) => void;
+  updateLastSessionNote: (note: string) => void;
   setAccentTheme: (id: string) => void;
   setFontScale: (s: 'sm' | 'md' | 'lg') => void;
   setHomeSectionVisible: (key: keyof HomeSectionsVisible, visible: boolean) => void;
@@ -199,7 +201,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       customAccentColor: '#e03030',
       amoledMode: false,
       fontScale: 'md',
-      homeSections: { cycle: true, nutrition: true, supersetRule: true },
+      homeSections: { cycle: true, nutrition: true, supersetRule: true, muscleAlert: true },
       homeSectionOrder: DEFAULT_HOME_ORDER,
       iconShape: 'rounded',
       iconSize: 'md',
@@ -430,6 +432,16 @@ export const useWorkoutStore = create<WorkoutStore>()(
         });
       },
 
+      // Note libre (ressenti) sur la dernière séance terminée
+      updateLastSessionNote: (note) => {
+        set((state) => {
+          if (state.history.length === 0) return state;
+          const updated = [...state.history];
+          updated[0] = { ...updated[0], note };
+          return { history: updated };
+        });
+      },
+
       setAccentTheme: (id) => set({ accentTheme: id }),
       setFontScale: (s) => set({ fontScale: s }),
       setHomeSectionVisible: (key, visible) =>
@@ -488,6 +500,21 @@ export const useWorkoutStore = create<WorkoutStore>()(
         customAccentColor: state.customAccentColor,
         amoledMode: state.amoledMode,
       }),
+      // Merge personnalisé : par défaut, zustand/persist remplace entièrement
+      // les objets imbriqués (homeSections, homeSectionOrder) par la version
+      // sauvegardée. Si on ajoute une nouvelle section plus tard (ex:
+      // muscleAlert), les téléphones qui ont déjà des données perdraient
+      // silencieusement cette section. On merge donc à la main pour que les
+      // nouvelles clés apparaissent avec leur valeur par défaut.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<WorkoutStore>;
+        const merged = { ...current, ...p };
+        merged.homeSections = { ...current.homeSections, ...(p.homeSections ?? {}) };
+        const savedOrder = p.homeSectionOrder ?? current.homeSectionOrder;
+        const missingKeys = current.homeSectionOrder.filter((k) => !savedOrder.includes(k));
+        merged.homeSectionOrder = [...savedOrder, ...missingKeys];
+        return merged;
+      },
     }
   )
 );
