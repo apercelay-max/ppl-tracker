@@ -179,6 +179,26 @@ export const ALL_EXERCISES = WORKOUTS.flatMap((w) => w.exercises).reduce(
  * séries au poids du corps ("PDC") ou non numériques — seule la charge
  * chiffrée est comparable dans le temps.
  */
+/**
+ * Poids max (numérique) jamais soulevé sur un exercice, toutes séances
+ * confondues. Sert à détecter les records personnels (PR) en direct
+ * pendant une séance — 0 si l'exercice n'a encore jamais été fait avec un
+ * poids chiffré (pas de "record" à annoncer dans ce cas).
+ */
+export const getMaxWeightEver = (history: HistoryEntry[], exerciseId: string): number => {
+  let max = 0;
+  for (const entry of history) {
+    const sets = entry.exerciseProgress[exerciseId];
+    if (!sets) continue;
+    for (const s of sets) {
+      if (!s.completed) continue;
+      const w = parseFloat(s.weight);
+      if (!isNaN(w) && w > max) max = w;
+    }
+  }
+  return max;
+};
+
 export const getExerciseWeightHistory = (history: HistoryEntry[], exerciseId: string): ExerciseHistoryPoint[] => {
   const points: ExerciseHistoryPoint[] = [];
   for (const entry of history) {
@@ -232,6 +252,40 @@ export const getMuscleGroupsStatus = (history: HistoryEntry[]): MuscleGroupStatu
       daysSince: lastDate === null ? null : Math.floor((now - lastDate) / 86400000),
     };
   });
+};
+
+export interface MuscleGroupVolume {
+  group: string;
+  tonnage: number;
+}
+
+/**
+ * Tonnage total par groupe musculaire sur les `weeks` dernières semaines
+ * (4 par défaut), pour voir en un coup d'œil quels groupes sont les plus
+ * (ou les moins) travaillés récemment. Trié du plus gros volume au plus
+ * petit ; les groupes jamais travaillés dans la période sont omis.
+ */
+export const getMuscleGroupVolume = (history: HistoryEntry[], weeks = 4): MuscleGroupVolume[] => {
+  const cutoff = Date.now() - weeks * WEEK_MS;
+  const volumeByGroup: Record<string, number> = {};
+  for (const entry of history) {
+    if (entry.date < cutoff) continue;
+    for (const [exId, sets] of Object.entries(entry.exerciseProgress)) {
+      const group = EXERCISE_MUSCLE_GROUP[exId];
+      if (!group) continue;
+      for (const s of sets) {
+        if (!s.completed) continue;
+        const w = parseFloat(s.weight);
+        const r = parseInt(s.reps, 10);
+        if (!isNaN(w) && !isNaN(r)) {
+          volumeByGroup[group] = (volumeByGroup[group] ?? 0) + w * r;
+        }
+      }
+    }
+  }
+  return Object.entries(volumeByGroup)
+    .map(([group, tonnage]) => ({ group, tonnage: Math.round(tonnage) }))
+    .sort((a, b) => b.tonnage - a.tonnage);
 };
 
 // ─── Schéma corps humain (muscles sollicités) ───────────────────────────────
