@@ -31,6 +31,12 @@ const REST_OPTIONS: { seconds: number; label: string }[] = [
   { seconds: 240, label: '4:00' },
 ];
 
+const BEEP_TONES: { id: 'doux' | 'classique' | 'urgent'; label: string }[] = [
+  { id: 'doux', label: 'Doux' },
+  { id: 'classique', label: 'Classique' },
+  { id: 'urgent', label: 'Urgent' },
+];
+
 const SECTION_META: Record<HomeSectionKey, { label: string; desc: string; toggleable: boolean }> = {
   cycle: { label: 'Cycle en cours', desc: 'La carte semaine / RIR / objectif.', toggleable: true },
   seances: { label: 'Liste des séances', desc: 'Les 6 séances PPL — toujours visible.', toggleable: false },
@@ -58,6 +64,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const clearCustomRest = useWorkoutStore((s) => s.clearCustomRest);
   const highContrast = useWorkoutStore((s) => s.highContrast);
   const setHighContrast = useWorkoutStore((s) => s.setHighContrast);
+  const beepEnabled = useWorkoutStore((s) => s.beepEnabled);
+  const setBeepEnabled = useWorkoutStore((s) => s.setBeepEnabled);
+  const beepTone = useWorkoutStore((s) => s.beepTone);
+  const setBeepTone = useWorkoutStore((s) => s.setBeepTone);
+  const testBeep = useWorkoutStore((s) => s.testBeep);
+  const caloriesPerHour = useWorkoutStore((s) => s.caloriesPerHour);
+  const setCaloriesPerHour = useWorkoutStore((s) => s.setCaloriesPerHour);
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
   const toggleDay = (id: string) => setExpandedDays((d) => ({ ...d, [id]: !d[id] }));
 
@@ -202,6 +215,59 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
               {opt.label}
             </button>
           ))}
+        </div>
+
+        {/* Son du minuteur */}
+        <p style={{ ...sectionLabel, marginTop: 24 }}>SON DU MINUTEUR</p>
+        <div style={toggleRow}>
+          <div style={{ flex: 1 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Bip de fin de repos</p>
+            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+              Joue un bip quand le repos se termine, en plus de la vibration/notification.
+            </p>
+          </div>
+          <button
+            onClick={() => setBeepEnabled(!beepEnabled)}
+            style={{
+              ...switchTrack,
+              background: beepEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
+              justifyContent: beepEnabled ? 'flex-end' : 'flex-start',
+            }}
+          >
+            <span style={switchThumb} />
+          </button>
+        </div>
+        {beepEnabled && (
+          <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+            {BEEP_TONES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setBeepTone(t.id)}
+                style={{
+                  ...restBtn,
+                  background: beepTone === t.id ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                  color: beepTone === t.id ? '#fff' : 'var(--text-muted)',
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+            <button onClick={testBeep} style={{ ...restBtn, flex: '0 0 auto', padding: '10px 16px' }}>▶ Tester</button>
+          </div>
+        )}
+        {!beepEnabled && <div style={{ marginBottom: 12 }} />}
+
+        {/* Calories (estimation) */}
+        <p style={{ ...sectionLabel, marginTop: 12 }}>CALORIES (ESTIMATION)</p>
+        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+          Utilisé pour estimer les calories brûlées quand aucun capteur de fréquence cardiaque n'est connecté.
+        </p>
+        <div style={{ ...toggleRow, marginBottom: 20 }}>
+          <div style={{ flex: 1 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>{caloriesPerHour} kcal/h</p>
+          </div>
+          <button onClick={() => setCaloriesPerHour(caloriesPerHour - 10)} style={stepperBtn}>−</button>
+          <button onClick={() => setCaloriesPerHour(caloriesPerHour + 10)} style={stepperBtn}>+</button>
         </div>
 
         {/* Temps de repos par exercice */}

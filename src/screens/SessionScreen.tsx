@@ -47,6 +47,13 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
 
   // Track which exercise triggered the timer (for saving custom rest)
   const timerExerciseRef = useRef<string | null>(null);
+  // La série (exercice + index) à laquelle le repos en cours correspond —
+  // utile car le repos peut maintenant démarrer dès la saisie du poids,
+  // avant que la série soit validée (✓).
+  const pendingSetKeyRef = useRef<{ exerciseId: string; setIndex: number } | null>(null);
+  // Vrai si le repos s'est terminé alors que la série n'était pas encore
+  // validée : on n'avance pas la séance tant que ✓ n'a pas été pressé.
+  const timerAlreadyElapsedRef = useRef(false);
 
   // ── Échauffement cardio 3 min, en tout début de séance ──────────────────
   const [cardioVisible, setCardioVisible] = useState(true);
@@ -98,7 +105,18 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
         }
       }
     }
-    advanceSession();
+    // Le repos peut avoir démarré dès la saisie du poids, avant validation.
+    // Si la série visée n'est pas encore validée, on ne fait pas avancer la
+    // séance tout de suite : on avancera quand ✓ sera pressé.
+    const key = pendingSetKeyRef.current;
+    const store = useWorkoutStore.getState();
+    const setDone = key ? !!store.session?.exerciseProgress[key.exerciseId]?.[key.setIndex]?.completed : true;
+    if (setDone) {
+      pendingSetKeyRef.current = null;
+      advanceSession();
+    } else {
+      timerAlreadyElapsedRef.current = true;
+    }
   }, [advanceSession, saveCustomRest, defaultRestSeconds]);
 
   const { secondsLeft, isRunning: timerIsRunning, progress, formattedTime } = useRestTimer(handleTimerComplete);
@@ -138,13 +156,43 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
       advanceSession();
       return;
     }
+    // Le repos peut avoir déjà démarré à la saisie du poids (voir
+    // handleWeightEntered). S'il s'est déjà terminé pendant qu'on
+    // remplissait la série, on avance direct sans relancer de repos.
+    const isSameSet = pendingSetKeyRef.current?.exerciseId === exerciseId && pendingSetKeyRef.current?.setIndex === setIndex;
+    if (isSameSet && timerAlreadyElapsedRef.current) {
+      timerAlreadyElapsedRef.current = false;
+      pendingSetKeyRef.current = null;
+      advanceSession();
+      return;
+    }
+    // S'il tourne déjà pour cette série, on le laisse continuer.
+    if (isSameSet && useWorkoutStore.getState().timer.isRunning) {
+      return;
+    }
     // Priorité : temps custom (auto-appris ou réglé à la main dans la
     // liste "Temps de repos par exercice") → temps propre à l'exercice
     // (workouts.ts) → défaut global des réglages.
     const restSecs = customRestSeconds[exerciseId] ?? exercise.restSeconds ?? defaultRestSeconds;
     timerExerciseRef.current = exerciseId;
+    pendingSetKeyRef.current = { exerciseId, setIndex };
     startTimer(restSecs);
   }, [workout, completeSet, advanceSession, startTimer, customRestSeconds, defaultRestSeconds]);
+
+  // Démarre le repos dès que le poids est saisi (avant même de valider la
+  // série), pour compter le repos au plus près du moment où la série a
+  // réellement lieu, plutôt que d'attendre la validation manuelle.
+  const handleWeightEntered = useCallback((exerciseId: string, setIndex: number) => {
+    const exercise = workout?.exercises.find((e) => e.id === exerciseId);
+    if (!exercise) return;
+    if (exercise.restMode === 'superset' && exercise.supersetOrder === 1) return;
+    if (useWorkoutStore.getState().timer.isRunning) return;
+    const restSecs = customRestSeconds[exerciseId] ?? exercise.restSeconds ?? defaultRestSeconds;
+    timerExerciseRef.current = exerciseId;
+    pendingSetKeyRef.current = { exerciseId, setIndex };
+    timerAlreadyElapsedRef.current = false;
+    startTimer(restSecs);
+  }, [workout, customRestSeconds, defaultRestSeconds, startTimer]);
 
   if (!workout || !session || session.dayId !== dayId) {
     return (
@@ -296,6 +344,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
                           onSkipSet={exIdx === currentExIdx ? skipSet : undefined}
                           onSkipExercise={exIdx === currentExIdx ? skipExercise : undefined}
                           onAddSet={() => addSet(exercise.id)}
+                          onWeightStart={(setIndex) => handleWeightEntered(exercise.id, setIndex)}
                           restBar={isRestTarget ? restBarNode : null}
                           restBarIndex={isRestTarget ? restBarTargetIndex : undefined}
                         />
@@ -321,6 +370,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
                   onSkipSet={exIdx === currentExIdx ? skipSet : undefined}
                   onSkipExercise={exIdx === currentExIdx ? skipExercise : undefined}
                   onAddSet={() => addSet(exercise.id)}
+                  onWeightStart={(setIndex) => handleWeightEntered(exercise.id, setIndex)}
                   restBar={isRestTarget ? restBarNode : null}
                   restBarIndex={isRestTarget ? restBarTargetIndex : undefined}
                 />
@@ -381,12 +431,13 @@ const CompletionScreen: React.FC<{
   history: HistoryEntry[];
 }> = ({ workout, session, onBack, history }) => {
   const updateLastSessionRPE = useWorkoutStore((s) => s.updateLastSessionRPE);
+  const caloriesPerHour = useWorkoutStore((s) => s.caloriesPerHour);
   const [rpe, setRpe] = useState<number | null>(null);
 
   const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
   const durationMs = Date.now() - session.startTime;
   const durationMin = Math.round(durationMs / 60000);
-  const cal = Math.round(5.5 * durationMin);
+  const cal = Math.round((caloriesPerHour / 60) * durationMin);
   const tonnage = computeTonnage(session.exerciseProgress);
   const comparison = compareSessionToHistory(history, session.dayId, tonnage);
 
