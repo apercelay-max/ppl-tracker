@@ -2,6 +2,12 @@ import React, { useRef, useState } from 'react';
 import { WORKOUTS, PROGRESSION_WEEKS } from '../data/workouts';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
+import { getMuscleGroupsStatus } from '../utils/training';
+
+// Au-delà de ce seuil (en jours), un groupe musculaire est considéré
+// "en retard" — le cycle PPL Strict V10 repasse sur chaque groupe tous les
+// 4 à 8 jours environ, donc 9 jours laisse une vraie marge avant d'alerter.
+const MUSCLE_ALERT_THRESHOLD_DAYS = 9;
 
 const DAY_ACCENT: Record<string, string> = {
   'pull-a': '#7c6fcd', 'push-a': '#e03030', 'legs-a': '#e8a020',
@@ -25,6 +31,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const homeSections = useWorkoutStore((s) => s.homeSections);
   const homeSectionOrder = useWorkoutStore((s) => s.homeSectionOrder);
   const cycleDoneIds = useWorkoutStore((s) => s.cycleDoneIds);
+  const history = useWorkoutStore((s) => s.history);
   const iconSize = useWorkoutStore((s) => s.iconSize);
   const iconSizes = ICON_SIZE_PRESETS[iconSize];
 
@@ -160,6 +167,36 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     </div>
   );
 
+  const muscleAlertSection = homeSections.muscleAlert && (() => {
+    if (history.length === 0) return null; // Rien à signaler avant la 1ère séance
+    const statuses = getMuscleGroupsStatus(history)
+      .filter((s) => s.daysSince === null || s.daysSince > MUSCLE_ALERT_THRESHOLD_DAYS)
+      .sort((a, b) => (b.daysSince ?? 999) - (a.daysSince ?? 999));
+    return (
+      <div key="muscleAlert" style={muscleAlertCard}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: statuses.length ? 8 : 0 }}>
+          🎯 Groupes musculaires
+        </p>
+        {statuses.length === 0 ? (
+          <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px' }}>
+            Tout est à jour, aucun groupe musculaire délaissé. 👍
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {statuses.map((s) => (
+              <div key={s.group} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{s.group}</span>
+                <span style={{ color: '#f5a623', fontSize: 12, fontWeight: 700 }}>
+                  {s.daysSince === null ? 'jamais travaillé' : `${s.daysSince} j`}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  })();
+
   const supersetSection = homeSections.supersetRule && (
     <div key="supersetRule" style={{ background: 'var(--bg-green-tint)', borderRadius: 14, padding: 14, marginTop: 8, marginBottom: 10, border: '1px solid var(--border-ss-tint)' }}>
       <p style={{ color: 'var(--text-ss-label)', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>⟳ Règle Superset</p>
@@ -174,6 +211,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     seances: seancesSection,
     nutrition: nutritionSection,
     supersetRule: supersetSection,
+    muscleAlert: muscleAlertSection,
   };
 
   return (
@@ -333,4 +371,8 @@ const workoutCard: React.CSSProperties = {
 const nutritionCard: React.CSSProperties = {
   background: 'var(--bg-gold-tint)', borderRadius: 14, padding: 14, marginTop: 10,
   border: '1px solid var(--border-gold-tint)',
+};
+const muscleAlertCard: React.CSSProperties = {
+  background: 'var(--bg-card)', borderRadius: 14, padding: 14, marginTop: 10, marginBottom: 10,
+  border: '1px solid var(--border-mid)',
 };

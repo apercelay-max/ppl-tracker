@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getWorkout } from '../data/workouts';
 import { HistoryEntry } from '../data/types';
-import { bucketByWeek, computeLoadStatus, computeTonnage, WeekBucket } from '../utils/training';
+import {
+  bucketByWeek, computeLoadStatus, computeTonnage, WeekBucket,
+  ALL_EXERCISES, getExerciseWeightHistory,
+} from '../utils/training';
 
 interface DashboardScreenProps { onBack: () => void; }
 
@@ -51,6 +54,136 @@ const WeeklyBarChart: React.FC<{
           </div>
         );
       })}
+    </div>
+  );
+};
+
+const WEEKDAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
+const MonthCalendar: React.FC<{ history: HistoryEntry[] }> = ({ history }) => {
+  const [monthOffset, setMonthOffset] = useState(0); // 0 = mois en cours, négatif = mois précédents
+  const now = new Date();
+  const viewDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstWeekday = new Date(year, month, 1).getDay(); // 0 = dimanche
+  const startOffset = (firstWeekday + 6) % 7; // décalage pour semaine commençant lundi
+
+  const sessionsByDay: Record<number, HistoryEntry[]> = {};
+  for (const entry of history) {
+    const d = new Date(entry.date);
+    if (d.getFullYear() === year && d.getMonth() === month) {
+      const day = d.getDate();
+      (sessionsByDay[day] ??= []).push(entry);
+    }
+  }
+
+  const monthLabel = viewDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const sessionsThisMonth = Object.keys(sessionsByDay).length;
+
+  return (
+    <div style={chartCard}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <button onClick={() => setMonthOffset((m) => m - 1)} style={calNavBtn}>‹</button>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700, textTransform: 'capitalize' }}>{monthLabel}</p>
+        <button
+          onClick={() => setMonthOffset((m) => Math.min(0, m + 1))}
+          disabled={monthOffset === 0}
+          style={{ ...calNavBtn, opacity: monthOffset === 0 ? 0.3 : 1, cursor: monthOffset === 0 ? 'default' : 'pointer' }}
+        >›</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 6 }}>
+        {WEEKDAY_LABELS.map((d, i) => (
+          <span key={i} style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: 9, fontWeight: 700 }}>{d}</span>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+        {Array.from({ length: startOffset }, (_, i) => <div key={`empty-${i}`} />)}
+        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
+          const sessions = sessionsByDay[day];
+          const isToday = monthOffset === 0 && day === now.getDate();
+          const accent = sessions ? (DAY_ACCENT[sessions[0].dayId] ?? '#7a7a90') : undefined;
+          return (
+            <div
+              key={day}
+              style={{
+                aspectRatio: '1', borderRadius: 8,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: accent ? `${accent}25` : 'var(--bg-elevated)',
+                border: isToday ? '1px solid var(--brand-1)' : '1px solid transparent',
+              }}
+            >
+              <span style={{ fontSize: 11, fontWeight: accent ? 800 : 500, color: accent ?? 'var(--text-dim)' }}>{day}</span>
+            </div>
+          );
+        })}
+      </div>
+      <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 10, textAlign: 'center' }}>
+        {sessionsThisMonth > 0 ? `${sessionsThisMonth} séance${sessionsThisMonth > 1 ? 's' : ''} ce mois-ci` : 'Aucune séance ce mois-ci'}
+      </p>
+    </div>
+  );
+};
+
+const ProgressionChart: React.FC<{ history: HistoryEntry[] }> = ({ history }) => {
+  const [exerciseId, setExerciseId] = useState(ALL_EXERCISES[0]?.id ?? '');
+  const points = getExerciseWeightHistory(history, exerciseId);
+
+  const CHART_W = 300;
+  const CHART_H = 100;
+  const PAD = 12;
+
+  let svgContent: React.ReactNode = null;
+  if (points.length >= 2) {
+    const weights = points.map((p) => p.maxWeight);
+    const min = Math.min(...weights);
+    const max = Math.max(...weights);
+    const range = max - min || 1;
+    const coords = points.map((p, i) => {
+      const x = PAD + (i / (points.length - 1)) * (CHART_W - PAD * 2);
+      const y = CHART_H - PAD - ((p.maxWeight - min) / range) * (CHART_H - PAD * 2);
+      return { x, y, w: p.maxWeight };
+    });
+    const path = coords.map((c) => `${c.x},${c.y}`).join(' ');
+    const last = points[points.length - 1];
+    const first = points[0];
+    const trendUp = last.maxWeight >= first.maxWeight;
+    svgContent = (
+      <>
+        <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} style={{ width: '100%', height: 90, display: 'block' }}>
+          <polyline points={path} fill="none" stroke={trendUp ? '#4CAF50' : '#f5a623'} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+          {coords.map((c, i) => (
+            <circle key={i} cx={c.x} cy={c.y} r={i === coords.length - 1 ? 3.5 : 2} fill={trendUp ? '#4CAF50' : '#f5a623'} />
+          ))}
+        </svg>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+          <span style={{ color: 'var(--text-dim)', fontSize: 10 }}>{first.maxWeight} kg</span>
+          <span style={{ color: trendUp ? '#4CAF50' : '#f5a623', fontSize: 11, fontWeight: 800 }}>{last.maxWeight} kg</span>
+        </div>
+      </>
+    );
+  } else {
+    svgContent = (
+      <p style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center', padding: '20px 0' }}>
+        Pas encore assez de séances avec cet exercice pour voir une courbe.
+      </p>
+    );
+  }
+
+  return (
+    <div style={chartCard}>
+      <p style={{ ...sectionLabel, marginBottom: 8 }}>PROGRESSION PAR EXERCICE</p>
+      <select
+        value={exerciseId}
+        onChange={(e) => setExerciseId(e.target.value)}
+        style={exerciseSelect}
+      >
+        {ALL_EXERCISES.map((ex) => (
+          <option key={ex.id} value={ex.id}>{ex.name}</option>
+        ))}
+      </select>
+      {svgContent}
     </div>
   );
 };
@@ -127,6 +260,12 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onBack }) => {
               <WeeklyBarChart buckets={buckets} valueFn={(b) => b.tonnage} color="#5560cc" />
             </div>
 
+            {/* Progression par exercice */}
+            <ProgressionChart history={history} />
+
+            {/* Calendrier des séances */}
+            <MonthCalendar history={history} />
+
             {/* Historique */}
             <p style={{ ...sectionLabel, marginBottom: 10 }}>SÉANCES RÉCENTES</p>
             <div>
@@ -173,6 +312,11 @@ const SessionRow: React.FC<{ entry: HistoryEntry }> = ({ entry }) => {
           {setsCompleted} séries · {durationMin} min
           {entry.tonnage ? ` · ${entry.tonnage} kg` : ''}
         </p>
+        {entry.note && (
+          <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 3, fontStyle: 'italic', lineHeight: '15px' }}>
+            « {entry.note} »
+          </p>
+        )}
       </div>
       {entry.rpe && (
         <div style={{
@@ -221,6 +365,16 @@ const chartCard: React.CSSProperties = {
   border: '1px solid var(--border-mid)',
 };
 const sectionLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 10 };
+const calNavBtn: React.CSSProperties = {
+  width: 28, height: 28, borderRadius: 8, background: 'var(--bg-elevated)',
+  color: 'var(--text-secondary)', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-strong)',
+};
+const exerciseSelect: React.CSSProperties = {
+  width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+  borderRadius: 10, padding: '8px 10px', color: 'var(--text-primary)', fontSize: 13,
+  marginBottom: 10, fontFamily: 'inherit',
+};
 const sessionRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 10,
   background: 'var(--bg-surface)', border: '1px solid var(--border)',

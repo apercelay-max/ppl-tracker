@@ -4,8 +4,9 @@ import { getWorkout, PROGRESSION_WEEKS } from '../data/workouts';
 import { ExerciseCard } from '../components/ExerciseCard';
 import { InlineRestBar } from '../components/InlineRestBar';
 import { StatsPanel } from '../components/StatsPanel';
+import { BodyDiagram } from '../components/BodyDiagram';
 import { useRestTimer } from '../hooks/useRestTimer';
-import { computeTonnage, computeTrainingLoad, compareSessionToHistory } from '../utils/training';
+import { computeTonnage, computeTrainingLoad, compareSessionToHistory, getWorkoutBodyIntensity } from '../utils/training';
 import { SetEntry, Exercise, ExerciseProgress, HistoryEntry } from '../data/types';
 
 interface SessionScreenProps { dayId: string; onBack: () => void; onOpenSettings: () => void; }
@@ -54,6 +55,9 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
   // Vrai si le repos s'est terminé alors que la série n'était pas encore
   // validée : on n'avance pas la séance tant que ✓ n'a pas été pressé.
   const timerAlreadyElapsedRef = useRef(false);
+
+  // ── Schéma corps humain, en tout début de séance ────────────────────────
+  const [bodyDiagramVisible, setBodyDiagramVisible] = useState(true);
 
   // ── Échauffement cardio 3 min, en tout début de séance ──────────────────
   const [cardioVisible, setCardioVisible] = useState(true);
@@ -205,6 +209,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
   if (session.isComplete) return <CompletionScreen workout={workout} session={session} onBack={onBack} history={history} />;
 
   const exercises = workout.exercises;
+  const bodyIntensity = getWorkoutBodyIntensity(workout);
   const weekIdx = currentWeek <= 2 ? 0 : currentWeek <= 4 ? 1 : currentWeek <= 6 ? 2 : currentWeek === 7 ? 3 : 4;
   const weekData = PROGRESSION_WEEKS[weekIdx];
   const currentExIdx = session.currentExerciseIndex;
@@ -296,6 +301,15 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
 
         <div style={scrollArea}>
           <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 16px 80px' }}>
+            {bodyDiagramVisible && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
+              <div style={bodyDiagramCard}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5 }}>MUSCLES SOLLICITÉS</p>
+                  <button onClick={() => setBodyDiagramVisible(false)} style={bodyDiagramCloseBtn}>✕</button>
+                </div>
+                <BodyDiagram intensity={bodyIntensity} />
+              </div>
+            )}
             {cardioVisible && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
               <div style={cardioCard}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: cardioRunning ? 10 : 6 }}>
@@ -385,6 +399,18 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
   );
 };
 
+// ─── Schéma corps humain ──────────────────────────────────────────────────
+
+const bodyDiagramCard: React.CSSProperties = {
+  background: 'var(--bg-card)', border: '1px solid var(--border-mid)',
+  borderRadius: 18, padding: '14px 14px', marginBottom: 14,
+};
+const bodyDiagramCloseBtn: React.CSSProperties = {
+  width: 22, height: 22, borderRadius: 7, background: 'var(--bg-elevated)',
+  color: 'var(--text-dim)', fontSize: 11, display: 'flex', alignItems: 'center',
+  justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
+};
+
 // ─── Échauffement cardio ─────────────────────────────────────────────────
 
 const cardioCard: React.CSSProperties = {
@@ -431,8 +457,10 @@ const CompletionScreen: React.FC<{
   history: HistoryEntry[];
 }> = ({ workout, session, onBack, history }) => {
   const updateLastSessionRPE = useWorkoutStore((s) => s.updateLastSessionRPE);
+  const updateLastSessionNote = useWorkoutStore((s) => s.updateLastSessionNote);
   const caloriesPerHour = useWorkoutStore((s) => s.caloriesPerHour);
   const [rpe, setRpe] = useState<number | null>(null);
+  const [note, setNote] = useState('');
 
   const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
   const durationMs = Date.now() - session.startTime;
@@ -544,6 +572,19 @@ const CompletionScreen: React.FC<{
           )}
         </div>
 
+        <div style={rpeCard}>
+          <p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 10 }}>
+            NOTE DE SÉANCE (FACULTATIF)
+          </p>
+          <textarea
+            value={note}
+            onChange={(e) => { setNote(e.target.value); updateLastSessionNote(e.target.value); }}
+            placeholder="Comment tu t'es senti aujourd'hui ?"
+            rows={2}
+            style={noteInput}
+          />
+        </div>
+
         <div style={{ borderRadius: 16, padding: 16, marginBottom: 12, border: `1px solid ${rec.color}30`, background: `${rec.color}08` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
             <span style={{ fontSize: 20 }}>{rec.emoji}</span>
@@ -617,6 +658,12 @@ const rpeBtn: React.CSSProperties = {
   flex: 1, height: 34, borderRadius: 9,
   fontSize: 13, fontWeight: 700, cursor: 'pointer',
   transition: 'background 0.15s, border-color 0.15s',
+};
+const noteInput: React.CSSProperties = {
+  width: '100%', resize: 'none', background: 'var(--bg-elevated)',
+  border: '1px solid var(--border-strong)', borderRadius: 12,
+  padding: '10px 12px', color: 'var(--text-primary)', fontSize: 13,
+  lineHeight: '18px', fontFamily: 'inherit',
 };
 const completeBtnStyle: React.CSSProperties = {
   width: '100%', background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))',

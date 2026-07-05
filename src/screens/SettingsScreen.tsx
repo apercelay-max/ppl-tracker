@@ -44,6 +44,7 @@ const SECTION_META: Record<HomeSectionKey, { label: string; desc: string; toggle
   seances: { label: 'Liste des séances', desc: 'Les 6 séances PPL — toujours visible.', toggleable: false },
   nutrition: { label: 'Conseil nutrition', desc: 'Le rappel protéines/glucides après la séance.', toggleable: true },
   supersetRule: { label: 'Règle superset', desc: 'Le rappel sur le fonctionnement des supersets.', toggleable: true },
+  muscleAlert: { label: 'Groupes musculaires', desc: 'Alerte les groupes pas travaillés depuis un moment.', toggleable: true },
 };
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
