@@ -135,6 +135,8 @@ interface WorkoutStore {
   wakeLockEnabled: boolean;
   customRestSeconds: Record<string, number>;
   accentTheme: string;
+  customAccentColor: string;
+  amoledMode: boolean;
   fontScale: 'sm' | 'md' | 'lg';
   homeSections: HomeSectionsVisible;
   homeSectionOrder: HomeSectionKey[];
@@ -179,6 +181,8 @@ interface WorkoutStore {
   setBeepVolume: (value: number) => void;
   testBeep: () => void;
   setCaloriesPerHour: (value: number) => void;
+  setCustomAccentColor: (hex: string) => void;
+  setAmoledMode: (enabled: boolean) => void;
 }
 
 export const useWorkoutStore = create<WorkoutStore>()(
@@ -192,6 +196,8 @@ export const useWorkoutStore = create<WorkoutStore>()(
       wakeLockEnabled: true,
       customRestSeconds: {},
       accentTheme: 'red',
+      customAccentColor: '#e03030',
+      amoledMode: false,
       fontScale: 'md',
       homeSections: { cycle: true, nutrition: true, supersetRule: true },
       homeSectionOrder: DEFAULT_HOME_ORDER,
@@ -454,6 +460,8 @@ export const useWorkoutStore = create<WorkoutStore>()(
       },
       testBeep: () => playBeep(get().beepTone, get().beepVolume),
       setCaloriesPerHour: (value) => set({ caloriesPerHour: Math.max(50, Math.min(1200, value)) }),
+      setCustomAccentColor: (hex) => set({ customAccentColor: hex, accentTheme: 'custom' }),
+      setAmoledMode: (enabled) => set({ amoledMode: enabled }),
     }),
     {
       name: 'ppl-tracker-store',
@@ -477,6 +485,8 @@ export const useWorkoutStore = create<WorkoutStore>()(
         beepTone: state.beepTone,
         beepVolume: state.beepVolume,
         caloriesPerHour: state.caloriesPerHour,
+        customAccentColor: state.customAccentColor,
+        amoledMode: state.amoledMode,
       }),
     }
   )
