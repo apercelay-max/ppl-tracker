@@ -18,6 +18,7 @@ interface ExerciseCardProps {
   onSkipSet?: () => void;
   onSkipExercise?: () => void;
   onAddSet?: () => void;
+  onWeightStart?: (setIndex: number) => void;
   restBar?: React.ReactNode;
   restBarIndex?: number;
 }
@@ -30,7 +31,7 @@ const formatRest = (seconds: number): string => {
 
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   exercise, setEntries, currentSetIndex, isActive, currentWeek, onSetComplete,
-  onEditSet, onSkipSet, onSkipExercise, onAddSet, restBar, restBarIndex,
+  onEditSet, onSkipSet, onSkipExercise, onAddSet, onWeightStart, restBar, restBarIndex,
 }) => {
   const [notesOpen, setNotesOpen] = useState(false);
   const iconSize = useWorkoutStore((s) => s.iconSize);
@@ -148,6 +149,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 isCurrent={isActive && idx === currentSetIndex}
                 onComplete={(e) => onSetComplete(idx, e)}
                 onEdit={onEditSet ? () => onEditSet(idx) : undefined}
+                onWeightStart={onWeightStart ? () => onWeightStart(idx) : undefined}
                 lastTime={lastTimeSets?.[idx]}
               />
             </React.Fragment>

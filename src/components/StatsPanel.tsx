@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useSessionChrono } from '../hooks/useSessionChrono';
 import { useHeartRate } from '../hooks/useHeartRate';
+import { useWorkoutStore } from '../store/workoutStore';
 
 interface Props { startTime: number; compact?: boolean; }
 
-const estCal = (ms: number, hr: number | null): number => {
+const estCal = (ms: number, hr: number | null, caloriesPerHour: number): number => {
   const min = ms / 60000;
   if (hr && hr > 50) return Math.max(0, Math.round((0.074 * hr - 6.5) * min));
-  return Math.round(5.5 * min);
+  return Math.round((caloriesPerHour / 60) * min);
 };
 
 const clock = (): string => {
@@ -18,6 +19,7 @@ const clock = (): string => {
 export const StatsPanel: React.FC<Props> = ({ startTime, compact }) => {
   const { elapsed, formatted: chrono } = useSessionChrono(startTime);
   const { hr, status, connect, disconnect, isSupported, error } = useHeartRate();
+  const caloriesPerHour = useWorkoutStore((s) => s.caloriesPerHour);
   const [time, setTime] = useState(clock);
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export const StatsPanel: React.FC<Props> = ({ startTime, compact }) => {
     return () => clearInterval(id);
   }, []);
 
-  const cal = estCal(elapsed, hr);
+  const cal = estCal(elapsed, hr, caloriesPerHour);
   const connected = status === 'connected';
   const connecting = status === 'connecting';
   const hrColor = hr ? (hr > 170 ? '#f44336' : hr > 145 ? '#ff9800' : '#ff6b6b') : 'var(--text-muted)';
@@ -97,7 +99,7 @@ export const StatsPanel: React.FC<Props> = ({ startTime, compact }) => {
           {cal} <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>kcal</span>
         </p>
         <p style={{ color: 'var(--text-micro)', fontSize: 10, marginTop: 4 }}>
-          {hr ? 'basé sur FC' : 'estimation ~5.5/min'}
+          {hr ? 'basé sur FC' : `estimation ~${caloriesPerHour} kcal/h`}
         </p>
       </Block>
     </div>

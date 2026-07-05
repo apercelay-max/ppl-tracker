@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SetEntry } from '../data/types';
 
 interface SetRowProps {
@@ -10,6 +10,10 @@ interface SetRowProps {
   onComplete: (entry: SetEntry) => void;
   onEdit?: () => void;
   lastTime?: SetEntry;
+  // Appelé la 1ère fois que l'utilisateur modifie le poids de la série
+  // active, pour démarrer le repos dès la saisie plutôt que d'attendre
+  // la validation (✓) — voir SessionScreen.handleWeightEntered.
+  onWeightStart?: () => void;
 }
 
 const parseTargetRange = (targetReps: string): [number, number] | null => {
@@ -26,10 +30,13 @@ const isRepOutOfRange = (reps: string, targetReps: string): boolean => {
 };
 
 export const SetRow: React.FC<SetRowProps> = ({
-  setNumber, targetReps, defaultWeight, entry, isCurrent, onComplete, onEdit, lastTime,
+  setNumber, targetReps, defaultWeight, entry, isCurrent, onComplete, onEdit, lastTime, onWeightStart,
 }) => {
   const [weight, setWeight] = useState(entry.weight || defaultWeight || '');
   const [reps, setReps] = useState(entry.reps || '');
+  // Ne déclenche onWeightStart qu'une fois par série active (reset dès
+  // qu'on quitte la série active, ex. après validation ou passage suivant).
+  const weightStartFiredRef = useRef(false);
 
   useEffect(() => {
     if (!entry.completed) {
@@ -37,6 +44,18 @@ export const SetRow: React.FC<SetRowProps> = ({
       setReps(entry.reps || '');
     }
   }, [entry.completed, entry.weight, entry.reps, defaultWeight]);
+
+  useEffect(() => {
+    if (!isCurrent) weightStartFiredRef.current = false;
+  }, [isCurrent]);
+
+  const handleWeightChange = (value: string) => {
+    setWeight(value);
+    if (isCurrent && value.trim() !== '' && !weightStartFiredRef.current) {
+      weightStartFiredRef.current = true;
+      onWeightStart?.();
+    }
+  };
 
   const handleValidate = () => { if (!reps) return; onComplete({ weight, reps, completed: true }); };
 
@@ -120,7 +139,7 @@ export const SetRow: React.FC<SetRowProps> = ({
         </div>
         <div className="input-field" style={inputWrapper}>
           <input style={inputField} type="text" inputMode="decimal" value={weight}
-            onChange={(e) => setWeight(e.target.value)} placeholder="kg" onFocus={(e) => e.target.select()} />
+            onChange={(e) => handleWeightChange(e.target.value)} placeholder="kg" onFocus={(e) => e.target.select()} />
           <span style={inputUnit}>kg</span>
         </div>
         <div className="input-field" style={inputWrapper}>
