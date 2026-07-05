@@ -17,6 +17,8 @@ export default function App() {
   const [settingsReturnView, setSettingsReturnView] = useState<View>('home');
   const theme = useWorkoutStore((s) => s.theme);
   const accentTheme = useWorkoutStore((s) => s.accentTheme);
+  const customAccentColor = useWorkoutStore((s) => s.customAccentColor);
+  const amoledMode = useWorkoutStore((s) => s.amoledMode);
   const fontScale = useWorkoutStore((s) => s.fontScale);
   const iconShape = useWorkoutStore((s) => s.iconShape);
   const highContrast = useWorkoutStore((s) => s.highContrast);
@@ -26,12 +28,18 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
-    const accent = getAccent(accentTheme);
+    const accent = getAccent(accentTheme, customAccentColor);
     const root = document.documentElement.style;
     root.setProperty('--brand-1', accent.c1);
     root.setProperty('--brand-2', accent.c2);
     root.setProperty('--brand-1-rgb', accent.rgb1);
-  }, [accentTheme]);
+  }, [accentTheme, customAccentColor]);
+
+  // Noir pur (AMOLED) — ne s'applique visuellement qu'en thème sombre,
+  // voir les overrides [data-theme="dark"][data-amoled="on"] dans index.css.
+  useEffect(() => {
+    document.documentElement.setAttribute('data-amoled', amoledMode ? 'on' : 'off');
+  }, [amoledMode]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-font-scale', fontScale);

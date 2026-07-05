@@ -101,6 +101,20 @@
   --border-strong: #8080a0;
 }
 
+/* ─── Noir pur / AMOLED (réglage accueil) ───────────────────────────────── */
+/* Ne s'applique qu'en thème sombre — inutile en thème clair. */
+[data-theme="dark"][data-amoled="on"] {
+  --bg-base: #000000;
+  --bg-surface: #060606;
+  --bg-card: #0b0b0b;
+  --bg-elevated: #141414;
+  --bg-higher: #1c1c1c;
+  --border-subtle: #161616;
+  --border: #202020;
+  --border-mid: #2a2a2a;
+  --border-strong: #383838;
+}
+
 html, body, #root {
   height: 100%;
   background: var(--bg-base);
