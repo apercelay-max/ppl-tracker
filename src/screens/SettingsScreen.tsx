@@ -31,10 +31,12 @@ const REST_OPTIONS: { seconds: number; label: string }[] = [
   { seconds: 240, label: '4:00' },
 ];
 
-const BEEP_TONES: { id: 'doux' | 'classique' | 'urgent'; label: string }[] = [
+const BEEP_TONES: { id: 'doux' | 'classique' | 'urgent' | 'melodique' | 'cloche'; label: string }[] = [
   { id: 'doux', label: 'Doux' },
   { id: 'classique', label: 'Classique' },
   { id: 'urgent', label: 'Urgent' },
+  { id: 'melodique', label: 'Mélodique' },
+  { id: 'cloche', label: 'Cloche' },
 ];
 
 const SECTION_META: Record<HomeSectionKey, { label: string; desc: string; toggleable: boolean }> = {
@@ -68,6 +70,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const setBeepEnabled = useWorkoutStore((s) => s.setBeepEnabled);
   const beepTone = useWorkoutStore((s) => s.beepTone);
   const setBeepTone = useWorkoutStore((s) => s.setBeepTone);
+  const beepVolume = useWorkoutStore((s) => s.beepVolume);
+  const setBeepVolume = useWorkoutStore((s) => s.setBeepVolume);
   const testBeep = useWorkoutStore((s) => s.testBeep);
   const caloriesPerHour = useWorkoutStore((s) => s.caloriesPerHour);
   const setCaloriesPerHour = useWorkoutStore((s) => s.setCaloriesPerHour);
@@ -238,22 +242,42 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
           </button>
         </div>
         {beepEnabled && (
-          <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
-            {BEEP_TONES.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setBeepTone(t.id)}
-                style={{
-                  ...restBtn,
-                  background: beepTone === t.id ? 'var(--brand-1)' : 'var(--bg-elevated)',
-                  color: beepTone === t.id ? '#fff' : 'var(--text-muted)',
-                }}
-              >
-                {t.label}
-              </button>
-            ))}
-            <button onClick={testBeep} style={{ ...restBtn, flex: '0 0 auto', padding: '10px 16px' }}>▶ Tester</button>
-          </div>
+          <>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+              {BEEP_TONES.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setBeepTone(t.id)}
+                  style={{
+                    ...restBtn,
+                    flex: '1 1 30%',
+                    background: beepTone === t.id ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                    color: beepTone === t.id ? '#fff' : 'var(--text-muted)',
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+              <button onClick={testBeep} style={{ ...restBtn, flex: '1 1 30%', color: 'var(--brand-1)' }}>▶ Tester</button>
+            </div>
+            <div style={{ ...toggleRow, marginBottom: 20, flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>Volume du bip</p>
+                <p style={{ color: 'var(--text-dim)', fontSize: 12, fontWeight: 700 }}>{beepVolume}%</p>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={beepVolume}
+                onChange={(e) => setBeepVolume(Number(e.target.value))}
+                onMouseUp={testBeep}
+                onTouchEnd={testBeep}
+                style={{ width: '100%', accentColor: 'var(--brand-1)' }}
+              />
+            </div>
+          </>
         )}
         {!beepEnabled && <div style={{ marginBottom: 12 }} />}
 
