@@ -6,7 +6,7 @@ import { InlineRestBar } from '../components/InlineRestBar';
 import { StatsPanel } from '../components/StatsPanel';
 import { BodyDiagram } from '../components/BodyDiagram';
 import { useRestTimer } from '../hooks/useRestTimer';
-import { computeTonnage, computeTrainingLoad, compareSessionToHistory, getWorkoutBodyIntensity } from '../utils/training';
+import { computeTonnage, computeTrainingLoad, compareSessionToHistory, getWorkoutBodyIntensity, getMaxWeightEver } from '../utils/training';
 import { SetEntry, Exercise, ExerciseProgress, HistoryEntry } from '../data/types';
 
 interface SessionScreenProps { dayId: string; onBack: () => void; onOpenSettings: () => void; }
@@ -44,7 +44,13 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
   const reduceTimer = useWorkoutStore((s) => s.reduceTimer);
   const addTimer = useWorkoutStore((s) => s.addTimer);
   const saveCustomRest = useWorkoutStore((s) => s.saveCustomRest);
+  const bodyDiagramEnabled = useWorkoutStore((s) => s.bodyDiagramEnabled);
   const [isWide, setIsWide] = useState(() => window.innerWidth >= 700);
+
+  // ── Détection de record personnel (PR) ───────────────────────────────────
+  const [prBanner, setPrBanner] = useState<string | null>(null);
+  const prTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (prTimeoutRef.current) clearTimeout(prTimeoutRef.current); }, []);
 
   // Track which exercise triggered the timer (for saving custom rest)
   const timerExerciseRef = useRef<string | null>(null);
@@ -152,6 +158,21 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
   // ci-dessous (règle des hooks React — sinon erreur #300 "rendered fewer
   // hooks than expected" dès qu'on atteint la fin d'une séance).
   const handleSetComplete = useCallback(async (exerciseId: string, setIndex: number, entry: SetEntry) => {
+    // Détecte un record personnel AVANT de compléter la série : `history`
+    // ne contient que les séances déjà terminées, donc c'est bien "ton
+    // record d'avant aujourd'hui" qu'on compare au poids qui vient d'être
+    // saisi.
+    const newWeight = parseFloat(entry.weight);
+    if (!isNaN(newWeight)) {
+      const previousMax = getMaxWeightEver(history, exerciseId);
+      if (previousMax > 0 && newWeight > previousMax) {
+        const exerciseName = workout?.exercises.find((e) => e.id === exerciseId)?.name ?? '';
+        if (prTimeoutRef.current) clearTimeout(prTimeoutRef.current);
+        setPrBanner(exerciseName);
+        prTimeoutRef.current = setTimeout(() => setPrBanner(null), 3500);
+        try { if ('vibrate' in navigator) navigator.vibrate([80, 40, 80, 40, 160]); } catch (_) {}
+      }
+    }
     completeSet(exerciseId, setIndex, entry);
     const exercise = workout?.exercises.find((e) => e.id === exerciseId);
     if (!exercise) return;
@@ -181,7 +202,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
     timerExerciseRef.current = exerciseId;
     pendingSetKeyRef.current = { exerciseId, setIndex };
     startTimer(restSecs);
-  }, [workout, completeSet, advanceSession, startTimer, customRestSeconds, defaultRestSeconds]);
+  }, [workout, completeSet, advanceSession, startTimer, customRestSeconds, defaultRestSeconds, history]);
 
   // Démarre le repos dès que le poids est saisi (avant même de valider la
   // série), pour compter le repos au plus près du moment où la série a
@@ -283,6 +304,15 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
 
   return (
     <div style={{ ...container, flexDirection: isWide ? 'row' : 'column' }}>
+      {prBanner && (
+        <div style={prBannerStyle} className="fade-in">
+          <span style={{ fontSize: 20 }}>🏆</span>
+          <div>
+            <p style={{ color: '#fff', fontSize: 13, fontWeight: 800 }}>Nouveau record !</p>
+            <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11 }}>{prBanner}</p>
+          </div>
+        </div>
+      )}
       <div style={isWide ? mainArea : { display: 'contents' }}>
         <div style={headerBar}>
           <button onClick={handleAbandon} style={backBtn}>←</button>
@@ -301,7 +331,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
 
         <div style={scrollArea}>
           <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 16px 80px' }}>
-            {bodyDiagramVisible && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
+            {bodyDiagramEnabled && bodyDiagramVisible && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
               <div style={bodyDiagramCard}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5 }}>MUSCLES SOLLICITÉS</p>
@@ -609,6 +639,12 @@ const CompletionScreen: React.FC<{
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
+const prBannerStyle: React.CSSProperties = {
+  position: 'fixed', top: 'max(14px, env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)',
+  zIndex: 200, display: 'flex', alignItems: 'center', gap: 10,
+  background: 'linear-gradient(135deg, #e8a020, #cc7a10)', borderRadius: 14, padding: '10px 16px',
+  boxShadow: '0 8px 24px rgba(232,160,32,0.4)', maxWidth: '90%',
+};
 const container: React.CSSProperties = { height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg-base)' };
 const mainArea: React.CSSProperties = { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' };
 const headerBar: React.CSSProperties = {

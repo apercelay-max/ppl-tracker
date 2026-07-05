@@ -1,8 +1,19 @@
 import React, { useRef, useState } from 'react';
 import { WORKOUTS, PROGRESSION_WEEKS } from '../data/workouts';
-import { useWorkoutStore } from '../store/workoutStore';
+import { useWorkoutStore, CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
 import { getMuscleGroupsStatus } from '../utils/training';
+import type { CardioActivityType } from '../data/types';
+
+const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
+
+const formatCardioDate = (ts: number): string => {
+  const diffDays = Math.floor((Date.now() - ts) / 86400000);
+  if (diffDays <= 0) return "Aujourd'hui";
+  if (diffDays === 1) return 'Hier';
+  if (diffDays < 7) return `Il y a ${diffDays} j`;
+  return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+};
 
 // Au-delà de ce seuil (en jours), un groupe musculaire est considéré
 // "en retard" — le cycle PPL Strict V10 repasse sur chaque groupe tous les
@@ -34,6 +45,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const history = useWorkoutStore((s) => s.history);
   const iconSize = useWorkoutStore((s) => s.iconSize);
   const iconSizes = ICON_SIZE_PRESETS[iconSize];
+  const cardioHistory = useWorkoutStore((s) => s.cardioHistory);
+  const addCardioEntry = useWorkoutStore((s) => s.addCardioEntry);
+  const deleteCardioEntry = useWorkoutStore((s) => s.deleteCardioEntry);
+  const weeklySessionGoal = useWorkoutStore((s) => s.weeklySessionGoal);
+
+  // ── Cardio (formulaire rapide d'ajout) ──────────────────────────────────
+  const [cardioFormOpen, setCardioFormOpen] = useState(false);
+  const [cardioType, setCardioType] = useState<CardioActivityType>('velo');
+  const [cardioDuration, setCardioDuration] = useState(30);
+  const [cardioRpe, setCardioRpe] = useState<number | null>(null);
+
+  const handleAddCardio = () => {
+    addCardioEntry(cardioType, cardioDuration, cardioRpe ?? undefined);
+    setCardioFormOpen(false);
+    setCardioDuration(30);
+    setCardioRpe(null);
+  };
 
   const weekIdx = currentWeek <= 2 ? 0 : currentWeek <= 4 ? 1 : currentWeek <= 6 ? 2 : currentWeek === 7 ? 3 : 4;
   const weekData = PROGRESSION_WEEKS[weekIdx];
@@ -206,12 +234,134 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     </div>
   );
 
+  const cardioSection = homeSections.cardio && (
+    <div key="cardio" style={cardioCard}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: cardioFormOpen || cardioHistory.length ? 10 : 0 }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700 }}>🏃 Cardio</p>
+        {!cardioFormOpen && (
+          <button onClick={() => setCardioFormOpen(true)} style={cardioAddBtn}>+ Ajouter</button>
+        )}
+      </div>
+
+      {cardioFormOpen && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+            {CARDIO_TYPES.map((t) => (
+              <button
+                key={t}
+                onClick={() => setCardioType(t)}
+                style={{
+                  ...cardioTypeBtn,
+                  background: cardioType === t ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                  color: cardioType === t ? '#fff' : 'var(--text-muted)',
+                }}
+              >
+                <span style={{ fontSize: 15 }}>{CARDIO_TYPE_LABELS[t].emoji}</span>
+                <span style={{ fontSize: 9, fontWeight: 700 }}>{CARDIO_TYPE_LABELS[t].label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <span style={{ color: 'var(--text-muted)', fontSize: 12, flex: 1 }}>Durée</span>
+            <button onClick={() => setCardioDuration((d) => Math.max(5, d - 5))} style={cardioStepBtn}>−</button>
+            <span style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 800, width: 56, textAlign: 'center' }}>{cardioDuration} min</span>
+            <button onClick={() => setCardioDuration((d) => Math.min(240, d + 5))} style={cardioStepBtn}>+</button>
+          </div>
+
+          <p style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 6 }}>Ressenti (facultatif)</p>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+            {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                onClick={() => setCardioRpe(cardioRpe === n ? null : n)}
+                style={{
+                  ...cardioRpeBtn,
+                  background: cardioRpe === n ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                  color: cardioRpe === n ? '#fff' : 'var(--text-dim)',
+                }}
+              >{n}</button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={handleAddCardio} style={cardioValidateBtn}>Enregistrer</button>
+            <button onClick={() => setCardioFormOpen(false)} style={cardioCancelBtn}>Annuler</button>
+          </div>
+        </div>
+      )}
+
+      {cardioHistory.slice(0, 3).map((entry) => (
+        <div key={entry.id} style={cardioRow}>
+          <span style={{ fontSize: 16 }}>{CARDIO_TYPE_LABELS[entry.type].emoji}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>{CARDIO_TYPE_LABELS[entry.type].label}</p>
+            <p style={{ color: 'var(--text-dim)', fontSize: 11 }}>
+              {formatCardioDate(entry.date)} · {entry.durationMin} min · {entry.calories} kcal{entry.rpe ? ` · RPE ${entry.rpe}` : ''}
+            </p>
+          </div>
+          <button onClick={() => deleteCardioEntry(entry.id)} style={cardioDeleteBtn}>✕</button>
+        </div>
+      ))}
+    </div>
+  );
+
+  const weeklyGoalSection = homeSections.weeklyGoal && (() => {
+    const now = Date.now();
+    const sessionsThisWeek = history.filter((e) => now - e.date < 7 * 86400000).length;
+    const pct = Math.min(1, sessionsThisWeek / weeklySessionGoal);
+    const r = 26;
+    const circumference = 2 * Math.PI * r;
+    const goalReached = sessionsThisWeek >= weeklySessionGoal;
+    return (
+      <div key="weeklyGoal" style={weeklyGoalCard}>
+        <svg width="64" height="64" viewBox="0 0 64 64" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+          <circle cx="32" cy="32" r={r} fill="none" stroke="var(--bg-elevated)" strokeWidth="7" />
+          <circle
+            cx="32" cy="32" r={r} fill="none"
+            stroke={goalReached ? '#4CAF50' : 'var(--brand-1)'}
+            strokeWidth="7" strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference * (1 - pct)}
+            style={{ transition: 'stroke-dashoffset 0.3s' }}
+          />
+        </svg>
+        <div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 800 }}>
+            {sessionsThisWeek} / {weeklySessionGoal} <span style={{ fontWeight: 500, color: 'var(--text-muted)', fontSize: 12 }}>séances cette semaine</span>
+          </p>
+          <p style={{ color: goalReached ? '#4CAF50' : 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>
+            {goalReached ? 'Objectif atteint 💪' : `Encore ${weeklySessionGoal - sessionsThisWeek} pour l'objectif`}
+          </p>
+        </div>
+      </div>
+    );
+  })();
+
+  const nextWorkout = WORKOUTS.find((w) => !cycleDoneIds.includes(w.id)) ?? WORKOUTS[0];
+  const nextSessionSection = homeSections.nextSession && !resumeWorkout && (
+    <button key="nextSession" className="workout-card" style={nextSessionBanner} onClick={() => onSelectDay(nextWorkout.id)}>
+      <div style={{ ...nextSessionIcon, background: `${DAY_ACCENT[nextWorkout.id]}20` }}>
+        <span style={{ fontSize: 20 }}>🎯</span>
+      </div>
+      <div style={{ textAlign: 'left', flex: 1 }}>
+        <p style={{ color: DAY_ACCENT[nextWorkout.id], fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>PROCHAINE SÉANCE</p>
+        <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800 }}>{nextWorkout.name}</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>{nextWorkout.muscleGroups}</p>
+      </div>
+      <span style={{ color: DAY_ACCENT[nextWorkout.id], fontSize: 22, fontWeight: 200, flexShrink: 0, opacity: 0.8 }}>›</span>
+    </button>
+  );
+
   const SECTION_MAP: Record<string, React.ReactNode> = {
     cycle: cycleSection,
     seances: seancesSection,
     nutrition: nutritionSection,
     supersetRule: supersetSection,
     muscleAlert: muscleAlertSection,
+    cardio: cardioSection,
+    weeklyGoal: weeklyGoalSection,
+    nextSession: nextSessionSection,
   };
 
   return (
@@ -375,4 +525,56 @@ const nutritionCard: React.CSSProperties = {
 const muscleAlertCard: React.CSSProperties = {
   background: 'var(--bg-card)', borderRadius: 14, padding: 14, marginTop: 10, marginBottom: 10,
   border: '1px solid var(--border-mid)',
+};
+const weeklyGoalCard: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 14,
+  background: 'var(--bg-card)', borderRadius: 14, padding: 14, marginTop: 10, marginBottom: 10,
+  border: '1px solid var(--border-mid)',
+};
+const nextSessionBanner: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 14,
+  background: 'var(--bg-card)', borderRadius: 18, padding: '14px 16px',
+  marginBottom: 16, border: '1px solid var(--border-mid)', width: '100%', cursor: 'pointer',
+};
+const nextSessionIcon: React.CSSProperties = {
+  width: 44, height: 44, borderRadius: 'var(--icon-radius)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+};
+const cardioCard: React.CSSProperties = {
+  background: 'var(--bg-card)', borderRadius: 14, padding: 14, marginTop: 10, marginBottom: 10,
+  border: '1px solid var(--border-mid)',
+};
+const cardioAddBtn: React.CSSProperties = {
+  background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+  borderRadius: 10, padding: '6px 10px', color: 'var(--brand-1)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+};
+const cardioTypeBtn: React.CSSProperties = {
+  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+  padding: '8px 2px', borderRadius: 10, cursor: 'pointer', border: '1px solid var(--border-strong)',
+};
+const cardioStepBtn: React.CSSProperties = {
+  width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+  background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+  color: 'var(--text-muted)', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+};
+const cardioRpeBtn: React.CSSProperties = {
+  flex: 1, height: 26, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+};
+const cardioValidateBtn: React.CSSProperties = {
+  flex: 1, background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))',
+  borderRadius: 10, padding: '10px 8px', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+};
+const cardioCancelBtn: React.CSSProperties = {
+  flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+  borderRadius: 10, padding: '10px 8px', color: 'var(--text-muted)', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+};
+const cardioRow: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 10,
+  padding: '8px 0', borderTop: '1px solid var(--border-subtle)',
+};
+const cardioDeleteBtn: React.CSSProperties = {
+  width: 24, height: 24, borderRadius: 7, flexShrink: 0,
+  background: 'var(--bg-elevated)', color: 'var(--text-dim)', fontSize: 11, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
 };

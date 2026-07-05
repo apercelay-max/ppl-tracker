@@ -5,6 +5,10 @@ import type { HomeSectionKey } from '../store/workoutStore';
 import { ICON_SHAPE_RADIUS, ICON_SHAPE_LABEL, ICON_SIZE_LABEL } from '../data/iconPrefs';
 import type { IconShape, IconSize } from '../data/iconPrefs';
 import { WORKOUTS } from '../data/workouts';
+import { CARDIO_TYPE_LABELS } from '../store/workoutStore';
+import type { CardioActivityType } from '../data/types';
+
+const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
 const formatRest = (seconds: number): string => {
   const m = Math.floor(seconds / 60);
@@ -45,6 +49,9 @@ const SECTION_META: Record<HomeSectionKey, { label: string; desc: string; toggle
   nutrition: { label: 'Conseil nutrition', desc: 'Le rappel protéines/glucides après la séance.', toggleable: true },
   supersetRule: { label: 'Règle superset', desc: 'Le rappel sur le fonctionnement des supersets.', toggleable: true },
   muscleAlert: { label: 'Groupes musculaires', desc: 'Alerte les groupes pas travaillés depuis un moment.', toggleable: true },
+  cardio: { label: 'Cardio', desc: 'Ajouter et suivre tes séances de vélo, marche, course...', toggleable: true },
+  weeklyGoal: { label: 'Objectif hebdo', desc: "L'anneau de progression du nombre de séances cette semaine.", toggleable: true },
+  nextSession: { label: 'Prochaine séance', desc: 'Le bandeau qui indique la prochaine séance du cycle.', toggleable: true },
 };
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
@@ -81,6 +88,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const testBeep = useWorkoutStore((s) => s.testBeep);
   const caloriesPerHour = useWorkoutStore((s) => s.caloriesPerHour);
   const setCaloriesPerHour = useWorkoutStore((s) => s.setCaloriesPerHour);
+  const bodyDiagramEnabled = useWorkoutStore((s) => s.bodyDiagramEnabled);
+  const setBodyDiagramEnabled = useWorkoutStore((s) => s.setBodyDiagramEnabled);
+  const cardioKcalPerHour = useWorkoutStore((s) => s.cardioKcalPerHour);
+  const setCardioKcalPerHour = useWorkoutStore((s) => s.setCardioKcalPerHour);
+  const weeklySessionGoal = useWorkoutStore((s) => s.weeklySessionGoal);
+  const setWeeklySessionGoal = useWorkoutStore((s) => s.setWeeklySessionGoal);
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
   const toggleDay = (id: string) => setExpandedDays((d) => ({ ...d, [id]: !d[id] }));
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -389,6 +402,62 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
           </div>
           <button onClick={() => setCaloriesPerHour(caloriesPerHour - 10)} style={stepperBtn}>−</button>
           <button onClick={() => setCaloriesPerHour(caloriesPerHour + 10)} style={stepperBtn}>+</button>
+        </div>
+
+        {/* Schéma des muscles sollicités */}
+        <p style={sectionLabel}>SÉANCE</p>
+        <div style={{ ...toggleRow, marginBottom: 20 }}>
+          <div style={{ flex: 1 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Schéma muscles sollicités</p>
+            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+              Le corps face/dos affiché en début de séance avec les muscles travaillés.
+            </p>
+          </div>
+          <button
+            onClick={() => setBodyDiagramEnabled(!bodyDiagramEnabled)}
+            style={{
+              ...switchTrack,
+              background: bodyDiagramEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
+              justifyContent: bodyDiagramEnabled ? 'flex-end' : 'flex-start',
+            }}
+          >
+            <span style={switchThumb} />
+          </button>
+        </div>
+
+        {/* Objectif hebdo */}
+        <p style={sectionLabel}>OBJECTIF HEBDO</p>
+        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+          Nombre de séances (muscu) visées par semaine, affiché avec l'anneau de progression sur l'accueil.
+        </p>
+        <div style={{ ...toggleRow, marginBottom: 20 }}>
+          <div style={{ flex: 1 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>{weeklySessionGoal} séance{weeklySessionGoal > 1 ? 's' : ''} / semaine</p>
+          </div>
+          <button onClick={() => setWeeklySessionGoal(weeklySessionGoal - 1)} style={stepperBtn}>−</button>
+          <button onClick={() => setWeeklySessionGoal(weeklySessionGoal + 1)} style={stepperBtn}>+</button>
+        </div>
+
+        {/* Cardio (vélo, marche, course...) */}
+        <p style={sectionLabel}>CARDIO — CALORIES PAR ACTIVITÉ</p>
+        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+          Réglage des kcal/h utilisées pour estimer les calories brûlées lors d'une activité cardio.
+        </p>
+        <div style={{ marginBottom: 20 }}>
+          {CARDIO_TYPES.map((t) => (
+            <div key={t} style={{ ...toggleRow, marginBottom: 6 }}>
+              <div style={{ flex: 1 }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>
+                  {CARDIO_TYPE_LABELS[t].emoji} {CARDIO_TYPE_LABELS[t].label}
+                </p>
+              </div>
+              <span style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700, width: 66, textAlign: 'center' }}>
+                {cardioKcalPerHour[t]} kcal/h
+              </span>
+              <button onClick={() => setCardioKcalPerHour(t, cardioKcalPerHour[t] - 25)} style={stepperBtn}>−</button>
+              <button onClick={() => setCardioKcalPerHour(t, cardioKcalPerHour[t] + 25)} style={stepperBtn}>+</button>
+            </div>
+          ))}
         </div>
 
         {/* Temps de repos par exercice */}

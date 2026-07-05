@@ -4,7 +4,7 @@ import { getWorkout } from '../data/workouts';
 import { HistoryEntry } from '../data/types';
 import {
   bucketByWeek, computeLoadStatus, computeTonnage, WeekBucket,
-  ALL_EXERCISES, getExerciseWeightHistory,
+  ALL_EXERCISES, getExerciseWeightHistory, getMuscleGroupVolume,
 } from '../utils/training';
 
 interface DashboardScreenProps { onBack: () => void; }
@@ -188,6 +188,43 @@ const ProgressionChart: React.FC<{ history: HistoryEntry[] }> = ({ history }) =>
   );
 };
 
+const MUSCLE_VOLUME_COLORS = ['#7c6fcd', '#e03030', '#e8a020', '#4CAF50', '#5560cc', '#f5a623', '#cc2828', '#7a7a90'];
+
+const MuscleGroupVolumeChart: React.FC<{ history: HistoryEntry[] }> = ({ history }) => {
+  const volumes = getMuscleGroupVolume(history, 4);
+  const max = Math.max(1, ...volumes.map((v) => v.tonnage));
+
+  return (
+    <div style={chartCard}>
+      <p style={sectionLabel}>VOLUME PAR GROUPE MUSCULAIRE (4 SEM.)</p>
+      {volumes.length === 0 ? (
+        <p style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center', padding: '10px 0' }}>
+          Pas encore de séries chiffrées sur les 4 dernières semaines.
+        </p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {volumes.map((v, i) => (
+            <div key={v.group}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700 }}>{v.group}</span>
+                <span style={{ color: 'var(--text-dim)', fontSize: 11, fontWeight: 700 }}>{v.tonnage.toLocaleString('fr-FR')} kg</span>
+              </div>
+              <div style={{ height: 7, borderRadius: 4, background: 'var(--bg-elevated)', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', borderRadius: 4,
+                  width: `${Math.max(3, (v.tonnage / max) * 100)}%`,
+                  background: MUSCLE_VOLUME_COLORS[i % MUSCLE_VOLUME_COLORS.length],
+                  transition: 'width 0.3s',
+                }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onBack }) => {
   const history = useWorkoutStore((s) => s.history);
 
@@ -259,6 +296,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onBack }) => {
               <p style={sectionLabel}>TONNAGE / SEMAINE (KG)</p>
               <WeeklyBarChart buckets={buckets} valueFn={(b) => b.tonnage} color="#5560cc" />
             </div>
+
+            {/* Volume par groupe musculaire */}
+            <MuscleGroupVolumeChart history={history} />
 
             {/* Progression par exercice */}
             <ProgressionChart history={history} />
