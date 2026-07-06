@@ -96,3 +96,16 @@ export interface CardioEntry {
   calories: number;      // calculées à l'ajout (durationMin/60 * kcal/h de l'activité)
   rpe?: number;          // Ressenti 1-10, facultatif
 }
+
+// ─── Poids du corps (fonctionnalité en essai) ───────────────────────────────
+
+export interface BodyWeightEntry {
+  id: string;
+  date: number;      // timestamp ms
+  weightKg: number;
+}
+
+// ─── Barre de navigation : clé de chaque onglet possible ───────────────────
+
+export type NavTabKey =
+  | 'home' | 'objectifs' | 'historique' | 'cardio' | 'exercices' | 'poids' | 'dashboard' | 'profil' | 'settings';
