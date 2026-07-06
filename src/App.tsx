@@ -6,13 +6,19 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { WorkoutIntroScreen } from './screens/WorkoutIntroScreen';
 import { ObjectivesScreen } from './screens/ObjectivesScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
+import { CardioScreen } from './screens/CardioScreen';
+import { ExercicesScreen } from './screens/ExercicesScreen';
+import { PoidsScreen } from './screens/PoidsScreen';
+import { ProfilScreen } from './screens/ProfilScreen';
 import { NavBar } from './components/NavBar';
 import type { NavView } from './components/NavBar';
 import { useWorkoutStore } from './store/workoutStore';
 import { getAccent } from './data/accents';
 import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 
-type View = 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'historique';
+type View =
+  | 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'historique'
+  | 'cardio' | 'exercices' | 'poids' | 'profil';
 
 export default function App() {
   const [view, setView] = useState<View>('home');
@@ -116,6 +122,14 @@ export default function App() {
     screen = <ObjectivesScreen onBack={handleBack} />;
   } else if (view === 'historique') {
     screen = <HistoryScreen onBack={handleBack} />;
+  } else if (view === 'cardio') {
+    screen = <CardioScreen onBack={handleBack} />;
+  } else if (view === 'exercices') {
+    screen = <ExercicesScreen onBack={handleBack} />;
+  } else if (view === 'poids') {
+    screen = <PoidsScreen onBack={handleBack} />;
+  } else if (view === 'profil') {
+    screen = <ProfilScreen onBack={handleBack} />;
   } else if (view === 'settings') {
     screen = <SettingsScreen onBack={handleBackFromSettings} />;
   } else {
@@ -124,7 +138,7 @@ export default function App() {
 
   // La barre ne s'affiche jamais pendant une séance (intro/session) — même
   // activée dans les Réglages, elle distrairait pendant l'entraînement.
-  const NAV_VIEWS: View[] = ['home', 'objectifs', 'historique', 'dashboard', 'settings'];
+  const NAV_VIEWS: View[] = ['home', 'objectifs', 'historique', 'cardio', 'exercices', 'poids', 'dashboard', 'profil', 'settings'];
   const showNavBar = navBarEnabled && NAV_VIEWS.includes(view);
   const activeNavTab: NavView = (NAV_VIEWS.includes(view) ? view : 'home') as NavView;
 
