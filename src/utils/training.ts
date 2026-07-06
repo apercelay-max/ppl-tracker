@@ -342,4 +342,31 @@ export const getWorkoutBodyIntensity = (workout: WorkoutDay): Partial<Record<Bod
     for (const r of regions) result[r] = Math.max(result[r] ?? 0, t);
   }
   return result;
-};;
+};
+
+/**
+ * Même principe que getWorkoutBodyIntensity, mais basé sur l'historique réel
+ * des `days` derniers jours plutôt que sur une séance planifiée — pour
+ * l'écran "Corps" qui montre ce qui a vraiment été travaillé récemment.
+ */
+export const getBodyIntensityFromHistory = (history: HistoryEntry[], days = 9): Partial<Record<BodyRegionKey, number>> => {
+  const cutoff = Date.now() - days * 86400000;
+  const setsByGroup: Record<string, number> = {};
+  for (const entry of history) {
+    if (entry.date < cutoff) continue;
+    for (const [exId, sets] of Object.entries(entry.exerciseProgress)) {
+      const group = EXERCISE_MUSCLE_GROUP[exId];
+      if (!group) continue;
+      const completedCount = sets.filter((s) => s.completed).length;
+      if (completedCount > 0) setsByGroup[group] = (setsByGroup[group] ?? 0) + completedCount;
+    }
+  }
+  const maxSets = Math.max(1, ...Object.values(setsByGroup));
+  const result: Partial<Record<BodyRegionKey, number>> = {};
+  for (const [group, sets] of Object.entries(setsByGroup)) {
+    const regions = MUSCLE_GROUP_TO_REGIONS[group] ?? [];
+    const t = sets / maxSets;
+    for (const r of regions) result[r] = Math.max(result[r] ?? 0, t);
+  }
+  return result;
+};
