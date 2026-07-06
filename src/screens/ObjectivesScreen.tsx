@@ -1,6 +1,7 @@
 import React from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
-import { getMuscleGroupsStatus, getMaxWeightEver, ALL_EXERCISES } from '../utils/training';
+import { getMuscleGroupsStatus, getMaxWeightEver, ALL_EXERCISES, getBodyIntensityFromHistory } from '../utils/training';
+import { BodyDiagram } from '../components/BodyDiagram';
 
 interface ObjectivesScreenProps { onBack: () => void; }
 
@@ -28,6 +29,9 @@ export const ObjectivesScreen: React.FC<ObjectivesScreenProps> = ({ onBack }) =>
     .filter((r) => r.max > 0)
     .sort((a, b) => b.max - a.max)
     .slice(0, 8);
+
+  const bodyIntensity = getBodyIntensityFromHistory(history, MUSCLE_ALERT_THRESHOLD_DAYS);
+  const hasBodyData = Object.keys(bodyIntensity).length > 0;
 
   return (
     <div style={container}>
@@ -90,6 +94,28 @@ export const ObjectivesScreen: React.FC<ObjectivesScreenProps> = ({ onBack }) =>
           )}
         </div>
 
+        {/* Corps — schéma des muscles travaillés récemment */}
+        <p style={sectionLabel}>CORPS</p>
+        <div style={card}>
+          {hasBodyData ? (
+            <div style={{ width: '100%' }}>
+              <BodyDiagram intensity={bodyIntensity} />
+              <div style={legendRow}>
+                <span style={{ ...legendDot, background: 'var(--bg-elevated)' }} />
+                <span style={legendLabel}>pas travaillé</span>
+                <span style={{ ...legendDot, background: 'rgba(var(--brand-1-rgb), 0.45)' }} />
+                <span style={legendLabel}>un peu</span>
+                <span style={{ ...legendDot, background: 'rgba(var(--brand-1-rgb), 0.9)' }} />
+                <span style={legendLabel}>beaucoup</span>
+              </div>
+            </div>
+          ) : (
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: '18px' }}>
+              Pas encore de séance récente — fais une séance et reviens voir quels muscles s'allument ici.
+            </p>
+          )}
+        </div>
+
         {/* Records personnels */}
         <p style={sectionLabel}>RECORDS PERSONNELS</p>
         <div style={card}>
@@ -133,3 +159,9 @@ const card: React.CSSProperties = {
   background: 'var(--bg-card)', borderRadius: 14, padding: 16,
   border: '1px solid var(--border-mid)',
 };
+const legendRow: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+  marginTop: 14, justifyContent: 'center',
+};
+const legendDot: React.CSSProperties = { width: 10, height: 10, borderRadius: 5 };
+const legendLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 11, marginRight: 8 };
