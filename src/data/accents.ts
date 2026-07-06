@@ -15,6 +15,15 @@ export const ACCENT_PRESETS: AccentPreset[] = [
   { id: 'cyan',   label: 'Cyan',   c1: '#0891b2', c2: '#22d3ee', rgb1: '8,145,178' },
 ];
 
+// ── Thèmes "salle de sport" ──────────────────────────────────────────────────
+// Couleurs inspirées de l'identité visuelle de ces enseignes (pas les codes
+// hexadécimaux officiels de la marque — juste une ambiance proche).
+export const GYM_PRESETS: AccentPreset[] = [
+  { id: 'gym-basicfit',     label: 'Basic-Fit',      c1: '#EB6800', c2: '#78BE20', rgb1: '235,104,0' },
+  { id: 'gym-keepcool',     label: 'Keepcool',       c1: '#1f7a4d', c2: '#111111', rgb1: '31,122,77' },
+  { id: 'gym-orangebleue',  label: "L'Orange Bleue", c1: '#f28c1e', c2: '#1f6fb2', rgb1: '242,140,30' },
+];
+
 // ── Couleur perso (color picker libre) ──────────────────────────────────────
 
 const hexToRgbTriplet = (hex: string): string => {
@@ -43,5 +52,5 @@ export const getAccent = (id: string, customHex?: string): AccentPreset => {
   if (id === 'custom' && customHex) {
     return { id: 'custom', label: 'Perso', c1: customHex, c2: darken(customHex, 0.22), rgb1: hexToRgbTriplet(customHex) };
   }
-  return ACCENT_PRESETS.find((a) => a.id === id) ?? ACCENT_PRESETS[0];
+  return ACCENT_PRESETS.find((a) => a.id === id) ?? GYM_PRESETS.find((a) => a.id === id) ?? ACCENT_PRESETS[0];
 };
