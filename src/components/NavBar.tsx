@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export type NavView = 'home' | 'objectifs' | 'dashboard' | 'settings';
+export type NavView = 'home' | 'objectifs' | 'corps' | 'historique' | 'dashboard' | 'settings';
 
 interface NavBarProps {
   active: NavView;
@@ -10,6 +10,8 @@ interface NavBarProps {
 const TABS: { id: NavView; label: string; emoji: string }[] = [
   { id: 'home', label: 'Accueil', emoji: '🏠' },
   { id: 'objectifs', label: 'Objectifs', emoji: '🎯' },
+  { id: 'corps', label: 'Corps', emoji: '🧍' },
+  { id: 'historique', label: 'Historique', emoji: '🗓️' },
   { id: 'dashboard', label: 'Stats', emoji: '📊' },
   { id: 'settings', label: 'Réglages', emoji: '⚙️' },
 ];
@@ -64,8 +66,13 @@ export const NavBar: React.FC<NavBarProps> = ({ active, onNavigate }) => {
               >
                 <span style={{ fontSize: 14, filter: isActive ? 'none' : 'grayscale(0.15)', opacity: isActive ? 1 : 0.72 }}>{tab.emoji}</span>
               </span>
-              <span style={{ ...tabLabel, color: isActive ? 'var(--text-primary)' : 'var(--text-dim)', fontWeight: isActive ? 800 : 600 }}>
-                {tab.label}
+              {/* Le libellé ne s'affiche que pour l'onglet actif — avec 6
+                  onglets, les afficher tous rendrait la barre trop large
+                  (elle doit rester petite). On garde quand même la place
+                  réservée (espace insécable) pour que les icônes ne
+                  sautent pas verticalement selon l'onglet actif. */}
+              <span style={{ ...tabLabel, color: isActive ? 'var(--text-primary)' : 'transparent', fontWeight: isActive ? 800 : 600 }}>
+                {isActive ? tab.label : ' '}
               </span>
             </button>
           );
@@ -106,10 +113,10 @@ const glass: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 2,
-  padding: '5px 6px',
+  padding: '5px 5px',
   borderRadius: 22,
-  maxWidth: 320,
-  width: 'calc(100% - 48px)',
+  maxWidth: 360,
+  width: 'calc(100% - 40px)',
   background: 'var(--glass-bg)',
   border: '1px solid var(--glass-border)',
   boxShadow: '0 -1px 0 var(--glass-highlight) inset, 0 6px 24px rgba(0,0,0,0.35)',
