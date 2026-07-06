@@ -4,11 +4,14 @@ import { SessionScreen } from './screens/SessionScreen';
 import { DashboardScreen } from './screens/DashboardScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { WorkoutIntroScreen } from './screens/WorkoutIntroScreen';
+import { ObjectivesScreen } from './screens/ObjectivesScreen';
+import { NavBar } from './components/NavBar';
+import type { NavView } from './components/NavBar';
 import { useWorkoutStore } from './store/workoutStore';
 import { getAccent } from './data/accents';
 import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 
-type View = 'home' | 'intro' | 'session' | 'dashboard' | 'settings';
+type View = 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs';
 
 export default function App() {
   const [view, setView] = useState<View>('home');
@@ -23,6 +26,7 @@ export default function App() {
   const fontScale = useWorkoutStore((s) => s.fontScale);
   const iconShape = useWorkoutStore((s) => s.iconShape);
   const highContrast = useWorkoutStore((s) => s.highContrast);
+  const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -92,21 +96,39 @@ export default function App() {
     setView(settingsReturnView);
   };
 
+  // Navigation depuis la barre du bas (liquid glass, activable dans les
+  // Réglages) — "Réglages" passe par handleOpenSettings pour garder le
+  // comportement normal du bouton retour de cet écran.
+  const handleNavigate = (v: NavView) => {
+    if (v === 'settings') { handleOpenSettings(); return; }
+    setView(v);
+  };
+
+  let screen;
   if (view === 'intro' && selectedDayId) {
-    return <WorkoutIntroScreen dayId={selectedDayId} onBack={handleBack} onStart={handleStartWorkout} />;
+    screen = <WorkoutIntroScreen dayId={selectedDayId} onBack={handleBack} onStart={handleStartWorkout} />;
+  } else if (view === 'session' && selectedDayId) {
+    screen = <SessionScreen dayId={selectedDayId} onBack={handleBack} onOpenSettings={handleOpenSettings} />;
+  } else if (view === 'dashboard') {
+    screen = <DashboardScreen onBack={handleBack} />;
+  } else if (view === 'objectifs') {
+    screen = <ObjectivesScreen onBack={handleBack} />;
+  } else if (view === 'settings') {
+    screen = <SettingsScreen onBack={handleBackFromSettings} />;
+  } else {
+    screen = <HomeScreen onSelectDay={handleSelectDay} onOpenDashboard={handleOpenDashboard} onOpenSettings={handleOpenSettings} />;
   }
 
-  if (view === 'session' && selectedDayId) {
-    return <SessionScreen dayId={selectedDayId} onBack={handleBack} onOpenSettings={handleOpenSettings} />;
-  }
+  // La barre ne s'affiche jamais pendant une séance (intro/session) — même
+  // activée dans les Réglages, elle distrairait pendant l'entraînement.
+  const showNavBar = navBarEnabled && (view === 'home' || view === 'objectifs' || view === 'dashboard' || view === 'settings');
+  const activeNavTab: NavView =
+    view === 'settings' ? 'settings' : view === 'dashboard' ? 'dashboard' : view === 'objectifs' ? 'objectifs' : 'home';
 
-  if (view === 'dashboard') {
-    return <DashboardScreen onBack={handleBack} />;
-  }
-
-  if (view === 'settings') {
-    return <SettingsScreen onBack={handleBackFromSettings} />;
-  }
-
-  return <HomeScreen onSelectDay={handleSelectDay} onOpenDashboard={handleOpenDashboard} onOpenSettings={handleOpenSettings} />;
+  return (
+    <>
+      {screen}
+      {showNavBar && <NavBar active={activeNavTab} onNavigate={handleNavigate} />}
+    </>
+  );
 }

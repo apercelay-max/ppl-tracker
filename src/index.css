@@ -43,6 +43,9 @@
   --text-ss-body: #2e422e;
   --scrollbar-track: #111;
   --scrollbar-thumb: #2a2a2a;
+  --glass-bg: rgba(40,40,52,0.55);
+  --glass-border: rgba(255,255,255,0.14);
+  --glass-highlight: rgba(255,255,255,0.18);
 }
 
 [data-theme="light"] {
@@ -77,6 +80,9 @@
   --text-ss-body: #1a4a1a;
   --scrollbar-track: #e0e0e8;
   --scrollbar-thumb: #b8b8c8;
+  --glass-bg: rgba(255,255,255,0.55);
+  --glass-border: rgba(255,255,255,0.6);
+  --glass-highlight: rgba(255,255,255,0.85);
 }
 
 /* ─── Contraste élevé (réglage accessibilité) ───────────────────────────── */
