@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { WORKOUTS, PROGRESSION_WEEKS } from '../data/workouts';
 import { useWorkoutStore, CARDIO_TYPE_LABELS } from '../store/workoutStore';
+import type { HomeSectionKey } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
 import { getMuscleGroupsStatus } from '../utils/training';
 import type { CardioActivityType } from '../data/types';
@@ -49,6 +50,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const addCardioEntry = useWorkoutStore((s) => s.addCardioEntry);
   const deleteCardioEntry = useWorkoutStore((s) => s.deleteCardioEntry);
   const weeklySessionGoal = useWorkoutStore((s) => s.weeklySessionGoal);
+  const homeSectionColors = useWorkoutStore((s) => s.homeSectionColors);
+  // Couleur perso d'un bloc si réglée dans les Réglages, sinon la couleur
+  // par défaut de ce bloc (accent du thème, ou couleur du jour pour
+  // "prochaine séance"). Sert aussi à afficher un liseré de couleur sur la
+  // carte pour qu'on voie d'un coup d'œil qu'elle est personnalisée.
+  const blockColor = (key: HomeSectionKey, fallback: string) => homeSectionColors[key] ?? fallback;
 
   // ── Cardio (formulaire rapide d'ajout) ──────────────────────────────────
   const [cardioFormOpen, setCardioFormOpen] = useState(false);
@@ -87,8 +94,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   };
   const handleTitlePointerLeave = () => setHoloPos({ x: 50, y: 50 });
 
+  const cycleColor = blockColor('cycle', 'var(--brand-1)');
   const cycleSection = homeSections.cycle && (
-    <div key="cycle" style={weekCard}>
+    <div key="cycle" style={{ ...weekCard, ...(homeSectionColors.cycle ? { borderLeft: `3px solid ${cycleColor}` } : {}) }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div>
           <p style={sectionLabel}>CYCLE EN COURS</p>
@@ -111,7 +119,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
         </div>
         <div style={weekMetric}>
           <span style={weekMetricLabel}>REPOS</span>
-          <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5, color: 'var(--brand-1)' }}>3:00</span>
+          <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5, color: cycleColor }}>3:00</span>
         </div>
         <div style={{ ...weekMetric, flex: 2 }}>
           <span style={weekMetricLabel}>OBJECTIF</span>
@@ -123,9 +131,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
         {Array.from({ length: 8 }, (_, i) => (
           <div key={i} style={{
             flex: 1, height: i + 1 === currentWeek ? 6 : 4, borderRadius: 3,
-            background: i + 1 < currentWeek ? 'var(--brand-1)' : i + 1 === currentWeek ? '#ffffff' : 'var(--border-strong)',
+            background: i + 1 < currentWeek ? cycleColor : i + 1 === currentWeek ? '#ffffff' : 'var(--border-strong)',
             transition: 'background 0.3s, height 0.3s',
-            boxShadow: i + 1 < currentWeek ? '0 0 6px rgba(var(--brand-1-rgb),0.4)' : 'none',
+            boxShadow: i + 1 < currentWeek ? `0 0 6px rgba(var(--brand-1-rgb),0.4)` : 'none',
           }} />
         ))}
       </div>
@@ -186,7 +194,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   );
 
   const nutritionSection = homeSections.nutrition && (
-    <div key="nutrition" style={nutritionCard}>
+    <div key="nutrition" style={{ ...nutritionCard, ...(homeSectionColors.nutrition ? { borderLeft: `3px solid ${homeSectionColors.nutrition}` } : {}) }}>
       <p style={{ color: 'var(--text-gold-label)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>🥩 Nutrition post-training</p>
       <p style={{ color: 'var(--text-gold-body)', fontSize: 12, lineHeight: '18px' }}>
         Dans les <strong style={{ color: '#a07030' }}>30 min</strong> après la séance :
@@ -201,7 +209,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
       .filter((s) => s.daysSince === null || s.daysSince > MUSCLE_ALERT_THRESHOLD_DAYS)
       .sort((a, b) => (b.daysSince ?? 999) - (a.daysSince ?? 999));
     return (
-      <div key="muscleAlert" style={muscleAlertCard}>
+      <div key="muscleAlert" style={{ ...muscleAlertCard, ...(homeSectionColors.muscleAlert ? { borderLeft: `3px solid ${homeSectionColors.muscleAlert}` } : {}) }}>
         <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: statuses.length ? 8 : 0 }}>
           🎯 Groupes musculaires
         </p>
@@ -214,7 +222,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
             {statuses.map((s) => (
               <div key={s.group} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{s.group}</span>
-                <span style={{ color: '#f5a623', fontSize: 12, fontWeight: 700 }}>
+                <span style={{ color: homeSectionColors.muscleAlert ?? '#f5a623', fontSize: 12, fontWeight: 700 }}>
                   {s.daysSince === null ? 'jamais travaillé' : `${s.daysSince} j`}
                 </span>
               </div>
@@ -226,7 +234,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   })();
 
   const supersetSection = homeSections.supersetRule && (
-    <div key="supersetRule" style={{ background: 'var(--bg-green-tint)', borderRadius: 14, padding: 14, marginTop: 8, marginBottom: 10, border: '1px solid var(--border-ss-tint)' }}>
+    <div key="supersetRule" style={{
+      background: 'var(--bg-green-tint)', borderRadius: 14, padding: 14, marginTop: 8, marginBottom: 10,
+      border: '1px solid var(--border-ss-tint)',
+      ...(homeSectionColors.supersetRule ? { borderLeft: `3px solid ${homeSectionColors.supersetRule}` } : {}),
+    }}>
       <p style={{ color: 'var(--text-ss-label)', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>⟳ Règle Superset</p>
       <p style={{ color: 'var(--text-ss-body)', fontSize: 12, lineHeight: '17px' }}>
         Enchaîne les deux exercices SS sans repos. Le minuteur de 3 min démarre uniquement après la paire. Push A & B uniquement.
@@ -234,12 +246,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     </div>
   );
 
+  const cardioColor = blockColor('cardio', 'var(--brand-1)');
   const cardioSection = homeSections.cardio && (
-    <div key="cardio" style={cardioCard}>
+    <div key="cardio" style={{ ...cardioCard, ...(homeSectionColors.cardio ? { borderLeft: `3px solid ${cardioColor}` } : {}) }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: cardioFormOpen || cardioHistory.length ? 10 : 0 }}>
         <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700 }}>🏃 Cardio</p>
         {!cardioFormOpen && (
-          <button onClick={() => setCardioFormOpen(true)} style={cardioAddBtn}>+ Ajouter</button>
+          <button onClick={() => setCardioFormOpen(true)} style={{ ...cardioAddBtn, color: cardioColor }}>+ Ajouter</button>
         )}
       </div>
 
@@ -252,7 +265,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
                 onClick={() => setCardioType(t)}
                 style={{
                   ...cardioTypeBtn,
-                  background: cardioType === t ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                  background: cardioType === t ? cardioColor : 'var(--bg-elevated)',
                   color: cardioType === t ? '#fff' : 'var(--text-muted)',
                 }}
               >
@@ -277,7 +290,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
                 onClick={() => setCardioRpe(cardioRpe === n ? null : n)}
                 style={{
                   ...cardioRpeBtn,
-                  background: cardioRpe === n ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                  background: cardioRpe === n ? cardioColor : 'var(--bg-elevated)',
                   color: cardioRpe === n ? '#fff' : 'var(--text-dim)',
                 }}
               >{n}</button>
@@ -285,7 +298,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
           </div>
 
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={handleAddCardio} style={cardioValidateBtn}>Enregistrer</button>
+            <button onClick={handleAddCardio} style={{ ...cardioValidateBtn, background: `linear-gradient(135deg, ${cardioColor}, var(--brand-2))` }}>Enregistrer</button>
             <button onClick={() => setCardioFormOpen(false)} style={cardioCancelBtn}>Annuler</button>
           </div>
         </div>
@@ -313,13 +326,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     const r = 26;
     const circumference = 2 * Math.PI * r;
     const goalReached = sessionsThisWeek >= weeklySessionGoal;
+    const goalColor = blockColor('weeklyGoal', 'var(--brand-1)');
     return (
-      <div key="weeklyGoal" style={weeklyGoalCard}>
+      <div key="weeklyGoal" style={{ ...weeklyGoalCard, ...(homeSectionColors.weeklyGoal ? { borderLeft: `3px solid ${goalColor}` } : {}) }}>
         <svg width="64" height="64" viewBox="0 0 64 64" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
           <circle cx="32" cy="32" r={r} fill="none" stroke="var(--bg-elevated)" strokeWidth="7" />
           <circle
             cx="32" cy="32" r={r} fill="none"
-            stroke={goalReached ? '#4CAF50' : 'var(--brand-1)'}
+            stroke={goalReached ? '#4CAF50' : goalColor}
             strokeWidth="7" strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={circumference * (1 - pct)}
@@ -339,17 +353,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   })();
 
   const nextWorkout = WORKOUTS.find((w) => !cycleDoneIds.includes(w.id)) ?? WORKOUTS[0];
+  const nextColor = blockColor('nextSession', DAY_ACCENT[nextWorkout.id]);
   const nextSessionSection = homeSections.nextSession && !resumeWorkout && (
-    <button key="nextSession" className="workout-card" style={nextSessionBanner} onClick={() => onSelectDay(nextWorkout.id)}>
-      <div style={{ ...nextSessionIcon, background: `${DAY_ACCENT[nextWorkout.id]}20` }}>
+    <button key="nextSession" className="workout-card" style={{ ...nextSessionBanner, ...(homeSectionColors.nextSession ? { borderLeft: `3px solid ${nextColor}` } : {}) }} onClick={() => onSelectDay(nextWorkout.id)}>
+      <div style={{ ...nextSessionIcon, background: `${nextColor}20` }}>
         <span style={{ fontSize: 20 }}>🎯</span>
       </div>
       <div style={{ textAlign: 'left', flex: 1 }}>
-        <p style={{ color: DAY_ACCENT[nextWorkout.id], fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>PROCHAINE SÉANCE</p>
+        <p style={{ color: nextColor, fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>PROCHAINE SÉANCE</p>
         <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800 }}>{nextWorkout.name}</p>
         <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>{nextWorkout.muscleGroups}</p>
       </div>
-      <span style={{ color: DAY_ACCENT[nextWorkout.id], fontSize: 22, fontWeight: 200, flexShrink: 0, opacity: 0.8 }}>›</span>
+      <span style={{ color: nextColor, fontSize: 22, fontWeight: 200, flexShrink: 0, opacity: 0.8 }}>›</span>
     </button>
   );
 

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
-import { ACCENT_PRESETS } from '../data/accents';
+import { ACCENT_PRESETS, GYM_PRESETS } from '../data/accents';
 import type { HomeSectionKey } from '../store/workoutStore';
 import { ICON_SHAPE_RADIUS, ICON_SHAPE_LABEL, ICON_SIZE_LABEL } from '../data/iconPrefs';
 import type { IconShape, IconSize } from '../data/iconPrefs';
@@ -68,6 +68,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const setHomeSectionVisible = useWorkoutStore((s) => s.setHomeSectionVisible);
   const homeSectionOrder = useWorkoutStore((s) => s.homeSectionOrder);
   const moveHomeSection = useWorkoutStore((s) => s.moveHomeSection);
+  const homeSectionColors = useWorkoutStore((s) => s.homeSectionColors);
+  const setHomeSectionColor = useWorkoutStore((s) => s.setHomeSectionColor);
   const iconShape = useWorkoutStore((s) => s.iconShape);
   const setIconShape = useWorkoutStore((s) => s.setIconShape);
   const iconSize = useWorkoutStore((s) => s.iconSize);
@@ -196,6 +198,32 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
               style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
             />
           </label>
+        </div>
+
+        {/* Thème "salle de sport" */}
+        <p style={{ ...sectionLabel, marginTop: 24 }}>SALLE DE SPORT</p>
+        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 12, lineHeight: '15px' }}>
+          Choisis ta salle et l'appli (et le logo) reprend une couleur dans son esprit. Couleurs approximatives, pas les codes officiels de la marque.
+        </p>
+        <div style={swatchGrid}>
+          {GYM_PRESETS.map((g) => (
+            <button
+              key={g.id}
+              onClick={() => setAccentTheme(g.id)}
+              style={{
+                ...swatchBtn,
+                border: accentTheme === g.id ? `2px solid ${g.c1}` : '2px solid transparent',
+              }}
+              title={g.label}
+            >
+              <span style={{
+                display: 'block', width: 40, height: 40, borderRadius: '50%',
+                background: `linear-gradient(135deg, ${g.c1}, ${g.c2})`,
+                boxShadow: accentTheme === g.id ? `0 0 0 3px var(--bg-card), 0 0 0 5px ${g.c1}` : 'none',
+              }} />
+              <span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 700, textAlign: 'center' }}>{g.label}</span>
+            </button>
+          ))}
         </div>
 
         {/* Thème */}
@@ -541,6 +569,31 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
                   <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>{meta.label}</p>
                   <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>{meta.desc}</p>
                 </div>
+                {key !== 'seances' && (
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <label
+                      style={{
+                        ...colorSwatchBtn,
+                        background: homeSectionColors[key] ?? 'var(--brand-1)',
+                      }}
+                      title="Couleur de ce bloc"
+                    >
+                      <input
+                        type="color"
+                        value={homeSectionColors[key] ?? '#e03030'}
+                        onChange={(e) => setHomeSectionColor(key, e.target.value)}
+                        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+                      />
+                    </label>
+                    {homeSectionColors[key] && (
+                      <button
+                        onClick={() => setHomeSectionColor(key, null)}
+                        style={colorResetBtn}
+                        title="Revenir à la couleur par défaut"
+                      >✕</button>
+                    )}
+                  </div>
+                )}
                 {meta.toggleable ? (
                   <button
                     onClick={() => setHomeSectionVisible(key as keyof typeof homeSections, !visible)}
@@ -646,6 +699,16 @@ const reorderBtn: React.CSSProperties = {
   background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
   color: 'var(--text-muted)', fontSize: 9, cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
+};
+const colorSwatchBtn: React.CSSProperties = {
+  display: 'block', width: 22, height: 22, borderRadius: '50%', cursor: 'pointer',
+  border: '2px solid var(--border-strong)', marginRight: 10,
+};
+const colorResetBtn: React.CSSProperties = {
+  position: 'absolute', top: -6, right: 2, width: 14, height: 14, borderRadius: 7,
+  background: 'var(--bg-higher)', border: '1px solid var(--border-strong)',
+  color: 'var(--text-dim)', fontSize: 8, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
 };
 const dayGroup: React.CSSProperties = {
   background: 'var(--bg-surface)', border: '1px solid var(--border)',

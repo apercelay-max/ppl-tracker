@@ -26,34 +26,54 @@ const formatDate = (ts: number): string => {
   return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 };
 
+const formatAxisValue = (v: number): string => {
+  if (v >= 1000) return `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k`;
+  return `${Math.round(v)}`;
+};
+
 const WeeklyBarChart: React.FC<{
   buckets: WeekBucket[];
   valueFn: (b: WeekBucket) => number;
   color: string;
 }> = ({ buckets, valueFn, color }) => {
   const max = Math.max(1, ...buckets.map(valueFn));
+  const CHART_H = 72;
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 84 }}>
-      {buckets.map((b, i) => {
-        const v = valueFn(b);
-        const h = v > 0 ? Math.max(4, (v / max) * 72) : 2;
-        const isCurrent = i === buckets.length - 1;
-        return (
-          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', width: '100%' }}>
-              <div style={{
-                width: '100%', height: h, borderRadius: 4,
-                background: v > 0 ? color : 'var(--bg-elevated)',
-                opacity: isCurrent ? 1 : 0.75,
-                transition: 'height 0.3s',
-              }} />
+    <div style={{ display: 'flex', gap: 8, height: 84 }}>
+      {/* Axe Y : repères haut / milieu / 0 */}
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: CHART_H, paddingBottom: 12 }}>
+        <span style={axisLabel}>{formatAxisValue(max)}</span>
+        <span style={axisLabel}>{formatAxisValue(max / 2)}</span>
+        <span style={axisLabel}>0</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, flex: 1, position: 'relative' }}>
+        {/* Lignes de repère horizontales */}
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: CHART_H, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none' }}>
+          <div style={axisGridline} />
+          <div style={axisGridline} />
+          <div style={axisGridline} />
+        </div>
+        {buckets.map((b, i) => {
+          const v = valueFn(b);
+          const h = v > 0 ? Math.max(4, (v / max) * CHART_H) : 2;
+          const isCurrent = i === buckets.length - 1;
+          return (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', width: '100%' }}>
+                <div style={{
+                  width: '100%', height: h, borderRadius: 4,
+                  background: v > 0 ? color : 'var(--bg-elevated)',
+                  opacity: isCurrent ? 1 : 0.75,
+                  transition: 'height 0.3s',
+                }} />
+              </div>
+              <span style={{ color: isCurrent ? 'var(--text-secondary)' : 'var(--text-micro)', fontSize: 8, fontWeight: 700 }}>
+                {isCurrent ? 'S' : `-${b.weeksAgo}`}
+              </span>
             </div>
-            <span style={{ color: isCurrent ? 'var(--text-secondary)' : 'var(--text-micro)', fontSize: 8, fontWeight: 700 }}>
-              {isCurrent ? 'S' : `-${b.weeksAgo}`}
-            </span>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -131,35 +151,61 @@ const ProgressionChart: React.FC<{ history: HistoryEntry[] }> = ({ history }) =>
   const points = getExerciseWeightHistory(history, exerciseId);
 
   const CHART_W = 300;
-  const CHART_H = 100;
-  const PAD = 12;
+  const CHART_H = 110;
+  const PAD_TOP = 10;
+  const PAD_BOTTOM = 18;
+  const AXIS_W = 28; // largeur réservée aux libellés de l'axe Y
 
   let svgContent: React.ReactNode = null;
   if (points.length >= 2) {
     const weights = points.map((p) => p.maxWeight);
-    const min = Math.min(...weights);
-    const max = Math.max(...weights);
+    const dataMin = Math.min(...weights);
+    const dataMax = Math.max(...weights);
+    // Un peu de marge au-dessus/en dessous pour que les points ne touchent
+    // pas les bords du graphique.
+    const pad = (dataMax - dataMin) * 0.15 || dataMax * 0.1 || 1;
+    const min = Math.max(0, dataMin - pad);
+    const max = dataMax + pad;
     const range = max - min || 1;
-    const coords = points.map((p, i) => {
-      const x = PAD + (i / (points.length - 1)) * (CHART_W - PAD * 2);
-      const y = CHART_H - PAD - ((p.maxWeight - min) / range) * (CHART_H - PAD * 2);
-      return { x, y, w: p.maxWeight };
-    });
+    const plotX0 = AXIS_W;
+    const plotW = CHART_W - AXIS_W - 8;
+    const yFor = (w: number) => CHART_H - PAD_BOTTOM - ((w - min) / range) * (CHART_H - PAD_TOP - PAD_BOTTOM);
+    const coords = points.map((p, i) => ({
+      x: plotX0 + (points.length === 1 ? plotW / 2 : (i / (points.length - 1)) * plotW),
+      y: yFor(p.maxWeight),
+      w: p.maxWeight,
+    }));
     const path = coords.map((c) => `${c.x},${c.y}`).join(' ');
     const last = points[points.length - 1];
     const first = points[0];
     const trendUp = last.maxWeight >= first.maxWeight;
+    const lineColor = trendUp ? '#4CAF50' : '#f5a623';
+    const midVal = (min + max) / 2;
+    const dateFmt = (ts: number) => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+
     svgContent = (
       <>
-        <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} style={{ width: '100%', height: 90, display: 'block' }}>
-          <polyline points={path} fill="none" stroke={trendUp ? '#4CAF50' : '#f5a623'} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} style={{ width: '100%', height: 100, display: 'block' }}>
+          {/* Axe Y : lignes de repère + valeurs */}
+          {[max, midVal, min].map((v, i) => {
+            const y = yFor(v);
+            return (
+              <g key={i}>
+                <line x1={plotX0} y1={y} x2={CHART_W} y2={y} stroke="var(--border-subtle)" strokeWidth={1} />
+                <text x={plotX0 - 4} y={y + 3} textAnchor="end" fontSize="8" fill="var(--text-dim)">{Math.round(v)}</text>
+              </g>
+            );
+          })}
+          <polyline points={path} fill="none" stroke={lineColor} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
           {coords.map((c, i) => (
-            <circle key={i} cx={c.x} cy={c.y} r={i === coords.length - 1 ? 3.5 : 2} fill={trendUp ? '#4CAF50' : '#f5a623'} />
+            <circle key={i} cx={c.x} cy={c.y} r={i === coords.length - 1 ? 3.5 : 2} fill={lineColor} />
           ))}
+          {/* Axe X : première et dernière date */}
+          <text x={plotX0} y={CHART_H - 4} textAnchor="start" fontSize="8" fill="var(--text-dim)">{dateFmt(first.date)}</text>
+          <text x={CHART_W} y={CHART_H - 4} textAnchor="end" fontSize="8" fill="var(--text-dim)">{dateFmt(last.date)}</text>
         </svg>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-          <span style={{ color: 'var(--text-dim)', fontSize: 10 }}>{first.maxWeight} kg</span>
-          <span style={{ color: trendUp ? '#4CAF50' : '#f5a623', fontSize: 11, fontWeight: 800 }}>{last.maxWeight} kg</span>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 2 }}>
+          <span style={{ color: lineColor, fontSize: 11, fontWeight: 800 }}>{last.maxWeight} kg</span>
         </div>
       </>
     );
@@ -188,38 +234,64 @@ const ProgressionChart: React.FC<{ history: HistoryEntry[] }> = ({ history }) =>
   );
 };
 
-const MUSCLE_VOLUME_COLORS = ['#7c6fcd', '#e03030', '#e8a020', '#4CAF50', '#5560cc', '#f5a623', '#cc2828', '#7a7a90'];
+const MUSCLE_VOLUME_COLORS = ['#7c6fcd', '#e03030', '#e8a020', '#4CAF50', '#5560cc', '#f5a623', '#cc2828', '#7a7a90', '#3b9dcc', '#c46ad1', '#8fae3f', '#d67a3a'];
+
+type VolumeUnit = 'kg' | 'reps';
 
 const MuscleGroupVolumeChart: React.FC<{ history: HistoryEntry[] }> = ({ history }) => {
-  const volumes = getMuscleGroupVolume(history, 4);
-  const max = Math.max(1, ...volumes.map((v) => v.tonnage));
+  const [unit, setUnit] = useState<VolumeUnit>('kg');
+  const raw = getMuscleGroupVolume(history, 4);
+  const valueOf = (v: { tonnage: number; totalReps: number }) => (unit === 'kg' ? v.tonnage : v.totalReps);
+  const volumes = [...raw].sort((a, b) => valueOf(b) - valueOf(a));
+  const max = Math.max(1, ...volumes.map(valueOf));
+  const anyData = volumes.some((v) => valueOf(v) > 0);
 
   return (
     <div style={chartCard}>
-      <p style={sectionLabel}>VOLUME PAR GROUPE MUSCULAIRE (4 SEM.)</p>
-      {volumes.length === 0 ? (
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <p style={{ ...sectionLabel, marginBottom: 0 }}>VOLUME PAR GROUPE MUSCULAIRE (4 SEM.)</p>
+        <div style={unitToggleTrack}>
+          <button onClick={() => setUnit('kg')} style={{ ...unitToggleBtn, background: unit === 'kg' ? 'var(--brand-1)' : 'transparent', color: unit === 'kg' ? '#fff' : 'var(--text-muted)' }}>kg</button>
+          <button onClick={() => setUnit('reps')} style={{ ...unitToggleBtn, background: unit === 'reps' ? 'var(--brand-1)' : 'transparent', color: unit === 'reps' ? '#fff' : 'var(--text-muted)' }}>reps</button>
+        </div>
+      </div>
+      {!anyData ? (
         <p style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center', padding: '10px 0' }}>
           Pas encore de séries chiffrées sur les 4 dernières semaines.
         </p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {volumes.map((v, i) => (
-            <div key={v.group}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700 }}>{v.group}</span>
-                <span style={{ color: 'var(--text-dim)', fontSize: 11, fontWeight: 700 }}>{v.tonnage.toLocaleString('fr-FR')} kg</span>
-              </div>
-              <div style={{ height: 7, borderRadius: 4, background: 'var(--bg-elevated)', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%', borderRadius: 4,
-                  width: `${Math.max(3, (v.tonnage / max) * 100)}%`,
-                  background: MUSCLE_VOLUME_COLORS[i % MUSCLE_VOLUME_COLORS.length],
-                  transition: 'width 0.3s',
-                }} />
-              </div>
-            </div>
-          ))}
-        </div>
+        <>
+          {/* Axe : repères 0 / milieu / max, alignés avec les barres */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, paddingLeft: 2 }}>
+            <span style={axisLabel}>0</span>
+            <span style={axisLabel}>{formatAxisValue(max / 2)}</span>
+            <span style={axisLabel}>{formatAxisValue(max)}{unit === 'kg' ? ' kg' : ' reps'}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {volumes.map((v, i) => {
+              const val = valueOf(v);
+              const isZero = val === 0;
+              return (
+                <div key={v.group} style={{ opacity: isZero ? 0.45 : 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700 }}>{v.group}</span>
+                    <span style={{ color: 'var(--text-dim)', fontSize: 11, fontWeight: 700 }}>
+                      {isZero ? 'pas travaillé' : `${val.toLocaleString('fr-FR')} ${unit === 'kg' ? 'kg' : 'reps'}`}
+                    </span>
+                  </div>
+                  <div style={{ height: 7, borderRadius: 4, background: 'var(--bg-elevated)', overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%', borderRadius: 4,
+                      width: isZero ? '2%' : `${Math.max(3, (val / max) * 100)}%`,
+                      background: isZero ? 'var(--border-strong)' : MUSCLE_VOLUME_COLORS[i % MUSCLE_VOLUME_COLORS.length],
+                      transition: 'width 0.3s',
+                    }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );
@@ -371,6 +443,15 @@ const SessionRow: React.FC<{ entry: HistoryEntry }> = ({ entry }) => {
   );
 };
 
+const axisLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 9, fontWeight: 700 };
+const axisGridline: React.CSSProperties = { borderTop: '1px dashed var(--border-subtle)', width: '100%', height: 0 };
+const unitToggleTrack: React.CSSProperties = {
+  display: 'flex', gap: 2, background: 'var(--bg-elevated)', borderRadius: 8, padding: 2,
+  border: '1px solid var(--border-strong)', flexShrink: 0,
+};
+const unitToggleBtn: React.CSSProperties = {
+  padding: '4px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: 'pointer', transition: 'background 0.15s',
+};
 const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto', background: 'var(--bg-base)' };
 const scroll: React.CSSProperties = { maxWidth: 480, margin: '0 auto', padding: '0 16px 40px' };
 const headerRow: React.CSSProperties = {
