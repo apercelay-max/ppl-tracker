@@ -256,18 +256,24 @@ export const getMuscleGroupsStatus = (history: HistoryEntry[]): MuscleGroupStatu
 
 export interface MuscleGroupVolume {
   group: string;
-  tonnage: number;
+  tonnage: number; // kg (poids × reps cumulés)
+  totalReps: number; // nombre de répétitions cumulées (séries chiffrées en reps)
 }
 
 /**
- * Tonnage total par groupe musculaire sur les `weeks` dernières semaines
- * (4 par défaut), pour voir en un coup d'œil quels groupes sont les plus
- * (ou les moins) travaillés récemment. Trié du plus gros volume au plus
- * petit ; les groupes jamais travaillés dans la période sont omis.
+ * Tonnage ET nombre de reps total par groupe musculaire sur les `weeks`
+ * dernières semaines (4 par défaut), pour voir en un coup d'œil quels
+ * groupes sont les plus (ou les moins) travaillés récemment.
+ *
+ * Renvoie TOUJOURS tous les groupes du programme (voir ALL_MUSCLE_GROUPS),
+ * même à 0 — un groupe pas travaillé dans la période doit rester visible
+ * (ex: jambes si tu n'as pas fait de séance Legs récemment), pas disparaître
+ * du graphique comme s'il n'existait pas.
  */
 export const getMuscleGroupVolume = (history: HistoryEntry[], weeks = 4): MuscleGroupVolume[] => {
   const cutoff = Date.now() - weeks * WEEK_MS;
-  const volumeByGroup: Record<string, number> = {};
+  const tonnageByGroup: Record<string, number> = {};
+  const repsByGroup: Record<string, number> = {};
   for (const entry of history) {
     if (entry.date < cutoff) continue;
     for (const [exId, sets] of Object.entries(entry.exerciseProgress)) {
@@ -277,14 +283,21 @@ export const getMuscleGroupVolume = (history: HistoryEntry[], weeks = 4): Muscle
         if (!s.completed) continue;
         const w = parseFloat(s.weight);
         const r = parseInt(s.reps, 10);
-        if (!isNaN(w) && !isNaN(r)) {
-          volumeByGroup[group] = (volumeByGroup[group] ?? 0) + w * r;
+        if (!isNaN(r)) {
+          repsByGroup[group] = (repsByGroup[group] ?? 0) + r;
+          if (!isNaN(w)) {
+            tonnageByGroup[group] = (tonnageByGroup[group] ?? 0) + w * r;
+          }
         }
       }
     }
   }
-  return Object.entries(volumeByGroup)
-    .map(([group, tonnage]) => ({ group, tonnage: Math.round(tonnage) }))
+  return ALL_MUSCLE_GROUPS
+    .map((group) => ({
+      group,
+      tonnage: Math.round(tonnageByGroup[group] ?? 0),
+      totalReps: repsByGroup[group] ?? 0,
+    }))
     .sort((a, b) => b.tonnage - a.tonnage);
 };
 
