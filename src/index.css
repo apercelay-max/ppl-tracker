@@ -124,6 +124,17 @@ html, body, #root {
   overscroll-behavior: none;
 }
 
+/* Empêche le body de scroller en plus des écrans internes (chaque écran
+   gère son propre scroll en 100dvh). Sans ça, sur mobile, atteindre le
+   haut/bas d'un écran peut faire "glisser" la page entière derrière (bug
+   visuel/du contenu qui saute) — un scroll imbriqué qu'on désactive ici. */
+html, body {
+  position: fixed;
+  overflow: hidden;
+  width: 100%;
+  overscroll-behavior-y: none;
+}
+
 /* ─── Taille du texte (réglage utilisateur) ─────────────────────────────── */
 :root[data-font-scale="sm"] #root { zoom: 0.92; }
 :root[data-font-scale="md"] #root { zoom: 1; }
