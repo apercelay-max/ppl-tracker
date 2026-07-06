@@ -6,9 +6,23 @@ import { ICON_SHAPE_RADIUS, ICON_SHAPE_LABEL, ICON_SIZE_LABEL } from '../data/ic
 import type { IconShape, IconSize } from '../data/iconPrefs';
 import { WORKOUTS } from '../data/workouts';
 import { CARDIO_TYPE_LABELS } from '../store/workoutStore';
-import type { CardioActivityType } from '../data/types';
+import type { CardioActivityType, NavTabKey } from '../data/types';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
+
+// Métadonnées d'affichage des onglets de la barre de navigation — même liste
+// que TABS dans NavBar.tsx (sans "Réglages", qui reste toujours affiché et
+// n'a donc pas besoin d'interrupteur).
+const NAV_TAB_META: { id: NavTabKey; label: string; emoji: string }[] = [
+  { id: 'home', label: 'Accueil', emoji: '🏠' },
+  { id: 'objectifs', label: 'Objectifs', emoji: '🎯' },
+  { id: 'historique', label: 'Historique', emoji: '🗓️' },
+  { id: 'cardio', label: 'Cardio', emoji: '🏃' },
+  { id: 'exercices', label: 'Exercices', emoji: '🏋️' },
+  { id: 'poids', label: 'Poids (essai)', emoji: '⚖️' },
+  { id: 'dashboard', label: 'Stats', emoji: '📊' },
+  { id: 'profil', label: 'Profil', emoji: '👤' },
+];
 
 const formatRest = (seconds: number): string => {
   const m = Math.floor(seconds / 60);
@@ -98,6 +112,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const setWeeklySessionGoal = useWorkoutStore((s) => s.setWeeklySessionGoal);
   const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
   const setNavBarEnabled = useWorkoutStore((s) => s.setNavBarEnabled);
+  const navBarTabsEnabled = useWorkoutStore((s) => s.navBarTabsEnabled);
+  const setNavBarTabEnabled = useWorkoutStore((s) => s.setNavBarTabEnabled);
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
   const toggleDay = (id: string) => setExpandedDays((d) => ({ ...d, [id]: !d[id] }));
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -272,6 +288,34 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
             <span style={switchThumb} />
           </button>
         </div>
+
+        {navBarEnabled && (
+          <div style={{ marginBottom: 20 }}>
+            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+              Choisis les onglets affichés dans la barre. Réglages reste toujours accessible, quoi qu'il arrive.
+            </p>
+            {NAV_TAB_META.map((tab) => {
+              const enabled = navBarTabsEnabled[tab.id];
+              return (
+                <div key={tab.id} style={toggleRow}>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>{tab.emoji} {tab.label}</p>
+                  </div>
+                  <button
+                    onClick={() => setNavBarTabEnabled(tab.id, !enabled)}
+                    style={{
+                      ...switchTrack,
+                      background: enabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                      justifyContent: enabled ? 'flex-end' : 'flex-start',
+                    }}
+                  >
+                    <span style={switchThumb} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Taille du texte */}
         <p style={{ ...sectionLabel, marginTop: 24 }}>TAILLE DU TEXTE</p>

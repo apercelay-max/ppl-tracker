@@ -78,73 +78,9 @@ const WeeklyBarChart: React.FC<{
   );
 };
 
-const WEEKDAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-
-const MonthCalendar: React.FC<{ history: HistoryEntry[] }> = ({ history }) => {
-  const [monthOffset, setMonthOffset] = useState(0); // 0 = mois en cours, négatif = mois précédents
-  const now = new Date();
-  const viewDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
-  const year = viewDate.getFullYear();
-  const month = viewDate.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstWeekday = new Date(year, month, 1).getDay(); // 0 = dimanche
-  const startOffset = (firstWeekday + 6) % 7; // décalage pour semaine commençant lundi
-
-  const sessionsByDay: Record<number, HistoryEntry[]> = {};
-  for (const entry of history) {
-    const d = new Date(entry.date);
-    if (d.getFullYear() === year && d.getMonth() === month) {
-      const day = d.getDate();
-      (sessionsByDay[day] ??= []).push(entry);
-    }
-  }
-
-  const monthLabel = viewDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-  const sessionsThisMonth = Object.keys(sessionsByDay).length;
-
-  return (
-    <div style={chartCard}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <button onClick={() => setMonthOffset((m) => m - 1)} style={calNavBtn}>‹</button>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700, textTransform: 'capitalize' }}>{monthLabel}</p>
-        <button
-          onClick={() => setMonthOffset((m) => Math.min(0, m + 1))}
-          disabled={monthOffset === 0}
-          style={{ ...calNavBtn, opacity: monthOffset === 0 ? 0.3 : 1, cursor: monthOffset === 0 ? 'default' : 'pointer' }}
-        >›</button>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 6 }}>
-        {WEEKDAY_LABELS.map((d, i) => (
-          <span key={i} style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: 9, fontWeight: 700 }}>{d}</span>
-        ))}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-        {Array.from({ length: startOffset }, (_, i) => <div key={`empty-${i}`} />)}
-        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
-          const sessions = sessionsByDay[day];
-          const isToday = monthOffset === 0 && day === now.getDate();
-          const accent = sessions ? (DAY_ACCENT[sessions[0].dayId] ?? '#7a7a90') : undefined;
-          return (
-            <div
-              key={day}
-              style={{
-                aspectRatio: '1', borderRadius: 8,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: accent ? `${accent}25` : 'var(--bg-elevated)',
-                border: isToday ? '1px solid var(--brand-1)' : '1px solid transparent',
-              }}
-            >
-              <span style={{ fontSize: 11, fontWeight: accent ? 800 : 500, color: accent ?? 'var(--text-dim)' }}>{day}</span>
-            </div>
-          );
-        })}
-      </div>
-      <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 10, textAlign: 'center' }}>
-        {sessionsThisMonth > 0 ? `${sessionsThisMonth} séance${sessionsThisMonth > 1 ? 's' : ''} ce mois-ci` : 'Aucune séance ce mois-ci'}
-      </p>
-    </div>
-  );
-};
+// Le calendrier mensuel des séances vit maintenant dans l'écran Historique
+// (voir HistoryScreen.tsx) plutôt qu'ici, pour ne pas dupliquer la même vue
+// à deux endroits différents.
 
 const ProgressionChart: React.FC<{ history: HistoryEntry[] }> = ({ history }) => {
   const [exerciseId, setExerciseId] = useState(ALL_EXERCISES[0]?.id ?? '');
@@ -376,9 +312,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onBack }) => {
             {/* Progression par exercice */}
             <ProgressionChart history={history} />
 
-            {/* Calendrier des séances */}
-            <MonthCalendar history={history} />
-
             {/* Historique */}
             <p style={{ ...sectionLabel, marginBottom: 10 }}>SÉANCES RÉCENTES</p>
             <div>
@@ -487,11 +420,6 @@ const chartCard: React.CSSProperties = {
   border: '1px solid var(--border-mid)',
 };
 const sectionLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 10 };
-const calNavBtn: React.CSSProperties = {
-  width: 28, height: 28, borderRadius: 8, background: 'var(--bg-elevated)',
-  color: 'var(--text-secondary)', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-  display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-strong)',
-};
 const exerciseSelect: React.CSSProperties = {
   width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
   borderRadius: 10, padding: '8px 10px', color: 'var(--text-primary)', fontSize: 13,
