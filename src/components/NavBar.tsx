@@ -1,19 +1,25 @@
 import React, { useState, useEffect } from 'react';
+import { useWorkoutStore } from '../store/workoutStore';
+import type { NavTabKey } from '../data/types';
 
-export type NavView = 'home' | 'objectifs' | 'historique' | 'dashboard' | 'settings';
+// Le schéma corporel ("Corps") vit maintenant dans l'écran Objectifs (section
+// dédiée) plutôt que dans un onglet séparé — voir ObjectivesScreen.tsx.
+export type NavView = NavTabKey;
 
 interface NavBarProps {
   active: NavView;
   onNavigate: (view: NavView) => void;
 }
 
-// Le schéma corporel ("Corps") vit maintenant dans l'écran Objectifs (section
-// dédiée) plutôt que dans un onglet séparé — voir ObjectivesScreen.tsx.
 const TABS: { id: NavView; label: string; emoji: string }[] = [
   { id: 'home', label: 'Accueil', emoji: '🏠' },
   { id: 'objectifs', label: 'Objectifs', emoji: '🎯' },
   { id: 'historique', label: 'Historique', emoji: '🗓️' },
+  { id: 'cardio', label: 'Cardio', emoji: '🏃' },
+  { id: 'exercices', label: 'Exercices', emoji: '🏋️' },
+  { id: 'poids', label: 'Poids', emoji: '⚖️' },
   { id: 'dashboard', label: 'Stats', emoji: '📊' },
+  { id: 'profil', label: 'Profil', emoji: '👤' },
   { id: 'settings', label: 'Réglages', emoji: '⚙️' },
 ];
 
@@ -41,6 +47,10 @@ const supportsLiquidRefraction = (): boolean => {
 export const NavBar: React.FC<NavBarProps> = ({ active, onNavigate }) => {
   const [refraction, setRefraction] = useState(false);
   useEffect(() => { setRefraction(supportsLiquidRefraction()); }, []);
+  const navBarTabsEnabled = useWorkoutStore((s) => s.navBarTabsEnabled);
+  // "Réglages" reste toujours affiché, même désactivé — sinon on n'a plus
+  // aucun moyen de rallumer les autres onglets depuis la barre.
+  const visibleTabs = TABS.filter((tab) => tab.id === 'settings' || navBarTabsEnabled[tab.id]);
 
   return (
     <div style={wrapper}>
@@ -48,7 +58,7 @@ export const NavBar: React.FC<NavBarProps> = ({ active, onNavigate }) => {
         {/* Reflet spéculaire du haut — fonctionne partout (pur dégradé CSS) */}
         <div style={sheen} />
 
-        {TABS.map((tab) => {
+        {visibleTabs.map((tab) => {
           const isActive = tab.id === active;
           return (
             <button
@@ -116,8 +126,8 @@ const glass: React.CSSProperties = {
   gap: 2,
   padding: '5px 5px',
   borderRadius: 22,
-  maxWidth: 360,
-  width: 'calc(100% - 40px)',
+  maxWidth: 460,
+  width: 'calc(100% - 24px)',
   background: 'var(--glass-bg)',
   border: '1px solid var(--glass-border)',
   boxShadow: '0 -1px 0 var(--glass-highlight) inset, 0 6px 24px rgba(0,0,0,0.35)',
