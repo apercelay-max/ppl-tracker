@@ -280,3 +280,20 @@ button { cursor: pointer; }
 .rest-bar-btn { transition: background 0.15s, transform 0.1s; }
 .rest-bar-btn:hover { background: var(--bg-higher) !important; }
 .rest-bar-btn:active { transform: scale(0.94); }
+
+/* ─── Barre de navigation liquid glass ──────────────────────────────────── */
+/* Base : flou dépoli classique, fonctionne sur tous les navigateurs (c'est
+   ce que verra Léo sur iPhone — voir NavBar.tsx pour l'explication). */
+.navbar-glass {
+  backdrop-filter: blur(18px) saturate(180%) brightness(1.05);
+  -webkit-backdrop-filter: blur(18px) saturate(180%) brightness(1.05);
+}
+/* Amélioration : distorsion réelle du fond via filtre SVG. Déclarée après
+   la règle du dessus donc prioritaire quand la classe est ajoutée — n'est
+   ajoutée par NavBar.tsx que sur Chrome/Edge desktop (Safari et tout iPhone
+   ignorent silencieusement backdrop-filter: url(...), d'où le besoin de
+   cette classe séparée plutôt qu'une seule règle). */
+.navbar-glass-refract {
+  backdrop-filter: url(#liquidGlassNav) blur(9px) saturate(180%) brightness(1.05);
+  -webkit-backdrop-filter: url(#liquidGlassNav) blur(9px) saturate(180%) brightness(1.05);
+}
