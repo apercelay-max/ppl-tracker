@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 
-export type NavView = 'home' | 'objectifs' | 'corps' | 'historique' | 'dashboard' | 'settings';
+export type NavView = 'home' | 'objectifs' | 'historique' | 'dashboard' | 'settings';
 
 interface NavBarProps {
   active: NavView;
   onNavigate: (view: NavView) => void;
 }
 
+// Le schéma corporel ("Corps") vit maintenant dans l'écran Objectifs (section
+// dédiée) plutôt que dans un onglet séparé — voir ObjectivesScreen.tsx.
 const TABS: { id: NavView; label: string; emoji: string }[] = [
   { id: 'home', label: 'Accueil', emoji: '🏠' },
   { id: 'objectifs', label: 'Objectifs', emoji: '🎯' },
-  { id: 'corps', label: 'Corps', emoji: '🧍' },
   { id: 'historique', label: 'Historique', emoji: '🗓️' },
   { id: 'dashboard', label: 'Stats', emoji: '📊' },
   { id: 'settings', label: 'Réglages', emoji: '⚙️' },
