@@ -16,12 +16,25 @@ export const ACCENT_PRESETS: AccentPreset[] = [
 ];
 
 // ── Thèmes "salle de sport" ──────────────────────────────────────────────────
-// Couleurs inspirées de l'identité visuelle de ces enseignes (pas les codes
-// hexadécimaux officiels de la marque — juste une ambiance proche).
+// Couleurs relevées directement sur les sites officiels de chaque enseigne
+// (getComputedStyle sur les vrais boutons/dégradés de la page, pas des
+// couleurs inventées) — sauf mention contraire ci-dessous.
 export const GYM_PRESETS: AccentPreset[] = [
-  { id: 'gym-basicfit',     label: 'Basic-Fit',      c1: '#EB6800', c2: '#78BE20', rgb1: '235,104,0' },
-  { id: 'gym-keepcool',     label: 'Keepcool',       c1: '#1f7a4d', c2: '#111111', rgb1: '31,122,77' },
-  { id: 'gym-orangebleue',  label: "L'Orange Bleue", c1: '#f28c1e', c2: '#1f6fb2', rgb1: '242,140,30' },
+  { id: 'gym-basicfit',     label: 'Basic-Fit',      c1: '#FF8712', c2: '#592BB2', rgb1: '255,135,18' },
+  { id: 'gym-fitnesspark',  label: 'Fitness Park',   c1: '#FFD600', c2: '#1A1A1A', rgb1: '255,214,0' },
+  { id: 'gym-orangebleue',  label: "L'Orange Bleue", c1: '#F36C21', c2: '#10113C', rgb1: '243,108,33' },
+  { id: 'gym-keepcool',     label: 'Keepcool',       c1: '#66CC99', c2: '#0F2E22', rgb1: '102,204,153' },
+  { id: 'gym-neoness',      label: 'Neoness',        c1: '#D71730', c2: '#141414', rgb1: '215,23,48' },
+  { id: 'gym-libertygym',   label: 'Liberty GYM',    c1: '#83BE00', c2: '#141414', rgb1: '131,190,0' },
+  // CMG Sports Club (Club Maillot / Club Grenelle, rebrand "Masada"): pas de
+  // couleur de marque forte sur le site actuel — palette neutre reprise telle
+  // quelle (gris ardoise + crème).
+  { id: 'gym-cmg',          label: 'CMG Sports Club', c1: '#1F2937', c2: '#F5F3EF', rgb1: '31,41,55' },
+  { id: 'gym-johnreed',     label: 'John Reed',      c1: '#F0077B', c2: '#0D0D0D', rgb1: '240,7,123' },
+  // GIGAFIT : le site est en noir/blanc, le doré n'existe que dans les images
+  // des badges (pas de couleur CSS) — estimation visuelle depuis ces badges.
+  { id: 'gym-gigafit',      label: 'GIGAFIT',        c1: '#C9A227', c2: '#0A0A0A', rgb1: '201,162,39' },
+  { id: 'gym-magicform',    label: 'Magic Form',     c1: '#CE2329', c2: '#141414', rgb1: '206,35,41' },
 ];
 
 // ── Couleur perso (color picker libre) ──────────────────────────────────────
