@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { WorkoutSession, ExerciseProgress, SetEntry, HistoryEntry, TimerState, CardioActivityType, CardioEntry } from '../data/types';
+import { WorkoutSession, ExerciseProgress, SetEntry, HistoryEntry, TimerState, CardioActivityType, CardioEntry, BodyWeightEntry, NavTabKey } from '../data/types';
 import { getWorkout } from '../data/workouts';
 
 const notifSupported = typeof Notification !== 'undefined';
@@ -149,6 +149,18 @@ export const CARDIO_TYPE_LABELS: Record<CardioActivityType, { label: string; emo
   autre: { label: 'Autre', emoji: '⚡' },
 };
 
+// Tous les onglets possibles de la barre de navigation, activables/désactivables
+// individuellement dans les Réglages — "settings" reste toujours affiché (voir
+// NavBar.tsx) pour ne jamais bloquer l'accès aux réglages.
+export const NAV_TAB_ORDER: NavTabKey[] = [
+  'home', 'objectifs', 'historique', 'cardio', 'exercices', 'poids', 'dashboard', 'profil', 'settings',
+];
+
+const DEFAULT_NAV_TABS_ENABLED: Record<NavTabKey, boolean> = {
+  home: true, objectifs: true, historique: true, cardio: true,
+  exercices: true, poids: true, dashboard: true, profil: true, settings: true,
+};
+
 interface WorkoutStore {
   session: WorkoutSession | null;
   timer: TimerState;
@@ -178,6 +190,8 @@ interface WorkoutStore {
   weeklySessionGoal: number;
   homeSectionColors: Partial<Record<HomeSectionKey, string>>;
   navBarEnabled: boolean;
+  navBarTabsEnabled: Record<NavTabKey, boolean>;
+  bodyWeightHistory: BodyWeightEntry[];
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
   editSet: (exerciseId: string, setIndex: number) => void;
@@ -220,6 +234,9 @@ interface WorkoutStore {
   setWeeklySessionGoal: (value: number) => void;
   setHomeSectionColor: (key: HomeSectionKey, hex: string | null) => void;
   setNavBarEnabled: (enabled: boolean) => void;
+  setNavBarTabEnabled: (key: NavTabKey, enabled: boolean) => void;
+  addBodyWeightEntry: (weightKg: number) => void;
+  deleteBodyWeightEntry: (id: string) => void;
 }
 
 export const useWorkoutStore = create<WorkoutStore>()(
@@ -253,6 +270,8 @@ export const useWorkoutStore = create<WorkoutStore>()(
       weeklySessionGoal: 4,
       homeSectionColors: {},
       navBarEnabled: false,
+      navBarTabsEnabled: { ...DEFAULT_NAV_TABS_ENABLED },
+      bodyWeightHistory: [],
 
       startSession: (dayId) => {
         const workout = getWorkout(dayId);
@@ -544,6 +563,17 @@ export const useWorkoutStore = create<WorkoutStore>()(
         return { homeSectionColors: next };
       }),
       setNavBarEnabled: (enabled) => set({ navBarEnabled: enabled }),
+      setNavBarTabEnabled: (key, enabled) => {
+        set((state) => ({ navBarTabsEnabled: { ...state.navBarTabsEnabled, [key]: enabled } }));
+      },
+
+      addBodyWeightEntry: (weightKg) => {
+        const entry: BodyWeightEntry = { id: `bw-${Date.now()}`, date: Date.now(), weightKg };
+        set((state) => ({ bodyWeightHistory: [entry, ...state.bodyWeightHistory].slice(0, 200) }));
+      },
+      deleteBodyWeightEntry: (id) => {
+        set((state) => ({ bodyWeightHistory: state.bodyWeightHistory.filter((e) => e.id !== id) }));
+      },
     }),
     {
       name: 'ppl-tracker-store',
@@ -575,6 +605,8 @@ export const useWorkoutStore = create<WorkoutStore>()(
         weeklySessionGoal: state.weeklySessionGoal,
         homeSectionColors: state.homeSectionColors,
         navBarEnabled: state.navBarEnabled,
+        navBarTabsEnabled: state.navBarTabsEnabled,
+        bodyWeightHistory: state.bodyWeightHistory,
       }),
       // Merge personnalisé : par défaut, zustand/persist remplace entièrement
       // les objets imbriqués (homeSections, homeSectionOrder) par la version
@@ -589,6 +621,10 @@ export const useWorkoutStore = create<WorkoutStore>()(
         const savedOrder = p.homeSectionOrder ?? current.homeSectionOrder;
         const missingKeys = current.homeSectionOrder.filter((k) => !savedOrder.includes(k));
         merged.homeSectionOrder = [...savedOrder, ...missingKeys];
+        // Même logique pour les onglets de la nav bar : un nouvel onglet
+        // ajouté plus tard (ex: Profil) doit apparaître actif par défaut
+        // pour les téléphones qui ont déjà une sauvegarde, pas disparaître.
+        merged.navBarTabsEnabled = { ...DEFAULT_NAV_TABS_ENABLED, ...(p.navBarTabsEnabled ?? {}) };
         return merged;
       },
     }
