@@ -299,6 +299,7 @@ const MuscleGroupVolumeChart: React.FC<{ history: HistoryEntry[] }> = ({ history
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onBack }) => {
   const history = useWorkoutStore((s) => s.history);
+  const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
 
   const buckets = bucketByWeek(history, 8);
   const status = computeLoadStatus(buckets);
@@ -309,7 +310,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onBack }) => {
 
   return (
     <div style={container}>
-      <div style={scroll}>
+      <div style={{ ...scroll, paddingBottom: navBarEnabled ? 112 : 40 }}>
         <div style={headerRow}>
           <button onClick={onBack} style={backBtn}>←</button>
           <div>

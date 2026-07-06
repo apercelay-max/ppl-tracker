@@ -96,6 +96,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const setCardioKcalPerHour = useWorkoutStore((s) => s.setCardioKcalPerHour);
   const weeklySessionGoal = useWorkoutStore((s) => s.weeklySessionGoal);
   const setWeeklySessionGoal = useWorkoutStore((s) => s.setWeeklySessionGoal);
+  const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
+  const setNavBarEnabled = useWorkoutStore((s) => s.setNavBarEnabled);
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
   const toggleDay = (id: string) => setExpandedDays((d) => ({ ...d, [id]: !d[id] }));
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -141,7 +143,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
 
   return (
     <div style={container}>
-      <div style={scroll}>
+      <div style={{ ...scroll, paddingBottom: navBarEnabled ? 112 : 40 }}>
         <div style={headerRow}>
           <button onClick={onBack} style={backBtn}>←</button>
           <div>
@@ -244,6 +246,27 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
               background: amoledMode ? 'var(--brand-1)' : 'var(--bg-elevated)',
               justifyContent: amoledMode ? 'flex-end' : 'flex-start',
               opacity: theme === 'dark' ? 1 : 0.5,
+            }}
+          >
+            <span style={switchThumb} />
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <p style={{ ...sectionLabel, marginTop: 24 }}>NAVIGATION</p>
+        <div style={toggleRow}>
+          <div style={{ flex: 1 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Barre de navigation (Liquid Glass)</p>
+            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+              Barre flottante et translucide en bas de l'écran, pour naviguer entre l'accueil, les objectifs, le dashboard et les réglages sans revenir en arrière à chaque fois. Masquée pendant une séance.
+            </p>
+          </div>
+          <button
+            onClick={() => setNavBarEnabled(!navBarEnabled)}
+            style={{
+              ...switchTrack,
+              background: navBarEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
+              justifyContent: navBarEnabled ? 'flex-end' : 'flex-start',
             }}
           >
             <span style={switchThumb} />

@@ -38,6 +38,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const session = useWorkoutStore((s) => s.session);
   const theme = useWorkoutStore((s) => s.theme);
   const setTheme = useWorkoutStore((s) => s.setTheme);
+  const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
   const wakeLockEnabled = useWorkoutStore((s) => s.wakeLockEnabled);
   const setWakeLockEnabled = useWorkoutStore((s) => s.setWakeLockEnabled);
   const homeSections = useWorkoutStore((s) => s.homeSections);
@@ -381,7 +382,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
 
   return (
     <div style={container}>
-      <div style={scroll}>
+      <div style={{ ...scroll, paddingBottom: navBarEnabled ? 112 : 80 }}>
 
         {/* Header */}
         <div style={headerSection}>
