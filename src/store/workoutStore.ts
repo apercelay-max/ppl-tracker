@@ -176,6 +176,7 @@ interface WorkoutStore {
   cardioHistory: CardioEntry[];
   cardioKcalPerHour: Record<CardioActivityType, number>;
   weeklySessionGoal: number;
+  homeSectionColors: Partial<Record<HomeSectionKey, string>>;
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
   editSet: (exerciseId: string, setIndex: number) => void;
@@ -216,6 +217,7 @@ interface WorkoutStore {
   deleteCardioEntry: (id: string) => void;
   setCardioKcalPerHour: (type: CardioActivityType, value: number) => void;
   setWeeklySessionGoal: (value: number) => void;
+  setHomeSectionColor: (key: HomeSectionKey, hex: string | null) => void;
 }
 
 export const useWorkoutStore = create<WorkoutStore>()(
@@ -247,6 +249,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       cardioHistory: [],
       cardioKcalPerHour: { ...DEFAULT_CARDIO_KCAL_PER_HOUR },
       weeklySessionGoal: 4,
+      homeSectionColors: {},
 
       startSession: (dayId) => {
         const workout = getWorkout(dayId);
@@ -532,6 +535,11 @@ export const useWorkoutStore = create<WorkoutStore>()(
         }));
       },
       setWeeklySessionGoal: (value) => set({ weeklySessionGoal: Math.max(1, Math.min(7, value)) }),
+      setHomeSectionColor: (key, hex) => set((state) => {
+        const next = { ...state.homeSectionColors };
+        if (hex) next[key] = hex; else delete next[key];
+        return { homeSectionColors: next };
+      }),
     }),
     {
       name: 'ppl-tracker-store',
@@ -561,6 +569,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         cardioHistory: state.cardioHistory,
         cardioKcalPerHour: state.cardioKcalPerHour,
         weeklySessionGoal: state.weeklySessionGoal,
+        homeSectionColors: state.homeSectionColors,
       }),
       // Merge personnalisé : par défaut, zustand/persist remplace entièrement
       // les objets imbriqués (homeSections, homeSectionOrder) par la version
