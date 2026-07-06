@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import type { NavTabKey } from '../data/types';
+import {
+  HomeIcon, TargetIcon, CalendarIcon, HeartPulseIcon,
+  DumbbellIcon, ScaleIcon, ChartIcon, UserIcon, SlidersIcon,
+} from './NavIcons';
 
 // Le schéma corporel ("Corps") vit maintenant dans l'écran Objectifs (section
 // dédiée) plutôt que dans un onglet séparé — voir ObjectivesScreen.tsx.
@@ -11,17 +15,33 @@ interface NavBarProps {
   onNavigate: (view: NavView) => void;
 }
 
-const TABS: { id: NavView; label: string; emoji: string }[] = [
-  { id: 'home', label: 'Accueil', emoji: '🏠' },
-  { id: 'objectifs', label: 'Objectifs', emoji: '🎯' },
-  { id: 'historique', label: 'Historique', emoji: '🗓️' },
-  { id: 'cardio', label: 'Cardio', emoji: '🏃' },
-  { id: 'exercices', label: 'Exercices', emoji: '🏋️' },
-  { id: 'poids', label: 'Poids', emoji: '⚖️' },
-  { id: 'dashboard', label: 'Stats', emoji: '📊' },
-  { id: 'profil', label: 'Profil', emoji: '👤' },
-  { id: 'settings', label: 'Réglages', emoji: '⚙️' },
+const TABS: { id: NavView; label: string }[] = [
+  { id: 'home', label: 'Accueil' },
+  { id: 'objectifs', label: 'Objectifs' },
+  { id: 'historique', label: 'Historique' },
+  { id: 'cardio', label: 'Cardio' },
+  { id: 'exercices', label: 'Exercices' },
+  { id: 'poids', label: 'Poids' },
+  { id: 'dashboard', label: 'Stats' },
+  { id: 'profil', label: 'Profil' },
+  { id: 'settings', label: 'Réglages' },
 ];
+
+// Icônes ligne dessinées à la main (voir NavIcons.tsx) plutôt que des emojis :
+// les emojis rendent différemment selon la plateforme (tailles, styles,
+// épaisseurs incohérentes entre eux), ce qui donnait une barre "pas propre".
+// Ces icônes partagent le même trait et la même taille partout.
+const TAB_ICONS: Record<NavView, React.FC<{ size?: number }>> = {
+  home: HomeIcon,
+  objectifs: TargetIcon,
+  historique: CalendarIcon,
+  cardio: HeartPulseIcon,
+  exercices: DumbbellIcon,
+  poids: ScaleIcon,
+  dashboard: ChartIcon,
+  profil: UserIcon,
+  settings: SlidersIcon,
+};
 
 // Le vrai "liquid glass" (distorsion du fond, façon loupe) utilise un filtre
 // SVG (feDisplacementMap) appliqué en backdrop-filter. Seuls les navigateurs
@@ -60,6 +80,7 @@ export const NavBar: React.FC<NavBarProps> = ({ active, onNavigate }) => {
 
         {visibleTabs.map((tab) => {
           const isActive = tab.id === active;
+          const Icon = TAB_ICONS[tab.id];
           return (
             <button
               key={tab.id}
@@ -72,12 +93,13 @@ export const NavBar: React.FC<NavBarProps> = ({ active, onNavigate }) => {
                   ...iconPill,
                   background: isActive ? 'linear-gradient(135deg, var(--brand-1), var(--brand-2))' : 'transparent',
                   boxShadow: isActive ? '0 2px 8px rgba(var(--brand-1-rgb), 0.45)' : 'none',
-                  transform: isActive ? 'translateY(-1px) scale(1)' : 'scale(0.92)',
+                  transform: isActive ? 'translateY(-1px) scale(1)' : 'scale(0.94)',
+                  color: isActive ? '#fff' : 'var(--text-muted)',
                 }}
               >
-                <span style={{ fontSize: 14, filter: isActive ? 'none' : 'grayscale(0.15)', opacity: isActive ? 1 : 0.72 }}>{tab.emoji}</span>
+                <Icon size={17} />
               </span>
-              {/* Le libellé ne s'affiche que pour l'onglet actif — avec 6
+              {/* Le libellé ne s'affiche que pour l'onglet actif — avec 9
                   onglets, les afficher tous rendrait la barre trop large
                   (elle doit rester petite). On garde quand même la place
                   réservée (espace insécable) pour que les icônes ne
@@ -123,8 +145,8 @@ const glass: React.CSSProperties = {
   pointerEvents: 'auto',
   display: 'flex',
   alignItems: 'center',
-  gap: 2,
-  padding: '5px 5px',
+  gap: 3,
+  padding: '6px 6px',
   borderRadius: 22,
   maxWidth: 460,
   width: 'calc(100% - 24px)',
