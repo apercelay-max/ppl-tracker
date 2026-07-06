@@ -5,7 +5,6 @@ import { DashboardScreen } from './screens/DashboardScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { WorkoutIntroScreen } from './screens/WorkoutIntroScreen';
 import { ObjectivesScreen } from './screens/ObjectivesScreen';
-import { BodyScreen } from './screens/BodyScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { NavBar } from './components/NavBar';
 import type { NavView } from './components/NavBar';
@@ -13,7 +12,7 @@ import { useWorkoutStore } from './store/workoutStore';
 import { getAccent } from './data/accents';
 import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 
-type View = 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'corps' | 'historique';
+type View = 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'historique';
 
 export default function App() {
   const [view, setView] = useState<View>('home');
@@ -115,8 +114,6 @@ export default function App() {
     screen = <DashboardScreen onBack={handleBack} />;
   } else if (view === 'objectifs') {
     screen = <ObjectivesScreen onBack={handleBack} />;
-  } else if (view === 'corps') {
-    screen = <BodyScreen onBack={handleBack} />;
   } else if (view === 'historique') {
     screen = <HistoryScreen onBack={handleBack} />;
   } else if (view === 'settings') {
@@ -127,7 +124,7 @@ export default function App() {
 
   // La barre ne s'affiche jamais pendant une séance (intro/session) — même
   // activée dans les Réglages, elle distrairait pendant l'entraînement.
-  const NAV_VIEWS: View[] = ['home', 'objectifs', 'corps', 'historique', 'dashboard', 'settings'];
+  const NAV_VIEWS: View[] = ['home', 'objectifs', 'historique', 'dashboard', 'settings'];
   const showNavBar = navBarEnabled && NAV_VIEWS.includes(view);
   const activeNavTab: NavView = (NAV_VIEWS.includes(view) ? view : 'home') as NavView;
 
