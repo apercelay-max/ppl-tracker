@@ -214,6 +214,7 @@ interface WorkoutStore {
   totalCardioSessions: number;
   bestWeekStreak: number;
   hapticsEnabled: boolean;
+  ultraAnimationsEnabled: boolean;
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
   editSet: (exerciseId: string, setIndex: number) => void;
@@ -264,6 +265,7 @@ interface WorkoutStore {
   removeCustomProgram: (id: string) => void;
   setBadgesEnabled: (enabled: boolean) => void;
   setHapticsEnabled: (enabled: boolean) => void;
+  setUltraAnimationsEnabled: (enabled: boolean) => void;
 }
 
 // Recalcule le registre des séances importées (voir data/workouts.ts →
@@ -326,6 +328,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       totalCardioSessions: 0,
       bestWeekStreak: 0,
       hapticsEnabled: true,
+      ultraAnimationsEnabled: false,
 
       startSession: (dayId) => {
         const workout = getWorkout(dayId);
@@ -670,6 +673,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
 
       setBadgesEnabled: (enabled) => set({ badgesEnabled: enabled }),
       setHapticsEnabled: (enabled) => set({ hapticsEnabled: enabled }),
+      setUltraAnimationsEnabled: (enabled) => set({ ultraAnimationsEnabled: enabled }),
     }),
     {
       name: 'ppl-tracker-store',
@@ -710,6 +714,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         totalCardioSessions: state.totalCardioSessions,
         bestWeekStreak: state.bestWeekStreak,
         hapticsEnabled: state.hapticsEnabled,
+        ultraAnimationsEnabled: state.ultraAnimationsEnabled,
       }),
       // Merge personnalisé : par défaut, zustand/persist remplace entièrement
       // les objets imbriqués (homeSections, homeSectionOrder) par la version
@@ -750,6 +755,10 @@ export const useWorkoutStore = create<WorkoutStore>()(
         // Vibrations — activées par défaut, comme le reste des retours
         // sensoriels (bip, wake lock).
         merged.hapticsEnabled = p.hapticsEnabled ?? true;
+        // Ultra animations — désactivé par défaut (opt-in), contrairement
+        // aux autres retours sensoriels : c'est un effet plus voyant que
+        // Léo doit choisir d'activer, pas quelque chose qu'on impose.
+        merged.ultraAnimationsEnabled = p.ultraAnimationsEnabled ?? false;
 
         return merged;
       },
