@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { WorkoutSession, ExerciseProgress, SetEntry, HistoryEntry, TimerState, CardioActivityType, CardioEntry, BodyWeightEntry, NavTabKey } from '../data/types';
-import { getWorkout } from '../data/workouts';
+import { getWorkout, setCustomWorkouts } from '../data/workouts';
+import { Program } from '../data/programs';
 
 const notifSupported = typeof Notification !== 'undefined';
 let notifTimeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -192,6 +193,8 @@ interface WorkoutStore {
   navBarEnabled: boolean;
   navBarTabsEnabled: Record<NavTabKey, boolean>;
   bodyWeightHistory: BodyWeightEntry[];
+  activeProgramId: string;
+  customPrograms: Program[];
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
   editSet: (exerciseId: string, setIndex: number) => void;
@@ -237,7 +240,16 @@ interface WorkoutStore {
   setNavBarTabEnabled: (key: NavTabKey, enabled: boolean) => void;
   addBodyWeightEntry: (weightKg: number) => void;
   deleteBodyWeightEntry: (id: string) => void;
+  setActiveProgram: (id: string) => void;
+  addCustomProgram: (program: Program) => void;
+  removeCustomProgram: (id: string) => void;
 }
+
+// Recalcule le registre des séances importées (voir data/workouts.ts →
+// CUSTOM_WORKOUTS) à partir de la liste de programmes custom du store.
+const syncCustomWorkoutsRegistry = (customPrograms: Program[]) => {
+  setCustomWorkouts(customPrograms.flatMap((p) => p.workouts));
+};
 
 export const useWorkoutStore = create<WorkoutStore>()(
   persist(
@@ -272,6 +284,8 @@ export const useWorkoutStore = create<WorkoutStore>()(
       navBarEnabled: false,
       navBarTabsEnabled: { ...DEFAULT_NAV_TABS_ENABLED },
       bodyWeightHistory: [],
+      activeProgramId: 'strict-v10',
+      customPrograms: [],
 
       startSession: (dayId) => {
         const workout = getWorkout(dayId);
@@ -574,6 +588,33 @@ export const useWorkoutStore = create<WorkoutStore>()(
       deleteBodyWeightEntry: (id) => {
         set((state) => ({ bodyWeightHistory: state.bodyWeightHistory.filter((e) => e.id !== id) }));
       },
+
+      // Change le programme actif — ne touche jamais aux autres programmes
+      // ni à l'historique déjà enregistré. Remet à zéro les séances "faites
+      // ce cycle" puisque ce compteur est propre au programme actif.
+      setActiveProgram: (id) => set({ activeProgramId: id, cycleDoneIds: [] }),
+
+      // Ajoute un programme importé (voir importParser.ts) et le rend
+      // immédiatement disponible pour getWorkout() partout dans l'appli.
+      addCustomProgram: (program) => {
+        set((state) => {
+          const customPrograms = [...state.customPrograms, program];
+          syncCustomWorkoutsRegistry(customPrograms);
+          return { customPrograms };
+        });
+      },
+      removeCustomProgram: (id) => {
+        set((state) => {
+          const customPrograms = state.customPrograms.filter((p) => p.id !== id);
+          syncCustomWorkoutsRegistry(customPrograms);
+          return {
+            customPrograms,
+            // Si le programme actif vient d'être supprimé, on retombe sur
+            // Strict V10 plutôt que de laisser l'accueil sans séances.
+            activeProgramId: state.activeProgramId === id ? 'strict-v10' : state.activeProgramId,
+          };
+        });
+      },
     }),
     {
       name: 'ppl-tracker-store',
@@ -607,6 +648,8 @@ export const useWorkoutStore = create<WorkoutStore>()(
         navBarEnabled: state.navBarEnabled,
         navBarTabsEnabled: state.navBarTabsEnabled,
         bodyWeightHistory: state.bodyWeightHistory,
+        activeProgramId: state.activeProgramId,
+        customPrograms: state.customPrograms,
       }),
       // Merge personnalisé : par défaut, zustand/persist remplace entièrement
       // les objets imbriqués (homeSections, homeSectionOrder) par la version
@@ -625,6 +668,11 @@ export const useWorkoutStore = create<WorkoutStore>()(
         // ajouté plus tard (ex: Profil) doit apparaître actif par défaut
         // pour les téléphones qui ont déjà une sauvegarde, pas disparaître.
         merged.navBarTabsEnabled = { ...DEFAULT_NAV_TABS_ENABLED, ...(p.navBarTabsEnabled ?? {}) };
+        merged.activeProgramId = p.activeProgramId ?? 'strict-v10';
+        merged.customPrograms = p.customPrograms ?? [];
+        // Remplit tout de suite le registre des séances importées, pour que
+        // getWorkout() les retrouve dès le premier rendu après le chargement.
+        syncCustomWorkoutsRegistry(merged.customPrograms);
         return merged;
       },
     }
