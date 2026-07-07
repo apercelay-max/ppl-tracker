@@ -218,6 +218,9 @@ interface WorkoutStore {
   // Style visuel des effets "Ultra animations" (confettis par défaut, ou
   // feu d'artifice / étincelles — voir Réglages → Personnalisation).
   ultraAnimationStyle: 'confetti' | 'fireworks' | 'sparkles';
+  // Style de transition entre écrans en mode "Ultra animations" (rebond par
+  // défaut = comportement historique, ou glissement / zoom / rotation).
+  ultraTransitionStyle: 'bounce' | 'slide' | 'zoom' | 'flip';
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
   editSet: (exerciseId: string, setIndex: number) => void;
@@ -270,6 +273,7 @@ interface WorkoutStore {
   setHapticsEnabled: (enabled: boolean) => void;
   setUltraAnimationsEnabled: (enabled: boolean) => void;
   setUltraAnimationStyle: (style: 'confetti' | 'fireworks' | 'sparkles') => void;
+  setUltraTransitionStyle: (style: 'bounce' | 'slide' | 'zoom' | 'flip') => void;
 }
 
 // Recalcule le registre des séances importées (voir data/workouts.ts →
@@ -334,6 +338,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       hapticsEnabled: true,
       ultraAnimationsEnabled: false,
       ultraAnimationStyle: 'confetti',
+      ultraTransitionStyle: 'bounce',
 
       startSession: (dayId) => {
         const workout = getWorkout(dayId);
@@ -680,6 +685,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       setHapticsEnabled: (enabled) => set({ hapticsEnabled: enabled }),
       setUltraAnimationsEnabled: (enabled) => set({ ultraAnimationsEnabled: enabled }),
       setUltraAnimationStyle: (style) => set({ ultraAnimationStyle: style }),
+      setUltraTransitionStyle: (style) => set({ ultraTransitionStyle: style }),
     }),
     {
       name: 'ppl-tracker-store',
@@ -722,6 +728,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         hapticsEnabled: state.hapticsEnabled,
         ultraAnimationsEnabled: state.ultraAnimationsEnabled,
         ultraAnimationStyle: state.ultraAnimationStyle,
+        ultraTransitionStyle: state.ultraTransitionStyle,
       }),
       // Merge personnalisé : par défaut, zustand/persist remplace entièrement
       // les objets imbriqués (homeSections, homeSectionOrder) par la version
@@ -767,6 +774,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         // Léo doit choisir d'activer, pas quelque chose qu'on impose.
         merged.ultraAnimationsEnabled = p.ultraAnimationsEnabled ?? false;
         merged.ultraAnimationStyle = p.ultraAnimationStyle ?? 'confetti';
+        merged.ultraTransitionStyle = p.ultraTransitionStyle ?? 'bounce';
 
         return merged;
       },
