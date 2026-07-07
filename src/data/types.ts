@@ -9,68 +9,68 @@
 export type RestMode = 'normal' | 'superset' | 'bilateral';
 
 export interface Exercise {
-  id: string;
-  name: string;
-  muscleGroup: string;
-  sets: number;
-  targetReps: string;        // "6-10" | "AMRAP" | "45 s" | "Max sec" | "10/jambe"
+    id: string;
+    name: string;
+    muscleGroup: string;
+    sets: number;
+    targetReps: string;        // "6-10" | "AMRAP" | "45 s" | "Max sec" | "10/jambe"
   restSeconds: number;       // Durée de repos après l'exercice (ou après la paire SS)
   restMode: RestMode;
-  bilateralRestSeconds?: number; // Pour restMode=bilateral : repos inter-jambes (ex: 45)
+    bilateralRestSeconds?: number; // Pour restMode=bilateral : repos inter-jambes (ex: 45)
   isSuperset: boolean;
-  supersetGroupId?: string;  // ID partagé entre les deux exos d'un SS
+    supersetGroupId?: string;  // ID partagé entre les deux exos d'un SS
   supersetOrder?: 1 | 2;     // 1 = pas de repos après, 2 = repos après
   defaultWeight?: string;    // Suggestion de départ (ex: "PDC", "45", "20")
   notes: string;
 }
 
 export interface WorkoutDay {
-  id: string;
-  dayNumber: number;         // 1, 2, 3, 5, 6, 7
+    id: string;
+    dayNumber: number;         // 1, 2, 3, 5, 6, 7
   name: string;              // "Pull A", "Push B"…
   focus: string;
-  muscleGroups: string;
-  estimatedDuration: string;
-  exercises: Exercise[];
+    muscleGroups: string;
+    estimatedDuration: string;
+    exercises: Exercise[];
 }
 
 export interface ProgressionWeek {
-  label: string;             // "Sem. 1-2"
+    label: string;             // "Sem. 1-2"
   phase: string;
-  rir: string;
-  objective: string;
+    rir: string;
+    objective: string;
 }
 
 // ─── State de session ───────────────────────────────────────────────────────
 
 export interface SetEntry {
-  weight: string;   // Saisie libre ("PDC", "45.5", …)
+    weight: string;   // Saisie libre ("PDC", "45.5", …)
   reps: string;     // Saisie libre ("10", "AMRAP", "45 s", …)
   completed: boolean;
 }
 
 export interface ExerciseProgress {
-  [exerciseId: string]: SetEntry[];
+    [exerciseId: string]: SetEntry[];
 }
 
 export interface WorkoutSession {
-  dayId: string;
-  startTime: number;                    // timestamp ms
+    dayId: string;
+    startTime: number;                    // timestamp ms
   exerciseProgress: ExerciseProgress;   // poids/reps saisis
   currentExerciseIndex: number;
-  currentSetIndex: number;
-  isComplete: boolean;
+    currentSetIndex: number;
+    isComplete: boolean;
 }
 
 // ─── History ──────────────────────────────────────────────────────────────
 
 export interface HistoryEntry {
-  id: string;
-  dayId: string;
-  date: number;                  // timestamp ms
+    id: string;
+    dayId: string;
+    date: number;                  // timestamp ms
   exerciseProgress: ExerciseProgress;
-  durationMs: number;
-  rpe?: number;                  // Auto-évaluation séance (1-10)
+    durationMs: number;
+    rpe?: number;                  // Auto-évaluation séance (1-10)
   tonnage?: number;              // Total kg soulevés (poids × reps sommés)
   trainingLoad?: number;         // Charge d'entraînement : RPE × durée en minutes
   note?: string;                 // Ressenti libre noté par l'utilisateur à la fin
@@ -79,8 +79,8 @@ export interface HistoryEntry {
 // ─── Timer ────────────────────────────────────────────────────────────────
 
 export interface TimerState {
-  isRunning: boolean;
-  endTimestamp: number | null;   // Date.now() + duration*1000 au démarrage
+    isRunning: boolean;
+    endTimestamp: number | null;   // Date.now() + duration*1000 au démarrage
   totalSeconds: number;          // Durée initiale (pour la progress bar)
 }
 
@@ -89,23 +89,36 @@ export interface TimerState {
 export type CardioActivityType = 'velo' | 'marche' | 'course' | 'autre';
 
 export interface CardioEntry {
-  id: string;
-  type: CardioActivityType;
-  date: number;          // timestamp ms
+    id: string;
+    type: CardioActivityType;
+    date: number;          // timestamp ms
   durationMin: number;
-  calories: number;      // calculées à l'ajout (durationMin/60 * kcal/h de l'activité)
+    calories: number;      // calculées à l'ajout (durationMin/60 * kcal/h de l'activité)
   rpe?: number;          // Ressenti 1-10, facultatif
 }
 
 // ─── Poids du corps (fonctionnalité en essai) ───────────────────────────────
 
+// Une mesure de composition corporelle peut être saisie soit en pourcentage,
+// soit en kg — on garde l'unité choisie par l'utilisateur plutôt que de
+// forcer une conversion (on ne connaît pas son poids total au moment de la
+// bascule / pas de règle fiable sans plus d'infos).
+export type MassUnit = 'percent' | 'kg';
+
+export interface MassMeasurement {
+    value: number;
+    unit: MassUnit;
+}
+
 export interface BodyWeightEntry {
-  id: string;
-  date: number;      // timestamp ms
+    id: string;
+    date: number;      // timestamp ms
   weightKg: number;
+    bodyFat?: MassMeasurement;     // masse graisseuse, en % ou en kg
+  muscleMass?: MassMeasurement;  // masse musculaire, en % ou en kg
 }
 
 // ─── Barre de navigation : clé de chaque onglet possible ───────────────────
 
 export type NavTabKey =
-  | 'home' | 'objectifs' | 'historique' | 'cardio' | 'exercices' | 'poids' | 'dashboard' | 'profil' | 'settings';
+    | 'home' | 'objectifs' | 'historique' | 'cardio' | 'exercices' | 'poids' | 'dashboard' | 'profil' | 'settings';
