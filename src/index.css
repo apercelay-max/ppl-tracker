@@ -390,6 +390,25 @@ button { cursor: pointer; }
   animation-name: confettiFall; animation-timing-function: ease-in; animation-fill-mode: forwards;
 }
 
+/* Feu d'artifice — particules qui jaillissent depuis le centre de l'écran
+   dans une direction aléatoire (--fx/--fy fixés par particule en JS, voir
+   ConfettiBurst.tsx). */
+@keyframes fireworkBurst {
+  0%   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) scale(0.3); opacity: 0; }
+}
+.firework-piece {
+  position: absolute; top: 50%; left: 50%; border-radius: 50%; will-change: transform, opacity;
+  animation-name: fireworkBurst; animation-timing-function: cubic-bezier(0.15, 0.6, 0.4, 1); animation-fill-mode: forwards;
+}
+
+/* Étincelles ✨ dispersées sur l'écran — réutilise @keyframes sparklePop
+   ci-dessus, en variante positionnée/durée par particule (ConfettiBurst.tsx). */
+.sparkle-piece {
+  position: absolute; will-change: transform, opacity;
+  animation-name: sparklePop; animation-timing-function: ease-out; animation-fill-mode: forwards;
+}
+
 /* Staggered pop-in utilisé pour les blocs de stats de l'écran de fin de
    séance en mode ultra (chaque bloc apparaît un peu après le précédent). */
 @keyframes ultraStatIn {
