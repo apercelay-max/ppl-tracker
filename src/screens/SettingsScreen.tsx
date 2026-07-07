@@ -157,6 +157,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const customPrograms = useWorkoutStore((s) => s.customPrograms);
   const addCustomProgram = useWorkoutStore((s) => s.addCustomProgram);
   const removeCustomProgram = useWorkoutStore((s) => s.removeCustomProgram);
+  const badgesEnabled = useWorkoutStore((s) => s.badgesEnabled);
+  const setBadgesEnabled = useWorkoutStore((s) => s.setBadgesEnabled);
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
   const toggleDay = (id: string) => setExpandedDays((d) => ({ ...d, [id]: !d[id] }));
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -742,6 +744,27 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
           <CategoryHeader id="objectifs" />
           {!collapsedCategories['objectifs'] && (
             <div style={categoryBody}>
+              {/* Badges de progression */}
+              <p style={subLabel}>BADGES & RÉCOMPENSES</p>
+              <div style={{ ...toggleRow, marginBottom: 20 }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Afficher les badges</p>
+                  <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+                    Paliers de progression (séances, régularité, cardio, poids, records) sur l'écran Profil.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setBadgesEnabled(!badgesEnabled)}
+                  style={{
+                    ...switchTrack,
+                    background: badgesEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                    justifyContent: badgesEnabled ? 'flex-end' : 'flex-start',
+                  }}
+                >
+                  <span style={switchThumb} />
+                </button>
+              </div>
+
               {/* Calories (estimation) */}
               <p style={subLabel}>CALORIES (ESTIMATION)</p>
               <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>

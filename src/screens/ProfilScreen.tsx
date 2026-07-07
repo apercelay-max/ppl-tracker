@@ -1,6 +1,7 @@
 import React from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ALL_EXERCISES, getMaxWeightEver, computeTonnage, bucketByWeek } from '../utils/training';
+import { BADGE_CATEGORIES, computeBadgeProgress } from '../data/badges';
 
 interface ProfilScreenProps { onBack: () => void; }
 
@@ -11,6 +12,11 @@ export const ProfilScreen: React.FC<ProfilScreenProps> = ({ onBack }) => {
   const history = useWorkoutStore((s) => s.history);
   const weeklySessionGoal = useWorkoutStore((s) => s.weeklySessionGoal);
   const currentWeek = useWorkoutStore((s) => s.currentWeek);
+  const badgesEnabled = useWorkoutStore((s) => s.badgesEnabled);
+  const totalSessionsCompleted = useWorkoutStore((s) => s.totalSessionsCompleted);
+  const totalCardioSessions = useWorkoutStore((s) => s.totalCardioSessions);
+  const bestWeekStreak = useWorkoutStore((s) => s.bestWeekStreak);
+  const bodyWeightHistory = useWorkoutStore((s) => s.bodyWeightHistory);
 
   const totalSessions = history.length;
   const totalTonnage = history.reduce((sum, e) => sum + (e.tonnage ?? computeTonnage(e.exerciseProgress)), 0);
@@ -36,6 +42,17 @@ export const ProfilScreen: React.FC<ProfilScreenProps> = ({ onBack }) => {
   // history est du plus récent au plus ancien → la dernière position est la
   // toute première séance jamais enregistrée.
   const firstSession = history.length > 0 ? history[history.length - 1] : null;
+
+  // Valeurs réelles associées à chaque catégorie de badge — voir
+  // data/badges.ts. `records` utilise un compteur binaire (0 ou 1) car il
+  // n'y a qu'un seul palier pour cette catégorie.
+  const badgeValues: Record<string, number> = {
+    sessions: totalSessionsCompleted,
+    streak: bestWeekStreak,
+    cardio: totalCardioSessions,
+    bodyweight: bodyWeightHistory.length,
+    records: topRecord ? 1 : 0,
+  };
 
   return (
     <div style={container}>
@@ -110,6 +127,41 @@ export const ProfilScreen: React.FC<ProfilScreenProps> = ({ onBack }) => {
                 </div>
               </>
             )}
+
+            {badgesEnabled && (
+              <>
+                <p style={{ ...sectionLabel, marginTop: 20 }}>BADGES</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {BADGE_CATEGORIES.map((cat) => {
+                    const progress = computeBadgeProgress(cat, badgeValues[cat.id] ?? 0);
+                    return (
+                      <div key={cat.id} style={badgeCard}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ fontSize: 22, opacity: progress.currentTier ? 1 : 0.35 }}>{cat.emoji}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 800 }}>
+                              {progress.currentTier ? progress.currentTier.label : cat.title}
+                            </p>
+                            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>
+                              {cat.unitLabel(progress.value)}
+                              {progress.nextTier ? ` · prochain : ${progress.nextTier.label} (${progress.nextTier.threshold})` : progress.currentTier ? ' · tous les paliers atteints' : ''}
+                            </p>
+                          </div>
+                        </div>
+                        {progress.nextTier && (
+                          <div style={{ height: 5, borderRadius: 3, background: 'var(--bg-elevated)', overflow: 'hidden', marginTop: 8 }}>
+                            <div style={{
+                              height: '100%', borderRadius: 3, background: 'var(--brand-1)',
+                              width: `${Math.round(progress.progressToNext * 100)}%`, transition: 'width 0.3s',
+                            }} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </>
         )}
 
@@ -133,6 +185,10 @@ const title: React.CSSProperties = { color: 'var(--text-primary)', fontSize: 20,
 const sectionLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 10, marginTop: 20 };
 const card: React.CSSProperties = {
   background: 'var(--bg-card)', borderRadius: 14, padding: 16,
+  border: '1px solid var(--border-mid)',
+};
+const badgeCard: React.CSSProperties = {
+  background: 'var(--bg-card)', borderRadius: 14, padding: '12px 14px',
   border: '1px solid var(--border-mid)',
 };
 const statBlock: React.CSSProperties = {
