@@ -16,9 +16,20 @@ const formatLastDate = (ts: number): string => {
 export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
   const history = useWorkoutStore((s) => s.history);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+
+  // Recherche insensible à la casse et aux accents (ex: "developpe" trouve
+  // "Développé couché") — pratique sur mobile où taper les accents est pénible.
+  const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+  const normalizedQuery = normalize(query.trim());
 
   const groups = ALL_MUSCLE_GROUPS
-    .map((group) => ({ group, exercises: ALL_EXERCISES.filter((ex) => ex.muscleGroup === group) }))
+    .map((group) => ({
+      group,
+      exercises: ALL_EXERCISES.filter((ex) =>
+        ex.muscleGroup === group && (normalizedQuery === '' || normalize(ex.name).includes(normalizedQuery))
+      ),
+    }))
     .filter((g) => g.exercises.length > 0);
 
   return (
@@ -32,6 +43,26 @@ export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Ta progression, exercice par exercice</p>
           </div>
         </div>
+
+        <div style={searchWrap}>
+          <span style={searchIcon}>🔍</span>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Rechercher un exercice..."
+            style={searchInput}
+          />
+          {query !== '' && (
+            <button onClick={() => setQuery('')} style={searchClearBtn} aria-label="Effacer">✕</button>
+          )}
+        </div>
+
+        {groups.length === 0 && (
+          <p style={{ color: 'var(--text-dim)', fontSize: 13, textAlign: 'center', marginTop: 24 }}>
+            Aucun exercice ne correspond à "{query}".
+          </p>
+        )}
 
         {groups.map(({ group, exercises }) => (
           <div key={group} style={{ marginBottom: 18 }}>
@@ -94,4 +125,16 @@ const card: React.CSSProperties = {
 };
 const exRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', width: '100%', padding: '12px 14px', cursor: 'pointer',
+};
+const searchWrap: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)',
+  border: '1px solid var(--border-mid)', borderRadius: 12, padding: '10px 14px', marginBottom: 18,
+};
+const searchIcon: React.CSSProperties = { fontSize: 14, opacity: 0.7 };
+const searchInput: React.CSSProperties = {
+  flex: 1, background: 'transparent', border: 'none', outline: 'none',
+  color: 'var(--text-primary)', fontSize: 14,
+};
+const searchClearBtn: React.CSSProperties = {
+  color: 'var(--text-dim)', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', padding: 4,
 };
