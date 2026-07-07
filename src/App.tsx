@@ -12,6 +12,7 @@ import { PoidsScreen } from './screens/PoidsScreen';
 import { ProfilScreen } from './screens/ProfilScreen';
 import { NavBar } from './components/NavBar';
 import type { NavView } from './components/NavBar';
+import { SplashScreen } from './components/SplashScreen';
 import { useWorkoutStore } from './store/workoutStore';
 import { getAccent } from './data/accents';
 import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
@@ -19,6 +20,12 @@ import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 type View =
   | 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'historique'
   | 'cardio' | 'exercices' | 'poids' | 'profil';
+
+// Durée d'affichage du splash "PPL" au démarrage, avant le fondu de sortie
+// (voir .splash-fade dans index.css). Volontairement court pour ne pas
+// ralentir l'ouverture de l'appli à chaque fois.
+const SPLASH_VISIBLE_MS = 1100;
+const SPLASH_FADE_MS = 350;
 
 export default function App() {
   const [view, setView] = useState<View>('home');
@@ -34,6 +41,15 @@ export default function App() {
   const iconShape = useWorkoutStore((s) => s.iconShape);
   const highContrast = useWorkoutStore((s) => s.highContrast);
   const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
+
+  // ── Splash de démarrage ("PPL" en grand + icône) ────────────────────────
+  const [splashVisible, setSplashVisible] = useState(true);
+  const [splashFading, setSplashFading] = useState(false);
+  useEffect(() => {
+    const fadeTimer = setTimeout(() => setSplashFading(true), SPLASH_VISIBLE_MS);
+    const hideTimer = setTimeout(() => setSplashVisible(false), SPLASH_VISIBLE_MS + SPLASH_FADE_MS);
+    return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer); };
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -75,7 +91,8 @@ export default function App() {
       setView('session');
     } else {
       // Nouvelle séance : on montre d'abord l'aperçu (programme du jour +
-      // bouton Démarrer), la séance ne démarre qu'au clic.
+      // bouton Démarrer), la séance ne démarre qu'après avoir appuyé sur
+      // Démarrer.
       setView('intro');
     }
   };
@@ -146,6 +163,7 @@ export default function App() {
     <>
       {screen}
       {showNavBar && <NavBar active={activeNavTab} onNavigate={handleNavigate} />}
+      {splashVisible && <SplashScreen fadingOut={splashFading} />}
     </>
   );
 }
