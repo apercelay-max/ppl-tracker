@@ -10,6 +10,7 @@ import { parseImportedFile, parseExcelWorkbook } from '../utils/importParser';
 import type { ImportResult } from '../utils/importParser';
 import { useAuth } from '../hooks/useAuth';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import type { SyncStatus } from '../hooks/useCloudSync';
 import { CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import type { CardioActivityType, NavTabKey } from '../data/types';
 
@@ -35,7 +36,12 @@ const formatRest = (seconds: number): string => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
-interface SettingsScreenProps { onBack: () => void; onOpenAccount: () => void; }
+interface SettingsScreenProps {
+  onBack: () => void;
+  onOpenAccount: () => void;
+  syncStatus?: SyncStatus;
+  lastSyncedAt?: number | null;
+}
 
 const FONT_SCALES: { id: 'sm' | 'md' | 'lg'; label: string; preview: number }[] = [
   { id: 'sm', label: 'Petit', preview: 12 },
@@ -111,7 +117,28 @@ const CATEGORY_ORDER: CategoryId[] = [
   'compte',
 ];
 
-export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAccount }) => {
+// Libellé + couleur affichés dans la catégorie Compte, selon l'état de la
+// synchro en cours (voir hooks/useCloudSync.ts pour la logique).
+const SYNC_STATUS_META: Record<SyncStatus, { label: string; color: string }> = {
+  idle: { label: '', color: 'var(--text-dim)' },
+  checking: { label: 'Vérification...', color: 'var(--text-dim)' },
+  conflict: { label: 'Choix à faire...', color: '#f5a623' },
+  syncing: { label: 'Synchro en cours...', color: 'var(--text-dim)' },
+  synced: { label: 'Synchronisé', color: '#4CAF50' },
+  error: { label: 'Erreur de synchro — nouvelle tentative au prochain changement', color: '#e03030' },
+};
+
+const formatSyncTime = (ts: number | null | undefined): string | null => {
+  if (!ts) return null;
+  const diffSec = Math.round((Date.now() - ts) / 1000);
+  if (diffSec < 10) return "à l'instant";
+  if (diffSec < 60) return `il y a ${diffSec}s`;
+  const diffMin = Math.round(diffSec / 60);
+  if (diffMin < 60) return `il y a ${diffMin} min`;
+  return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+};
+
+export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAccount, syncStatus, lastSyncedAt }) => {
   const { user, loading: authLoading } = useAuth();
   const handleSignOut = () => { supabase?.auth.signOut(); };
   const accentTheme = useWorkoutStore((s) => s.accentTheme);
@@ -950,7 +977,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
                     <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {user.email}
                     </p>
-                    <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>Connecté.</p>
+                    <p style={{ color: SYNC_STATUS_META[syncStatus ?? 'idle'].color, fontSize: 11, marginTop: 2 }}>
+                      {syncStatus && syncStatus !== 'idle'
+                        ? SYNC_STATUS_META[syncStatus].label
+                        : 'Connecté.'}
+                      {syncStatus === 'synced' && formatSyncTime(lastSyncedAt) ? ` — ${formatSyncTime(lastSyncedAt)}` : ''}
+                    </p>
                   </div>
                   <button onClick={handleSignOut} style={{ ...restBtn, flexShrink: 0, width: 'auto', padding: '10px 14px' }}>
                     Se déconnecter
