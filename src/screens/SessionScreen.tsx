@@ -319,7 +319,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
     <div style={{ ...container, flexDirection: isWide ? 'row' : 'column' }}>
       {confettiBurst && <ConfettiBurst />}
       {prBanner && (
-        <div style={prBannerStyle} className={ultraAnimationsEnabled ? 'ultra-pop ultra-glow' : 'fade-in'}>
+        <div style={prBannerStyle} className={ultraAnimationsEnabled ? 'ultra-pop-glow' : 'fade-in'}>
           <span style={{ fontSize: 20 }}>🏆</span>
           <div>
             <p style={{ color: '#fff', fontSize: 13, fontWeight: 800 }}>Nouveau record !</p>
@@ -548,7 +548,7 @@ const CompletionScreen: React.FC<{
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div
             style={trophyBadge}
-            className={ultraAnimationsEnabled ? 'ultra-pop ultra-glow' : undefined}
+            className={ultraAnimationsEnabled ? 'ultra-pop-glow' : undefined}
           ><span style={{ fontSize: 44 }}>🏆</span></div>
           <h2 style={{ color: 'var(--text-primary)', fontSize: 24, fontWeight: 800, marginBottom: 6, letterSpacing: -0.5 }}>Séance terminée !</h2>
           <p style={{ color: 'var(--brand-1)', fontSize: 17, fontWeight: 700, marginBottom: 2 }}>{workout.name}</p>
