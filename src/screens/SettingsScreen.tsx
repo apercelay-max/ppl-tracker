@@ -174,6 +174,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
   const beepVolume = useWorkoutStore((s) => s.beepVolume);
   const setBeepVolume = useWorkoutStore((s) => s.setBeepVolume);
   const testBeep = useWorkoutStore((s) => s.testBeep);
+  const hapticsEnabled = useWorkoutStore((s) => s.hapticsEnabled);
+  const setHapticsEnabled = useWorkoutStore((s) => s.setHapticsEnabled);
   const caloriesPerHour = useWorkoutStore((s) => s.caloriesPerHour);
   const setCaloriesPerHour = useWorkoutStore((s) => s.setCaloriesPerHour);
   const bodyDiagramEnabled = useWorkoutStore((s) => s.bodyDiagramEnabled);
@@ -694,6 +696,26 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
                 </>
               )}
               {!beepEnabled && <div style={{ marginBottom: 12 }} />}
+
+              {/* Vibrations */}
+              <div style={{ ...toggleRow, marginBottom: 20 }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Vibrations (haptique)</p>
+                  <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+                    Petite vibration à chaque série validée, fin de repos et fin de séance.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setHapticsEnabled(!hapticsEnabled)}
+                  style={{
+                    ...switchTrack,
+                    background: hapticsEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                    justifyContent: hapticsEnabled ? 'flex-end' : 'flex-start',
+                  }}
+                >
+                  <span style={switchThumb} />
+                </button>
+              </div>
 
               {/* Schéma des muscles sollicités */}
               <p style={subLabel}>SÉANCE</p>
