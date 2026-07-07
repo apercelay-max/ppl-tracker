@@ -14,7 +14,9 @@ import { AuthScreen } from './screens/AuthScreen';
 import { NavBar } from './components/NavBar';
 import type { NavView } from './components/NavBar';
 import { SplashScreen } from './components/SplashScreen';
+import { SyncConflictModal } from './components/SyncConflictModal';
 import { useWorkoutStore } from './store/workoutStore';
+import { useCloudSync } from './hooks/useCloudSync';
 import { getAccent } from './data/accents';
 import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 
@@ -42,6 +44,11 @@ export default function App() {
   const iconShape = useWorkoutStore((s) => s.iconShape);
   const highContrast = useWorkoutStore((s) => s.highContrast);
   const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
+
+  // Synchro cloud (Supabase) — se met en route toute seule dès qu'un
+  // utilisateur est connecté (voir hooks/useCloudSync.ts). Le modal de
+  // conflit est rendu plus bas, par-dessus l'écran courant quel qu'il soit.
+  const sync = useCloudSync();
 
   // ── Splash de démarrage ("PPL" en grand + icône) ────────────────────────
   const [splashVisible, setSplashVisible] = useState(true);
@@ -162,7 +169,14 @@ export default function App() {
   } else if (view === 'auth') {
     screen = <AuthScreen onBack={handleBackFromAccount} />;
   } else if (view === 'settings') {
-    screen = <SettingsScreen onBack={handleBackFromSettings} onOpenAccount={handleOpenAccount} />;
+    screen = (
+      <SettingsScreen
+        onBack={handleBackFromSettings}
+        onOpenAccount={handleOpenAccount}
+        syncStatus={sync.status}
+        lastSyncedAt={sync.lastSyncedAt}
+      />
+    );
   } else {
     screen = <HomeScreen onSelectDay={handleSelectDay} onOpenDashboard={handleOpenDashboard} onOpenSettings={handleOpenSettings} />;
   }
@@ -178,6 +192,13 @@ export default function App() {
       {screen}
       {showNavBar && <NavBar active={activeNavTab} onNavigate={handleNavigate} />}
       {splashVisible && <SplashScreen fadingOut={splashFading} />}
+      {sync.status === 'conflict' && sync.conflict && (
+        <SyncConflictModal
+          remoteUpdatedAt={sync.conflict.remoteUpdatedAt}
+          onUseCloud={sync.resolveUseCloud}
+          onUseDevice={sync.resolveUseDevice}
+        />
+      )}
     </>
   );
 }
