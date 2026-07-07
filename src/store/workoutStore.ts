@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { WorkoutSession, ExerciseProgress, SetEntry, HistoryEntry, TimerState, CardioActivityType, CardioEntry, BodyWeightEntry, NavTabKey } from '../data/types';
 import { getWorkout, setCustomWorkouts } from '../data/workouts';
 import { Program } from '../data/programs';
+import { bucketByWeek } from '../utils/training';
 
 const notifSupported = typeof Notification !== 'undefined';
 let notifTimeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -195,6 +196,10 @@ interface WorkoutStore {
   bodyWeightHistory: BodyWeightEntry[];
   activeProgramId: string;
   customPrograms: Program[];
+  badgesEnabled: boolean;
+  totalSessionsCompleted: number;
+  totalCardioSessions: number;
+  bestWeekStreak: number;
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
   editSet: (exerciseId: string, setIndex: number) => void;
@@ -243,12 +248,27 @@ interface WorkoutStore {
   setActiveProgram: (id: string) => void;
   addCustomProgram: (program: Program) => void;
   removeCustomProgram: (id: string) => void;
+  setBadgesEnabled: (enabled: boolean) => void;
 }
 
 // Recalcule le registre des séances importées (voir data/workouts.ts →
 // CUSTOM_WORKOUTS) à partir de la liste de programmes custom du store.
 const syncCustomWorkoutsRegistry = (customPrograms: Program[]) => {
   setCustomWorkouts(customPrograms.flatMap((p) => p.workouts));
+};
+
+// Nombre de semaines d'affilée (semaine en cours incluse) où l'objectif
+// hebdo a été atteint, à partir de l'historique réel — même calcul que
+// ProfilScreen.tsx, réutilisé ici pour tenir à jour le record `bestWeekStreak`
+// (badges de régularité) à chaque séance terminée.
+const computeCurrentWeekStreak = (history: HistoryEntry[], weeklySessionGoal: number): number => {
+  const buckets = bucketByWeek(history, 12);
+  let streak = 0;
+  for (let i = buckets.length - 1; i >= 0; i--) {
+    if (buckets[i].sessionCount >= weeklySessionGoal) streak++;
+    else break;
+  }
+  return streak;
 };
 
 export const useWorkoutStore = create<WorkoutStore>()(
@@ -286,6 +306,10 @@ export const useWorkoutStore = create<WorkoutStore>()(
       bodyWeightHistory: [],
       activeProgramId: 'strict-v10',
       customPrograms: [],
+      badgesEnabled: true,
+      totalSessionsCompleted: 0,
+      totalCardioSessions: 0,
+      bestWeekStreak: 0,
 
       startSession: (dayId) => {
         const workout = getWorkout(dayId);
@@ -416,7 +440,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       },
 
       finishSession: () => {
-        const { session, history } = get();
+        const { session, history, weeklySessionGoal, totalSessionsCompleted, bestWeekStreak } = get();
         if (!session) return;
         const entry: HistoryEntry = {
           id: `${session.dayId}-${session.startTime}`,
@@ -424,12 +448,19 @@ export const useWorkoutStore = create<WorkoutStore>()(
           exerciseProgress: session.exerciseProgress,
           durationMs: Date.now() - session.startTime,
         };
+        const updatedHistory = [entry, ...history].slice(0, 50);
+        const currentStreak = computeCurrentWeekStreak(updatedHistory, weeklySessionGoal);
         set((state) => ({
           session: { ...session, isComplete: true },
-          history: [entry, ...history].slice(0, 50),
+          history: updatedHistory,
           cycleDoneIds: state.cycleDoneIds.includes(session.dayId)
             ? state.cycleDoneIds
             : [...state.cycleDoneIds, session.dayId],
+          // Compteur vie entière — jamais tronqué, contrairement à `history`
+          // (limité à 50 entrées) — sert de base honnête aux badges de
+          // paliers (10/25/50/100/200 séances).
+          totalSessionsCompleted: totalSessionsCompleted + 1,
+          bestWeekStreak: Math.max(bestWeekStreak, currentStreak),
         }));
         cancelRestNotification();
         releaseWakeLock();
@@ -560,7 +591,10 @@ export const useWorkoutStore = create<WorkoutStore>()(
           calories: Math.round((kcalPerHour / 60) * durationMin),
           rpe,
         };
-        set((state) => ({ cardioHistory: [entry, ...state.cardioHistory].slice(0, 50) }));
+        set((state) => ({
+          cardioHistory: [entry, ...state.cardioHistory].slice(0, 50),
+          totalCardioSessions: state.totalCardioSessions + 1,
+        }));
       },
       deleteCardioEntry: (id) => {
         set((state) => ({ cardioHistory: state.cardioHistory.filter((e) => e.id !== id) }));
@@ -615,6 +649,8 @@ export const useWorkoutStore = create<WorkoutStore>()(
           };
         });
       },
+
+      setBadgesEnabled: (enabled) => set({ badgesEnabled: enabled }),
     }),
     {
       name: 'ppl-tracker-store',
@@ -650,6 +686,10 @@ export const useWorkoutStore = create<WorkoutStore>()(
         bodyWeightHistory: state.bodyWeightHistory,
         activeProgramId: state.activeProgramId,
         customPrograms: state.customPrograms,
+        badgesEnabled: state.badgesEnabled,
+        totalSessionsCompleted: state.totalSessionsCompleted,
+        totalCardioSessions: state.totalCardioSessions,
+        bestWeekStreak: state.bestWeekStreak,
       }),
       // Merge personnalisé : par défaut, zustand/persist remplace entièrement
       // les objets imbriqués (homeSections, homeSectionOrder) par la version
@@ -673,6 +713,21 @@ export const useWorkoutStore = create<WorkoutStore>()(
         // Remplit tout de suite le registre des séances importées, pour que
         // getWorkout() les retrouve dès le premier rendu après le chargement.
         syncCustomWorkoutsRegistry(merged.customPrograms);
+
+        // Badges — compteurs vie entière introduits après coup. Pour ne pas
+        // pénaliser les utilisateurs qui ont déjà de l'historique, on les
+        // initialise une seule fois (si absents de la sauvegarde) à partir
+        // des données réelles déjà présentes (history/cardioHistory étant
+        // limités à 50 entrées, c'est une base honnête — pas un chiffre
+        // inventé — mais elle peut sous-compter l'activité plus ancienne).
+        merged.badgesEnabled = p.badgesEnabled ?? true;
+        const baseHistory = p.history ?? current.history;
+        const baseCardio = p.cardioHistory ?? current.cardioHistory;
+        const baseGoal = p.weeklySessionGoal ?? current.weeklySessionGoal;
+        merged.totalSessionsCompleted = p.totalSessionsCompleted ?? baseHistory.length;
+        merged.totalCardioSessions = p.totalCardioSessions ?? baseCardio.length;
+        merged.bestWeekStreak = p.bestWeekStreak ?? computeCurrentWeekStreak(baseHistory, baseGoal);
+
         return merged;
       },
     }
