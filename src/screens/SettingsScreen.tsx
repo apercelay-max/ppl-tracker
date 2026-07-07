@@ -180,6 +180,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
   const setUltraAnimationsEnabled = useWorkoutStore((s) => s.setUltraAnimationsEnabled);
   const ultraAnimationStyle = useWorkoutStore((s) => s.ultraAnimationStyle);
   const setUltraAnimationStyle = useWorkoutStore((s) => s.setUltraAnimationStyle);
+  const ultraTransitionStyle = useWorkoutStore((s) => s.ultraTransitionStyle);
+  const setUltraTransitionStyle = useWorkoutStore((s) => s.setUltraTransitionStyle);
   const caloriesPerHour = useWorkoutStore((s) => s.caloriesPerHour);
   const setCaloriesPerHour = useWorkoutStore((s) => s.setCaloriesPerHour);
   const bodyDiagramEnabled = useWorkoutStore((s) => s.bodyDiagramEnabled);
@@ -569,6 +571,31 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
                           ...segmentBtn,
                           background: ultraAnimationStyle === opt.id ? 'var(--brand-1)' : 'var(--bg-elevated)',
                           color: ultraAnimationStyle === opt.id ? '#fff' : 'var(--text-muted)',
+                        }}
+                      >
+                        <span style={{ fontSize: 20 }}>{opt.emoji}</span>
+                        <span style={{ fontSize: 10, fontWeight: 700 }}>{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <p style={{ ...subLabel, marginTop: 16 }}>STYLE DE TRANSITION</p>
+                  <div style={segmentRow}>
+                    {(
+                      [
+                        { id: 'bounce', emoji: '🏀', label: 'Rebond' },
+                        { id: 'slide', emoji: '➡️', label: 'Glissement' },
+                        { id: 'zoom', emoji: '🔍', label: 'Zoom' },
+                        { id: 'flip', emoji: '🔃', label: 'Rotation' },
+                      ] as const
+                    ).map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() => setUltraTransitionStyle(opt.id)}
+                        style={{
+                          ...segmentBtn,
+                          background: ultraTransitionStyle === opt.id ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                          color: ultraTransitionStyle === opt.id ? '#fff' : 'var(--text-muted)',
                         }}
                       >
                         <span style={{ fontSize: 20 }}>{opt.emoji}</span>
