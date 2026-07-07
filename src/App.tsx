@@ -10,6 +10,7 @@ import { CardioScreen } from './screens/CardioScreen';
 import { ExercicesScreen } from './screens/ExercicesScreen';
 import { PoidsScreen } from './screens/PoidsScreen';
 import { ProfilScreen } from './screens/ProfilScreen';
+import { AuthScreen } from './screens/AuthScreen';
 import { NavBar } from './components/NavBar';
 import type { NavView } from './components/NavBar';
 import { SplashScreen } from './components/SplashScreen';
@@ -19,7 +20,7 @@ import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 
 type View =
   | 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'historique'
-  | 'cardio' | 'exercices' | 'poids' | 'profil';
+  | 'cardio' | 'exercices' | 'poids' | 'profil' | 'auth';
 
 // Durée d'affichage du splash "PPL" au démarrage, avant le fondu de sortie
 // (voir .splash-fade dans index.css). Volontairement court pour ne pas
@@ -120,6 +121,17 @@ export default function App() {
     setView(settingsReturnView);
   };
 
+  // Écran Compte (connexion/inscription) — toujours ouvert depuis les
+  // Réglages, donc "retour" ramène toujours vers Réglages (pas besoin
+  // d'un historique de navigation dédié comme pour settingsReturnView).
+  const handleOpenAccount = () => {
+    setView('auth');
+  };
+
+  const handleBackFromAccount = () => {
+    setView('settings');
+  };
+
   // Navigation depuis la barre du bas (liquid glass, activable dans les
   // Réglages) — "Réglages" passe par handleOpenSettings pour garder le
   // comportement normal du bouton retour de cet écran.
@@ -147,8 +159,10 @@ export default function App() {
     screen = <PoidsScreen onBack={handleBack} />;
   } else if (view === 'profil') {
     screen = <ProfilScreen onBack={handleBack} />;
+  } else if (view === 'auth') {
+    screen = <AuthScreen onBack={handleBackFromAccount} />;
   } else if (view === 'settings') {
-    screen = <SettingsScreen onBack={handleBackFromSettings} />;
+    screen = <SettingsScreen onBack={handleBackFromSettings} onOpenAccount={handleOpenAccount} />;
   } else {
     screen = <HomeScreen onSelectDay={handleSelectDay} onOpenDashboard={handleOpenDashboard} onOpenSettings={handleOpenSettings} />;
   }
