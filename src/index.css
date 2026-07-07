@@ -345,6 +345,29 @@ button { cursor: pointer; }
 }
 .ultra-fade-in { animation: ultraFadeIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 
+/* Glissement — l'écran entre depuis la droite. */
+@keyframes ultraSlideIn {
+  0%   { opacity: 0; transform: translateX(70px); }
+  60%  { opacity: 1; transform: translateX(-10px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+.ultra-slide-in { animation: ultraSlideIn 0.5s cubic-bezier(0.34, 1.2, 0.64, 1) both; }
+
+/* Zoom — l'écran grossit depuis un point plus petit. */
+@keyframes ultraZoomIn {
+  0%   { opacity: 0; transform: scale(0.72); }
+  60%  { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.ultra-zoom-in { animation: ultraZoomIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* Rotation — léger flip 3D façon carte qui se retourne. */
+@keyframes ultraFlipIn {
+  0%   { opacity: 0; transform: perspective(900px) rotateY(-40deg); }
+  100% { opacity: 1; transform: perspective(900px) rotateY(0deg); }
+}
+.ultra-flip-in { animation: ultraFlipIn 0.5s cubic-bezier(0.34, 1.2, 0.64, 1) both; }
+
 /* Halo pulsant multicolore — utilisé sur la bannière de record et le trophée
    de fin de séance quand le mode ultra est actif. */
 @keyframes ultraGlowPulse {

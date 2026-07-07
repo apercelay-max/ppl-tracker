@@ -45,6 +45,7 @@ export default function App() {
   const highContrast = useWorkoutStore((s) => s.highContrast);
   const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
   const ultraAnimationsEnabled = useWorkoutStore((s) => s.ultraAnimationsEnabled);
+  const ultraTransitionStyle = useWorkoutStore((s) => s.ultraTransitionStyle);
 
   // Synchro cloud (Supabase) — se met en route toute seule dès qu'un
   // utilisateur est connecté (voir hooks/useCloudSync.ts). Le modal de
@@ -188,9 +189,22 @@ export default function App() {
   const showNavBar = navBarEnabled && NAV_VIEWS.includes(view);
   const activeNavTab: NavView = (NAV_VIEWS.includes(view) ? view : 'home') as NavView;
 
+  // Classe de transition d'écran : en mode Ultra animations, on pioche parmi
+  // plusieurs styles réglables (Réglages → Personnalisation) au lieu du seul
+  // rebond historique.
+  const transitionClass = !ultraAnimationsEnabled
+    ? 'fade-in'
+    : ultraTransitionStyle === 'slide'
+    ? 'ultra-slide-in'
+    : ultraTransitionStyle === 'zoom'
+    ? 'ultra-zoom-in'
+    : ultraTransitionStyle === 'flip'
+    ? 'ultra-flip-in'
+    : 'ultra-fade-in';
+
   return (
     <>
-      <div key={view} className={ultraAnimationsEnabled ? 'ultra-fade-in' : 'fade-in'} style={{ height: '100%' }}>
+      <div key={view} className={transitionClass} style={{ height: '100%' }}>
         {screen}
       </div>
       {showNavBar && <NavBar active={activeNavTab} onNavigate={handleNavigate} />}
