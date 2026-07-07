@@ -44,6 +44,7 @@ export default function App() {
   const iconShape = useWorkoutStore((s) => s.iconShape);
   const highContrast = useWorkoutStore((s) => s.highContrast);
   const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
+  const ultraAnimationsEnabled = useWorkoutStore((s) => s.ultraAnimationsEnabled);
 
   // Synchro cloud (Supabase) — se met en route toute seule dès qu'un
   // utilisateur est connecté (voir hooks/useCloudSync.ts). Le modal de
@@ -189,7 +190,7 @@ export default function App() {
 
   return (
     <>
-      <div key={view} className="fade-in" style={{ height: '100%' }}>
+      <div key={view} className={ultraAnimationsEnabled ? 'ultra-fade-in' : 'fade-in'} style={{ height: '100%' }}>
         {screen}
       </div>
       {showNavBar && <NavBar active={activeNavTab} onNavigate={handleNavigate} />}
