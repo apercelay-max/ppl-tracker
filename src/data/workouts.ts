@@ -1,4 +1,5 @@
 import { WorkoutDay, ProgressionWeek } from './types';
+import { PPL_DEBUTANT_WORKOUTS, FULL_BODY_WORKOUTS, FORCE_5X5_WORKOUTS } from './extraPrograms';
 
 // ─── Tableau de progression 8 semaines ───────────────────────────────────────
 
@@ -36,6 +37,8 @@ export const PROGRESSION_WEEKS: ProgressionWeek[] = [
 ];
 
 // ─── Les 6 séances PPL Strict V10 ────────────────────────────────────────────
+// Programme par défaut de l'appli — jamais modifié ni supprimé, même
+// quand d'autres programmes sont ajoutés (voir programs.ts).
 
 export const WORKOUTS: WorkoutDay[] = [
   // ── JOUR 1 — PULL A ────────────────────────────────────────────────────────
@@ -149,7 +152,7 @@ export const WORKOUTS: WorkoutDay[] = [
         muscleGroup: 'ÉPAULES',
         sets: 4,
         targetReps: '12-15',
-        restSeconds: 0,   // Pas de repos : enchaîné avec le triceps
+        restSeconds: 0, // Pas de repos : enchaîné avec le triceps
         restMode: 'superset',
         isSuperset: true,
         supersetGroupId: 'ss-push-a',
@@ -163,7 +166,7 @@ export const WORKOUTS: WorkoutDay[] = [
         muscleGroup: 'TRICEPS',
         sets: 4,
         targetReps: '10-12',
-        restSeconds: 90,  // Repos après la paire SS
+        restSeconds: 90, // Repos après la paire SS
         restMode: 'superset',
         isSuperset: true,
         supersetGroupId: 'ss-push-a',
@@ -201,9 +204,9 @@ export const WORKOUTS: WorkoutDay[] = [
         muscleGroup: 'ISCHIOS & FESSIERS',
         sets: 4,
         targetReps: '10/jambe',
-        restSeconds: 120,            // Repos après la paire de jambes
+        restSeconds: 120, // Repos après la paire de jambes
         restMode: 'bilateral',
-        bilateralRestSeconds: 45,    // Repos entre jambe G et jambe D
+        bilateralRestSeconds: 45, // Repos entre jambe G et jambe D
         isSuperset: false,
         defaultWeight: 'PDC',
         notes: 'Repos de 45 s entre les jambes, puis 120 s après la paire.',
@@ -447,6 +450,31 @@ export const WORKOUTS: WorkoutDay[] = [
   },
 ];
 
-// Helper : récupère une séance par son ID
+// Toutes les séances de tous les programmes intégrés (Strict V10 + les
+// programmes additionnels de extraPrograms.ts) — sert uniquement à la
+// recherche par id ci-dessous, pour que l'historique/les écrans puissent
+// toujours retrouver une séance même si le programme actif a changé
+// depuis (voir workoutStore.ts → activeProgramId).
+const ALL_KNOWN_WORKOUTS: WorkoutDay[] = [
+  ...WORKOUTS,
+  ...PPL_DEBUTANT_WORKOUTS,
+  ...FULL_BODY_WORKOUTS,
+  ...FORCE_5X5_WORKOUTS,
+];
+
+// Registre des séances issues de programmes importés par l'utilisateur
+// (voir importParser.ts + workoutStore.ts → customPrograms). Rempli au
+// chargement de l'appli et à chaque import — permet à getWorkout() de les
+// retrouver sans dépendance circulaire vers le store.
+export const CUSTOM_WORKOUTS: WorkoutDay[] = [];
+export const setCustomWorkouts = (days: WorkoutDay[]) => {
+  CUSTOM_WORKOUTS.length = 0;
+  CUSTOM_WORKOUTS.push(...days);
+};
+
+// Helper : récupère une séance par son ID, dans n'importe quel programme
+// intégré ou importé (pas seulement Strict V10) — utilisé partout dans
+// l'appli (session, historique, dashboard...) donc reste valable même
+// après un changement de programme actif.
 export const getWorkout = (id: string): WorkoutDay | undefined =>
-  WORKOUTS.find((w) => w.id === id);
+  ALL_KNOWN_WORKOUTS.find((w) => w.id === id) ?? CUSTOM_WORKOUTS.find((w) => w.id === id);
