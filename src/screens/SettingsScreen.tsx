@@ -178,6 +178,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
   const setHapticsEnabled = useWorkoutStore((s) => s.setHapticsEnabled);
   const ultraAnimationsEnabled = useWorkoutStore((s) => s.ultraAnimationsEnabled);
   const setUltraAnimationsEnabled = useWorkoutStore((s) => s.setUltraAnimationsEnabled);
+  const ultraAnimationStyle = useWorkoutStore((s) => s.ultraAnimationStyle);
+  const setUltraAnimationStyle = useWorkoutStore((s) => s.setUltraAnimationStyle);
   const caloriesPerHour = useWorkoutStore((s) => s.caloriesPerHour);
   const setCaloriesPerHour = useWorkoutStore((s) => s.setCaloriesPerHour);
   const bodyDiagramEnabled = useWorkoutStore((s) => s.bodyDiagramEnabled);
@@ -548,6 +550,34 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
                   <span style={switchThumb} />
                 </button>
               </div>
+
+              {ultraAnimationsEnabled && (
+                <>
+                  <p style={{ ...subLabel, marginTop: 16 }}>STYLE DE L'EFFET</p>
+                  <div style={segmentRow}>
+                    {(
+                      [
+                        { id: 'confetti', emoji: '🎉', label: 'Confettis' },
+                        { id: 'fireworks', emoji: '🎆', label: 'Feu d\'artifice' },
+                        { id: 'sparkles', emoji: '✨', label: 'Étincelles' },
+                      ] as const
+                    ).map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() => setUltraAnimationStyle(opt.id)}
+                        style={{
+                          ...segmentBtn,
+                          background: ultraAnimationStyle === opt.id ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                          color: ultraAnimationStyle === opt.id ? '#fff' : 'var(--text-muted)',
+                        }}
+                      >
+                        <span style={{ fontSize: 20 }}>{opt.emoji}</span>
+                        <span style={{ fontSize: 10, fontWeight: 700 }}>{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

@@ -47,6 +47,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
   const saveCustomRest = useWorkoutStore((s) => s.saveCustomRest);
   const bodyDiagramEnabled = useWorkoutStore((s) => s.bodyDiagramEnabled);
   const ultraAnimationsEnabled = useWorkoutStore((s) => s.ultraAnimationsEnabled);
+  const ultraAnimationStyle = useWorkoutStore((s) => s.ultraAnimationStyle);
   const [isWide, setIsWide] = useState(() => window.innerWidth >= 700);
 
   // ── Détection de record personnel (PR) ───────────────────────────────────
@@ -317,7 +318,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
 
   return (
     <div style={{ ...container, flexDirection: isWide ? 'row' : 'column' }}>
-      {confettiBurst && <ConfettiBurst />}
+      {confettiBurst && <ConfettiBurst style={ultraAnimationStyle} />}
       {prBanner && (
         <div style={prBannerStyle} className={ultraAnimationsEnabled ? 'ultra-pop-glow' : 'fade-in'}>
           <span style={{ fontSize: 20 }}>🏆</span>
@@ -504,6 +505,7 @@ const CompletionScreen: React.FC<{
   const updateLastSessionNote = useWorkoutStore((s) => s.updateLastSessionNote);
   const caloriesPerHour = useWorkoutStore((s) => s.caloriesPerHour);
   const ultraAnimationsEnabled = useWorkoutStore((s) => s.ultraAnimationsEnabled);
+  const ultraAnimationStyle = useWorkoutStore((s) => s.ultraAnimationStyle);
   const [rpe, setRpe] = useState<number | null>(null);
   const [note, setNote] = useState('');
   // Grosse pluie de confettis à l'arrivée sur l'écran de fin, uniquement en
@@ -543,7 +545,7 @@ const CompletionScreen: React.FC<{
 
   return (
     <div style={completeScreen}>
-      {showConfetti && <ConfettiBurst count={40} />}
+      {showConfetti && <ConfettiBurst count={40} style={ultraAnimationStyle} />}
       <div style={{ maxWidth: 400, width: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div
