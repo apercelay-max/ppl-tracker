@@ -215,6 +215,59 @@ export const getExerciseWeightHistory = (history: HistoryEntry[], exerciseId: st
   return points.reverse(); // plus ancien → plus récent
 };
 
+export interface E1RMPoint {
+  date: number;
+  e1rm: number; // 1RM estimé (formule d'Epley), arrondi à 0.1 kg
+}
+
+/**
+ * 1RM estimé (formule d'Epley : poids × (1 + reps/30)) pour un exercice,
+ * jour par jour — on garde la meilleure estimation de la séance. Séries au
+ * poids du corps ("PDC") ou non chiffrées ignorées (pas de poids numérique
+ * = pas d'estimation fiable).
+ *
+ * C'est une ESTIMATION, pas une vraie mesure de force maximale — Epley
+ * reste la formule la plus utilisée mais devient moins fiable au-delà
+ * d'une dizaine de répétitions. À lire comme une tendance, pas un chiffre
+ * exact.
+ */
+export const getExerciseE1RMHistory = (history: HistoryEntry[], exerciseId: string): E1RMPoint[] => {
+  const points: E1RMPoint[] = [];
+  for (const entry of history) {
+    const sets = entry.exerciseProgress[exerciseId];
+    if (!sets) continue;
+    let best = 0;
+    for (const s of sets) {
+      if (!s.completed) continue;
+      const w = parseFloat(s.weight);
+      const r = parseInt(s.reps, 10);
+      if (isNaN(w) || isNaN(r) || r <= 0) continue;
+      const e1rm = w * (1 + r / 30);
+      if (e1rm > best) best = e1rm;
+    }
+    if (best > 0) points.push({ date: entry.date, e1rm: Math.round(best * 10) / 10 });
+  }
+  return points.reverse(); // plus ancien → plus récent
+};
+
+/** Meilleur 1RM estimé jamais atteint sur un exercice (formule d'Epley). */
+export const getMaxE1RMEver = (history: HistoryEntry[], exerciseId: string): number => {
+  let max = 0;
+  for (const entry of history) {
+    const sets = entry.exerciseProgress[exerciseId];
+    if (!sets) continue;
+    for (const s of sets) {
+      if (!s.completed) continue;
+      const w = parseFloat(s.weight);
+      const r = parseInt(s.reps, 10);
+      if (isNaN(w) || isNaN(r) || r <= 0) continue;
+      const e1rm = w * (1 + r / 30);
+      if (e1rm > max) max = e1rm;
+    }
+  }
+  return Math.round(max * 10) / 10;
+};
+
 // ─── Groupes musculaires pas travaillés récemment ───────────────────────────
 
 // Table exerciceId → groupe musculaire (construite une fois depuis workouts.ts).
