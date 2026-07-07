@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
-import { ALL_EXERCISES, ALL_MUSCLE_GROUPS, getExerciseWeightHistory, getMaxWeightEver } from '../utils/training';
+import { ALL_EXERCISES, ALL_MUSCLE_GROUPS, getExerciseWeightHistory, getMaxWeightEver, getExerciseE1RMHistory, getMaxE1RMEver } from '../utils/training';
 import { MiniLineChart } from '../components/MiniLineChart';
 
 interface ExercicesScreenProps { onBack: () => void; }
@@ -17,6 +17,10 @@ export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
   const history = useWorkoutStore((s) => s.history);
   const [openId, setOpenId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  // Vue affichée dans le graphique déplié : poids max soulevé, ou 1RM estimé
+  // (formule d'Epley) — partagée par toutes les cartes pour rester cohérent
+  // en parcourant la liste.
+  const [chartMode, setChartMode] = useState<'weight' | 'e1rm'>('weight');
 
   // Recherche insensible à la casse et aux accents (ex: "developpe" trouve
   // "Développé couché") — pratique sur mobile où taper les accents est pénible.
@@ -64,6 +68,26 @@ export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
           </p>
         )}
 
+        <div style={modeSwitch}>
+          <button
+            onClick={() => setChartMode('weight')}
+            style={{ ...modeBtn, ...(chartMode === 'weight' ? modeBtnActive : {}) }}
+          >
+            Poids soulevé
+          </button>
+          <button
+            onClick={() => setChartMode('e1rm')}
+            style={{ ...modeBtn, ...(chartMode === 'e1rm' ? modeBtnActive : {}) }}
+          >
+            1RM estimé
+          </button>
+        </div>
+        {chartMode === 'e1rm' && (
+          <p style={{ color: 'var(--text-dim)', fontSize: 10.5, lineHeight: '14px', marginTop: -10, marginBottom: 16 }}>
+            Estimation (formule d'Epley) à partir de ton poids × reps — une tendance, pas une vraie mesure de force max.
+          </p>
+        )}
+
         {groups.map(({ group, exercises }) => (
           <div key={group} style={{ marginBottom: 18 }}>
             <p style={sectionLabel}>{group}</p>
@@ -71,15 +95,22 @@ export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
               {exercises.map((ex) => {
                 const isOpen = openId === ex.id;
                 const max = getMaxWeightEver(history, ex.id);
+                const maxE1rm = getMaxE1RMEver(history, ex.id);
                 const points = getExerciseWeightHistory(history, ex.id);
+                const e1rmPoints = getExerciseE1RMHistory(history, ex.id);
                 const lastPoint = points[points.length - 1];
+                const chartPoints = chartMode === 'weight'
+                  ? points.map((p) => ({ date: p.date, value: p.maxWeight }))
+                  : e1rmPoints.map((p) => ({ date: p.date, value: p.e1rm }));
                 return (
                   <div key={ex.id} style={card}>
                     <button onClick={() => setOpenId(isOpen ? null : ex.id)} style={exRow}>
                       <div style={{ flex: 1, textAlign: 'left' }}>
                         <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>{ex.name}</p>
                         <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>
-                          {max > 0 ? `Record : ${max} kg` : 'Pas encore testé'}
+                          {chartMode === 'weight'
+                            ? (max > 0 ? `Record : ${max} kg` : 'Pas encore testé')
+                            : (maxE1rm > 0 ? `1RM est. : ~${Math.round(maxE1rm)} kg` : 'Pas encore testé')}
                           {lastPoint ? ` · dernière fois ${formatLastDate(lastPoint.date)}` : ''}
                         </p>
                       </div>
@@ -88,7 +119,7 @@ export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
                     {isOpen && (
                       <div style={{ padding: '4px 2px 2px' }}>
                         <MiniLineChart
-                          points={points.map((p) => ({ date: p.date, value: p.maxWeight }))}
+                          points={chartPoints}
                           unit="kg"
                           emptyMessage="Pas encore assez de séances chiffrées sur cet exercice pour voir une courbe."
                         />
@@ -137,4 +168,14 @@ const searchInput: React.CSSProperties = {
 };
 const searchClearBtn: React.CSSProperties = {
   color: 'var(--text-dim)', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+};
+const modeSwitch: React.CSSProperties = {
+  display: 'flex', gap: 6, marginBottom: 12,
+};
+const modeBtn: React.CSSProperties = {
+  flex: 1, padding: '9px 0', borderRadius: 10, fontSize: 12.5, fontWeight: 700,
+  background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-mid)',
+};
+const modeBtnActive: React.CSSProperties = {
+  background: 'var(--brand-1)', color: '#fff', border: '1px solid transparent',
 };
