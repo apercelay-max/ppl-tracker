@@ -215,6 +215,9 @@ interface WorkoutStore {
   bestWeekStreak: number;
   hapticsEnabled: boolean;
   ultraAnimationsEnabled: boolean;
+  // Style visuel des effets "Ultra animations" (confettis par défaut, ou
+  // feu d'artifice / étincelles — voir Réglages → Personnalisation).
+  ultraAnimationStyle: 'confetti' | 'fireworks' | 'sparkles';
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
   editSet: (exerciseId: string, setIndex: number) => void;
@@ -266,6 +269,7 @@ interface WorkoutStore {
   setBadgesEnabled: (enabled: boolean) => void;
   setHapticsEnabled: (enabled: boolean) => void;
   setUltraAnimationsEnabled: (enabled: boolean) => void;
+  setUltraAnimationStyle: (style: 'confetti' | 'fireworks' | 'sparkles') => void;
 }
 
 // Recalcule le registre des séances importées (voir data/workouts.ts →
@@ -329,6 +333,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       bestWeekStreak: 0,
       hapticsEnabled: true,
       ultraAnimationsEnabled: false,
+      ultraAnimationStyle: 'confetti',
 
       startSession: (dayId) => {
         const workout = getWorkout(dayId);
@@ -674,6 +679,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       setBadgesEnabled: (enabled) => set({ badgesEnabled: enabled }),
       setHapticsEnabled: (enabled) => set({ hapticsEnabled: enabled }),
       setUltraAnimationsEnabled: (enabled) => set({ ultraAnimationsEnabled: enabled }),
+      setUltraAnimationStyle: (style) => set({ ultraAnimationStyle: style }),
     }),
     {
       name: 'ppl-tracker-store',
@@ -715,6 +721,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         bestWeekStreak: state.bestWeekStreak,
         hapticsEnabled: state.hapticsEnabled,
         ultraAnimationsEnabled: state.ultraAnimationsEnabled,
+        ultraAnimationStyle: state.ultraAnimationStyle,
       }),
       // Merge personnalisé : par défaut, zustand/persist remplace entièrement
       // les objets imbriqués (homeSections, homeSectionOrder) par la version
@@ -759,6 +766,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         // aux autres retours sensoriels : c'est un effet plus voyant que
         // Léo doit choisir d'activer, pas quelque chose qu'on impose.
         merged.ultraAnimationsEnabled = p.ultraAnimationsEnabled ?? false;
+        merged.ultraAnimationStyle = p.ultraAnimationStyle ?? 'confetti';
 
         return merged;
       },
