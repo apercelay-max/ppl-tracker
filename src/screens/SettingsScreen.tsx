@@ -176,6 +176,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
   const testBeep = useWorkoutStore((s) => s.testBeep);
   const hapticsEnabled = useWorkoutStore((s) => s.hapticsEnabled);
   const setHapticsEnabled = useWorkoutStore((s) => s.setHapticsEnabled);
+  const ultraAnimationsEnabled = useWorkoutStore((s) => s.ultraAnimationsEnabled);
+  const setUltraAnimationsEnabled = useWorkoutStore((s) => s.setUltraAnimationsEnabled);
   const caloriesPerHour = useWorkoutStore((s) => s.caloriesPerHour);
   const setCaloriesPerHour = useWorkoutStore((s) => s.setCaloriesPerHour);
   const bodyDiagramEnabled = useWorkoutStore((s) => s.bodyDiagramEnabled);
@@ -524,6 +526,27 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
                     <span style={{ fontSize: 10, fontWeight: 700 }}>{ICON_SIZE_LABEL[sz]}</span>
                   </button>
                 ))}
+              </div>
+
+              {/* Ultra animations */}
+              <p style={{ ...subLabel, marginTop: 20 }}>EFFETS</p>
+              <div style={toggleRow}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>✨ Ultra animations</p>
+                  <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+                    Transitions rebondissantes entre les écrans, confettis sur les records et à la fin de séance, halo lumineux. Purement visuel, à activer si tu aimes le fun.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setUltraAnimationsEnabled(!ultraAnimationsEnabled)}
+                  style={{
+                    ...switchTrack,
+                    background: ultraAnimationsEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                    justifyContent: ultraAnimationsEnabled ? 'flex-end' : 'flex-start',
+                  }}
+                >
+                  <span style={switchThumb} />
+                </button>
               </div>
             </div>
           )}

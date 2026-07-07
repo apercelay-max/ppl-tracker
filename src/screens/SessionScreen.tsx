@@ -5,6 +5,7 @@ import { ExerciseCard } from '../components/ExerciseCard';
 import { InlineRestBar } from '../components/InlineRestBar';
 import { StatsPanel } from '../components/StatsPanel';
 import { BodyDiagram } from '../components/BodyDiagram';
+import { ConfettiBurst } from '../components/ConfettiBurst';
 import { useRestTimer } from '../hooks/useRestTimer';
 import { computeTonnage, computeTrainingLoad, compareSessionToHistory, getWorkoutBodyIntensity, getMaxWeightEver } from '../utils/training';
 import { SetEntry, Exercise, ExerciseProgress, HistoryEntry } from '../data/types';
@@ -45,12 +46,23 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
   const addTimer = useWorkoutStore((s) => s.addTimer);
   const saveCustomRest = useWorkoutStore((s) => s.saveCustomRest);
   const bodyDiagramEnabled = useWorkoutStore((s) => s.bodyDiagramEnabled);
+  const ultraAnimationsEnabled = useWorkoutStore((s) => s.ultraAnimationsEnabled);
   const [isWide, setIsWide] = useState(() => window.innerWidth >= 700);
 
   // ── Détection de record personnel (PR) ───────────────────────────────────
   const [prBanner, setPrBanner] = useState<string | null>(null);
   const prTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (prTimeoutRef.current) clearTimeout(prTimeoutRef.current); }, []);
+
+  // ── Confettis (mode "Ultra animations", réglable dans les Réglages) ─────
+  const [confettiBurst, setConfettiBurst] = useState(false);
+  const confettiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (confettiTimeoutRef.current) clearTimeout(confettiTimeoutRef.current); }, []);
+  const fireConfetti = useCallback((durationMs = 1700) => {
+    if (confettiTimeoutRef.current) clearTimeout(confettiTimeoutRef.current);
+    setConfettiBurst(true);
+    confettiTimeoutRef.current = setTimeout(() => setConfettiBurst(false), durationMs);
+  }, []);
 
   // Track which exercise triggered the timer (for saving custom rest)
   const timerExerciseRef = useRef<string | null>(null);
@@ -171,6 +183,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
         setPrBanner(exerciseName);
         prTimeoutRef.current = setTimeout(() => setPrBanner(null), 3500);
         try { if ('vibrate' in navigator) navigator.vibrate([80, 40, 80, 40, 160]); } catch (_) {}
+        if (ultraAnimationsEnabled) fireConfetti();
       }
     }
     completeSet(exerciseId, setIndex, entry);
@@ -202,7 +215,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
     timerExerciseRef.current = exerciseId;
     pendingSetKeyRef.current = { exerciseId, setIndex };
     startTimer(restSecs);
-  }, [workout, completeSet, advanceSession, startTimer, customRestSeconds, defaultRestSeconds, history]);
+  }, [workout, completeSet, advanceSession, startTimer, customRestSeconds, defaultRestSeconds, history, ultraAnimationsEnabled, fireConfetti]);
 
   // Démarre le repos dès que le poids est saisi (avant même de valider la
   // série), pour compter le repos au plus près du moment où la série a
@@ -304,8 +317,9 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
 
   return (
     <div style={{ ...container, flexDirection: isWide ? 'row' : 'column' }}>
+      {confettiBurst && <ConfettiBurst />}
       {prBanner && (
-        <div style={prBannerStyle} className="fade-in">
+        <div style={prBannerStyle} className={ultraAnimationsEnabled ? 'ultra-pop ultra-glow' : 'fade-in'}>
           <span style={{ fontSize: 20 }}>🏆</span>
           <div>
             <p style={{ color: '#fff', fontSize: 13, fontWeight: 800 }}>Nouveau record !</p>
@@ -489,8 +503,17 @@ const CompletionScreen: React.FC<{
   const updateLastSessionRPE = useWorkoutStore((s) => s.updateLastSessionRPE);
   const updateLastSessionNote = useWorkoutStore((s) => s.updateLastSessionNote);
   const caloriesPerHour = useWorkoutStore((s) => s.caloriesPerHour);
+  const ultraAnimationsEnabled = useWorkoutStore((s) => s.ultraAnimationsEnabled);
   const [rpe, setRpe] = useState<number | null>(null);
   const [note, setNote] = useState('');
+  // Grosse pluie de confettis à l'arrivée sur l'écran de fin, uniquement en
+  // mode "Ultra animations" — se retire tout seul après ~2.2s.
+  const [showConfetti, setShowConfetti] = useState(ultraAnimationsEnabled);
+  useEffect(() => {
+    if (!ultraAnimationsEnabled) return;
+    const t = setTimeout(() => setShowConfetti(false), 2200);
+    return () => clearTimeout(t);
+  }, [ultraAnimationsEnabled]);
 
   const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
   const durationMs = Date.now() - session.startTime;
@@ -520,32 +543,36 @@ const CompletionScreen: React.FC<{
 
   return (
     <div style={completeScreen}>
+      {showConfetti && <ConfettiBurst count={40} />}
       <div style={{ maxWidth: 400, width: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={trophyBadge}><span style={{ fontSize: 44 }}>🏆</span></div>
+          <div
+            style={trophyBadge}
+            className={ultraAnimationsEnabled ? 'ultra-pop ultra-glow' : undefined}
+          ><span style={{ fontSize: 44 }}>🏆</span></div>
           <h2 style={{ color: 'var(--text-primary)', fontSize: 24, fontWeight: 800, marginBottom: 6, letterSpacing: -0.5 }}>Séance terminée !</h2>
           <p style={{ color: 'var(--brand-1)', fontSize: 17, fontWeight: 700, marginBottom: 2 }}>{workout.name}</p>
           <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>{totalSets} séries · {durationMin} min</p>
         </div>
 
         <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-          <div style={statBlock}>
+          <div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
             <span style={{ fontSize: 22 }}>⏱</span>
             <span style={{ color: '#4CAF50', fontSize: 20, fontWeight: 200 }}>{durationMin}<span style={{ fontSize: 11 }}> min</span></span>
             <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>DURÉE</span>
           </div>
-          <div style={statBlock}>
+          <div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.08s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
             <span style={{ fontSize: 22 }}>🔥</span>
             <span style={{ color: '#e8a020', fontSize: 20, fontWeight: 200 }}>{cal}<span style={{ fontSize: 11 }}> kcal</span></span>
             <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>CALORIES</span>
           </div>
-          <div style={statBlock}>
+          <div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.16s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
             <span style={{ fontSize: 22 }}>💪</span>
             <span style={{ color: '#9b27af', fontSize: 20, fontWeight: 200 }}>{totalSets}</span>
             <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>SÉRIES</span>
           </div>
           {tonnage > 0 && (
-            <div style={statBlock}>
+            <div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.24s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
               <span style={{ fontSize: 22 }}>🏋️</span>
               <span style={{ color: '#5560cc', fontSize: 20, fontWeight: 200 }}>{tonnage}<span style={{ fontSize: 11 }}> kg</span></span>
               <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>TONNAGE</span>
