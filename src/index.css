@@ -362,6 +362,15 @@ button { cursor: pointer; }
 }
 .ultra-pop { animation: ultraPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
+/* Pop + halo combinés sur un même élément (bannière PR, trophée fin de
+   séance). Nécessaire en une seule classe car `.ultra-pop` et `.ultra-glow`
+   posent chacun `animation` en shorthand : les mettre toutes les deux sur
+   le même élément ferait que la règle la plus tardive (ultra-pop) écrase
+   entièrement l'animation de glow, qui ne jouerait alors jamais. */
+.ultra-pop-glow {
+  animation: ultraPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), ultraGlowPulse 1.3s ease-in-out infinite;
+}
+
 /* Petites étincelles qui apparaissent et tournent sur elles-mêmes. */
 @keyframes sparklePop {
   0% { transform: scale(0) rotate(0deg); opacity: 0; }
