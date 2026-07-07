@@ -6,7 +6,8 @@ import { ICON_SHAPE_RADIUS, ICON_SHAPE_LABEL, ICON_SIZE_LABEL } from '../data/ic
 import type { IconShape, IconSize } from '../data/iconPrefs';
 import { WORKOUTS } from '../data/workouts';
 import { getAllPrograms } from '../data/programs';
-import { parseImportedFile } from '../utils/importParser';
+import { parseImportedFile, parseExcelWorkbook } from '../utils/importParser';
+import type { ImportResult } from '../utils/importParser';
 import { CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import type { CardioActivityType, NavTabKey } from '../data/types';
 
@@ -183,41 +184,61 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
     URL.revokeObjectURL(url);
   };
 
-  // Import "intelligent" : accepte n'importe quel format texte. D'abord on
-  // vérifie si c'est une vraie sauvegarde PPL Tracker (JSON avec "state") →
-  // restauration complète comme avant. Sinon on tente d'en extraire un
-  // programme (CSV, JSON générique, ou texte libre analysé par mots-clés —
-  // voir importParser.ts, pas une vraie IA, un parseur à base de règles).
+  // Traite le résultat du parseur (texte, CSV, JSON ou Excel) une fois
+  // obtenu — proposition de restauration pour une sauvegarde PPL Tracker,
+  // ou proposition d'ajout d'un nouveau programme sans toucher aux
+  // programmes existants.
+  const finishImport = (result: ImportResult, rawText: string | null, filename: string) => {
+    if (result.isBackupFile) {
+      if (!rawText) {
+        setImportMsg('Sauvegarde détectée mais illisible — réessaie.');
+        return;
+      }
+      const ok = window.confirm(
+        'Ce fichier est une sauvegarde PPL Tracker. L\'importer va remplacer toutes tes données actuelles (séances, historique, réglages...) par celles du fichier. Continuer ?'
+      );
+      if (!ok) return;
+      localStorage.setItem('ppl-tracker-store', rawText);
+      window.location.reload();
+      return;
+    }
+
+    if (!result.program) {
+      setImportMsg(`Import impossible — ${result.warnings[0] ?? 'aucune séance reconnue dans ce fichier.'}`);
+      return;
+    }
+
+    const warningLine = result.warnings.length ? ` (${result.warnings.join(' ')})` : '';
+    const ok = window.confirm(
+      `${result.daysDetected} jour(s) et ${result.exercisesDetected} exercice(s) détectés dans "${filename}".\n` +
+      `Ça va créer le programme "${result.program.name}", sélectionnable dans Programme d'entraînement — sans toucher aux programmes existants.${warningLine}\n\n` +
+      `Ajouter ce programme ?`
+    );
+    if (!ok) return;
+    addCustomProgram(result.program);
+    setImportMsg(`"${result.program.name}" ajouté (${result.daysDetected} jour(s), ${result.exercisesDetected} exercice(s)). Choisis-le dans "Programme d'entraînement" ci-dessus.`);
+  };
+
+  // Import "intelligent" : accepte n'importe quel format (Excel, CSV, JSON,
+  // texte). D'abord on vérifie si c'est une vraie sauvegarde PPL Tracker
+  // (JSON avec "state") → restauration complète comme avant. Sinon on
+  // tente d'en extraire un programme — voir importParser.ts, pas une
+  // vraie IA, un parseur à base de règles qui remonte des avertissements
+  // honnêtes plutôt que d'inventer des données.
   const handleImportFile = (file: File) => {
+    const lower = file.name.toLowerCase();
+    if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
+      setImportMsg('Lecture du fichier Excel...');
+      parseExcelWorkbook(file)
+        .then((result) => finishImport(result, null, file.name))
+        .catch(() => setImportMsg("Import impossible — le fichier Excel n'a pas pu être lu."));
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       const text = String(reader.result ?? '');
       const result = parseImportedFile(file.name, text);
-
-      if (result.isBackupFile) {
-        const ok = window.confirm(
-          'Ce fichier est une sauvegarde PPL Tracker. L\'importer va remplacer toutes tes données actuelles (séances, historique, réglages...) par celles du fichier. Continuer ?'
-        );
-        if (!ok) return;
-        localStorage.setItem('ppl-tracker-store', text);
-        window.location.reload();
-        return;
-      }
-
-      if (!result.program) {
-        setImportMsg(`Import impossible — ${result.warnings[0] ?? 'aucune séance reconnue dans ce fichier.'}`);
-        return;
-      }
-
-      const warningLine = result.warnings.length ? ` (${result.warnings.join(' ')})` : '';
-      const ok = window.confirm(
-        `${result.daysDetected} jour(s) et ${result.exercisesDetected} exercice(s) détectés dans "${file.name}".\n` +
-        `Ça va créer le programme "${result.program.name}", sélectionnable dans Programme d'entraînement — sans toucher aux programmes existants.${warningLine}\n\n` +
-        `Ajouter ce programme ?`
-      );
-      if (!ok) return;
-      addCustomProgram(result.program);
-      setImportMsg(`"${result.program.name}" ajouté (${result.daysDetected} jour(s), ${result.exercisesDetected} exercice(s)). Choisis-le dans "Programme d'entraînement" ci-dessus.`);
+      finishImport(result, text, file.name);
     };
     reader.readAsText(file);
   };
@@ -856,7 +877,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
             <div style={categoryBody}>
               <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
                 Exporter : télécharge tout ton historique et tes réglages. Importer : restaure une sauvegarde PPL Tracker,
-                ou analyse n'importe quel autre fichier (CSV, JSON, texte) pour en faire un nouveau programme.
+                ou analyse n'importe quel autre fichier (Excel, CSV, JSON, texte) pour en faire un nouveau programme.
               </p>
               <div style={{ display: 'flex', gap: 8, marginBottom: importMsg ? 8 : 0 }}>
                 <button onClick={handleExport} style={{ ...restBtn, flex: 1, padding: '12px 8px' }}>⬇ Exporter</button>
@@ -864,7 +885,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
                 <input
                   ref={importInputRef}
                   type="file"
-                  accept=".json,.csv,.txt,text/*,application/json"
+                  accept=".json,.csv,.txt,.xlsx,.xls,text/*,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                   style={{ display: 'none' }}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
