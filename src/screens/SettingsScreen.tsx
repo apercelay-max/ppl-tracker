@@ -70,6 +70,41 @@ const SECTION_META: Record<HomeSectionKey, { label: string; desc: string; toggle
   nextSession: { label: 'Prochaine séance', desc: 'Le bandeau qui indique la prochaine séance du cycle.', toggleable: true },
 };
 
+// Catégories de la page Réglages. Chaque section existante est rangée dans
+// une seule de ces classes ; chaque catégorie est dépliable/repliable pour
+// que la page reste lisible malgré le nombre de réglages.
+type CategoryId =
+  | 'programme'
+  | 'personnalisation'
+  | 'accessibilite'
+  | 'navigation'
+  | 'seance'
+  | 'objectifs'
+  | 'accueil'
+  | 'donnees';
+
+const CATEGORY_META: Record<CategoryId, { label: string; emoji: string; desc: string }> = {
+  programme: { label: 'Programme', emoji: '🏋️', desc: "Le programme d'entraînement actif." },
+  personnalisation: { label: 'Personnalisation', emoji: '🎨', desc: 'Couleurs, thème, texte, icônes.' },
+  accessibilite: { label: 'Accessibilité', emoji: '♿', desc: 'Lisibilité et contraste.' },
+  navigation: { label: 'Navigation', emoji: '🧭', desc: "La barre en bas de l'écran." },
+  seance: { label: 'Séance & repos', emoji: '⏱️', desc: 'Minuteur, bip, schéma musculaire.' },
+  objectifs: { label: 'Objectifs & calories', emoji: '🎯', desc: 'Calories, objectif hebdo, cardio.' },
+  accueil: { label: "Écran d'accueil", emoji: '🏠', desc: 'Ordre et visibilité des blocs.' },
+  donnees: { label: 'Données', emoji: '💾', desc: 'Export, import, sauvegarde.' },
+};
+
+const CATEGORY_ORDER: CategoryId[] = [
+  'programme',
+  'personnalisation',
+  'accessibilite',
+  'navigation',
+  'seance',
+  'objectifs',
+  'accueil',
+  'donnees',
+];
+
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const accentTheme = useWorkoutStore((s) => s.accentTheme);
   const setAccentTheme = useWorkoutStore((s) => s.setAccentTheme);
@@ -127,6 +162,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const allPrograms = getAllPrograms(customPrograms);
 
+  // Chaque catégorie est ouverte par défaut ; l'état ne stocke que celles
+  // que l'utilisateur a explicitement repliées.
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
+  const toggleCategory = (id: CategoryId) =>
+    setCollapsedCategories((c) => ({ ...c, [id]: !c[id] }));
+
   // Télécharge tout le contenu du store (séances, historique, réglages…)
   // dans un fichier JSON, pour pouvoir le garder au chaud ou le remettre
   // sur un autre téléphone.
@@ -181,6 +222,22 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
     reader.readAsText(file);
   };
 
+  // Petit composant de tête de catégorie, réutilisé pour chacune des 8 classes.
+  const CategoryHeader: React.FC<{ id: CategoryId }> = ({ id }) => {
+    const meta = CATEGORY_META[id];
+    const collapsed = !!collapsedCategories[id];
+    return (
+      <button onClick={() => toggleCategory(id)} style={categoryHeaderBtn}>
+        <span style={{ fontSize: 18 }}>{meta.emoji}</span>
+        <div style={{ flex: 1, textAlign: 'left' }}>
+          <p style={categoryHeaderLabel}>{meta.label}</p>
+          <p style={categoryHeaderDesc}>{meta.desc}</p>
+        </div>
+        <span style={{ color: 'var(--text-dim)', fontSize: 12, transform: collapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.15s' }}>▾</span>
+      </button>
+    );
+  };
+
   return (
     <div style={container}>
       <div style={{ ...scroll, paddingBottom: navBarEnabled ? 112 : 40 }}>
@@ -192,582 +249,636 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
           </div>
         </div>
 
-        {/* Programme d'entraînement */}
-        <p style={sectionLabel}>PROGRAMME D'ENTRAÎNEMENT</p>
-        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 12, lineHeight: '15px' }}>
-          Choisis le programme actif — les autres restent disponibles, rien n'est supprimé en changeant.
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
-          {allPrograms.map((program) => {
-            const isActive = program.id === activeProgramId;
-            return (
-              <div key={program.id} style={{ display: 'flex', alignItems: 'stretch', gap: 6 }}>
-                <button
-                  onClick={() => setActiveProgram(program.id)}
+        {/* ═══ Catégorie : Programme ═══ */}
+        <div style={categoryWrapper}>
+          <CategoryHeader id="programme" />
+          {!collapsedCategories['programme'] && (
+            <div style={categoryBody}>
+              <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 12, lineHeight: '15px' }}>
+                Choisis le programme actif — les autres restent disponibles, rien n'est supprimé en changeant.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {allPrograms.map((program) => {
+                  const isActive = program.id === activeProgramId;
+                  return (
+                    <div key={program.id} style={{ display: 'flex', alignItems: 'stretch', gap: 6 }}>
+                      <button
+                        onClick={() => setActiveProgram(program.id)}
+                        style={{
+                          ...programCard,
+                          border: isActive ? '2px solid var(--brand-1)' : '2px solid transparent',
+                          background: isActive ? 'var(--bg-elevated)' : 'var(--bg-surface)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <p style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 800 }}>{program.name}</p>
+                          {isActive && <span style={{ color: 'var(--brand-1)', fontSize: 10, fontWeight: 700 }}>✓ ACTIF</span>}
+                        </div>
+                        <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 3, lineHeight: '15px' }}>{program.shortDescription}</p>
+                        <p style={{ color: 'var(--text-micro)', fontSize: 10, marginTop: 4, fontStyle: 'italic' }}>{program.source}</p>
+                      </button>
+                      {program.isCustom && (
+                        <button
+                          onClick={() => {
+                            const ok = window.confirm(`Supprimer le programme importé "${program.name}" ? L'historique déjà enregistré n'est pas touché.`);
+                            if (ok) removeCustomProgram(program.id);
+                          }}
+                          style={programDeleteBtn}
+                          title="Supprimer ce programme importé"
+                        >✕</button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ═══ Catégorie : Personnalisation ═══ */}
+        <div style={categoryWrapper}>
+          <CategoryHeader id="personnalisation" />
+          {!collapsedCategories['personnalisation'] && (
+            <div style={categoryBody}>
+              {/* Couleur d'accent */}
+              <p style={subLabel}>COULEUR D'ACCENT</p>
+              <div style={swatchGrid}>
+                {ACCENT_PRESETS.map((a) => (
+                  <button
+                    key={a.id}
+                    onClick={() => setAccentTheme(a.id)}
+                    style={{
+                      ...swatchBtn,
+                      border: accentTheme === a.id ? `2px solid ${a.c1}` : '2px solid transparent',
+                    }}
+                    title={a.label}
+                  >
+                    <span style={{
+                      display: 'block', width: 40, height: 40, borderRadius: '50%',
+                      background: `linear-gradient(135deg, ${a.c1}, ${a.c2})`,
+                      boxShadow: accentTheme === a.id ? `0 0 0 3px var(--bg-card), 0 0 0 5px ${a.c1}` : 'none',
+                    }} />
+                    <span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }}>{a.label}</span>
+                  </button>
+                ))}
+                <label
                   style={{
-                    ...programCard,
-                    border: isActive ? '2px solid var(--brand-1)' : '2px solid transparent',
-                    background: isActive ? 'var(--bg-elevated)' : 'var(--bg-surface)',
+                    ...swatchBtn,
+                    cursor: 'pointer',
+                    border: accentTheme === 'custom' ? `2px solid ${customAccentColor}` : '2px solid transparent',
+                  }}
+                  title="Couleur perso"
+                >
+                  <span style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 40, height: 40, borderRadius: '50%',
+                    background: accentTheme === 'custom'
+                      ? `linear-gradient(135deg, ${customAccentColor}, ${customAccentColor})`
+                      : 'repeating-conic-gradient(#e03030 0% 25%, #2563eb 0% 50%, #16a34a 0% 75%, #ea580c 0% 100%)',
+                    boxShadow: accentTheme === 'custom' ? `0 0 0 3px var(--bg-card), 0 0 0 5px ${customAccentColor}` : 'none',
+                    fontSize: 16,
+                  }}>
+                    {accentTheme !== 'custom' && '🎨'}
+                  </span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }}>Perso</span>
+                  <input
+                    type="color"
+                    value={customAccentColor}
+                    onChange={(e) => setCustomAccentColor(e.target.value)}
+                    style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+                  />
+                </label>
+              </div>
+
+              {/* Thème "salle de sport" */}
+              <p style={{ ...subLabel, marginTop: 20 }}>SALLE DE SPORT</p>
+              <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 12, lineHeight: '15px' }}>
+                Choisis ta salle et l'appli (et le logo) reprend une couleur dans son esprit. Couleurs approximatives, pas les codes officiels de la marque.
+              </p>
+              <div style={swatchGrid}>
+                {GYM_PRESETS.map((g) => (
+                  <button
+                    key={g.id}
+                    onClick={() => setAccentTheme(g.id)}
+                    style={{
+                      ...swatchBtn,
+                      border: accentTheme === g.id ? `2px solid ${g.c1}` : '2px solid transparent',
+                    }}
+                    title={g.label}
+                  >
+                    <span style={{
+                      display: 'block', width: 40, height: 40, borderRadius: '50%',
+                      background: `linear-gradient(135deg, ${g.c1}, ${g.c2})`,
+                      boxShadow: accentTheme === g.id ? `0 0 0 3px var(--bg-card), 0 0 0 5px ${g.c1}` : 'none',
+                    }} />
+                    <span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 700, textAlign: 'center' }}>{g.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Thème (AMOLED) */}
+              <p style={{ ...subLabel, marginTop: 20 }}>THÈME</p>
+              <div style={toggleRow}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Noir pur (AMOLED)</p>
+                  <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+                    {theme === 'dark'
+                      ? "Fond quasi noir, économise la batterie sur écran OLED."
+                      : 'Actif uniquement en thème sombre (☀️/🌙 sur l\'accueil).'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setAmoledMode(!amoledMode)}
+                  style={{
+                    ...switchTrack,
+                    background: amoledMode ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                    justifyContent: amoledMode ? 'flex-end' : 'flex-start',
+                    opacity: theme === 'dark' ? 1 : 0.5,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <p style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 800 }}>{program.name}</p>
-                    {isActive && <span style={{ color: 'var(--brand-1)', fontSize: 10, fontWeight: 700 }}>✓ ACTIF</span>}
-                  </div>
-                  <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 3, lineHeight: '15px' }}>{program.shortDescription}</p>
-                  <p style={{ color: 'var(--text-micro)', fontSize: 10, marginTop: 4, fontStyle: 'italic' }}>{program.source}</p>
+                  <span style={switchThumb} />
                 </button>
-                {program.isCustom && (
-                  <button
-                    onClick={() => {
-                      const ok = window.confirm(`Supprimer le programme importé "${program.name}" ? L'historique déjà enregistré n'est pas touché.`);
-                      if (ok) removeCustomProgram(program.id);
-                    }}
-                    style={programDeleteBtn}
-                    title="Supprimer ce programme importé"
-                  >✕</button>
-                )}
               </div>
-            );
-          })}
-        </div>
 
-        {/* Couleur d'accent */}
-        <p style={sectionLabel}>COULEUR D'ACCENT</p>
-        <div style={swatchGrid}>
-          {ACCENT_PRESETS.map((a) => (
-            <button
-              key={a.id}
-              onClick={() => setAccentTheme(a.id)}
-              style={{
-                ...swatchBtn,
-                border: accentTheme === a.id ? `2px solid ${a.c1}` : '2px solid transparent',
-              }}
-              title={a.label}
-            >
-              <span style={{
-                display: 'block', width: 40, height: 40, borderRadius: '50%',
-                background: `linear-gradient(135deg, ${a.c1}, ${a.c2})`,
-                boxShadow: accentTheme === a.id ? `0 0 0 3px var(--bg-card), 0 0 0 5px ${a.c1}` : 'none',
-              }} />
-              <span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }}>{a.label}</span>
-            </button>
-          ))}
-          <label
-            style={{
-              ...swatchBtn,
-              cursor: 'pointer',
-              border: accentTheme === 'custom' ? `2px solid ${customAccentColor}` : '2px solid transparent',
-            }}
-            title="Couleur perso"
-          >
-            <span style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 40, height: 40, borderRadius: '50%',
-              background: accentTheme === 'custom'
-                ? `linear-gradient(135deg, ${customAccentColor}, ${customAccentColor})`
-                : 'repeating-conic-gradient(#e03030 0% 25%, #2563eb 0% 50%, #16a34a 0% 75%, #ea580c 0% 100%)',
-              boxShadow: accentTheme === 'custom' ? `0 0 0 3px var(--bg-card), 0 0 0 5px ${customAccentColor}` : 'none',
-              fontSize: 16,
-            }}>
-              {accentTheme !== 'custom' && '🎨'}
-            </span>
-            <span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }}>Perso</span>
-            <input
-              type="color"
-              value={customAccentColor}
-              onChange={(e) => setCustomAccentColor(e.target.value)}
-              style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
-            />
-          </label>
-        </div>
-
-        {/* Thème "salle de sport" */}
-        <p style={{ ...sectionLabel, marginTop: 24 }}>SALLE DE SPORT</p>
-        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 12, lineHeight: '15px' }}>
-          Choisis ta salle et l'appli (et le logo) reprend une couleur dans son esprit. Couleurs approximatives, pas les codes officiels de la marque.
-        </p>
-        <div style={swatchGrid}>
-          {GYM_PRESETS.map((g) => (
-            <button
-              key={g.id}
-              onClick={() => setAccentTheme(g.id)}
-              style={{
-                ...swatchBtn,
-                border: accentTheme === g.id ? `2px solid ${g.c1}` : '2px solid transparent',
-              }}
-              title={g.label}
-            >
-              <span style={{
-                display: 'block', width: 40, height: 40, borderRadius: '50%',
-                background: `linear-gradient(135deg, ${g.c1}, ${g.c2})`,
-                boxShadow: accentTheme === g.id ? `0 0 0 3px var(--bg-card), 0 0 0 5px ${g.c1}` : 'none',
-              }} />
-              <span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 700, textAlign: 'center' }}>{g.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Thème */}
-        <p style={{ ...sectionLabel, marginTop: 24 }}>THÈME</p>
-        <div style={toggleRow}>
-          <div style={{ flex: 1 }}>
-            <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Noir pur (AMOLED)</p>
-            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
-              {theme === 'dark'
-                ? "Fond quasi noir, économise la batterie sur écran OLED."
-                : 'Actif uniquement en thème sombre (☀️/🌙 sur l\'accueil).'}
-            </p>
-          </div>
-          <button
-            onClick={() => setAmoledMode(!amoledMode)}
-            style={{
-              ...switchTrack,
-              background: amoledMode ? 'var(--brand-1)' : 'var(--bg-elevated)',
-              justifyContent: amoledMode ? 'flex-end' : 'flex-start',
-              opacity: theme === 'dark' ? 1 : 0.5,
-            }}
-          >
-            <span style={switchThumb} />
-          </button>
-        </div>
-
-        {/* Navigation */}
-        <p style={{ ...sectionLabel, marginTop: 24 }}>NAVIGATION</p>
-        <div style={toggleRow}>
-          <div style={{ flex: 1 }}>
-            <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Barre de navigation (Liquid Glass)</p>
-            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
-              Barre flottante et translucide en bas de l'écran, pour naviguer entre l'accueil, les objectifs, le dashboard et les réglages sans revenir en arrière à chaque fois. Masquée pendant une séance.
-            </p>
-          </div>
-          <button
-            onClick={() => setNavBarEnabled(!navBarEnabled)}
-            style={{
-              ...switchTrack,
-              background: navBarEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
-              justifyContent: navBarEnabled ? 'flex-end' : 'flex-start',
-            }}
-          >
-            <span style={switchThumb} />
-          </button>
-        </div>
-
-        {navBarEnabled && (
-          <div style={{ marginBottom: 20 }}>
-            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
-              Choisis les onglets affichés dans la barre. Réglages reste toujours accessible, quoi qu'il arrive.
-            </p>
-            {NAV_TAB_META.map((tab) => {
-              const enabled = navBarTabsEnabled[tab.id];
-              return (
-                <div key={tab.id} style={toggleRow}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>{tab.emoji} {tab.label}</p>
-                  </div>
+              {/* Taille du texte */}
+              <p style={{ ...subLabel, marginTop: 20 }}>TAILLE DU TEXTE</p>
+              <div style={segmentRow}>
+                {FONT_SCALES.map((f) => (
                   <button
-                    onClick={() => setNavBarTabEnabled(tab.id, !enabled)}
+                    key={f.id}
+                    onClick={() => setFontScale(f.id)}
                     style={{
-                      ...switchTrack,
-                      background: enabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
-                      justifyContent: enabled ? 'flex-end' : 'flex-start',
+                      ...segmentBtn,
+                      background: fontScale === f.id ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                      color: fontScale === f.id ? '#fff' : 'var(--text-muted)',
                     }}
                   >
-                    <span style={switchThumb} />
+                    <span style={{ fontSize: f.preview, fontWeight: 800 }}>Aa</span>
+                    <span style={{ fontSize: 10, fontWeight: 700 }}>{f.label}</span>
                   </button>
+                ))}
+              </div>
+
+              {/* Forme des icônes */}
+              <p style={{ ...subLabel, marginTop: 20 }}>FORME DES ICÔNES</p>
+              <div style={segmentRow}>
+                {ICON_SHAPES.map((shape) => (
+                  <button
+                    key={shape}
+                    onClick={() => setIconShape(shape)}
+                    style={{
+                      ...segmentBtn,
+                      background: iconShape === shape ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                      color: iconShape === shape ? '#fff' : 'var(--text-muted)',
+                    }}
+                  >
+                    <span style={{
+                      display: 'block', width: 24, height: 24,
+                      borderRadius: ICON_SHAPE_RADIUS[shape],
+                      background: iconShape === shape ? '#fff' : 'var(--text-muted)',
+                    }} />
+                    <span style={{ fontSize: 10, fontWeight: 700 }}>{ICON_SHAPE_LABEL[shape]}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Taille des icônes */}
+              <p style={{ ...subLabel, marginTop: 20 }}>TAILLE DES ICÔNES</p>
+              <div style={segmentRow}>
+                {ICON_SIZES.map((sz) => (
+                  <button
+                    key={sz}
+                    onClick={() => setIconSize(sz)}
+                    style={{
+                      ...segmentBtn,
+                      background: iconSize === sz ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                      color: iconSize === sz ? '#fff' : 'var(--text-muted)',
+                    }}
+                  >
+                    <span style={{
+                      display: 'block',
+                      width: sz === 'sm' ? 18 : sz === 'md' ? 24 : 30,
+                      height: sz === 'sm' ? 18 : sz === 'md' ? 24 : 30,
+                      borderRadius: ICON_SHAPE_RADIUS[iconShape],
+                      background: iconSize === sz ? '#fff' : 'var(--text-muted)',
+                    }} />
+                    <span style={{ fontSize: 10, fontWeight: 700 }}>{ICON_SIZE_LABEL[sz]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ═══ Catégorie : Accessibilité ═══ */}
+        <div style={categoryWrapper}>
+          <CategoryHeader id="accessibilite" />
+          {!collapsedCategories['accessibilite'] && (
+            <div style={categoryBody}>
+              <div style={toggleRow}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Contraste élevé</p>
+                  <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+                    Textes et bordures plus marqués, pour mieux distinguer les éléments.
+                  </p>
                 </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Taille du texte */}
-        <p style={{ ...sectionLabel, marginTop: 24 }}>TAILLE DU TEXTE</p>
-        <div style={segmentRow}>
-          {FONT_SCALES.map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setFontScale(f.id)}
-              style={{
-                ...segmentBtn,
-                background: fontScale === f.id ? 'var(--brand-1)' : 'var(--bg-elevated)',
-                color: fontScale === f.id ? '#fff' : 'var(--text-muted)',
-              }}
-            >
-              <span style={{ fontSize: f.preview, fontWeight: 800 }}>Aa</span>
-              <span style={{ fontSize: 10, fontWeight: 700 }}>{f.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Accessibilité */}
-        <p style={{ ...sectionLabel, marginTop: 24 }}>ACCESSIBILITÉ</p>
-        <div style={toggleRow}>
-          <div style={{ flex: 1 }}>
-            <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Contraste élevé</p>
-            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
-              Textes et bordures plus marqués, pour mieux distinguer les éléments.
-            </p>
-          </div>
-          <button
-            onClick={() => setHighContrast(!highContrast)}
-            style={{
-              ...switchTrack,
-              background: highContrast ? 'var(--brand-1)' : 'var(--bg-elevated)',
-              justifyContent: highContrast ? 'flex-end' : 'flex-start',
-            }}
-          >
-            <span style={switchThumb} />
-          </button>
-        </div>
-
-        {/* Forme des icônes */}
-        <p style={{ ...sectionLabel, marginTop: 24 }}>FORME DES ICÔNES</p>
-        <div style={segmentRow}>
-          {ICON_SHAPES.map((shape) => (
-            <button
-              key={shape}
-              onClick={() => setIconShape(shape)}
-              style={{
-                ...segmentBtn,
-                background: iconShape === shape ? 'var(--brand-1)' : 'var(--bg-elevated)',
-                color: iconShape === shape ? '#fff' : 'var(--text-muted)',
-              }}
-            >
-              <span style={{
-                display: 'block', width: 24, height: 24,
-                borderRadius: ICON_SHAPE_RADIUS[shape],
-                background: iconShape === shape ? '#fff' : 'var(--text-muted)',
-              }} />
-              <span style={{ fontSize: 10, fontWeight: 700 }}>{ICON_SHAPE_LABEL[shape]}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Taille des icônes */}
-        <p style={{ ...sectionLabel, marginTop: 24 }}>TAILLE DES ICÔNES</p>
-        <div style={segmentRow}>
-          {ICON_SIZES.map((sz) => (
-            <button
-              key={sz}
-              onClick={() => setIconSize(sz)}
-              style={{
-                ...segmentBtn,
-                background: iconSize === sz ? 'var(--brand-1)' : 'var(--bg-elevated)',
-                color: iconSize === sz ? '#fff' : 'var(--text-muted)',
-              }}
-            >
-              <span style={{
-                display: 'block',
-                width: sz === 'sm' ? 18 : sz === 'md' ? 24 : 30,
-                height: sz === 'sm' ? 18 : sz === 'md' ? 24 : 30,
-                borderRadius: ICON_SHAPE_RADIUS[iconShape],
-                background: iconSize === sz ? '#fff' : 'var(--text-muted)',
-              }} />
-              <span style={{ fontSize: 10, fontWeight: 700 }}>{ICON_SIZE_LABEL[sz]}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Temps de repos par défaut */}
-        <p style={{ ...sectionLabel, marginTop: 24 }}>TEMPS DE REPOS PAR DÉFAUT</p>
-        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
-          Utilisé quand tu commences une série sans temps personnalisé. Tu peux toujours ajuster +30s/-30s pendant le repos.
-        </p>
-        <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
-          {REST_OPTIONS.map((opt) => (
-            <button
-              key={opt.seconds}
-              onClick={() => setDefaultRestSeconds(opt.seconds)}
-              style={{
-                ...restBtn,
-                background: defaultRestSeconds === opt.seconds ? 'var(--brand-1)' : 'var(--bg-elevated)',
-                color: defaultRestSeconds === opt.seconds ? '#fff' : 'var(--text-muted)',
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Son du minuteur */}
-        <p style={{ ...sectionLabel, marginTop: 24 }}>SON DU MINUTEUR</p>
-        <div style={toggleRow}>
-          <div style={{ flex: 1 }}>
-            <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Bip de fin de repos</p>
-            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
-              Joue un bip quand le repos se termine, en plus de la vibration/notification.
-            </p>
-          </div>
-          <button
-            onClick={() => setBeepEnabled(!beepEnabled)}
-            style={{
-              ...switchTrack,
-              background: beepEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
-              justifyContent: beepEnabled ? 'flex-end' : 'flex-start',
-            }}
-          >
-            <span style={switchThumb} />
-          </button>
-        </div>
-        {beepEnabled && (
-          <>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-              {BEEP_TONES.map((t) => (
                 <button
-                  key={t.id}
-                  onClick={() => setBeepTone(t.id)}
+                  onClick={() => setHighContrast(!highContrast)}
                   style={{
-                    ...restBtn,
-                    flex: '1 1 30%',
-                    background: beepTone === t.id ? 'var(--brand-1)' : 'var(--bg-elevated)',
-                    color: beepTone === t.id ? '#fff' : 'var(--text-muted)',
+                    ...switchTrack,
+                    background: highContrast ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                    justifyContent: highContrast ? 'flex-end' : 'flex-start',
                   }}
                 >
-                  {t.label}
+                  <span style={switchThumb} />
                 </button>
-              ))}
-              <button onClick={testBeep} style={{ ...restBtn, flex: '1 1 30%', color: 'var(--brand-1)' }}>▶ Tester</button>
-            </div>
-            <div style={{ ...toggleRow, marginBottom: 20, flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>Volume du bip</p>
-                <p style={{ color: 'var(--text-dim)', fontSize: 12, fontWeight: 700 }}>{beepVolume}%</p>
               </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={5}
-                value={beepVolume}
-                onChange={(e) => setBeepVolume(Number(e.target.value))}
-                onMouseUp={testBeep}
-                onTouchEnd={testBeep}
-                style={{ width: '100%', accentColor: 'var(--brand-1)' }}
-              />
             </div>
-          </>
-        )}
-        {!beepEnabled && <div style={{ marginBottom: 12 }} />}
-
-        {/* Calories (estimation) */}
-        <p style={{ ...sectionLabel, marginTop: 12 }}>CALORIES (ESTIMATION)</p>
-        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
-          Utilisé pour estimer les calories brûlées quand aucun capteur de fréquence cardiaque n'est connecté.
-        </p>
-        <div style={{ ...toggleRow, marginBottom: 20 }}>
-          <div style={{ flex: 1 }}>
-            <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>{caloriesPerHour} kcal/h</p>
-          </div>
-          <button onClick={() => setCaloriesPerHour(caloriesPerHour - 10)} style={stepperBtn}>−</button>
-          <button onClick={() => setCaloriesPerHour(caloriesPerHour + 10)} style={stepperBtn}>+</button>
+          )}
         </div>
 
-        {/* Schéma des muscles sollicités */}
-        <p style={sectionLabel}>SÉANCE</p>
-        <div style={{ ...toggleRow, marginBottom: 20 }}>
-          <div style={{ flex: 1 }}>
-            <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Schéma muscles sollicités</p>
-            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
-              Le corps face/dos affiché en début de séance avec les muscles travaillés.
-            </p>
-          </div>
-          <button
-            onClick={() => setBodyDiagramEnabled(!bodyDiagramEnabled)}
-            style={{
-              ...switchTrack,
-              background: bodyDiagramEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
-              justifyContent: bodyDiagramEnabled ? 'flex-end' : 'flex-start',
-            }}
-          >
-            <span style={switchThumb} />
-          </button>
-        </div>
-
-        {/* Objectif hebdo */}
-        <p style={sectionLabel}>OBJECTIF HEBDO</p>
-        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
-          Nombre de séances (muscu) visées par semaine, affiché avec l'anneau de progression sur l'accueil.
-        </p>
-        <div style={{ ...toggleRow, marginBottom: 20 }}>
-          <div style={{ flex: 1 }}>
-            <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>{weeklySessionGoal} séance{weeklySessionGoal > 1 ? 's' : ''} / semaine</p>
-          </div>
-          <button onClick={() => setWeeklySessionGoal(weeklySessionGoal - 1)} style={stepperBtn}>−</button>
-          <button onClick={() => setWeeklySessionGoal(weeklySessionGoal + 1)} style={stepperBtn}>+</button>
-        </div>
-
-        {/* Cardio (vélo, marche, course...) */}
-        <p style={sectionLabel}>CARDIO — CALORIES PAR ACTIVITÉ</p>
-        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
-          Réglage des kcal/h utilisées pour estimer les calories brûlées lors d'une activité cardio.
-        </p>
-        <div style={{ marginBottom: 20 }}>
-          {CARDIO_TYPES.map((t) => (
-            <div key={t} style={{ ...toggleRow, marginBottom: 6 }}>
-              <div style={{ flex: 1 }}>
-                <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>
-                  {CARDIO_TYPE_LABELS[t].emoji} {CARDIO_TYPE_LABELS[t].label}
-                </p>
-              </div>
-              <span style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700, width: 66, textAlign: 'center' }}>
-                {cardioKcalPerHour[t]} kcal/h
-              </span>
-              <button onClick={() => setCardioKcalPerHour(t, cardioKcalPerHour[t] - 25)} style={stepperBtn}>−</button>
-              <button onClick={() => setCardioKcalPerHour(t, cardioKcalPerHour[t] + 25)} style={stepperBtn}>+</button>
-            </div>
-          ))}
-        </div>
-
-        {/* Temps de repos par exercice */}
-        <p style={{ ...sectionLabel, marginTop: 24 }}>TEMPS DE REPOS PAR EXERCICE</p>
-        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
-          Remplace le temps par défaut pour un exercice précis (séances Strict V10). Déplie une séance pour voir ses exercices.
-        </p>
-        <div style={{ marginBottom: 20 }}>
-          {WORKOUTS.map((workout) => {
-            const isOpen = !!expandedDays[workout.id];
-            return (
-              <div key={workout.id} style={dayGroup}>
-                <button onClick={() => toggleDay(workout.id)} style={dayHeaderBtn}>
-                  <span style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700, flex: 1, textAlign: 'left' }}>
-                    {workout.name}
-                  </span>
-                  <span style={{ color: 'var(--text-dim)', fontSize: 10 }}>{workout.exercises.length} exercices</span>
-                  <span style={{ color: 'var(--text-dim)', fontSize: 10, marginLeft: 8 }}>{isOpen ? '▴' : '▾'}</span>
+        {/* ═══ Catégorie : Navigation ═══ */}
+        <div style={categoryWrapper}>
+          <CategoryHeader id="navigation" />
+          {!collapsedCategories['navigation'] && (
+            <div style={categoryBody}>
+              <div style={toggleRow}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Barre de navigation (Liquid Glass)</p>
+                  <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+                    Barre flottante et translucide en bas de l'écran, pour naviguer entre l'accueil, les objectifs, le dashboard et les réglages sans revenir en arrière à chaque fois. Masquée pendant une séance.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setNavBarEnabled(!navBarEnabled)}
+                  style={{
+                    ...switchTrack,
+                    background: navBarEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                    justifyContent: navBarEnabled ? 'flex-end' : 'flex-start',
+                  }}
+                >
+                  <span style={switchThumb} />
                 </button>
-                {isOpen && (
-                  <div style={{ padding: '4px 10px 8px' }}>
-                    {workout.exercises.map((ex) => {
-                      const current = customRestSeconds[ex.id] ?? ex.restSeconds;
-                      const isCustom = customRestSeconds[ex.id] !== undefined;
-                      return (
-                        <div key={ex.id} style={exRestRow}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {ex.name}
-                            </p>
-                            {isCustom && <p style={{ color: 'var(--text-micro)', fontSize: 9, marginTop: 1 }}>Personnalisé</p>}
-                          </div>
-                          <button
-                            onClick={() => saveCustomRest(ex.id, Math.max(30, current - 15))}
-                            style={stepperBtn}
-                          >−</button>
-                          <span style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700, width: 40, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
-                            {formatRest(current)}
-                          </span>
-                          <button
-                            onClick={() => saveCustomRest(ex.id, Math.min(300, current + 15))}
-                            style={stepperBtn}
-                          >+</button>
-                          {isCustom && (
-                            <button onClick={() => clearCustomRest(ex.id)} style={resetBtn} title="Revenir au temps d'origine">↺</button>
+              </div>
+
+              {navBarEnabled && (
+                <div style={{ marginTop: 8 }}>
+                  <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+                    Choisis les onglets affichés dans la barre. Réglages reste toujours accessible, quoi qu'il arrive.
+                  </p>
+                  {NAV_TAB_META.map((tab) => {
+                    const enabled = navBarTabsEnabled[tab.id];
+                    return (
+                      <div key={tab.id} style={toggleRow}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>{tab.emoji} {tab.label}</p>
+                        </div>
+                        <button
+                          onClick={() => setNavBarTabEnabled(tab.id, !enabled)}
+                          style={{
+                            ...switchTrack,
+                            background: enabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                            justifyContent: enabled ? 'flex-end' : 'flex-start',
+                          }}
+                        >
+                          <span style={switchThumb} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ═══ Catégorie : Séance & repos ═══ */}
+        <div style={categoryWrapper}>
+          <CategoryHeader id="seance" />
+          {!collapsedCategories['seance'] && (
+            <div style={categoryBody}>
+              {/* Temps de repos par défaut */}
+              <p style={subLabel}>TEMPS DE REPOS PAR DÉFAUT</p>
+              <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+                Utilisé quand tu commences une série sans temps personnalisé. Tu peux toujours ajuster +30s/-30s pendant le repos.
+              </p>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+                {REST_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.seconds}
+                    onClick={() => setDefaultRestSeconds(opt.seconds)}
+                    style={{
+                      ...restBtn,
+                      background: defaultRestSeconds === opt.seconds ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                      color: defaultRestSeconds === opt.seconds ? '#fff' : 'var(--text-muted)',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Son du minuteur */}
+              <p style={subLabel}>SON DU MINUTEUR</p>
+              <div style={toggleRow}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Bip de fin de repos</p>
+                  <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+                    Joue un bip quand le repos se termine, en plus de la vibration/notification.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setBeepEnabled(!beepEnabled)}
+                  style={{
+                    ...switchTrack,
+                    background: beepEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                    justifyContent: beepEnabled ? 'flex-end' : 'flex-start',
+                  }}
+                >
+                  <span style={switchThumb} />
+                </button>
+              </div>
+              {beepEnabled && (
+                <>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8, marginBottom: 12 }}>
+                    {BEEP_TONES.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => setBeepTone(t.id)}
+                        style={{
+                          ...restBtn,
+                          flex: '1 1 30%',
+                          background: beepTone === t.id ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                          color: beepTone === t.id ? '#fff' : 'var(--text-muted)',
+                        }}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                    <button onClick={testBeep} style={{ ...restBtn, flex: '1 1 30%', color: 'var(--brand-1)' }}>▶ Tester</button>
+                  </div>
+                  <div style={{ ...toggleRow, marginBottom: 20, flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>Volume du bip</p>
+                      <p style={{ color: 'var(--text-dim)', fontSize: 12, fontWeight: 700 }}>{beepVolume}%</p>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={beepVolume}
+                      onChange={(e) => setBeepVolume(Number(e.target.value))}
+                      onMouseUp={testBeep}
+                      onTouchEnd={testBeep}
+                      style={{ width: '100%', accentColor: 'var(--brand-1)' }}
+                    />
+                  </div>
+                </>
+              )}
+              {!beepEnabled && <div style={{ marginBottom: 12 }} />}
+
+              {/* Schéma des muscles sollicités */}
+              <p style={subLabel}>SÉANCE</p>
+              <div style={{ ...toggleRow, marginBottom: 20 }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Schéma muscles sollicités</p>
+                  <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+                    Le corps face/dos affiché en début de séance avec les muscles travaillés.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setBodyDiagramEnabled(!bodyDiagramEnabled)}
+                  style={{
+                    ...switchTrack,
+                    background: bodyDiagramEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                    justifyContent: bodyDiagramEnabled ? 'flex-end' : 'flex-start',
+                  }}
+                >
+                  <span style={switchThumb} />
+                </button>
+              </div>
+
+              {/* Temps de repos par exercice */}
+              <p style={subLabel}>TEMPS DE REPOS PAR EXERCICE</p>
+              <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+                Remplace le temps par défaut pour un exercice précis (séances Strict V10). Déplie une séance pour voir ses exercices.
+              </p>
+              <div>
+                {WORKOUTS.map((workout) => {
+                  const isOpen = !!expandedDays[workout.id];
+                  return (
+                    <div key={workout.id} style={dayGroup}>
+                      <button onClick={() => toggleDay(workout.id)} style={dayHeaderBtn}>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700, flex: 1, textAlign: 'left' }}>
+                          {workout.name}
+                        </span>
+                        <span style={{ color: 'var(--text-dim)', fontSize: 10 }}>{workout.exercises.length} exercices</span>
+                        <span style={{ color: 'var(--text-dim)', fontSize: 10, marginLeft: 8 }}>{isOpen ? '▴' : '▾'}</span>
+                      </button>
+                      {isOpen && (
+                        <div style={{ padding: '4px 10px 8px' }}>
+                          {workout.exercises.map((ex) => {
+                            const current = customRestSeconds[ex.id] ?? ex.restSeconds;
+                            const isCustom = customRestSeconds[ex.id] !== undefined;
+                            return (
+                              <div key={ex.id} style={exRestRow}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {ex.name}
+                                  </p>
+                                  {isCustom && <p style={{ color: 'var(--text-micro)', fontSize: 9, marginTop: 1 }}>Personnalisé</p>}
+                                </div>
+                                <button
+                                  onClick={() => saveCustomRest(ex.id, Math.max(30, current - 15))}
+                                  style={stepperBtn}
+                                >−</button>
+                                <span style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700, width: 40, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+                                  {formatRest(current)}
+                                </span>
+                                <button
+                                  onClick={() => saveCustomRest(ex.id, Math.min(300, current + 15))}
+                                  style={stepperBtn}
+                                >+</button>
+                                {isCustom && (
+                                  <button onClick={() => clearCustomRest(ex.id)} style={resetBtn} title="Revenir au temps d'origine">↺</button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ═══ Catégorie : Objectifs & calories ═══ */}
+        <div style={categoryWrapper}>
+          <CategoryHeader id="objectifs" />
+          {!collapsedCategories['objectifs'] && (
+            <div style={categoryBody}>
+              {/* Calories (estimation) */}
+              <p style={subLabel}>CALORIES (ESTIMATION)</p>
+              <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+                Utilisé pour estimer les calories brûlées quand aucun capteur de fréquence cardiaque n'est connecté.
+              </p>
+              <div style={{ ...toggleRow, marginBottom: 20 }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>{caloriesPerHour} kcal/h</p>
+                </div>
+                <button onClick={() => setCaloriesPerHour(caloriesPerHour - 10)} style={stepperBtn}>−</button>
+                <button onClick={() => setCaloriesPerHour(caloriesPerHour + 10)} style={stepperBtn}>+</button>
+              </div>
+
+              {/* Objectif hebdo */}
+              <p style={subLabel}>OBJECTIF HEBDO</p>
+              <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+                Nombre de séances (muscu) visées par semaine, affiché avec l'anneau de progression sur l'accueil.
+              </p>
+              <div style={{ ...toggleRow, marginBottom: 20 }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>{weeklySessionGoal} séance{weeklySessionGoal > 1 ? 's' : ''} / semaine</p>
+                </div>
+                <button onClick={() => setWeeklySessionGoal(weeklySessionGoal - 1)} style={stepperBtn}>−</button>
+                <button onClick={() => setWeeklySessionGoal(weeklySessionGoal + 1)} style={stepperBtn}>+</button>
+              </div>
+
+              {/* Cardio (vélo, marche, course...) */}
+              <p style={subLabel}>CARDIO — CALORIES PAR ACTIVITÉ</p>
+              <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+                Réglage des kcal/h utilisées pour estimer les calories brûlées lors d'une activité cardio.
+              </p>
+              <div>
+                {CARDIO_TYPES.map((t) => (
+                  <div key={t} style={{ ...toggleRow, marginBottom: 6 }}>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>
+                        {CARDIO_TYPE_LABELS[t].emoji} {CARDIO_TYPE_LABELS[t].label}
+                      </p>
+                    </div>
+                    <span style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700, width: 66, textAlign: 'center' }}>
+                      {cardioKcalPerHour[t]} kcal/h
+                    </span>
+                    <button onClick={() => setCardioKcalPerHour(t, cardioKcalPerHour[t] - 25)} style={stepperBtn}>−</button>
+                    <button onClick={() => setCardioKcalPerHour(t, cardioKcalPerHour[t] + 25)} style={stepperBtn}>+</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ═══ Catégorie : Écran d'accueil ═══ */}
+        <div style={categoryWrapper}>
+          <CategoryHeader id="accueil" />
+          {!collapsedCategories['accueil'] && (
+            <div style={categoryBody}>
+              <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 12, lineHeight: '15px' }}>
+                Utilise les flèches pour réordonner les blocs, et l'interrupteur pour masquer ceux que tu ne veux pas voir.
+              </p>
+              <div>
+                {homeSectionOrder.map((key, idx) => {
+                  const meta = SECTION_META[key];
+                  const visible = meta.toggleable ? homeSections[key as keyof typeof homeSections] : true;
+                  return (
+                    <div key={key} style={toggleRow}>
+                      <div style={reorderCol}>
+                        <button
+                          onClick={() => moveHomeSection(key, 'up')}
+                          disabled={idx === 0}
+                          style={{ ...reorderBtn, opacity: idx === 0 ? 0.25 : 1 }}
+                        >▲</button>
+                        <button
+                          onClick={() => moveHomeSection(key, 'down')}
+                          disabled={idx === homeSectionOrder.length - 1}
+                          style={{ ...reorderBtn, opacity: idx === homeSectionOrder.length - 1 ? 0.25 : 1 }}
+                        >▼</button>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>{meta.label}</p>
+                        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>{meta.desc}</p>
+                      </div>
+                      {key !== 'seances' && (
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                          <label
+                            style={{
+                              ...colorSwatchBtn,
+                              background: homeSectionColors[key] ?? 'var(--brand-1)',
+                            }}
+                            title="Couleur de ce bloc"
+                          >
+                            <input
+                              type="color"
+                              value={homeSectionColors[key] ?? '#e03030'}
+                              onChange={(e) => setHomeSectionColor(key, e.target.value)}
+                              style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+                            />
+                          </label>
+                          {homeSectionColors[key] && (
+                            <button
+                              onClick={() => setHomeSectionColor(key, null)}
+                              style={colorResetBtn}
+                              title="Revenir à la couleur par défaut"
+                            >✕</button>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                      )}
+                      {meta.toggleable ? (
+                        <button
+                          onClick={() => setHomeSectionVisible(key as keyof typeof homeSections, !visible)}
+                          style={{
+                            ...switchTrack,
+                            background: visible ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                            justifyContent: visible ? 'flex-end' : 'flex-start',
+                          }}
+                        >
+                          <span style={switchThumb} />
+                        </button>
+                      ) : (
+                        <span style={{ color: 'var(--text-micro)', fontSize: 10, fontWeight: 700, flexShrink: 0, width: 44, textAlign: 'center' }}>FIXE</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          )}
         </div>
 
-        {/* Écran d'accueil : ordre + visibilité */}
-        <p style={{ ...sectionLabel, marginTop: 24 }}>DISPOSITION DE L'ACCUEIL</p>
-        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 12, lineHeight: '15px' }}>
-          Utilise les flèches pour réordonner les blocs, et l'interrupteur pour masquer ceux que tu ne veux pas voir.
-        </p>
-        <div style={{ marginBottom: 20 }}>
-          {homeSectionOrder.map((key, idx) => {
-            const meta = SECTION_META[key];
-            const visible = meta.toggleable ? homeSections[key as keyof typeof homeSections] : true;
-            return (
-              <div key={key} style={toggleRow}>
-                <div style={reorderCol}>
-                  <button
-                    onClick={() => moveHomeSection(key, 'up')}
-                    disabled={idx === 0}
-                    style={{ ...reorderBtn, opacity: idx === 0 ? 0.25 : 1 }}
-                  >▲</button>
-                  <button
-                    onClick={() => moveHomeSection(key, 'down')}
-                    disabled={idx === homeSectionOrder.length - 1}
-                    style={{ ...reorderBtn, opacity: idx === homeSectionOrder.length - 1 ? 0.25 : 1 }}
-                  >▼</button>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>{meta.label}</p>
-                  <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>{meta.desc}</p>
-                </div>
-                {key !== 'seances' && (
-                  <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <label
-                      style={{
-                        ...colorSwatchBtn,
-                        background: homeSectionColors[key] ?? 'var(--brand-1)',
-                      }}
-                      title="Couleur de ce bloc"
-                    >
-                      <input
-                        type="color"
-                        value={homeSectionColors[key] ?? '#e03030'}
-                        onChange={(e) => setHomeSectionColor(key, e.target.value)}
-                        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
-                      />
-                    </label>
-                    {homeSectionColors[key] && (
-                      <button
-                        onClick={() => setHomeSectionColor(key, null)}
-                        style={colorResetBtn}
-                        title="Revenir à la couleur par défaut"
-                      >✕</button>
-                    )}
-                  </div>
-                )}
-                {meta.toggleable ? (
-                  <button
-                    onClick={() => setHomeSectionVisible(key as keyof typeof homeSections, !visible)}
-                    style={{
-                      ...switchTrack,
-                      background: visible ? 'var(--brand-1)' : 'var(--bg-elevated)',
-                      justifyContent: visible ? 'flex-end' : 'flex-start',
-                    }}
-                  >
-                    <span style={switchThumb} />
-                  </button>
-                ) : (
-                  <span style={{ color: 'var(--text-micro)', fontSize: 10, fontWeight: 700, flexShrink: 0, width: 44, textAlign: 'center' }}>FIXE</span>
-                )}
+        {/* ═══ Catégorie : Données ═══ */}
+        <div style={categoryWrapper}>
+          <CategoryHeader id="donnees" />
+          {!collapsedCategories['donnees'] && (
+            <div style={categoryBody}>
+              <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+                Exporter : télécharge tout ton historique et tes réglages. Importer : restaure une sauvegarde PPL Tracker,
+                ou analyse n'importe quel autre fichier (CSV, JSON, texte) pour en faire un nouveau programme.
+              </p>
+              <div style={{ display: 'flex', gap: 8, marginBottom: importMsg ? 8 : 0 }}>
+                <button onClick={handleExport} style={{ ...restBtn, flex: 1, padding: '12px 8px' }}>⬇ Exporter</button>
+                <button onClick={() => importInputRef.current?.click()} style={{ ...restBtn, flex: 1, padding: '12px 8px' }}>⬆ Importer</button>
+                <input
+                  ref={importInputRef}
+                  type="file"
+                  accept=".json,.csv,.txt,text/*,application/json"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImportFile(file);
+                    e.target.value = '';
+                  }}
+                />
               </div>
-            );
-          })}
+              {importMsg && (
+                <p style={{ color: '#f5a623', fontSize: 11, marginTop: 8, lineHeight: '15px' }}>{importMsg}</p>
+              )}
+            </div>
+          )}
         </div>
-
-        {/* Sauvegarde */}
-        <p style={{ ...sectionLabel, marginTop: 24 }}>SAUVEGARDE & IMPORT</p>
-        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
-          Exporter : télécharge tout ton historique et tes réglages. Importer : restaure une sauvegarde PPL Tracker,
-          ou analyse n'importe quel autre fichier (CSV, JSON, texte) pour en faire un nouveau programme.
-        </p>
-        <div style={{ display: 'flex', gap: 8, marginBottom: importMsg ? 8 : 28 }}>
-          <button onClick={handleExport} style={{ ...restBtn, flex: 1, padding: '12px 8px' }}>⬇ Exporter</button>
-          <button onClick={() => importInputRef.current?.click()} style={{ ...restBtn, flex: 1, padding: '12px 8px' }}>⬆ Importer</button>
-          <input
-            ref={importInputRef}
-            type="file"
-            accept=".json,.csv,.txt,text/*,application/json"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleImportFile(file);
-              e.target.value = '';
-            }}
-          />
-        </div>
-        {importMsg && (
-          <p style={{ color: '#f5a623', fontSize: 11, marginBottom: 28, lineHeight: '15px' }}>{importMsg}</p>
-        )}
 
       </div>
     </div>
@@ -791,12 +902,25 @@ const backBtn: React.CSSProperties = {
 };
 const titleStyle: React.CSSProperties = { fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: -0.3 };
 const subtitleStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: 12, marginTop: 2 };
-const sectionLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 12 };
+const subLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 12 };
+const categoryWrapper: React.CSSProperties = {
+  background: 'var(--bg-surface)', border: '1px solid var(--border)',
+  borderRadius: 16, marginBottom: 12, overflow: 'hidden',
+};
+const categoryHeaderBtn: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+  padding: '14px 14px', cursor: 'pointer', background: 'transparent',
+};
+const categoryHeaderLabel: React.CSSProperties = { color: 'var(--text-primary)', fontSize: 15, fontWeight: 800 };
+const categoryHeaderDesc: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 11, marginTop: 2 };
+const categoryBody: React.CSSProperties = {
+  padding: '4px 14px 16px', borderTop: '1px solid var(--border-subtle)',
+};
 const swatchGrid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 };
 const swatchBtn: React.CSSProperties = {
   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
   padding: '10px 4px', borderRadius: 14, cursor: 'pointer',
-  background: 'var(--bg-surface)',
+  background: 'var(--bg-elevated)',
 };
 const segmentRow: React.CSSProperties = { display: 'flex', gap: 8 };
 const segmentBtn: React.CSSProperties = {
@@ -806,7 +930,7 @@ const segmentBtn: React.CSSProperties = {
 };
 const toggleRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 12,
-  background: 'var(--bg-surface)', border: '1px solid var(--border)',
+  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
   borderRadius: 14, padding: '12px 14px', marginBottom: 8,
 };
 const switchTrack: React.CSSProperties = {
@@ -843,7 +967,7 @@ const colorResetBtn: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
 };
 const dayGroup: React.CSSProperties = {
-  background: 'var(--bg-surface)', border: '1px solid var(--border)',
+  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
   borderRadius: 14, marginBottom: 8, overflow: 'hidden',
 };
 const dayHeaderBtn: React.CSSProperties = {
