@@ -8,6 +8,8 @@ import { WORKOUTS } from '../data/workouts';
 import { getAllPrograms } from '../data/programs';
 import { parseImportedFile, parseExcelWorkbook } from '../utils/importParser';
 import type { ImportResult } from '../utils/importParser';
+import { useAuth } from '../hooks/useAuth';
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import type { CardioActivityType, NavTabKey } from '../data/types';
 
@@ -33,7 +35,7 @@ const formatRest = (seconds: number): string => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
-interface SettingsScreenProps { onBack: () => void; }
+interface SettingsScreenProps { onBack: () => void; onOpenAccount: () => void; }
 
 const FONT_SCALES: { id: 'sm' | 'md' | 'lg'; label: string; preview: number }[] = [
   { id: 'sm', label: 'Petit', preview: 12 },
@@ -82,7 +84,8 @@ type CategoryId =
   | 'seance'
   | 'objectifs'
   | 'accueil'
-  | 'donnees';
+  | 'donnees'
+  | 'compte';
 
 const CATEGORY_META: Record<CategoryId, { label: string; emoji: string; desc: string }> = {
   programme: { label: 'Programme', emoji: '🏋️', desc: "Le programme d'entraînement actif." },
@@ -93,6 +96,7 @@ const CATEGORY_META: Record<CategoryId, { label: string; emoji: string; desc: st
   objectifs: { label: 'Objectifs & calories', emoji: '🎯', desc: 'Calories, objectif hebdo, cardio.' },
   accueil: { label: "Écran d'accueil", emoji: '🏠', desc: 'Ordre et visibilité des blocs.' },
   donnees: { label: 'Données', emoji: '💾', desc: 'Export, import, sauvegarde.' },
+  compte: { label: 'Compte', emoji: '👤', desc: 'Synchronisation entre appareils.' },
 };
 
 const CATEGORY_ORDER: CategoryId[] = [
@@ -104,9 +108,12 @@ const CATEGORY_ORDER: CategoryId[] = [
   'objectifs',
   'accueil',
   'donnees',
+  'compte',
 ];
 
-export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
+export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAccount }) => {
+  const { user, loading: authLoading } = useAuth();
+  const handleSignOut = () => { supabase?.auth.signOut(); };
   const accentTheme = useWorkoutStore((s) => s.accentTheme);
   const setAccentTheme = useWorkoutStore((s) => s.setAccentTheme);
   const customAccentColor = useWorkoutStore((s) => s.customAccentColor);
@@ -919,6 +926,45 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
               </div>
               {importMsg && (
                 <p style={{ color: '#f5a623', fontSize: 11, marginTop: 8, lineHeight: '15px' }}>{importMsg}</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ═══ Catégorie : Compte ═══ */}
+        <div style={categoryWrapper}>
+          <CategoryHeader id="compte" />
+          {!collapsedCategories['compte'] && (
+            <div style={categoryBody}>
+              {!isSupabaseConfigured ? (
+                <p style={{ color: 'var(--text-dim)', fontSize: 11, lineHeight: '16px' }}>
+                  Pas encore configuré. Il manque les variables d'environnement Supabase côté Vercel
+                  (VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY) — à ajouter dans Project Settings → Environment
+                  Variables, avec les valeurs de Settings → API du projet Supabase, puis redéployer.
+                </p>
+              ) : authLoading ? (
+                <p style={{ color: 'var(--text-dim)', fontSize: 12 }}>Vérification de la session...</p>
+              ) : user ? (
+                <div style={{ ...toggleRow, marginBottom: 0 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {user.email}
+                    </p>
+                    <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>Connecté.</p>
+                  </div>
+                  <button onClick={handleSignOut} style={{ ...restBtn, flexShrink: 0, width: 'auto', padding: '10px 14px' }}>
+                    Se déconnecter
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 12, lineHeight: '16px' }}>
+                    Crée un compte ou connecte-toi pour synchroniser tes séances et réglages entre plusieurs appareils.
+                  </p>
+                  <button onClick={onOpenAccount} style={{ ...restBtn, padding: '12px 8px' }}>
+                    Se connecter / créer un compte
+                  </button>
+                </>
               )}
             </div>
           )}
