@@ -189,7 +189,9 @@ export default function App() {
 
   return (
     <>
-      {screen}
+      <div key={view} className="fade-in" style={{ height: '100%' }}>
+        {screen}
+      </div>
       {showNavBar && <NavBar active={activeNavTab} onNavigate={handleNavigate} />}
       {splashVisible && <SplashScreen fadingOut={splashFading} />}
       {sync.status === 'conflict' && sync.conflict && (
