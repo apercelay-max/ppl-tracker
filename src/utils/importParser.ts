@@ -92,34 +92,31 @@ const buildProgramFromDays = (
   };
 };
 
-// ── CSV ─────────────────────────────────────────────────────────────────
-const parseCsv = (content: string, programId: string, programName: string): ImportResult => {
-  const lines = content.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  if (lines.length < 2) {
-    return { program: null, warnings: ['Le fichier CSV semble vide ou incomplet.'], isBackupFile: false, daysDetected: 0, exercisesDetected: 0 };
-  }
-  const splitRow = (line: string) => line.split(/[,;\t]/).map((c) => c.trim());
-  const header = splitRow(lines[0]).map((h) => h.toLowerCase());
-  const findCol = (...names: string[]) => header.findIndex((h) => names.some((n) => h.includes(n)));
-  const colDay = findCol('jour', 'séance', 'seance', 'day');
-  const colEx = findCol('exercice', 'exercise', 'nom');
-  const colSets = findCol('série', 'serie', 'set');
-  const colReps = findCol('rep');
-  const colRest = findCol('repos', 'rest');
+// ── Détection de colonnes par en-tête (partagée CSV + Excel) ────────────
+const findColInHeader = (header: string[], ...names: string[]): number =>
+  header.findIndex((h) => names.some((n) => h.includes(n)));
 
-  const warnings: string[] = [];
-  if (colEx === -1) {
-    warnings.push('Aucune colonne "exercice" reconnue dans l\'en-tête — import annulé.');
-    return { program: null, warnings, isBackupFile: false, daysDetected: 0, exercisesDetected: 0 };
-  }
+// Transforme un tableau de lignes (en-tête + données) en jours/exercices.
+// Si une colonne "jour/séance" existe dans l'en-tête, on regroupe par
+// cette colonne ; sinon toutes les lignes vont dans `fallbackDayName`
+// (utilisé pour l'Excel : chaque feuille = un jour par défaut).
+const rowsToDays = (
+  header: string[],
+  rows: string[][],
+  fallbackDayName: string,
+): { name: string; exercises: { name: string; sets?: number; reps?: string; restSeconds?: number }[] }[] | null => {
+  const colDay = findColInHeader(header, 'jour', 'séance', 'seance', 'day');
+  const colEx = findColInHeader(header, 'exercice', 'exercise', 'nom');
+  const colSets = findColInHeader(header, 'série', 'serie', 'set');
+  const colReps = findColInHeader(header, 'rep');
+  const colRest = findColInHeader(header, 'repos', 'rest');
+  if (colEx === -1) return null;
 
   const dayMap = new Map<string, { name: string; exercises: { name: string; sets?: number; reps?: string; restSeconds?: number }[] }>();
-  let skipped = 0;
-  for (let i = 1; i < lines.length; i++) {
-    const cells = splitRow(lines[i]);
+  for (const cells of rows) {
     const exName = cells[colEx];
-    if (!exName) { skipped++; continue; }
-    const dayName = colDay !== -1 && cells[colDay] ? cells[colDay] : 'Jour 1';
+    if (!exName) continue;
+    const dayName = colDay !== -1 && cells[colDay] ? cells[colDay] : fallbackDayName;
     const sets = colSets !== -1 ? parseInt(cells[colSets], 10) : undefined;
     const reps = colReps !== -1 ? cells[colReps] : undefined;
     const restRaw = colRest !== -1 ? parseInt(cells[colRest], 10) : undefined;
@@ -131,17 +128,112 @@ const parseCsv = (content: string, programId: string, programName: string): Impo
       restSeconds: Number.isFinite(restRaw) ? restRaw : undefined,
     });
   }
-  if (skipped > 0) warnings.push(`${skipped} ligne(s) ignorée(s) — colonne exercice vide.`);
+  return Array.from(dayMap.values());
+};
 
-  const daysRaw = Array.from(dayMap.values());
-  if (daysRaw.length === 0) {
+// ── CSV ─────────────────────────────────────────────────────────────────
+const parseCsv = (content: string, programId: string, programName: string): ImportResult => {
+  const lines = content.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (lines.length < 2) {
+    return { program: null, warnings: ['Le fichier CSV semble vide ou incomplet.'], isBackupFile: false, daysDetected: 0, exercisesDetected: 0 };
+  }
+  const splitRow = (line: string) => line.split(/[,;\t]/).map((c) => c.trim());
+  const header = splitRow(lines[0]).map((h) => h.toLowerCase());
+  const colEx = findColInHeader(header, 'exercice', 'exercise', 'nom');
+
+  const warnings: string[] = [];
+  if (colEx === -1) {
+    warnings.push('Aucune colonne "exercice" reconnue dans l\'en-tête — import annulé.');
+    return { program: null, warnings, isBackupFile: false, daysDetected: 0, exercisesDetected: 0 };
+  }
+
+  const colSets = findColInHeader(header, 'série', 'serie', 'set');
+  const colReps = findColInHeader(header, 'rep');
+  const dataRows = lines.slice(1).map(splitRow);
+  const daysRaw = rowsToDays(header, dataRows, 'Jour 1') ?? [];
+
+  const daysRawNonEmpty = daysRaw.filter((d) => d.exercises.length > 0);
+  if (daysRawNonEmpty.length === 0) {
     return { program: null, warnings: [...warnings, 'Aucun exercice exploitable trouvé.'], isBackupFile: false, daysDetected: 0, exercisesDetected: 0 };
   }
-  const program = buildProgramFromDays(programId, programName, 'Importé depuis un fichier CSV.', daysRaw);
-  const exCount = daysRaw.reduce((sum, d) => sum + d.exercises.length, 0);
+  const program = buildProgramFromDays(programId, programName, 'Importé depuis un fichier CSV.', daysRawNonEmpty);
+  const exCount = daysRawNonEmpty.reduce((sum, d) => sum + d.exercises.length, 0);
   if (colSets === -1) warnings.push('Pas de colonne "séries" trouvée — 3 séries appliquées par défaut.');
   if (colReps === -1) warnings.push('Pas de colonne "reps" trouvée — "10-12" appliqué par défaut.');
-  return { program, warnings, isBackupFile: false, daysDetected: daysRaw.length, exercisesDetected: exCount };
+  return { program, warnings, isBackupFile: false, daysDetected: daysRawNonEmpty.length, exercisesDetected: exCount };
+};
+
+// ── Excel (.xlsx / .xls) ─────────────────────────────────────────────────
+// Utilise la librairie SheetJS ("xlsx"), importée dynamiquement pour ne
+// pas alourdir le chargement initial de l'appli. Chaque feuille du
+// classeur est traitée comme un jour d'entraînement (le nom de la feuille
+// devient le nom du jour), sauf si une colonne "jour/séance" est présente
+// dans l'en-tête de la feuille — auquel cas on regroupe par cette colonne,
+// comme pour un CSV.
+export const parseExcelWorkbook = async (file: File): Promise<ImportResult> => {
+  const baseName = file.name.replace(/\.[^.]+$/, '') || 'Programme importé';
+  const programId = `custom-${slugify(baseName)}-${Date.now()}`;
+  const warnings: string[] = [];
+
+  let XLSX: any;
+  try {
+    XLSX = await import('xlsx');
+  } catch (_e) {
+    return {
+      program: null,
+      warnings: ["Le lecteur de fichiers Excel n'a pas pu être chargé. Vérifie ta connexion et réessaie, ou exporte ton fichier en CSV depuis Excel et réimporte-le."],
+      isBackupFile: false, daysDetected: 0, exercisesDetected: 0,
+    };
+  }
+
+  let workbook: any;
+  try {
+    const buffer = await file.arrayBuffer();
+    workbook = XLSX.read(buffer, { type: 'array' });
+  } catch (_e) {
+    return {
+      program: null,
+      warnings: ["Ce fichier n'a pas pu être lu comme un classeur Excel valide."],
+      isBackupFile: false, daysDetected: 0, exercisesDetected: 0,
+    };
+  }
+
+  const allDays: { name: string; exercises: { name: string; sets?: number; reps?: string; restSeconds?: number }[] }[] = [];
+  let sheetsSkipped = 0;
+
+  for (const sheetName of workbook.SheetNames as string[]) {
+    const ws = workbook.Sheets[sheetName];
+    const rawRows: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+    const nonEmptyRows = rawRows
+      .map((r) => r.map((c) => String(c ?? '').trim()))
+      .filter((r) => r.some((c) => c !== ''));
+    if (nonEmptyRows.length < 2) { sheetsSkipped++; continue; }
+    const header = nonEmptyRows[0].map((h) => h.toLowerCase());
+    const dataRows = nonEmptyRows.slice(1);
+    const days = rowsToDays(header, dataRows, sheetName);
+    if (!days) { sheetsSkipped++; continue; }
+    allDays.push(...days.filter((d) => d.exercises.length > 0));
+  }
+
+  if (sheetsSkipped > 0) {
+    warnings.push(`${sheetsSkipped} feuille(s) ignorée(s) — pas de colonne "exercice" reconnue dans l'en-tête.`);
+  }
+
+  if (allDays.length === 0) {
+    return {
+      program: null,
+      warnings: [
+        'Aucun exercice reconnu dans ce fichier Excel.',
+        'Il faut une ligne d\'en-tête avec une colonne "exercice" (et si possible "jour", "séries", "reps", "repos").',
+        ...warnings,
+      ],
+      isBackupFile: false, daysDetected: 0, exercisesDetected: 0,
+    };
+  }
+
+  const program = buildProgramFromDays(programId, baseName, 'Importé depuis un fichier Excel.', allDays);
+  const exCount = allDays.reduce((sum, d) => sum + d.exercises.length, 0);
+  return { program, warnings, isBackupFile: false, daysDetected: allDays.length, exercisesDetected: exCount };
 };
 
 // ── Texte libre ─────────────────────────────────────────────────────────
@@ -249,7 +341,10 @@ const parseGenericJson = (parsed: unknown, programId: string, programName: strin
   return { program, warnings, isBackupFile: false, daysDetected: daysRaw.length, exercisesDetected: exCount };
 };
 
-// ─── Point d'entrée ─────────────────────────────────────────────────────
+// ─── Point d'entrée (JSON / CSV / texte libre) ──────────────────────────
+// Pour l'Excel (.xlsx/.xls), voir `parseExcelWorkbook` ci-dessus — c'est
+// une fonction séparée car elle est asynchrone (lecture binaire du
+// fichier), contrairement à celle-ci qui reçoit déjà le texte du fichier.
 export const parseImportedFile = (filename: string, content: string): ImportResult => {
   const baseName = filename.replace(/\.[^.]+$/, '') || 'Programme importé';
   const programId = `custom-${slugify(baseName)}-${Date.now()}`;
