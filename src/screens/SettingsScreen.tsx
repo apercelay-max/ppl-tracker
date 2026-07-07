@@ -5,6 +5,8 @@ import type { HomeSectionKey } from '../store/workoutStore';
 import { ICON_SHAPE_RADIUS, ICON_SHAPE_LABEL, ICON_SIZE_LABEL } from '../data/iconPrefs';
 import type { IconShape, IconSize } from '../data/iconPrefs';
 import { WORKOUTS } from '../data/workouts';
+import { getAllPrograms } from '../data/programs';
+import { parseImportedFile } from '../utils/importParser';
 import { CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import type { CardioActivityType, NavTabKey } from '../data/types';
 
@@ -59,7 +61,7 @@ const BEEP_TONES: { id: 'doux' | 'classique' | 'urgent' | 'melodique' | 'cloche'
 
 const SECTION_META: Record<HomeSectionKey, { label: string; desc: string; toggleable: boolean }> = {
   cycle: { label: 'Cycle en cours', desc: 'La carte semaine / RIR / objectif.', toggleable: true },
-  seances: { label: 'Liste des séances', desc: 'Les 6 séances PPL — toujours visible.', toggleable: false },
+  seances: { label: 'Liste des séances', desc: 'Les séances du programme actif — toujours visible.', toggleable: false },
   nutrition: { label: 'Conseil nutrition', desc: 'Le rappel protéines/glucides après la séance.', toggleable: true },
   supersetRule: { label: 'Règle superset', desc: 'Le rappel sur le fonctionnement des supersets.', toggleable: true },
   muscleAlert: { label: 'Groupes musculaires', desc: 'Alerte les groupes pas travaillés depuis un moment.', toggleable: true },
@@ -114,10 +116,16 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const setNavBarEnabled = useWorkoutStore((s) => s.setNavBarEnabled);
   const navBarTabsEnabled = useWorkoutStore((s) => s.navBarTabsEnabled);
   const setNavBarTabEnabled = useWorkoutStore((s) => s.setNavBarTabEnabled);
+  const activeProgramId = useWorkoutStore((s) => s.activeProgramId);
+  const setActiveProgram = useWorkoutStore((s) => s.setActiveProgram);
+  const customPrograms = useWorkoutStore((s) => s.customPrograms);
+  const addCustomProgram = useWorkoutStore((s) => s.addCustomProgram);
+  const removeCustomProgram = useWorkoutStore((s) => s.removeCustomProgram);
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
   const toggleDay = (id: string) => setExpandedDays((d) => ({ ...d, [id]: !d[id] }));
   const importInputRef = useRef<HTMLInputElement>(null);
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  const allPrograms = getAllPrograms(customPrograms);
 
   // Télécharge tout le contenu du store (séances, historique, réglages…)
   // dans un fichier JSON, pour pouvoir le garder au chaud ou le remettre
@@ -134,25 +142,41 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
     URL.revokeObjectURL(url);
   };
 
+  // Import "intelligent" : accepte n'importe quel format texte. D'abord on
+  // vérifie si c'est une vraie sauvegarde PPL Tracker (JSON avec "state") →
+  // restauration complète comme avant. Sinon on tente d'en extraire un
+  // programme (CSV, JSON générique, ou texte libre analysé par mots-clés —
+  // voir importParser.ts, pas une vraie IA, un parseur à base de règles).
   const handleImportFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = () => {
-      try {
-        const text = String(reader.result);
-        const parsed = JSON.parse(text);
-        if (!parsed || typeof parsed !== 'object' || !parsed.state) {
-          setImportMsg("Fichier invalide — pas une sauvegarde PPL Tracker.");
-          return;
-        }
+      const text = String(reader.result ?? '');
+      const result = parseImportedFile(file.name, text);
+
+      if (result.isBackupFile) {
         const ok = window.confirm(
-          'Importer va remplacer toutes tes données actuelles (séances, historique, réglages...) par celles du fichier. Continuer ?'
+          'Ce fichier est une sauvegarde PPL Tracker. L\'importer va remplacer toutes tes données actuelles (séances, historique, réglages...) par celles du fichier. Continuer ?'
         );
         if (!ok) return;
         localStorage.setItem('ppl-tracker-store', text);
         window.location.reload();
-      } catch (_) {
-        setImportMsg('Fichier invalide — impossible de le lire.');
+        return;
       }
+
+      if (!result.program) {
+        setImportMsg(`Import impossible — ${result.warnings[0] ?? 'aucune séance reconnue dans ce fichier.'}`);
+        return;
+      }
+
+      const warningLine = result.warnings.length ? ` (${result.warnings.join(' ')})` : '';
+      const ok = window.confirm(
+        `${result.daysDetected} jour(s) et ${result.exercisesDetected} exercice(s) détectés dans "${file.name}".\n` +
+        `Ça va créer le programme "${result.program.name}", sélectionnable dans Programme d'entraînement — sans toucher aux programmes existants.${warningLine}\n\n` +
+        `Ajouter ce programme ?`
+      );
+      if (!ok) return;
+      addCustomProgram(result.program);
+      setImportMsg(`"${result.program.name}" ajouté (${result.daysDetected} jour(s), ${result.exercisesDetected} exercice(s)). Choisis-le dans "Programme d'entraînement" ci-dessus.`);
     };
     reader.readAsText(file);
   };
@@ -166,6 +190,46 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
             <h1 style={titleStyle}>Réglages</h1>
             <p style={subtitleStyle}>Personnalise l'appli</p>
           </div>
+        </div>
+
+        {/* Programme d'entraînement */}
+        <p style={sectionLabel}>PROGRAMME D'ENTRAÎNEMENT</p>
+        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 12, lineHeight: '15px' }}>
+          Choisis le programme actif — les autres restent disponibles, rien n'est supprimé en changeant.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+          {allPrograms.map((program) => {
+            const isActive = program.id === activeProgramId;
+            return (
+              <div key={program.id} style={{ display: 'flex', alignItems: 'stretch', gap: 6 }}>
+                <button
+                  onClick={() => setActiveProgram(program.id)}
+                  style={{
+                    ...programCard,
+                    border: isActive ? '2px solid var(--brand-1)' : '2px solid transparent',
+                    background: isActive ? 'var(--bg-elevated)' : 'var(--bg-surface)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <p style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 800 }}>{program.name}</p>
+                    {isActive && <span style={{ color: 'var(--brand-1)', fontSize: 10, fontWeight: 700 }}>✓ ACTIF</span>}
+                  </div>
+                  <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 3, lineHeight: '15px' }}>{program.shortDescription}</p>
+                  <p style={{ color: 'var(--text-micro)', fontSize: 10, marginTop: 4, fontStyle: 'italic' }}>{program.source}</p>
+                </button>
+                {program.isCustom && (
+                  <button
+                    onClick={() => {
+                      const ok = window.confirm(`Supprimer le programme importé "${program.name}" ? L'historique déjà enregistré n'est pas touché.`);
+                      if (ok) removeCustomProgram(program.id);
+                    }}
+                    style={programDeleteBtn}
+                    title="Supprimer ce programme importé"
+                  >✕</button>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Couleur d'accent */}
@@ -558,7 +622,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
         {/* Temps de repos par exercice */}
         <p style={{ ...sectionLabel, marginTop: 24 }}>TEMPS DE REPOS PAR EXERCICE</p>
         <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
-          Remplace le temps par défaut pour un exercice précis. Déplie une séance pour voir ses exercices.
+          Remplace le temps par défaut pour un exercice précis (séances Strict V10). Déplie une séance pour voir ses exercices.
         </p>
         <div style={{ marginBottom: 20 }}>
           {WORKOUTS.map((workout) => {
@@ -681,9 +745,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
         </div>
 
         {/* Sauvegarde */}
-        <p style={{ ...sectionLabel, marginTop: 24 }}>SAUVEGARDE</p>
+        <p style={{ ...sectionLabel, marginTop: 24 }}>SAUVEGARDE & IMPORT</p>
         <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
-          Télécharge un fichier avec tout ton historique et tes réglages, ou restaure une sauvegarde précédente.
+          Exporter : télécharge tout ton historique et tes réglages. Importer : restaure une sauvegarde PPL Tracker,
+          ou analyse n'importe quel autre fichier (CSV, JSON, texte) pour en faire un nouveau programme.
         </p>
         <div style={{ display: 'flex', gap: 8, marginBottom: importMsg ? 8 : 28 }}>
           <button onClick={handleExport} style={{ ...restBtn, flex: 1, padding: '12px 8px' }}>⬇ Exporter</button>
@@ -691,7 +756,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
           <input
             ref={importInputRef}
             type="file"
-            accept="application/json"
+            accept=".json,.csv,.txt,text/*,application/json"
             style={{ display: 'none' }}
             onChange={(e) => {
               const file = e.target.files?.[0];
@@ -701,7 +766,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
           />
         </div>
         {importMsg && (
-          <p style={{ color: '#f5a623', fontSize: 11, marginBottom: 28 }}>{importMsg}</p>
+          <p style={{ color: '#f5a623', fontSize: 11, marginBottom: 28, lineHeight: '15px' }}>{importMsg}</p>
         )}
 
       </div>
@@ -799,5 +864,15 @@ const resetBtn: React.CSSProperties = {
   width: 28, height: 28, borderRadius: 8, flexShrink: 0, marginLeft: 2,
   background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
   color: 'var(--brand-1)', fontSize: 13, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+};
+const programCard: React.CSSProperties = {
+  flex: 1, textAlign: 'left', borderRadius: 14, padding: '12px 14px',
+  cursor: 'pointer', transition: 'background 0.2s, border-color 0.2s',
+};
+const programDeleteBtn: React.CSSProperties = {
+  width: 32, borderRadius: 10, flexShrink: 0,
+  background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+  color: 'var(--text-dim)', fontSize: 13, cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 };

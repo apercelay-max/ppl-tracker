@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { WORKOUTS, PROGRESSION_WEEKS } from '../data/workouts';
+import { PROGRESSION_WEEKS, getWorkout } from '../data/workouts';
+import { getProgram } from '../data/programs';
 import { useWorkoutStore, CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import type { HomeSectionKey } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
@@ -21,14 +22,11 @@ const formatCardioDate = (ts: number): string => {
 // 4 à 8 jours environ, donc 9 jours laisse une vraie marge avant d'alerter.
 const MUSCLE_ALERT_THRESHOLD_DAYS = 9;
 
-const DAY_ACCENT: Record<string, string> = {
-  'pull-a': '#7c6fcd', 'push-a': '#e03030', 'legs-a': '#e8a020',
-  'pull-b': '#6a5fc0', 'push-b': '#cc2828', 'legs-b': '#d09018',
-};
-const DAY_TYPE_LABEL: Record<string, string> = {
-  'pull-a': 'PULL', 'push-a': 'PUSH', 'legs-a': 'LEGS',
-  'pull-b': 'PULL', 'push-b': 'PUSH', 'legs-b': 'LEGS',
-};
+// Couleur/label de secours pour un jour qui n'a pas d'entrée dans les
+// dayAccents/dayTypeLabels du programme actif (ne devrait pas arriver
+// pour les programmes intégrés, mais protège les programmes importés
+// incomplets).
+const FALLBACK_ACCENT = '#7a7a90';
 
 interface HomeScreenProps { onSelectDay: (dayId: string) => void; onOpenDashboard: () => void; onOpenSettings: () => void; }
 
@@ -52,6 +50,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const deleteCardioEntry = useWorkoutStore((s) => s.deleteCardioEntry);
   const weeklySessionGoal = useWorkoutStore((s) => s.weeklySessionGoal);
   const homeSectionColors = useWorkoutStore((s) => s.homeSectionColors);
+  // Programme actif (voir Réglages → Programme d'entraînement) — Strict V10
+  // par défaut, jamais supprimé même si un autre programme est choisi.
+  const activeProgramId = useWorkoutStore((s) => s.activeProgramId);
+  const customPrograms = useWorkoutStore((s) => s.customPrograms);
+  const activeProgram = getProgram(activeProgramId, customPrograms);
   // Couleur perso d'un bloc si réglée dans les Réglages, sinon la couleur
   // par défaut de ce bloc (accent du thème, ou couleur du jour pour
   // "prochaine séance"). Sert aussi à afficher un liseré de couleur sur la
@@ -74,7 +77,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const weekIdx = currentWeek <= 2 ? 0 : currentWeek <= 4 ? 1 : currentWeek <= 6 ? 2 : currentWeek === 7 ? 3 : 4;
   const weekData = PROGRESSION_WEEKS[weekIdx];
   const resumeWorkout = session && !session.isComplete
-    ? WORKOUTS.find((w) => w.id === session.dayId)
+    ? getWorkout(session.dayId)
     : null;
   const cycleProgress = ((currentWeek - 1) / 7) * 100;
 
@@ -96,7 +99,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const handleTitlePointerLeave = () => setHoloPos({ x: 50, y: 50 });
 
   const cycleColor = blockColor('cycle', 'var(--brand-1)');
-  const cycleSection = homeSections.cycle && (
+  // Le suivi "semaine / RIR / objectif" (progression 8 semaines) est propre
+  // à Strict V10 — les autres programmes n'ont pas cette notion, donc le
+  // bloc ne s'affiche que pour celui-ci, même si le réglage est activé.
+  const cycleSection = homeSections.cycle && activeProgramId === 'strict-v10' && (
     <div key="cycle" style={{ ...weekCard, ...(homeSectionColors.cycle ? { borderLeft: `3px solid ${cycleColor}` } : {}) }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div>
@@ -146,9 +152,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     <div key="seances">
       <p style={{ ...sectionLabel, marginBottom: 10 }}>SÉANCES</p>
       <div>
-        {WORKOUTS.map((workout, idx) => {
-          const accent = DAY_ACCENT[workout.id];
-          const typeLabel = DAY_TYPE_LABEL[workout.id];
+        {activeProgram.workouts.map((workout, idx) => {
+          const accent = activeProgram.dayAccents[workout.id] ?? FALLBACK_ACCENT;
+          const typeLabel = activeProgram.dayTypeLabels[workout.id] ?? '';
           const isDone = cycleDoneIds.includes(workout.id);
           return (
             <button
@@ -234,7 +240,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     );
   })();
 
-  const supersetSection = homeSections.supersetRule && (
+  const supersetSection = homeSections.supersetRule && activeProgramId === 'strict-v10' && (
     <div key="supersetRule" style={{
       background: 'var(--bg-green-tint)', borderRadius: 14, padding: 14, marginTop: 8, marginBottom: 10,
       border: '1px solid var(--border-ss-tint)',
@@ -353,9 +359,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     );
   })();
 
-  const nextWorkout = WORKOUTS.find((w) => !cycleDoneIds.includes(w.id)) ?? WORKOUTS[0];
-  const nextColor = blockColor('nextSession', DAY_ACCENT[nextWorkout.id]);
-  const nextSessionSection = homeSections.nextSession && !resumeWorkout && (
+  const nextWorkout = activeProgram.workouts.find((w) => !cycleDoneIds.includes(w.id)) ?? activeProgram.workouts[0];
+  const nextColor = blockColor('nextSession', activeProgram.dayAccents[nextWorkout?.id ?? ''] ?? FALLBACK_ACCENT);
+  const nextSessionSection = homeSections.nextSession && !resumeWorkout && nextWorkout && (
     <button key="nextSession" className="workout-card" style={{ ...nextSessionBanner, ...(homeSectionColors.nextSession ? { borderLeft: `3px solid ${nextColor}` } : {}) }} onClick={() => onSelectDay(nextWorkout.id)}>
       <div style={{ ...nextSessionIcon, background: `${nextColor}20` }}>
         <span style={{ fontSize: 20 }}>🎯</span>
@@ -409,7 +415,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
                   }}
                 >PPL Tracker</h1>
               </div>
-              <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Strict V10 · Hypertrophie</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>{activeProgram.focusLabel}</p>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               <button
