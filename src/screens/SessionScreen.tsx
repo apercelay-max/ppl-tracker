@@ -512,7 +512,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
                   isActive={exIdx === currentExIdx}
                   currentWeek={currentWeek}
                   onSetComplete={(setIndex, entry) => handleSetComplete(exercise.id, setIndex, entry)}
-                  onEditSet={(setIndex) => editSet(exercise.id, setIndex)}
+                  onEditSet={(setIndex) => handleEditSet(exercise.id, setIndex)}
                   onSkipSet={exIdx === currentExIdx ? skipSet : undefined}
                   onSkipExercise={exIdx === currentExIdx ? skipExercise : undefined}
                   onAddSet={() => addSet(exercise.id)}
