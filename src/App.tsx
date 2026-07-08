@@ -37,6 +37,8 @@ export default function App() {
   // jamais toucher à une séance en cours (voir handleOpenSettings).
   const [settingsReturnView, setSettingsReturnView] = useState<View>('home');
   const theme = useWorkoutStore((s) => s.theme);
+  const themeMode = useWorkoutStore((s) => s.themeMode);
+  const setThemeMode = useWorkoutStore((s) => s.setThemeMode);
   const accentTheme = useWorkoutStore((s) => s.accentTheme);
   const customAccentColor = useWorkoutStore((s) => s.customAccentColor);
   const amoledMode = useWorkoutStore((s) => s.amoledMode);
@@ -64,6 +66,21 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  // Mode "Système" (Réglages → Apparence) : on suit en direct les
+  // changements de thème clair/sombre du téléphone tant que themeMode reste
+  // 'system'. Si Léo a choisi 'light'/'dark' explicitement, ce listener ne
+  // touche à rien (setThemeMode a déjà fixé `theme` en dur dans ce cas).
+  useEffect(() => {
+    if (themeMode !== 'system' || typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = () => {
+      // Recalcule et réapplique le thème résolu sans changer themeMode.
+      useWorkoutStore.setState({ theme: mq.matches ? 'dark' : 'light' });
+    };
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [themeMode, setThemeMode]);
 
   useEffect(() => {
     const accent = getAccent(accentTheme, customAccentColor);
