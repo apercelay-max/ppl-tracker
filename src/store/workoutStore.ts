@@ -231,6 +231,7 @@ interface WorkoutStore {
   startSession: (dayId: string) => void;
   completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
   editSet: (exerciseId: string, setIndex: number) => void;
+  restoreSessionPosition: (exerciseIndex: number, setIndex: number) => void;
   skipSet: () => void;
   skipExercise: () => void;
   addSet: (exerciseId: string) => void;
@@ -408,6 +409,17 @@ export const useWorkoutStore = create<WorkoutStore>()(
           timer: { isRunning: false, endTimestamp: null, totalSeconds: 0 },
         });
         cancelRestNotification();
+      },
+
+      // Remet currentExerciseIndex/currentSetIndex à une position donnée,
+      // sans toucher au repos ni à exerciseProgress — utilisé après avoir
+      // corrigé une série déjà passée (rouverte via le crayon) pour revenir
+      // à la position réelle de la séance sans relancer de chrono ni
+      // avancer/reculer la progression (voir SessionScreen.handleSetComplete).
+      restoreSessionPosition: (exerciseIndex, setIndex) => {
+        const { session } = get();
+        if (!session) return;
+        set({ session: { ...session, currentExerciseIndex: exerciseIndex, currentSetIndex: setIndex } });
       },
 
       // Passer la série courante (marquée skip)
