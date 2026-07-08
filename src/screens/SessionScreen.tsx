@@ -35,6 +35,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
   const startSession = useWorkoutStore((s) => s.startSession);
   const completeSet = useWorkoutStore((s) => s.completeSet);
   const editSet = useWorkoutStore((s) => s.editSet);
+  const restoreSessionPosition = useWorkoutStore((s) => s.restoreSessionPosition);
   const skipSet = useWorkoutStore((s) => s.skipSet);
   const skipExercise = useWorkoutStore((s) => s.skipExercise);
   const addSet = useWorkoutStore((s) => s.addSet);
@@ -74,6 +75,11 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
   // Vrai si le repos s'est terminé alors que la série n'était pas encore
   // validée : on n'avance pas la séance tant que ✓ n'a pas été pressé.
   const timerAlreadyElapsedRef = useRef(false);
+  // Position réelle de la séance avant d'ouvrir l'édition d'une série déjà
+  // passée (bouton crayon) — non-null tant qu'une correction est en cours.
+  // Sert à revenir pile où on en était sans relancer de repos ni avancer/
+  // reculer la progression (voir handleEditSet / handleSetComplete).
+  const editRestoreRef = useRef<{ exerciseIndex: number; setIndex: number } | null>(null);
 
   // ── Schéma corps humain, en tout début de séance ────────────────────────
   const [bodyDiagramVisible, setBodyDiagramVisible] = useState(true);
@@ -199,6 +205,17 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
     return setIndex === totalSets - 1;
   }, [workout]);
 
+  // Rouvre une série déjà validée pour la corriger (bouton crayon) : on
+  // mémorise d'abord la position réelle de la séance (là où on en est
+  // vraiment) pour pouvoir y revenir une fois la correction enregistrée,
+  // sans relancer de repos ni avancer/reculer la progression.
+  const handleEditSet = useCallback((exerciseId: string, setIndex: number) => {
+    if (session) {
+      editRestoreRef.current = { exerciseIndex: session.currentExerciseIndex, setIndex: session.currentSetIndex };
+    }
+    editSet(exerciseId, setIndex);
+  }, [session, editSet]);
+
   // IMPORTANT : ce hook doit rester AVANT les "return" conditionnels
   // ci-dessous (règle des hooks React — sinon erreur #300 "rendered fewer
   // hooks than expected" dès qu'on atteint la fin d'une séance).
@@ -222,6 +239,16 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
     completeSet(exerciseId, setIndex, entry);
     const exercise = workout?.exercises.find((e) => e.id === exerciseId);
     if (!exercise) return;
+    // Correction d'une série déjà passée (rouverte via le crayon) : on
+    // vient d'enregistrer la valeur corrigée, on revient à la position
+    // réelle de la séance et on s'arrête là — pas de repos relancé, pas
+    // d'avancée/recul de la progression.
+    if (editRestoreRef.current) {
+      const restore = editRestoreRef.current;
+      editRestoreRef.current = null;
+      restoreSessionPosition(restore.exerciseIndex, restore.setIndex);
+      return;
+    }
     // Superset order 1 → pas de timer, on enchaîne
     if (exercise.restMode === 'superset' && exercise.supersetOrder === 1) {
       advanceSession();
@@ -257,7 +284,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
     timerExerciseRef.current = exerciseId;
     pendingSetKeyRef.current = { exerciseId, setIndex };
     startTimer(restSecs);
-  }, [workout, completeSet, advanceSession, startTimer, customRestSeconds, defaultRestSeconds, history, ultraAnimationsEnabled, fireConfetti, isFinalSetOfSession]);
+  }, [workout, completeSet, advanceSession, startTimer, customRestSeconds, defaultRestSeconds, history, ultraAnimationsEnabled, fireConfetti, isFinalSetOfSession, restoreSessionPosition]);
 
   // Démarre le repos dès que le poids est saisi (avant même de valider la
   // série), pour compter le repos au plus près du moment où la série a
@@ -269,6 +296,9 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
     // Toute dernière série de la séance : pas de repos anticipé non plus,
     // le deload prendra le relais une fois la série validée.
     if (isFinalSetOfSession(exerciseId, setIndex)) return;
+    // Correction d'une série déjà passée (crayon) : jamais de repos anticipé
+    // pendant qu'on retape le poids, seul le crayon ré-ouvre l'édition.
+    if (editRestoreRef.current) return;
     if (useWorkoutStore.getState().timer.isRunning) return;
     const restSecs = customRestSeconds[exerciseId] ?? exercise.restSeconds ?? defaultRestSeconds;
     timerExerciseRef.current = exerciseId;
@@ -456,7 +486,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
                           isActive={exIdx === currentExIdx}
                           currentWeek={currentWeek}
                           onSetComplete={(setIndex, entry) => handleSetComplete(exercise.id, setIndex, entry)}
-                          onEditSet={(setIndex) => editSet(exercise.id, setIndex)}
+                          onEditSet={(setIndex) => handleEditSet(exercise.id, setIndex)}
                           onSkipSet={exIdx === currentExIdx ? skipSet : undefined}
                           onSkipExercise={exIdx === currentExIdx ? skipExercise : undefined}
                           onAddSet={() => addSet(exercise.id)}
@@ -607,6 +637,8 @@ const CompletionScreen: React.FC<{
   const updateLastSessionRPE = useWorkoutStore((s) => s.updateLastSessionRPE);
   const updateLastSessionNote = useWorkoutStore((s) => s.updateLastSessionNote);
   const caloriesPerHour = useWorkoutStore((s) => s.caloriesPerHour);
+  const customRestSeconds = useWorkoutStore((s) => s.customRestSeconds);
+  const defaultRestSeconds = useWorkoutStore((s) => s.defaultRestSeconds);
   const ultraAnimationsEnabled = useWorkoutStore((s) => s.ultraAnimationsEnabled);
   const ultraAnimationStyle = useWorkoutStore((s) => s.ultraAnimationStyle);
   const [rpe, setRpe] = useState<number | null>(null);
@@ -626,6 +658,24 @@ const CompletionScreen: React.FC<{
   const cal = Math.round((caloriesPerHour / 60) * durationMin);
   const tonnage = computeTonnage(session.exerciseProgress);
   const comparison = compareSessionToHistory(history, session.dayId, tonnage);
+
+  // Estimation du temps de repos total : on ne connaît pas le temps réel
+  // écoulé série par série, donc on additionne le temps de repos "prévu"
+  // (custom si réglé, sinon celui de l'exercice, sinon le défaut) pour
+  // chaque série effectivement complétée — en excluant les séries "ordre 1"
+  // d'un superset (jamais de repos après) et la toute dernière série de la
+  // séance (remplacée par le deload, plus par un repos classique).
+  const totalRestSeconds = workout.exercises.reduce((sum, ex, exIdx) => {
+    if (ex.restMode === 'superset' && ex.supersetOrder === 1) return sum;
+    const entries = session.exerciseProgress[ex.id] ?? [];
+    const completedCount = entries.filter((e) => e.completed).length;
+    if (completedCount === 0) return sum;
+    const isLastExercise = exIdx === workout.exercises.length - 1;
+    const restsForThisExercise = isLastExercise ? Math.max(0, completedCount - 1) : completedCount;
+    const restSecs = customRestSeconds[ex.id] ?? ex.restSeconds ?? defaultRestSeconds;
+    return sum + restsForThisExercise * restSecs;
+  }, 0);
+  const restMin = Math.round(totalRestSeconds / 60);
 
   const allEntries = workout.exercises.flatMap((ex) =>
     (session.exerciseProgress[ex.id] ?? []).filter((e) => e.completed && e.reps !== '—').map((e) => ({ reps: e.reps, targetReps: ex.targetReps }))
@@ -660,7 +710,7 @@ const CompletionScreen: React.FC<{
           <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>{totalSets} séries · {durationMin} min</p>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
           <div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
             <span style={{ fontSize: 22 }}>⏱</span>
             <span style={{ color: '#4CAF50', fontSize: 20, fontWeight: 200 }}>{durationMin}<span style={{ fontSize: 11 }}> min</span></span>
@@ -676,6 +726,13 @@ const CompletionScreen: React.FC<{
             <span style={{ color: '#9b27af', fontSize: 20, fontWeight: 200 }}>{totalSets}</span>
             <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>SÉRIES</span>
           </div>
+          {totalRestSeconds > 0 && (
+            <div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.20s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
+              <span style={{ fontSize: 22 }}>😴</span>
+              <span style={{ color: '#4fa8e0', fontSize: 20, fontWeight: 200 }}>{restMin}<span style={{ fontSize: 11 }}> min</span></span>
+              <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>REPOS</span>
+            </div>
+          )}
           {tonnage > 0 && (
             <div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.24s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
               <span style={{ fontSize: 22 }}>🏋️</span>
@@ -810,7 +867,10 @@ const trophyBadge: React.CSSProperties = {
   margin: '0 auto 16px', boxShadow: '0 8px 24px rgba(232,160,32,0.15)',
 };
 const statBlock: React.CSSProperties = {
-  flex: 1, background: 'var(--bg-surface)', border: '1px solid var(--border)',
+  // Base à 70px + grow : jusqu'à 4 blocs tiennent sur une ligne, le 5e
+  // (repos, quand présent) passe proprement à la ligne suivante plutôt que
+  // d'écraser tous les blocs.
+  flex: '1 1 70px', background: 'var(--bg-surface)', border: '1px solid var(--border)',
   borderRadius: 16, padding: '14px 8px',
   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
 };
