@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ACCENT_PRESETS, GYM_PRESETS } from '../data/accents';
 import type { HomeSectionKey } from '../store/workoutStore';
@@ -242,6 +242,52 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
   };
   const visibleCategoryCount = CATEGORY_ORDER.filter(categoryMatchesQuery).length;
 
+  // Navigation rapide entre catégories (demande de Léo) : sur écran large/
+  // horizontal (tablette, ordi navigateur), une vraie barre latérale à
+  // gauche liste les 4 catégories et fait défiler jusqu'à la bonne section.
+  // Sur téléphone (écran étroit/vertical), on remplace le scroll par des
+  // onglets horizontaux qui n'affichent qu'une seule catégorie à la fois
+  // (plus besoin de scroller pour la trouver).
+  const [isLandscape, setIsLandscape] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(orientation: landscape)').matches : false
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(orientation: landscape)');
+    const onChange = () => setIsLandscape(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  const [activeTab, setActiveTab] = useState<CategoryId>('seance');
+  const categoryRefs = useRef<Record<CategoryId, HTMLDivElement | null>>({
+    seance: null, apparence: null, objectifs: null, donnees: null,
+  });
+  // Un clic sur la barre latérale (mode paysage) : on s'assure que la
+  // catégorie est dépliée puis on scrolle doucement jusqu'à elle.
+  const handleSidebarJump = (id: CategoryId) => {
+    setCollapsedCategories((c) => ({ ...c, [id]: false }));
+    requestAnimationFrame(() => {
+      categoryRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+  // Une catégorie s'affiche si : elle correspond à la recherche, ET (on est
+  // en paysage — tout reste visible, la sidebar sert juste à naviguer — OU
+  // en recherche active — OU c'est l'onglet actif en mode portrait/onglets).
+  const shouldShowCategory = (id: CategoryId) => {
+    if (!categoryMatchesQuery(id)) return false;
+    if (normalizedQuery !== '') return true;
+    if (isLandscape) return true;
+    return activeTab === id;
+  };
+  // Le corps d'une catégorie est visible si : recherche active, OU mode
+  // portrait/onglets (la catégorie affichée est toujours dépliée, l'onglet
+  // fait déjà office de sélection), OU non repliée manuellement en paysage.
+  const isBodyVisible = (id: CategoryId) => {
+    if (normalizedQuery !== '') return true;
+    if (!isLandscape) return true;
+    return !collapsedCategories[id];
+  };
+
   // Télécharge tout le contenu du store (séances, historique, réglages…)
   // dans un fichier JSON, pour pouvoir le garder au chaud ou le remettre
   // sur un autre téléphone.
@@ -334,7 +380,29 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
 
   return (
     <div style={container}>
-      <div style={{ ...scroll, paddingBottom: navBarEnabled ? 112 : 40 }}>
+      <div style={isLandscape ? landscapeRow : undefined}>
+        {isLandscape && (
+          <div style={landscapeSidebar}>
+            {CATEGORY_ORDER.map((id) => (
+              <button
+                key={id}
+                onClick={() => handleSidebarJump(id)}
+                title={CATEGORY_META[id].label}
+                style={{
+                  ...landscapeSidebarBtn,
+                  background: !collapsedCategories[id] ? 'var(--bg-elevated)' : 'transparent',
+                }}
+              >
+                <span style={{ fontSize: 20 }}>{CATEGORY_META[id].emoji}</span>
+                <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-muted)' }}>{CATEGORY_META[id].label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        <div style={isLandscape
+          ? { ...scroll, maxWidth: 'none', margin: 0, flex: 1, paddingBottom: navBarEnabled ? 112 : 40 }
+          : { ...scroll, paddingBottom: navBarEnabled ? 112 : 40 }}
+        >
         <div style={headerRow}>
           <button onClick={onBack} style={backBtn}>←</button>
           <div>
@@ -357,6 +425,28 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
           )}
         </div>
 
+        {/* Onglets rapides (téléphone / écran vertical uniquement) — une
+            seule catégorie affichée à la fois, pas besoin de scroller pour
+            la trouver. Masqués pendant une recherche (tout reste visible). */}
+        {!isLandscape && normalizedQuery === '' && (
+          <div style={portraitTabsRow}>
+            {CATEGORY_ORDER.map((id) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                style={{
+                  ...portraitTabBtn,
+                  background: activeTab === id ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                  color: activeTab === id ? '#fff' : 'var(--text-muted)',
+                }}
+              >
+                <span style={{ fontSize: 15 }}>{CATEGORY_META[id].emoji}</span>
+                <span style={{ fontSize: 10, fontWeight: 700 }}>{CATEGORY_META[id].label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {normalizedQuery !== '' && visibleCategoryCount === 0 && (
           <p style={{ color: 'var(--text-dim)', fontSize: 12, textAlign: 'center', padding: '24px 0' }}>
             Aucune catégorie ne correspond à "{settingsQuery}".
@@ -364,10 +454,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
         )}
 
         {/* ═══ Catégorie : Séance (programme, repos, minuteur, muscles) ═══ */}
-        {categoryMatchesQuery('seance') && (
-          <div style={categoryWrapper}>
+        {shouldShowCategory('seance') && (
+          <div style={categoryWrapper} ref={(el) => { categoryRefs.current.seance = el; }}>
             <CategoryHeader id="seance" />
-            {(normalizedQuery !== '' || !collapsedCategories['seance']) && (
+            {isBodyVisible('seance') && (
               <div style={categoryBody}>
                 {/* Programme actif */}
                 <p style={subLabel}>PROGRAMME D'ENTRAÎNEMENT</p>
@@ -590,10 +680,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
         )}
 
         {/* ═══ Catégorie : Apparence (couleurs, thème, icônes, navigation, animations, accueil) ═══ */}
-        {categoryMatchesQuery('apparence') && (
-          <div style={categoryWrapper}>
+        {shouldShowCategory('apparence') && (
+          <div style={categoryWrapper} ref={(el) => { categoryRefs.current.apparence = el; }}>
             <CategoryHeader id="apparence" />
-            {(normalizedQuery !== '' || !collapsedCategories['apparence']) && (
+            {isBodyVisible('apparence') && (
               <div style={categoryBody}>
                 {/* Couleur d'accent */}
                 <p style={subLabel}>COULEUR D'ACCENT</p>
@@ -1005,10 +1095,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
         )}
 
         {/* ═══ Catégorie : Objectifs & calories ═══ */}
-        {categoryMatchesQuery('objectifs') && (
-          <div style={categoryWrapper}>
+        {shouldShowCategory('objectifs') && (
+          <div style={categoryWrapper} ref={(el) => { categoryRefs.current.objectifs = el; }}>
             <CategoryHeader id="objectifs" />
-            {(normalizedQuery !== '' || !collapsedCategories['objectifs']) && (
+            {isBodyVisible('objectifs') && (
               <div style={categoryBody}>
                 {/* Badges de progression */}
                 <p style={subLabel}>BADGES & RÉCOMPENSES</p>
@@ -1084,10 +1174,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
         )}
 
         {/* ═══ Catégorie : Données & compte ═══ */}
-        {categoryMatchesQuery('donnees') && (
-          <div style={categoryWrapper}>
+        {shouldShowCategory('donnees') && (
+          <div style={categoryWrapper} ref={(el) => { categoryRefs.current.donnees = el; }}>
             <CategoryHeader id="donnees" />
-            {(normalizedQuery !== '' || !collapsedCategories['donnees']) && (
+            {isBodyVisible('donnees') && (
               <div style={categoryBody}>
                 <p style={subLabel}>SAUVEGARDE</p>
                 <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
@@ -1154,6 +1244,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
           </div>
         )}
 
+        </div>
       </div>
     </div>
   );
@@ -1163,6 +1254,28 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
 
 const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto', background: 'var(--bg-base)' };
 const scroll: React.CSSProperties = { maxWidth: 480, margin: '0 auto', padding: '0 16px 40px' };
+// Écran large/paysage (tablette, fenêtre navigateur large) : sidebar fixe à
+// gauche + contenu scrollable à droite, plutôt que tout empiler en colonne.
+const landscapeRow: React.CSSProperties = { display: 'flex', alignItems: 'flex-start', minHeight: '100%' };
+const landscapeSidebar: React.CSSProperties = {
+  position: 'sticky', top: 0, flexShrink: 0, width: 96,
+  display: 'flex', flexDirection: 'column', gap: 4, padding: '24px 8px',
+  borderRight: '1px solid var(--border-subtle)',
+};
+const landscapeSidebarBtn: React.CSSProperties = {
+  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+  padding: '10px 4px', borderRadius: 12, cursor: 'pointer',
+};
+// Téléphone / écran étroit-vertical : onglets horizontaux qui filtrent sur
+// une seule catégorie à la fois (façon barre d'onglets), au lieu de tout
+// empiler et devoir scroller pour retrouver une section.
+const portraitTabsRow: React.CSSProperties = {
+  display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto',
+};
+const portraitTabBtn: React.CSSProperties = {
+  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+  padding: '9px 10px', borderRadius: 12, cursor: 'pointer', flex: 1, minWidth: 64,
+};
 const headerRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14,
   paddingTop: 'max(24px, env(safe-area-inset-top))', paddingBottom: 18,
