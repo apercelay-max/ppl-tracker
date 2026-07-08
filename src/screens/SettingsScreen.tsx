@@ -52,6 +52,14 @@ const FONT_SCALES: { id: 'sm' | 'md' | 'lg'; label: string; preview: number }[] 
 const ICON_SHAPES: IconShape[] = ['square', 'rounded', 'circle'];
 const ICON_SIZES: IconSize[] = ['sm', 'md', 'lg'];
 
+// Sélecteur Système/Clair/Sombre (Réglages → Apparence), inspiré de la
+// pilule compacte du menu de réglages de Claude.ai.
+const THEME_MODES: { id: 'system' | 'light' | 'dark'; label: string; icon: string }[] = [
+  { id: 'system', label: 'Système', icon: '🖥️' },
+  { id: 'light', label: 'Clair', icon: '☀️' },
+  { id: 'dark', label: 'Sombre', icon: '🌙' },
+];
+
 const REST_OPTIONS: { seconds: number; label: string }[] = [
   { seconds: 60, label: '1:00' },
   { seconds: 90, label: '1:30' },
@@ -152,6 +160,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
   const amoledMode = useWorkoutStore((s) => s.amoledMode);
   const setAmoledMode = useWorkoutStore((s) => s.setAmoledMode);
   const theme = useWorkoutStore((s) => s.theme);
+  const themeMode = useWorkoutStore((s) => s.themeMode);
+  const setThemeMode = useWorkoutStore((s) => s.setThemeMode);
   const fontScale = useWorkoutStore((s) => s.fontScale);
   const setFontScale = useWorkoutStore((s) => s.setFontScale);
   const homeSections = useWorkoutStore((s) => s.homeSections);
@@ -661,6 +671,29 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
                   ))}
                 </div>
 
+                {/* Apparence (Système/Clair/Sombre) — pilule compacte façon
+                    menu de réglages Claude, distincte des segmentBtn colorés
+                    utilisés ailleurs (transitions, effets...). */}
+                <p style={subLabel}>APPARENCE</p>
+                <div style={themeModePill}>
+                  {THEME_MODES.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => setThemeMode(m.id)}
+                      title={m.label}
+                      style={{
+                        ...themeModeBtn,
+                        background: themeMode === m.id ? 'var(--bg-base)' : 'transparent',
+                        color: themeMode === m.id ? 'var(--text-primary)' : 'var(--text-dim)',
+                        boxShadow: themeMode === m.id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
+                      }}
+                    >
+                      <span style={{ fontSize: 16, lineHeight: 1 }}>{m.icon}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700 }}>{m.label}</span>
+                    </button>
+                  ))}
+                </div>
+
                 {/* Thème (AMOLED) */}
                 <p style={{ ...subLabel, marginTop: 20 }}>THÈME</p>
                 <div style={toggleRow}>
@@ -1159,6 +1192,18 @@ const settingsSearchClear: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
 const subLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 12 };
+// Pilule Système/Clair/Sombre : fond neutre discret (pas la couleur
+// d'accent) pour rester proche de la référence Claude.ai — seul l'onglet
+// actif se détache, via un fond clair + légère ombre, du reste du groupe.
+const themeModePill: React.CSSProperties = {
+  display: 'flex', gap: 2, padding: 3,
+  background: 'var(--bg-elevated)', borderRadius: 12,
+};
+const themeModeBtn: React.CSSProperties = {
+  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+  padding: '8px 4px', borderRadius: 9, cursor: 'pointer',
+  transition: 'background 0.15s ease, color 0.15s ease',
+};
 const categoryWrapper: React.CSSProperties = {
   background: 'var(--bg-surface)', border: '1px solid var(--border)',
   borderRadius: 16, marginBottom: 12, overflow: 'hidden',

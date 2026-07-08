@@ -35,7 +35,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const setCurrentWeek = useWorkoutStore((s) => s.setCurrentWeek);
   const session = useWorkoutStore((s) => s.session);
   const theme = useWorkoutStore((s) => s.theme);
-  const setTheme = useWorkoutStore((s) => s.setTheme);
+  const setThemeMode = useWorkoutStore((s) => s.setThemeMode);
   const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
   const wakeLockEnabled = useWorkoutStore((s) => s.wakeLockEnabled);
   const setWakeLockEnabled = useWorkoutStore((s) => s.setWakeLockEnabled);
@@ -442,7 +442,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
                 </button>
               )}
               <button
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                onClick={() => setThemeMode(theme === 'dark' ? 'light' : 'dark')}
                 style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
                 title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
               >
