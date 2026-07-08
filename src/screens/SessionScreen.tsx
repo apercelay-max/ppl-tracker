@@ -93,6 +93,27 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
     if (cardioRunning && cardioSeconds === 0 && 'vibrate' in navigator) navigator.vibrate([150, 80, 150]);
   }, [cardioRunning, cardioSeconds]);
 
+  // ── Deload / retour au calme, à la toute fin de la séance ───────────────
+  // Remplace le dernier temps de repos (inutile juste avant que la séance
+  // se termine) par 3 minutes de cardio lent, façon retour au calme. Se
+  // déclenche depuis handleSetComplete quand la série validée est la
+  // dernière du dernier exercice — voir isFinalSetOfSession ci-dessous.
+  const [deloadActive, setDeloadActive] = useState(false);
+  const [deloadRunning, setDeloadRunning] = useState(true);
+  const [deloadSeconds, setDeloadSeconds] = useState(180);
+  useEffect(() => {
+    if (!deloadActive || !deloadRunning || deloadSeconds <= 0) return;
+    const id = setTimeout(() => setDeloadSeconds((s) => Math.max(0, s - 1)), 1000);
+    return () => clearTimeout(id);
+  }, [deloadActive, deloadRunning, deloadSeconds]);
+  useEffect(() => {
+    if (deloadActive && deloadRunning && deloadSeconds === 0 && 'vibrate' in navigator) navigator.vibrate([150, 80, 150]);
+  }, [deloadActive, deloadRunning, deloadSeconds]);
+  const handleDeloadFinish = useCallback(() => {
+    setDeloadActive(false);
+    advanceSession();
+  }, [advanceSession]);
+
   useEffect(() => {
     const h = () => setIsWide(window.innerWidth >= 700);
     window.addEventListener('resize', h);
@@ -167,6 +188,17 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
     }
   }, [addTimer, timer.totalSeconds, saveCustomRest]);
 
+  // Vrai si (exerciseId, setIndex) est la toute dernière série de la séance
+  // (dernier exercice de la liste + dernière série de cet exercice) — sert à
+  // remplacer le repos final, inutile juste avant la fin, par le deload.
+  const isFinalSetOfSession = useCallback((exerciseId: string, setIndex: number): boolean => {
+    if (!workout) return false;
+    const lastExercise = workout.exercises[workout.exercises.length - 1];
+    if (!lastExercise || lastExercise.id !== exerciseId) return false;
+    const totalSets = useWorkoutStore.getState().session?.exerciseProgress[exerciseId]?.length ?? lastExercise.sets;
+    return setIndex === totalSets - 1;
+  }, [workout]);
+
   // IMPORTANT : ce hook doit rester AVANT les "return" conditionnels
   // ci-dessous (règle des hooks React — sinon erreur #300 "rendered fewer
   // hooks than expected" dès qu'on atteint la fin d'une séance).
@@ -195,6 +227,15 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
       advanceSession();
       return;
     }
+    // Toute dernière série de la séance : un repos ici ne servirait à rien
+    // (la séance se termine juste après) — on propose plutôt 3 min de
+    // cardio lent façon retour au calme, voir handleDeloadFinish.
+    if (isFinalSetOfSession(exerciseId, setIndex)) {
+      setDeloadSeconds(180);
+      setDeloadRunning(true);
+      setDeloadActive(true);
+      return;
+    }
     // Le repos peut avoir déjà démarré à la saisie du poids (voir
     // handleWeightEntered). S'il s'est déjà terminé pendant qu'on
     // remplissait la série, on avance direct sans relancer de repos.
@@ -216,7 +257,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
     timerExerciseRef.current = exerciseId;
     pendingSetKeyRef.current = { exerciseId, setIndex };
     startTimer(restSecs);
-  }, [workout, completeSet, advanceSession, startTimer, customRestSeconds, defaultRestSeconds, history, ultraAnimationsEnabled, fireConfetti]);
+  }, [workout, completeSet, advanceSession, startTimer, customRestSeconds, defaultRestSeconds, history, ultraAnimationsEnabled, fireConfetti, isFinalSetOfSession]);
 
   // Démarre le repos dès que le poids est saisi (avant même de valider la
   // série), pour compter le repos au plus près du moment où la série a
@@ -225,13 +266,16 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
     const exercise = workout?.exercises.find((e) => e.id === exerciseId);
     if (!exercise) return;
     if (exercise.restMode === 'superset' && exercise.supersetOrder === 1) return;
+    // Toute dernière série de la séance : pas de repos anticipé non plus,
+    // le deload prendra le relais une fois la série validée.
+    if (isFinalSetOfSession(exerciseId, setIndex)) return;
     if (useWorkoutStore.getState().timer.isRunning) return;
     const restSecs = customRestSeconds[exerciseId] ?? exercise.restSeconds ?? defaultRestSeconds;
     timerExerciseRef.current = exerciseId;
     pendingSetKeyRef.current = { exerciseId, setIndex };
     timerAlreadyElapsedRef.current = false;
     startTimer(restSecs);
-  }, [workout, customRestSeconds, defaultRestSeconds, startTimer]);
+  }, [workout, customRestSeconds, defaultRestSeconds, startTimer, isFinalSetOfSession]);
 
   if (!workout || !session || session.dayId !== dayId) {
     return (
@@ -242,6 +286,19 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onO
   }
 
   if (session.isComplete) return <CompletionScreen workout={workout} session={session} onBack={onBack} history={history} />;
+
+  // Deload : remplace le dernier repos par 3 min de cardio lent avant de
+  // clôturer la séance (voir handleSetComplete / isFinalSetOfSession).
+  if (deloadActive) {
+    return (
+      <DeloadScreen
+        seconds={deloadSeconds}
+        running={deloadRunning}
+        onToggleRunning={() => setDeloadRunning((r) => !r)}
+        onFinish={handleDeloadFinish}
+      />
+    );
+  }
 
   const exercises = workout.exercises;
   const bodyIntensity = getWorkoutBodyIntensity(workout);
@@ -486,6 +543,52 @@ const ssLabel: React.CSSProperties = {
   fontSize: 10, fontWeight: 800, letterSpacing: 2,
   padding: '4px 8px 6px',
   display: 'flex', alignItems: 'center', gap: 4,
+};
+
+// ─── Deload / retour au calme (remplace le dernier repos) ──────────────────
+
+const DeloadScreen: React.FC<{
+  seconds: number;
+  running: boolean;
+  onToggleRunning: () => void;
+  onFinish: () => void;
+}> = ({ seconds, running, onToggleRunning, onFinish }) => {
+  const isDone = seconds === 0;
+  return (
+    <div style={completeScreen}>
+      <div style={{ maxWidth: 380, width: '100%', textAlign: 'center' }}>
+        <div style={deloadBadge}><span style={{ fontSize: 40 }}>🧘</span></div>
+        <h2 style={{ color: 'var(--text-primary)', fontSize: 22, fontWeight: 800, marginBottom: 6, letterSpacing: -0.5 }}>
+          Retour au calme
+        </h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 24, lineHeight: '18px' }}>
+          Dernière série terminée — 3 minutes de cardio lent (marche, vélo doux) pour redescendre en douceur avant de clôturer la séance.
+        </p>
+        <p style={{ fontSize: 40, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: '#4CAF50', marginBottom: 20 }}>
+          {isDone ? "C'est bon 💪" : `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`}
+        </p>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onToggleRunning} style={deloadBtnGhost}>{running ? '⏸ Pause' : '▶ Reprendre'}</button>
+          <button onClick={onFinish} style={deloadBtnPrimary}>{isDone ? 'Terminer la séance' : 'Passer et terminer'}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+const deloadBadge: React.CSSProperties = {
+  width: 80, height: 80, borderRadius: 22,
+  background: 'rgba(76,175,80,0.12)', border: '1px solid rgba(76,175,80,0.3)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  margin: '0 auto 16px', boxShadow: '0 8px 24px rgba(76,175,80,0.15)',
+};
+const deloadBtnPrimary: React.CSSProperties = {
+  flex: 1, background: 'linear-gradient(135deg, #4CAF50, #3a8c3d)', color: '#fff',
+  borderRadius: 12, padding: '12px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+  boxShadow: '0 3px 12px rgba(76,175,80,0.3)',
+};
+const deloadBtnGhost: React.CSSProperties = {
+  flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+  color: 'var(--text-muted)', borderRadius: 12, padding: '12px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
 };
 
 // ─── Écran de fin ────────────────────────────────────────────────────────────
