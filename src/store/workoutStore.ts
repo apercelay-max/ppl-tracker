@@ -182,6 +182,13 @@ interface WorkoutStore {
   currentWeek: number;
   history: HistoryEntry[];
   theme: 'dark' | 'light';
+  // Préférence d'apparence choisie par Léo (Réglages → Apparence) : 'system'
+  // suit le thème du téléphone (clair/sombre) et se met à jour tout seul si
+  // l'appareil change d'heure/luminosité ; 'light'/'dark' est un choix figé
+  // qui prend le dessus. `theme` ci-dessus reste la valeur RÉSOLUE utilisée
+  // partout ailleurs dans l'appli (data-theme, AMOLED...) — c'est
+  // `setThemeMode` qui la garde synchronisée.
+  themeMode: 'system' | 'light' | 'dark';
   wakeLockEnabled: boolean;
   customRestSeconds: Record<string, number>;
   accentTheme: string;
@@ -235,6 +242,7 @@ interface WorkoutStore {
   addTimer: (secondsToAdd: number) => void;
   setCurrentWeek: (week: number) => void;
   setTheme: (t: 'dark' | 'light') => void;
+  setThemeMode: (m: 'system' | 'light' | 'dark') => void;
   setWakeLockEnabled: (enabled: boolean) => void;
   advanceSession: () => void;
   saveCustomRest: (exerciseId: string, seconds: number) => void;
@@ -304,6 +312,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       currentWeek: 1,
       history: [],
       theme: 'dark',
+      themeMode: 'dark',
       wakeLockEnabled: true,
       customRestSeconds: {},
       accentTheme: 'red',
@@ -534,6 +543,20 @@ export const useWorkoutStore = create<WorkoutStore>()(
 
       setCurrentWeek: (week) => set({ currentWeek: Math.min(8, Math.max(1, week)) }),
       setTheme: (t) => set({ theme: t }),
+      // 'system' résout tout de suite le thème actuel du téléphone — le
+      // suivi des changements ultérieurs (ex: passage auto en sombre le
+      // soir) est géré par un effet dans App.tsx qui réécoute matchMedia
+      // tant que themeMode reste 'system'.
+      setThemeMode: (m) => {
+        if (m === 'system') {
+          const prefersDark = typeof window !== 'undefined' && window.matchMedia
+            ? window.matchMedia('(prefers-color-scheme: dark)').matches
+            : true;
+          set({ themeMode: m, theme: prefersDark ? 'dark' : 'light' });
+        } else {
+          set({ themeMode: m, theme: m });
+        }
+      },
       setWakeLockEnabled: (enabled) => {
         set({ wakeLockEnabled: enabled });
         if (enabled) { requestWakeLock(); } else { releaseWakeLock(); }
@@ -694,6 +717,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         currentWeek: state.currentWeek,
         history: state.history,
         theme: state.theme,
+        themeMode: state.themeMode,
         wakeLockEnabled: state.wakeLockEnabled,
         customRestSeconds: state.customRestSeconds,
         accentTheme: state.accentTheme,
@@ -775,6 +799,9 @@ export const useWorkoutStore = create<WorkoutStore>()(
         merged.ultraAnimationsEnabled = p.ultraAnimationsEnabled ?? false;
         merged.ultraAnimationStyle = p.ultraAnimationStyle ?? 'confetti';
         merged.ultraTransitionStyle = p.ultraTransitionStyle ?? 'bounce';
+        // 'dark' par défaut = comportement historique (avant l'ajout du
+        // mode "Système") : personne ne bascule en clair sans le demander.
+        merged.themeMode = p.themeMode ?? 'dark';
 
         return merged;
       },
