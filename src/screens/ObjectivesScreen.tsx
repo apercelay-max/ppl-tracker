@@ -1,6 +1,6 @@
 import React from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
-import { getMuscleGroupsStatus, getMaxWeightEver, ALL_EXERCISES, getBodyIntensityFromHistory } from '../utils/training';
+import { getMuscleGroupsStatus, getMuscleRecoveryStatus, getMaxWeightEver, ALL_EXERCISES, getBodyIntensityFromHistory } from '../utils/training';
 import { BodyDiagram } from '../components/BodyDiagram';
 
 interface ObjectivesScreenProps { onBack: () => void; }
@@ -22,6 +22,14 @@ export const ObjectivesScreen: React.FC<ObjectivesScreenProps> = ({ onBack }) =>
 
   const muscleStatuses = history.length > 0
     ? getMuscleGroupsStatus(history).sort((a, b) => (b.daysSince ?? 999) - (a.daysSince ?? 999))
+    : [];
+
+  // Récupération : seulement les groupes déjà travaillés au moins une fois,
+  // triés des moins récupérés (le plus d'heures restantes) aux plus récupérés.
+  const recoveryStatuses = history.length > 0
+    ? getMuscleRecoveryStatus(history)
+        .filter((s) => s.hoursSince !== null)
+        .sort((a, b) => b.hoursRemaining - a.hoursRemaining)
     : [];
 
   const records = ALL_EXERCISES
@@ -94,6 +102,35 @@ export const ObjectivesScreen: React.FC<ObjectivesScreenProps> = ({ onBack }) =>
           )}
         </div>
 
+        {/* Récupération — temps restant avant que chaque muscle soit prêt */}
+        {recoveryStatuses.length > 0 && (
+          <>
+            <p style={sectionLabel}>RÉCUPÉRATION</p>
+            <div style={{ ...card, alignItems: 'stretch', flexDirection: 'column', gap: 12 }}>
+              {recoveryStatuses.map((s) => {
+                const pct = Math.min(1, Math.max(0, 1 - s.hoursRemaining / s.recoveryHours));
+                const color = s.recovered ? '#4CAF50' : s.hoursRemaining <= s.recoveryHours * 0.25 ? '#f5a623' : '#f55555';
+                return (
+                  <div key={s.group}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{s.group}</span>
+                      <span style={{ color, fontSize: 12, fontWeight: 700 }}>
+                        {s.recovered ? 'Récupéré ✅' : s.hoursRemaining >= 24 ? `encore ${Math.round(s.hoursRemaining / 24 * 10) / 10} j` : `encore ${s.hoursRemaining} h`}
+                      </span>
+                    </div>
+                    <div style={recoveryTrack}>
+                      <div style={{ ...recoveryFill, width: `${pct * 100}%`, background: color }} />
+                    </div>
+                  </div>
+                );
+              })}
+              <p style={{ color: 'var(--text-dim)', fontSize: 10, marginTop: 2, lineHeight: '14px' }}>
+                Estimation basée sur des temps de récupération standards par muscle, pas une mesure médicale.
+              </p>
+            </div>
+          </>
+        )}
+
         {/* Corps — schéma des muscles travaillés récemment */}
         <p style={sectionLabel}>CORPS</p>
         <div style={card}>
@@ -165,3 +202,7 @@ const legendRow: React.CSSProperties = {
 };
 const legendDot: React.CSSProperties = { width: 10, height: 10, borderRadius: 5 };
 const legendLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 11, marginRight: 8 };
+const recoveryTrack: React.CSSProperties = {
+  width: '100%', height: 6, borderRadius: 3, background: 'var(--bg-elevated)', overflow: 'hidden',
+};
+const recoveryFill: React.CSSProperties = { height: '100%', borderRadius: 3, transition: 'width 0.3s' };
