@@ -1,6 +1,7 @@
 import React from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
-import { getMuscleGroupsStatus, getMuscleRecoveryStatus, getMaxWeightEver, ALL_EXERCISES, getBodyIntensityFromHistory } from '../utils/training';
+import { getMuscleGroupsStatus, getMuscleRecoveryStatus, getRecoveryRegionStatus, getMaxWeightEver, ALL_EXERCISES, getBodyIntensityFromHistory } from '../utils/training';
+import type { BodyRegionKey } from '../utils/training';
 import { BodyDiagram } from '../components/BodyDiagram';
 
 interface ObjectivesScreenProps { onBack: () => void; }
@@ -31,6 +32,18 @@ export const ObjectivesScreen: React.FC<ObjectivesScreenProps> = ({ onBack }) =>
         .filter((s) => s.hoursSince !== null)
         .sort((a, b) => b.hoursRemaining - a.hoursRemaining)
     : [];
+
+  // Couleurs du schéma corps pour le mode récupération : rouge (encore en
+  // récup, plus foncé = plus loin d'être prêt) → vert (récupéré).
+  const recoveryRegionStatus = getRecoveryRegionStatus(history);
+  const recoveryFillOverride: Partial<Record<BodyRegionKey, string>> = {};
+  for (const [region, status] of Object.entries(recoveryRegionStatus)) {
+    if (!status) continue;
+    recoveryFillOverride[region as BodyRegionKey] = status.recovered
+      ? 'rgba(76, 175, 80, 0.75)'
+      : `rgba(245, 85, 85, ${(0.35 + 0.45 * (1 - status.pct)).toFixed(2)})`;
+  }
+  const hasRecoveryRegions = Object.keys(recoveryRegionStatus).length > 0;
 
   const records = ALL_EXERCISES
     .map((ex) => ({ ...ex, max: getMaxWeightEver(history, ex.id) }))
@@ -107,6 +120,19 @@ export const ObjectivesScreen: React.FC<ObjectivesScreenProps> = ({ onBack }) =>
           <>
             <p style={sectionLabel}>RÉCUPÉRATION</p>
             <div style={{ ...card, alignItems: 'stretch', flexDirection: 'column', gap: 12 }}>
+              {hasRecoveryRegions && (
+                <div style={{ width: '100%' }}>
+                  <BodyDiagram intensity={{}} fillOverride={recoveryFillOverride} />
+                  <div style={legendRow}>
+                    <span style={{ ...legendDot, background: 'var(--bg-elevated)' }} />
+                    <span style={legendLabel}>pas de données</span>
+                    <span style={{ ...legendDot, background: 'rgba(245, 85, 85, 0.7)' }} />
+                    <span style={legendLabel}>en récupération</span>
+                    <span style={{ ...legendDot, background: 'rgba(76, 175, 80, 0.75)' }} />
+                    <span style={legendLabel}>récupéré</span>
+                  </div>
+                </div>
+              )}
               {recoveryStatuses.map((s) => {
                 const pct = Math.min(1, Math.max(0, 1 - s.hoursRemaining / s.recoveryHours));
                 const color = s.recovered ? '#4CAF50' : s.hoursRemaining <= s.recoveryHours * 0.25 ? '#f5a623' : '#f55555';

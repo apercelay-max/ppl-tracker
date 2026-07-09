@@ -1,5 +1,7 @@
 import React from 'react';
 import { getWorkout } from '../data/workouts';
+import { getMuscleRecoveryStatus } from '../utils/training';
+import { useWorkoutStore } from '../store/workoutStore';
 
 interface WorkoutIntroScreenProps {
   dayId: string;
@@ -20,12 +22,20 @@ const DAY_TYPE_LABEL: Record<string, string> = {
 // Apple Fitness+) : on voit le programme du jour et on ne rentre dans le
 // minuteur/les séries qu'après avoir appuyé sur Démarrer.
 export const WorkoutIntroScreen: React.FC<WorkoutIntroScreenProps> = ({ dayId, onBack, onStart }) => {
+  const history = useWorkoutStore((s) => s.history);
   const workout = getWorkout(dayId);
   if (!workout) return null;
 
   const accent = DAY_ACCENT[dayId] ?? '#7a7a90';
   const typeLabel = DAY_TYPE_LABEL[dayId] ?? '';
   const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
+
+  // Groupes musculaires du programme du jour encore en récupération (voir
+  // Objectifs → Récupération) — alerte non bloquante, juste informative.
+  const dayMuscleGroups = new Set(workout.exercises.map((ex) => ex.muscleGroup));
+  const unrecoveredGroups = getMuscleRecoveryStatus(history).filter(
+    (s) => dayMuscleGroups.has(s.group) && s.hoursSince !== null && !s.recovered
+  );
 
   return (
     <div style={container}>
@@ -54,6 +64,25 @@ export const WorkoutIntroScreen: React.FC<WorkoutIntroScreenProps> = ({ dayId, o
             </div>
           </div>
         </div>
+
+        {unrecoveredGroups.length > 0 && (
+          <div style={recoveryWarning}>
+            <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
+            <div>
+              <p style={{ color: '#f5a623', fontSize: 13, fontWeight: 700 }}>
+                Pas totalement récupéré
+              </p>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 3, lineHeight: '16px' }}>
+                {unrecoveredGroups.map((s, i) => (
+                  <span key={s.group}>
+                    {i > 0 && ', '}
+                    {s.group} (encore {s.hoursRemaining >= 24 ? `${Math.round(s.hoursRemaining / 24 * 10) / 10} j` : `${s.hoursRemaining} h`})
+                  </span>
+                ))}
+              </p>
+            </div>
+          </div>
+        )}
 
         <p style={{ ...sectionLabel }}>AU PROGRAMME</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 100 }}>
@@ -109,6 +138,11 @@ const statItem: React.CSSProperties = {
 const statValue: React.CSSProperties = { color: 'var(--text-primary)', fontSize: 17, fontWeight: 800 };
 const statLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 8, fontWeight: 700, letterSpacing: 1 };
 const sectionLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 10 };
+const recoveryWarning: React.CSSProperties = {
+  display: 'flex', alignItems: 'flex-start', gap: 10,
+  background: 'rgba(245, 166, 35, 0.1)', border: '1px solid rgba(245, 166, 35, 0.3)',
+  borderRadius: 14, padding: '12px 14px', marginBottom: 20,
+};
 const exerciseRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 12,
   background: 'var(--bg-surface)', border: '1px solid var(--border)',
