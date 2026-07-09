@@ -5,6 +5,11 @@ interface BodyDiagramProps {
   // Intensité 0..1 par région — 0/absent = pas travaillé, 1 = groupe le
   // plus sollicité de la séance. Sert à calculer l'opacité de surbrillance.
   intensity: Partial<Record<BodyRegionKey, number>>;
+  // Couleurs explicites par région (ex: rouge/vert pour la récupération),
+  // prioritaires sur `intensity` quand fournies pour une région donnée —
+  // permet de réutiliser ce même schéma pour un mode couleur différent de
+  // la surbrillance accent-color par défaut.
+  fillOverride?: Partial<Record<BodyRegionKey, string>>;
 }
 
 // Surbrillance basée sur la couleur d'accent du thème (var(--brand-1-rgb))
@@ -15,8 +20,8 @@ const activeFill = (t: number | undefined): string =>
 
 const REGION_STROKE = 'var(--border-strong)';
 
-export const BodyDiagram: React.FC<BodyDiagramProps> = ({ intensity }) => {
-  const f = (key: BodyRegionKey) => activeFill(intensity[key]);
+export const BodyDiagram: React.FC<BodyDiagramProps> = ({ intensity, fillOverride }) => {
+  const f = (key: BodyRegionKey) => fillOverride?.[key] ?? activeFill(intensity[key]);
 
   return (
     <svg viewBox="0 0 240 165" style={{ width: '100%', maxWidth: 320, display: 'block', margin: '0 auto' }}>
