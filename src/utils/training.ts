@@ -362,6 +362,11 @@ export const getMuscleRecoveryStatus = (history: HistoryEntry[]): MuscleRecovery
   });
 };
 
+// ─── Récupération : régions du schéma corporel ───────────────────────────────
+// Note: MUSCLE_GROUP_TO_REGIONS est défini plus bas (section "Schéma corps
+// humain") — cette fonction est volontairement placée après pour pouvoir s'y
+// référer sans dupliquer le mapping. Voir plus bas dans ce fichier.
+
 export interface MuscleGroupVolume {
   group: string;
   tonnage: number; // kg (poids × reps cumulés)
@@ -475,6 +480,35 @@ export const getBodyIntensityFromHistory = (history: HistoryEntry[], days = 9): 
     const regions = MUSCLE_GROUP_TO_REGIONS[group] ?? [];
     const t = sets / maxSets;
     for (const r of regions) result[r] = Math.max(result[r] ?? 0, t);
+  }
+  return result;
+};
+
+export interface RegionRecoveryStatus {
+  pct: number; // 0 = juste travaillé (pas récupéré), 1 = totalement récupéré
+  recovered: boolean;
+}
+
+/**
+ * Statut de récupération par région du schéma corporel — dérivé de
+ * getMuscleRecoveryStatus (voir plus haut) via MUSCLE_GROUP_TO_REGIONS.
+ * Utilisé pour colorer le schéma (rouge = en cours, vert = récupéré) dans
+ * la section "Récupération" des Objectifs, et pour l'alerte au lancement
+ * d'une séance (voir WorkoutIntroScreen).
+ *
+ * Si une région est couverte par plusieurs groupes musculaires (rare), on
+ * garde le pire des deux (le pct le plus bas = le moins récupéré).
+ */
+export const getRecoveryRegionStatus = (history: HistoryEntry[]): Partial<Record<BodyRegionKey, RegionRecoveryStatus>> => {
+  const statuses = getMuscleRecoveryStatus(history).filter((s) => s.hoursSince !== null);
+  const result: Partial<Record<BodyRegionKey, RegionRecoveryStatus>> = {};
+  for (const s of statuses) {
+    const regions = MUSCLE_GROUP_TO_REGIONS[s.group] ?? [];
+    const pct = Math.min(1, Math.max(0, 1 - s.hoursRemaining / s.recoveryHours));
+    for (const r of regions) {
+      const existing = result[r];
+      if (!existing || pct < existing.pct) result[r] = { pct, recovered: pct >= 1 };
+    }
   }
   return result;
 };
