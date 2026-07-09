@@ -307,6 +307,61 @@ export const getMuscleGroupsStatus = (history: HistoryEntry[]): MuscleGroupStatu
   });
 };
 
+// ─── Temps de récupération par muscle ────────────────────────────────────────
+
+// Heures de récupération recommandées par groupe musculaire (source: image
+// envoyée par Léo — "Temps de récupération par muscle"). Les groupes "jambes"
+// du programme (quadriceps / ischios-fessiers / fessiers / mollets) partagent
+// tous la valeur "Jambes" de l'image, qui ne les détaille pas séparément.
+const RECOVERY_HOURS_BY_GROUP: Record<string, number> = {
+  'PECS': 48,
+  'DOS': 72,
+  'QUADRICEPS': 72,
+  'ISCHIOS & FESSIERS': 72,
+  'FESSIERS': 72,
+  'MOLLETS': 72,
+  'ABDOS': 24,
+  'ABDOS & LOMBAIRES': 24,
+  'BICEPS': 24,
+  'ÉPAULES': 48,
+  'TRICEPS': 48,
+  'AVANT-BRAS': 24,
+};
+const DEFAULT_RECOVERY_HOURS = 48;
+
+export interface MuscleRecoveryStatus {
+  group: string;
+  recoveryHours: number; // temps de récup recommandé pour ce groupe
+  hoursSince: number | null; // heures écoulées depuis la dernière fois travaillé (null = jamais)
+  hoursRemaining: number; // 0 si récupéré ou jamais travaillé
+  recovered: boolean; // true si jamais travaillé (rien à récupérer) ou délai écoulé
+}
+
+/**
+ * Pour chaque groupe musculaire du programme, calcule où il en est dans son
+ * cycle de récupération par rapport aux durées recommandées (RECOVERY_HOURS_BY_GROUP),
+ * en se basant sur la dernière séance réelle où il a été travaillé.
+ */
+export const getMuscleRecoveryStatus = (history: HistoryEntry[]): MuscleRecoveryStatus[] => {
+  const now = Date.now();
+  return ALL_MUSCLE_GROUPS.map((group) => {
+    let lastDate: number | null = null;
+    for (const entry of history) {
+      const worked = Object.entries(entry.exerciseProgress).some(
+        ([exId, sets]) => EXERCISE_MUSCLE_GROUP[exId] === group && sets.some((s) => s.completed)
+      );
+      if (worked) { lastDate = entry.date; break; } // history triée du + récent au + ancien
+    }
+    const recoveryHours = RECOVERY_HOURS_BY_GROUP[group] ?? DEFAULT_RECOVERY_HOURS;
+    if (lastDate === null) {
+      return { group, recoveryHours, hoursSince: null, hoursRemaining: 0, recovered: true };
+    }
+    const hoursSince = (now - lastDate) / 3600000;
+    const hoursRemaining = Math.max(0, Math.ceil(recoveryHours - hoursSince));
+    return { group, recoveryHours, hoursSince, hoursRemaining, recovered: hoursRemaining === 0 };
+  });
+};
+
 export interface MuscleGroupVolume {
   group: string;
   tonnage: number; // kg (poids × reps cumulés)
