@@ -5,58 +5,146 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ── CSS Variables ─────────────────────────────────────────────────────────── */
-/* Valeurs par défaut (Classique sombre). Les thèmes partagés avec l'app
-   Repas & Courses sont appliqués dynamiquement par src/data/themes.ts. */
+/* ─── CSS Variables ──────────────────────────────────────────────────────── */
 
 :root {
-  --bg-base: #0F172A;
-  --bg-gradient: linear-gradient(160deg, #0F172A, #1E293B);
-  --bg-surface: #1E293B;
-  --bg-card: #1E293B;
-  --bg-elevated: #1E293B;
-  --bg-higher: #1E293B;
-  --border-subtle: #334155;
-  --border: #334155;
-  --border-mid: #334155;
-  --border-strong: #334155;
-  --text-primary: #F9FAFB;
-  --text-secondary: #F9FAFB;
-  --text-muted: #94A3B8;
-  --text-dim: #94A3B8;
-  --text-micro: #94A3B8;
-  --overlay-bg: rgba(0,0,0,0.93);
-  --bg-red-tint: #F871711A;
-  --bg-red-input: #F871711F;
-  --bg-gold-tint: #FCD34D1F;
-  --bg-green-tint: #4ADE801F;
-  --bg-blue-tint: #60A5FA1F;
-  --border-gold-tint: #FCD34D40;
-  --border-green-tint: #4ADE8040;
-  --border-blue-tint: #60A5FA40;
-  --border-ss-tint: #4ADE8040;
-  --text-gold-label: #FCD34D;
-  --text-gold-body: #94A3B8;
-  --text-gold-footer: #94A3B8;
-  --text-ss-label: #4ADE80;
-  --text-ss-body: #94A3B8;
-  --scrollbar-track: transparent;
-  --scrollbar-thumb: #334155;
-  --accent: #818CF8;
-  --accent-2: #A78BFA;
-  --accent-contrast: #FFFFFF;
-  --num-color: #818CF8;
+  --brand-1: #e03030;
+  --brand-2: #9b27af;
+  --brand-1-rgb: 224,48,48;
+  --icon-radius: 14px;
+  --bg-base: #131318;
+  --bg-surface: #1d1d26;
+  --bg-card: #25252f;
+  --bg-elevated: #313140;
+  --bg-higher: #383848;
+  --border-subtle: #2c2c39;
+  --border: #363646;
+  --border-mid: #3e3e52;
+  --border-strong: #494962;
+  --text-primary: #ffffff;
+  --text-secondary: #d6d6e6;
+  --text-muted: #9797b0;
+  --text-dim: #6c6c88;
+  --text-micro: #4e4e66;
+  --overlay-bg: rgba(0,0,0,0.88);
+  --bg-red-tint: #1c0e0e;
+  --bg-red-input: #211010;
+  --bg-gold-tint: #141008;
+  --bg-green-tint: #0e200e;
+  --bg-blue-tint: #0e0e18;
+  --border-gold-tint: #2e2210;
+  --border-green-tint: #1c3e1c;
+  --border-blue-tint: #1c1c2e;
+  --border-ss-tint: #1c2018;
+  --text-gold-label: #8a6820;
+  --text-gold-body: #5a4418;
+  --text-gold-footer: #443010;
+  --text-ss-label: #446844;
+  --text-ss-body: #2e422e;
+  --scrollbar-track: #111;
+  --scrollbar-thumb: #2a2a2a;
+  --glass-bg: rgba(40,40,52,0.55);
+  --glass-border: rgba(255,255,255,0.14);
+  --glass-highlight: rgba(255,255,255,0.18);
+}
+
+[data-theme="light"] {
+  --bg-base: #f2f2f7;
+  --bg-surface: #ffffff;
+  --bg-card: #f6f6fb;
+  --bg-elevated: #ebebf2;
+  --bg-higher: #e4e4ec;
+  --border-subtle: #e8e8f0;
+  --border: #dddde8;
+  --border-mid: #d4d4e0;
+  --border-strong: #c8c8d8;
+  --text-primary: #0d0d16;
+  --text-secondary: #2a2a3c;
+  --text-muted: #777788;
+  --text-dim: #aaaabc;
+  --text-micro: #ccccda;
+  --overlay-bg: rgba(180,180,205,0.9);
+  --bg-red-tint: #fff0f0;
+  --bg-red-input: #fff4f4;
+  --bg-gold-tint: #fffaee;
+  --bg-green-tint: #f0fff4;
+  --bg-blue-tint: #f0f0ff;
+  --border-gold-tint: #e8d8a0;
+  --border-green-tint: #a8dca8;
+  --border-blue-tint: #c0c0f0;
+  --border-ss-tint: #b8dcb8;
+  --text-gold-label: #6b4800;
+  --text-gold-body: #4a3000;
+  --text-gold-footer: #3a2400;
+  --text-ss-label: #1a6a1a;
+  --text-ss-body: #1a4a1a;
+  --scrollbar-track: #e0e0e8;
+  --scrollbar-thumb: #b8b8c8;
+  --glass-bg: rgba(255,255,255,0.55);
+  --glass-border: rgba(255,255,255,0.6);
+  --glass-highlight: rgba(255,255,255,0.85);
+}
+
+/* ─── Contraste élevé (réglage accessibilité) ───────────────────────────── */
+[data-contrast="high"] {
+  --text-secondary: #ffffff;
+  --text-muted: #c8c8dc;
+  --text-dim: #a0a0ba;
+  --text-micro: #82829e;
+  --border-subtle: #40404e;
+  --border: #4c4c5e;
+  --border-mid: #565670;
+  --border-strong: #6a6a86;
+}
+[data-theme="light"][data-contrast="high"] {
+  --text-secondary: #000000;
+  --text-muted: #38384a;
+  --text-dim: #5c5c72;
+  --text-micro: #7c7c92;
+  --border-subtle: #c0c0d2;
+  --border: #adadc4;
+  --border-mid: #9898b4;
+  --border-strong: #8080a0;
+}
+
+/* ─── Noir pur / AMOLED (réglage accueil) ───────────────────────────────── */
+/* Ne s'applique qu'en thème sombre — inutile en thème clair. */
+[data-theme="dark"][data-amoled="on"] {
+  --bg-base: #000000;
+  --bg-surface: #060606;
+  --bg-card: #0b0b0b;
+  --bg-elevated: #141414;
+  --bg-higher: #1c1c1c;
+  --border-subtle: #161616;
+  --border: #202020;
+  --border-mid: #2a2a2a;
+  --border-strong: #383838;
 }
 
 html, body, #root {
   height: 100%;
-  background: var(--bg-gradient, var(--bg-base));
-  background-attachment: fixed;
+  background: var(--bg-base);
   color: var(--text-primary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
 }
+
+/* Empêche le body de scroller en plus des écrans internes (chaque écran
+   gère son propre scroll en 100dvh). Sans ça, sur mobile, atteindre le
+   haut/bas d'un écran peut faire "glisser" la page entière derrière (bug
+   visuel/du contenu qui saute) — un scroll imbriqué qu'on désactive ici. */
+html, body {
+  position: fixed;
+  overflow: hidden;
+  width: 100%;
+  overscroll-behavior-y: none;
+}
+
+/* ─── Taille du texte (réglage utilisateur) ─────────────────────────────── */
+:root[data-font-scale="sm"] #root { zoom: 0.92; }
+:root[data-font-scale="md"] #root { zoom: 1; }
+:root[data-font-scale="lg"] #root { zoom: 1.14; }
 
 input, button {
   font-family: inherit;
@@ -73,42 +161,60 @@ button { cursor: pointer; }
 
 .tabular { font-variant-numeric: tabular-nums; }
 
-/* ── Animations ─────────────────────────────────────────────────────────────── */
+/* ─── Animations ─────────────────────────────────────────────────────────── */
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .fade-in { animation: fadeIn 0.25s cubic-bezier(0.34, 1.2, 0.64, 1); }
 
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .slide-up { animation: slideUp 0.3s cubic-bezier(0.34, 1.2, 0.64, 1) both; }
 
 @keyframes checkPop {
-  0%   { transform: scale(0.4); opacity: 0; }
-  60%  { transform: scale(1.2); }
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.2); }
   100% { transform: scale(1); opacity: 1; }
 }
 .check-pop { animation: checkPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
 @keyframes glowPulse {
-  0%, 100% { box-shadow: 0 0 0 0 transparent; }
-  50%       { box-shadow: 0 0 20px 4px color-mix(in srgb, var(--accent) 15%, transparent); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--brand-1-rgb), 0); }
+  50% { box-shadow: 0 0 20px 4px rgba(var(--brand-1-rgb), 0.15); }
 }
 
 @keyframes borderGlow {
-  0%, 100% { border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
-  50%       { border-color: color-mix(in srgb, var(--accent) 75%, transparent); }
+  0%, 100% { border-color: rgba(var(--brand-1-rgb), 0.35); }
+  50% { border-color: rgba(var(--brand-1-rgb), 0.75); }
 }
 
 @keyframes amberPulse {
   0%, 100% { opacity: 1; }
-  50%       { opacity: 0.7; }
+  50% { opacity: 0.7; }
 }
 .amber-pulse { animation: amberPulse 1.8s ease-in-out infinite; }
+
+/* ─── Iridescent animé (titre PPL Tracker) ──────────────────────────────── */
+@keyframes irise {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.titre-irise {
+  background: linear-gradient(
+    270deg,
+    #ff3cac, #e03030, #ff8c00, #7928ca, #4353ff, #39c5bb, #7928ca, #e03030, #ff3cac
+  );
+  background-size: 400% 400%;
+  animation: irise 5s ease infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
 
 .workout-card {
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
@@ -131,8 +237,8 @@ button { cursor: pointer; }
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .input-field:focus-within {
-  border-color: color-mix(in srgb, var(--accent) 50%, transparent) !important;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent) !important;
+  border-color: rgba(var(--brand-1-rgb), 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(var(--brand-1-rgb), 0.1) !important;
 }
 
 .validate-btn {
@@ -140,7 +246,7 @@ button { cursor: pointer; }
 }
 .validate-btn:not(:disabled):hover {
   transform: scale(1.1);
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 6px 18px rgba(var(--brand-1-rgb), 0.45);
 }
 .validate-btn:not(:disabled):active { transform: scale(0.92); }
 
@@ -163,3 +269,174 @@ button { cursor: pointer; }
 
 .warmup-check { transition: background 0.2s, border-color 0.2s, transform 0.15s; }
 .warmup-check:active { transform: scale(0.9); }
+
+/* ─── Barre de repos inline (entre les séries) ──────────────────────────── */
+@keyframes restBarBlink {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(76,175,80,0); border-color: rgba(76,175,80,0.35); }
+  50% { box-shadow: 0 0 0 5px rgba(76,175,80,0.18); border-color: rgba(76,175,80,0.85); }
+}
+.rest-bar-blink { animation: restBarBlink 0.8s ease-in-out infinite; }
+
+.rest-bar-btn { transition: background 0.15s, transform 0.1s; }
+.rest-bar-btn:hover { background: var(--bg-higher) !important; }
+.rest-bar-btn:active { transform: scale(0.94); }
+
+/* ─── Barre de navigation liquid glass ──────────────────────────────────── */
+/* Base : flou dépoli classique, fonctionne sur tous les navigateurs (c'est
+   ce que verra Léo sur iPhone — voir NavBar.tsx pour l'explication). */
+.navbar-glass {
+  backdrop-filter: blur(18px) saturate(180%) brightness(1.05);
+  -webkit-backdrop-filter: blur(18px) saturate(180%) brightness(1.05);
+}
+/* Amélioration : distorsion réelle du fond via filtre SVG. Déclarée après
+   la règle du dessus donc prioritaire quand la classe est ajoutée — n'est
+   ajoutée par NavBar.tsx que sur Chrome/Edge desktop (Safari et tout iPhone
+   ignorent silencieusement backdrop-filter: url(...), d'où le besoin de
+   cette classe séparée plutôt qu'une seule règle). */
+.navbar-glass-refract {
+  backdrop-filter: url(#liquidGlassNav) blur(9px) saturate(180%) brightness(1.05);
+  -webkit-backdrop-filter: url(#liquidGlassNav) blur(9px) saturate(180%) brightness(1.05);
+}
+
+/* ─── Écran de démarrage (splash "PPL") ─────────────────────────────────── */
+@keyframes splashBadgePop {
+  0% { transform: scale(0.4) rotate(-8deg); opacity: 0; }
+  60% { transform: scale(1.08) rotate(2deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+@keyframes splashLetterIn {
+  0% { transform: translateY(28px) scale(0.7); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes splashSubFade {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+.splash-screen {
+  animation: fadeIn 0.2s ease both;
+}
+.splash-badge {
+  animation: splashBadgePop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.splash-letter {
+  display: inline-block;
+  animation: splashLetterIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.splash-sub {
+  animation: splashSubFade 0.4s ease 0.4s both;
+}
+.splash-fade {
+  animation: splashFadeOut 0.35s ease forwards;
+  pointer-events: none;
+}
+@keyframes splashFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* ─── Ultra animations (réglage optionnel, Réglages → Personnalisation) ──── */
+/* Version plus spectaculaire de la transition d'écran standard (.fade-in) :
+   rebond + légère rotation, pour un effet "waouh" à chaque changement de vue. */
+@keyframes ultraFadeIn {
+  0% { opacity: 0; transform: translateY(28px) scale(0.88) rotate(-3deg); }
+  55% { opacity: 1; transform: translateY(-6px) scale(1.03) rotate(1.5deg); }
+  80% { transform: translateY(2px) scale(0.99) rotate(-0.5deg); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+}
+.ultra-fade-in { animation: ultraFadeIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* Glissement — l'écran entre depuis la droite. */
+@keyframes ultraSlideIn {
+  0%   { opacity: 0; transform: translateX(70px); }
+  60%  { opacity: 1; transform: translateX(-10px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+.ultra-slide-in { animation: ultraSlideIn 0.5s cubic-bezier(0.34, 1.2, 0.64, 1) both; }
+
+/* Zoom — l'écran grossit depuis un point plus petit. */
+@keyframes ultraZoomIn {
+  0%   { opacity: 0; transform: scale(0.72); }
+  60%  { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.ultra-zoom-in { animation: ultraZoomIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* Rotation — léger flip 3D façon carte qui se retourne. */
+@keyframes ultraFlipIn {
+  0%   { opacity: 0; transform: perspective(900px) rotateY(-40deg); }
+  100% { opacity: 1; transform: perspective(900px) rotateY(0deg); }
+}
+.ultra-flip-in { animation: ultraFlipIn 0.5s cubic-bezier(0.34, 1.2, 0.64, 1) both; }
+
+/* Halo pulsant multicolore — utilisé sur la bannière de record et le trophée
+   de fin de séance quand le mode ultra est actif. */
+@keyframes ultraGlowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,140,0,0), 0 0 0 0 rgba(255,255,255,0); filter: brightness(1); }
+  50% { box-shadow: 0 0 34px 10px rgba(255,140,0,0.45), 0 0 14px 3px rgba(255,255,255,0.3); filter: brightness(1.08); }
+}
+.ultra-glow { animation: ultraGlowPulse 1.3s ease-in-out infinite; }
+
+/* Pop d'entrée plus rebondissant (remplace check-pop en mode ultra). */
+@keyframes ultraPop {
+  0% { transform: scale(0.3) rotate(-18deg); opacity: 0; }
+  50% { transform: scale(1.35) rotate(6deg); }
+  75% { transform: scale(0.9) rotate(-3deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.ultra-pop { animation: ultraPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* Pop + halo combinés sur un même élément (bannière PR, trophée fin de
+   séance). Nécessaire en une seule classe car `.ultra-pop` et `.ultra-glow`
+   posent chacun `animation` en shorthand : les mettre toutes les deux sur
+   le même élément ferait que la règle la plus tardive (ultra-pop) écrase
+   entièrement l'animation de glow, qui ne jouerait alors jamais. */
+.ultra-pop-glow {
+  animation: ultraPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), ultraGlowPulse 1.3s ease-in-out infinite;
+}
+
+/* Petites étincelles qui apparaissent et tournent sur elles-mêmes. */
+@keyframes sparklePop {
+  0% { transform: scale(0) rotate(0deg); opacity: 0; }
+  40% { transform: scale(1.25) rotate(110deg); opacity: 1; }
+  100% { transform: scale(0.7) rotate(200deg); opacity: 0; }
+}
+.sparkle-pop { animation: sparklePop 0.7s ease-out forwards; }
+
+/* Confettis qui tombent en tournoyant — voir components/ConfettiBurst.tsx. */
+@keyframes confettiFall {
+  0% { transform: translateY(-24px) rotate(0deg); opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(420px) rotate(720deg); opacity: 0; }
+}
+.confetti-piece {
+  position: absolute; top: 0; will-change: transform, opacity;
+  animation-name: confettiFall; animation-timing-function: ease-in; animation-fill-mode: forwards;
+}
+
+/* Feu d'artifice — particules qui jaillissent depuis le centre de l'écran
+   dans une direction aléatoire (--fx/--fy fixés par particule en JS, voir
+   ConfettiBurst.tsx). */
+@keyframes fireworkBurst {
+  0%   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) scale(0.3); opacity: 0; }
+}
+.firework-piece {
+  position: absolute; top: 50%; left: 50%; border-radius: 50%; will-change: transform, opacity;
+  animation-name: fireworkBurst; animation-timing-function: cubic-bezier(0.15, 0.6, 0.4, 1); animation-fill-mode: forwards;
+}
+
+/* Étincelles ✨ dispersées sur l'écran — réutilise @keyframes sparklePop
+   ci-dessus, en variante positionnée/durée par particule (ConfettiBurst.tsx). */
+.sparkle-piece {
+  position: absolute; will-change: transform, opacity;
+  animation-name: sparklePop; animation-timing-function: ease-out; animation-fill-mode: forwards;
+}
+
+/* Staggered pop-in utilisé pour les blocs de stats de l'écran de fin de
+   séance en mode ultra (chaque bloc apparaît un peu après le précédent). */
+@keyframes ultraStatIn {
+  0% { opacity: 0; transform: translateY(18px) scale(0.85); }
+  60% { opacity: 1; transform: translateY(-3px) scale(1.04); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.ultra-stat-in { animation: ultraStatIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
