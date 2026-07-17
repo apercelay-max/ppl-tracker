@@ -208,6 +208,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
   const setNavBarEnabled = useWorkoutStore((s) => s.setNavBarEnabled);
   const navBarTabsEnabled = useWorkoutStore((s) => s.navBarTabsEnabled);
   const setNavBarTabEnabled = useWorkoutStore((s) => s.setNavBarTabEnabled);
+  const navBarPinned = useWorkoutStore((s) => s.navBarPinned);
+  const setNavBarTabPinned = useWorkoutStore((s) => s.setNavBarTabPinned);
   const activeProgramId = useWorkoutStore((s) => s.activeProgramId);
   const setActiveProgram = useWorkoutStore((s) => s.setActiveProgram);
   const customPrograms = useWorkoutStore((s) => s.customPrograms);
@@ -971,7 +973,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
                 </div>
 
                 {/* Navigation (ex-catégorie séparée) */}
-                <p style={{ ...subLabel, marginTop: 20 }}>NAVIGATION</p>
+                <p style={{ ...subLabel, marginTop: 20 }}>BARRE DE MENUS</p>
                 <div style={toggleRow}>
                   <div style={{ flex: 1 }}>
                     <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Barre de navigation (Liquid Glass)</p>
@@ -994,15 +996,32 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAc
                 {navBarEnabled && (
                   <div style={{ marginTop: 8 }}>
                     <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
-                      Choisis les onglets affichés dans la barre. Réglages reste toujours accessible, quoi qu'il arrive.
+                      Choisis les onglets affichés dans la barre. Pour chaque onglet actif, choisis s'il reste épinglé directement dans la barre ou s'il passe dans le bouton + (pratique quand la barre est trop chargée). Réglages reste toujours accessible, quoi qu'il arrive.
                     </p>
                     {NAV_TAB_META.map((tab) => {
                       const enabled = navBarTabsEnabled[tab.id];
+                      const pinned = navBarPinned[tab.id];
                       return (
                         <div key={tab.id} style={toggleRow}>
                           <div style={{ flex: 1 }}>
                             <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>{tab.emoji} {tab.label}</p>
                           </div>
+                          {enabled && (
+                            <button
+                              onClick={() => setNavBarTabPinned(tab.id, !pinned)}
+                              style={{
+                                ...restBtn,
+                                flex: '0 0 auto',
+                                width: 'auto',
+                                padding: '6px 10px',
+                                fontSize: 11,
+                                color: pinned ? 'var(--text-muted)' : 'var(--brand-1)',
+                              }}
+                              title={pinned ? "Dans la barre — appuie pour mettre dans le +" : "Dans le + — appuie pour épingler dans la barre"}
+                            >
+                              {pinned ? 'Barre' : 'Dans le +'}
+                            </button>
+                          )}
                           <button
                             onClick={() => setNavBarTabEnabled(tab.id, !enabled)}
                             style={{
