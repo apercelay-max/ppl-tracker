@@ -91,3 +91,13 @@ export const SlidersIcon: React.FC<IconProps> = ({ size = 18 }) => (
     <circle cx="7.5" cy="17.5" r="2" fill="currentColor" />
   </svg>
 );
+
+// Icône "+" — bouton "Plus d'options" de la barre de navigation, quand des
+// onglets sont mis derrière un tiroir plutôt qu'épinglés (voir Réglages →
+// Apparence → Barre de menus).
+export const PlusIcon: React.FC<IconProps> = ({ size = 18 }) => (
+  <svg width={size} height={size} {...base}>
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+);
