@@ -3,7 +3,7 @@ import { useWorkoutStore } from '../store/workoutStore';
 import type { NavTabKey } from '../data/types';
 import {
   HomeIcon, TargetIcon, CalendarIcon, HeartPulseIcon,
-  DumbbellIcon, ScaleIcon, ChartIcon, UserIcon, SlidersIcon,
+  DumbbellIcon, ScaleIcon, ChartIcon, UserIcon, SlidersIcon, PlusIcon,
 } from './NavIcons';
 
 // Le schéma corporel ("Corps") vit maintenant dans l'écran Objectifs (section
@@ -68,23 +68,69 @@ export const NavBar: React.FC<NavBarProps> = ({ active, onNavigate }) => {
   const [refraction, setRefraction] = useState(false);
   useEffect(() => { setRefraction(supportsLiquidRefraction()); }, []);
   const navBarTabsEnabled = useWorkoutStore((s) => s.navBarTabsEnabled);
+  const navBarPinned = useWorkoutStore((s) => s.navBarPinned);
+  const [moreOpen, setMoreOpen] = useState(false);
   // "Réglages" reste toujours affiché, même désactivé — sinon on n'a plus
   // aucun moyen de rallumer les autres onglets depuis la barre.
   const visibleTabs = TABS.filter((tab) => tab.id === 'settings' || navBarTabsEnabled[tab.id]);
+  // Parmi les onglets visibles, certains restent épinglés directement dans la
+  // barre ; les autres passent derrière le bouton + (voir Réglages →
+  // Apparence → Barre de menus), pratique quand la barre est trop chargée.
+  // "Réglages" reste toujours épinglé — sinon on perdrait l'accès au réglage
+  // qui permet justement de gérer cette répartition.
+  const pinnedTabs = visibleTabs.filter((tab) => tab.id === 'settings' || navBarPinned[tab.id]);
+  const overflowTabs = visibleTabs.filter((tab) => tab.id !== 'settings' && !navBarPinned[tab.id]);
+  const isOverflowActive = overflowTabs.some((tab) => tab.id === active);
+
+  useEffect(() => { setMoreOpen(false); }, [active]);
+
+  const handleNavigate = (view: NavView) => {
+    setMoreOpen(false);
+    onNavigate(view);
+  };
 
   return (
     <div style={wrapper}>
+      {moreOpen && overflowTabs.length > 0 && (
+        <>
+          {/* Fond invisible pour fermer le tiroir en touchant en dehors */}
+          <div style={backdrop} onClick={() => setMoreOpen(false)} />
+          <div className="navbar-glass" style={drawer}>
+            {overflowTabs.map((tab) => {
+              const isActive = tab.id === active;
+              const Icon = TAB_ICONS[tab.id];
+              return (
+                <button key={tab.id} onClick={() => handleNavigate(tab.id)} style={drawerBtn} aria-label={tab.label}>
+                  <span
+                    style={{
+                      ...iconPill,
+                      background: isActive ? 'linear-gradient(135deg, var(--brand-1), var(--brand-2))' : 'transparent',
+                      color: isActive ? '#fff' : 'var(--text-muted)',
+                    }}
+                  >
+                    <Icon size={17} />
+                  </span>
+                  <span style={{ fontSize: 10, fontWeight: isActive ? 800 : 600, color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                    {tab.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+
       <div className={`navbar-glass${refraction ? ' navbar-glass-refract' : ''}`} style={glass}>
         {/* Reflet spéculaire du haut — fonctionne partout (pur dégradé CSS) */}
         <div style={sheen} />
 
-        {visibleTabs.map((tab) => {
+        {pinnedTabs.map((tab) => {
           const isActive = tab.id === active;
           const Icon = TAB_ICONS[tab.id];
           return (
             <button
               key={tab.id}
-              onClick={() => onNavigate(tab.id)}
+              onClick={() => handleNavigate(tab.id)}
               style={tabBtn}
               aria-label={tab.label}
             >
@@ -110,6 +156,25 @@ export const NavBar: React.FC<NavBarProps> = ({ active, onNavigate }) => {
             </button>
           );
         })}
+
+        {overflowTabs.length > 0 && (
+          <button onClick={() => setMoreOpen((v) => !v)} style={tabBtn} aria-label="Plus d'options">
+            <span
+              style={{
+                ...iconPill,
+                background: (moreOpen || isOverflowActive) ? 'linear-gradient(135deg, var(--brand-1), var(--brand-2))' : 'transparent',
+                boxShadow: (moreOpen || isOverflowActive) ? '0 2px 8px rgba(var(--brand-1-rgb), 0.45)' : 'none',
+                transform: (moreOpen || isOverflowActive) ? 'translateY(-1px) scale(1)' : 'scale(0.94)',
+                color: (moreOpen || isOverflowActive) ? '#fff' : 'var(--text-muted)',
+              }}
+            >
+              <PlusIcon size={17} />
+            </span>
+            <span style={{ ...tabLabel, color: (moreOpen || isOverflowActive) ? 'var(--text-primary)' : 'transparent', fontWeight: (moreOpen || isOverflowActive) ? 800 : 600 }}>
+              {(moreOpen || isOverflowActive) ? 'Plus' : ' '}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Filtre SVG de distorsion — invisible, référencé via backdrop-filter
@@ -143,6 +208,7 @@ const glass: React.CSSProperties = {
   position: 'relative',
   overflow: 'hidden',
   pointerEvents: 'auto',
+  zIndex: 2,
   display: 'flex',
   alignItems: 'center',
   gap: 3,
@@ -191,4 +257,32 @@ const tabLabel: React.CSSProperties = {
   fontSize: 8,
   letterSpacing: 0.15,
   transition: 'color 0.15s ease',
+};
+
+const backdrop: React.CSSProperties = {
+  position: 'fixed', inset: 0, zIndex: 1, pointerEvents: 'auto',
+};
+
+const drawer: React.CSSProperties = {
+  position: 'fixed',
+  left: '50%',
+  bottom: 'calc(max(10px, env(safe-area-inset-bottom)) + 70px)',
+  transform: 'translateX(-50%)',
+  zIndex: 3,
+  pointerEvents: 'auto',
+  display: 'grid',
+  gridTemplateColumns: 'repeat(4, 1fr)',
+  gap: 2,
+  padding: 10,
+  borderRadius: 20,
+  maxWidth: 320,
+  width: 'max-content',
+  background: 'var(--glass-bg)',
+  border: '1px solid var(--glass-border)',
+  boxShadow: '0 -1px 0 var(--glass-highlight) inset, 0 6px 24px rgba(0,0,0,0.35)',
+};
+
+const drawerBtn: React.CSSProperties = {
+  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+  padding: '8px 6px', background: 'transparent', border: 'none', cursor: 'pointer', minWidth: 60,
 };
