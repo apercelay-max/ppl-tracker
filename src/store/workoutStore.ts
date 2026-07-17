@@ -176,6 +176,15 @@ const DEFAULT_NAV_TABS_ENABLED: Record<NavTabKey, boolean> = {
   exercices: true, poids: true, dashboard: true, profil: true, settings: true,
 };
 
+// Parmi les onglets activés, ceux qui restent épinglés directement dans la
+// barre plutôt que derrière le bouton + (voir Réglages → Apparence → Barre
+// de menus). Tout épinglé par défaut : rien ne change tant que Léo ne
+// personnalise pas la répartition lui-même.
+const DEFAULT_NAV_TABS_PINNED: Record<NavTabKey, boolean> = {
+  home: true, objectifs: true, historique: true, cardio: true,
+  exercices: true, poids: true, dashboard: true, profil: true, settings: true,
+};
+
 interface WorkoutStore {
   session: WorkoutSession | null;
   timer: TimerState;
@@ -213,6 +222,7 @@ interface WorkoutStore {
   homeSectionColors: Partial<Record<HomeSectionKey, string>>;
   navBarEnabled: boolean;
   navBarTabsEnabled: Record<NavTabKey, boolean>;
+  navBarPinned: Record<NavTabKey, boolean>;
   bodyWeightHistory: BodyWeightEntry[];
   activeProgramId: string;
   customPrograms: Program[];
@@ -273,6 +283,7 @@ interface WorkoutStore {
   setHomeSectionColor: (key: HomeSectionKey, hex: string | null) => void;
   setNavBarEnabled: (enabled: boolean) => void;
   setNavBarTabEnabled: (key: NavTabKey, enabled: boolean) => void;
+  setNavBarTabPinned: (key: NavTabKey, pinned: boolean) => void;
   addBodyWeightEntry: (weightKg: number) => void;
   deleteBodyWeightEntry: (id: string) => void;
   setActiveProgram: (id: string) => void;
@@ -338,6 +349,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
       homeSectionColors: {},
       navBarEnabled: false,
       navBarTabsEnabled: { ...DEFAULT_NAV_TABS_ENABLED },
+      navBarPinned: { ...DEFAULT_NAV_TABS_PINNED },
       bodyWeightHistory: [],
       activeProgramId: 'strict-v10',
       customPrograms: [],
@@ -680,6 +692,9 @@ export const useWorkoutStore = create<WorkoutStore>()(
       setNavBarTabEnabled: (key, enabled) => {
         set((state) => ({ navBarTabsEnabled: { ...state.navBarTabsEnabled, [key]: enabled } }));
       },
+      setNavBarTabPinned: (key, pinned) => {
+        set((state) => ({ navBarPinned: { ...state.navBarPinned, [key]: pinned } }));
+      },
 
       addBodyWeightEntry: (weightKg) => {
         const entry: BodyWeightEntry = { id: `bw-${Date.now()}`, date: Date.now(), weightKg };
@@ -754,6 +769,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         homeSectionColors: state.homeSectionColors,
         navBarEnabled: state.navBarEnabled,
         navBarTabsEnabled: state.navBarTabsEnabled,
+        navBarPinned: state.navBarPinned,
         bodyWeightHistory: state.bodyWeightHistory,
         activeProgramId: state.activeProgramId,
         customPrograms: state.customPrograms,
@@ -783,6 +799,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         // ajouté plus tard (ex: Profil) doit apparaître actif par défaut
         // pour les téléphones qui ont déjà une sauvegarde, pas disparaître.
         merged.navBarTabsEnabled = { ...DEFAULT_NAV_TABS_ENABLED, ...(p.navBarTabsEnabled ?? {}) };
+        merged.navBarPinned = { ...DEFAULT_NAV_TABS_PINNED, ...(p.navBarPinned ?? {}) };
         merged.activeProgramId = p.activeProgramId ?? 'strict-v10';
         merged.customPrograms = p.customPrograms ?? [];
         // Remplit tout de suite le registre des séances importées, pour que
