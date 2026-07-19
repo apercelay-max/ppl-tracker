@@ -3,15 +3,17 @@ import { WORKOUTS } from './workouts';
 import { PPL_DEBUTANT_WORKOUTS, FULL_BODY_WORKOUTS, FORCE_5X5_WORKOUTS } from './extraPrograms';
 
 // ─── Programmes sélectionnables (Réglages → Programme d'entraînement) ─────
-// "Strict V10" est le programme historique de l'appli, toujours présent en
-// premier et jamais modifié. Les autres sont des trames additionnelles,
-// proposées en plus — changer de programme actif ne supprime jamais les
-// autres, ni l'historique déjà enregistré (voir workoutStore.ts).
+// "Strict V11" est le programme historique de l'appli (ex-V10), toujours
+// présent en premier — c'est le programme réellement suivi par Léo, mis à
+// jour au fil des versions envoyées (V10 → V11 le 19/07/2026). Les autres
+// sont des trames additionnelles, proposées en plus — changer de programme
+// actif ne supprime jamais les autres, ni l'historique déjà enregistré
+// (voir workoutStore.ts).
 
 export interface Program {
   id: string;
   name: string;
-  focusLabel: string; // sous-titre affiché sur l'accueil, ex. "Strict V10 · Hypertrophie"
+  focusLabel: string; // sous-titre affiché sur l'accueil, ex. "Strict V11 · Hypertrophie"
   shortDescription: string;
   source: string; // note honnête d'origine/inspiration, affichée dans Réglages
   isCustom?: boolean; // true pour un programme importé par l'utilisateur
@@ -22,10 +24,10 @@ export interface Program {
 
 export const STRICT_V10_PROGRAM: Program = {
   id: 'strict-v10',
-  name: 'Strict V10',
-  focusLabel: 'Strict V10 · Hypertrophie',
-  shortDescription: '6 séances (Pull/Push/Legs x2), hypertrophie, supersets ciblés.',
-  source: 'Le programme original de l\'appli.',
+  name: 'Strict V11',
+  focusLabel: 'Strict V11 · Hypertrophie',
+  shortDescription: '6 séances (Pull/Push/Legs x2), hypertrophie, supersets ciblés. Actuellement en Phase 0 — décharge (16→23/07).',
+  source: 'Le programme de Léo, mis à jour de V10 vers V11 le 19/07/2026.',
   workouts: WORKOUTS,
   dayAccents: {
     'pull-a': '#7c6fcd', 'push-a': '#e03030', 'legs-a': '#e8a020',
