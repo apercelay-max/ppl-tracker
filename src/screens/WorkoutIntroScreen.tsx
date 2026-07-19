@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getWorkout } from '../data/workouts';
 import { Exercise } from '../data/types';
 import { getMuscleRecoveryStatus } from '../utils/training';
@@ -27,15 +27,62 @@ const formatRest = (seconds: number): string => {
   return rest === 0 ? `${min} min` : `${min} min ${rest} s`;
 };
 
+const CLOSE_DRAG_THRESHOLD = 90; // px glissés vers le bas pour fermer la fiche
+const SHEET_TRANSITION = 'transform 260ms cubic-bezier(0.32, 0.72, 0, 1)';
+
 // Écran d'aperçu affiché avant de démarrer une séance (style "Forme" /
 // Apple Fitness+) : on voit le programme du jour et on ne rentre dans le
 // minuteur/les séries qu'après avoir appuyé sur Démarrer. Un tap sur un
-// exercice ouvre une fiche détaillée (bottom sheet) avec toutes les infos
-// utiles avant de commencer (repos, superset, poids de départ, notes).
+// exercice ouvre une fiche détaillée (bottom sheet, glisse depuis le bas,
+// même comportement que la barre de repos pendant la séance) avec toutes
+// les infos utiles avant de commencer (repos, superset, poids de départ,
+// notes) — on peut la fermer en tapant le fond, la croix, ou en glissant
+// la petite barre du haut vers le bas.
 export const WorkoutIntroScreen: React.FC<WorkoutIntroScreenProps> = ({ dayId, onBack, onStart }) => {
   const history = useWorkoutStore((s) => s.history);
   const workout = getWorkout(dayId);
   const [detailExercise, setDetailExercise] = useState<Exercise | null>(null);
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartY = useRef(0);
+
+  // Anime l'ouverture : on monte le sheet hors écran (translateY 100%) puis,
+  // une fois monté dans le DOM, on bascule sur place au frame suivant pour
+  // que la transition CSS ait quelque chose à animer.
+  useEffect(() => {
+    if (detailExercise) {
+      setDragY(0);
+      const id = requestAnimationFrame(() => setSheetVisible(true));
+      return () => cancelAnimationFrame(id);
+    }
+    setSheetVisible(false);
+  }, [detailExercise]);
+
+  const closeSheet = () => {
+    setSheetVisible(false);
+    setTimeout(() => setDetailExercise(null), 240);
+  };
+
+  const onHandlePointerDown = (e: React.PointerEvent) => {
+    setIsDragging(true);
+    dragStartY.current = e.clientY;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onHandlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    setDragY(Math.max(0, e.clientY - dragStartY.current));
+  };
+  const onHandlePointerUp = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    if (dragY > CLOSE_DRAG_THRESHOLD) {
+      closeSheet();
+    } else {
+      setDragY(0);
+    }
+  };
+
   if (!workout) return null;
 
   const accent = DAY_ACCENT[dayId] ?? '#7a7a90';
@@ -115,15 +162,33 @@ export const WorkoutIntroScreen: React.FC<WorkoutIntroScreenProps> = ({ dayId, o
       </div>
 
       {detailExercise && (
-        <div style={sheetBackdrop} onClick={() => setDetailExercise(null)}>
-          <div style={sheetCard} onClick={(e) => e.stopPropagation()}>
-            <div style={sheetHandle} />
+        <div
+          style={{ ...sheetBackdrop, opacity: sheetVisible ? 1 : 0, transition: 'opacity 240ms ease' }}
+          onClick={closeSheet}
+        >
+          <div
+            style={{
+              ...sheetCard,
+              transform: sheetVisible ? `translateY(${dragY}px)` : 'translateY(100%)',
+              transition: isDragging ? 'none' : SHEET_TRANSITION,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={sheetHandleZone}
+              onPointerDown={onHandlePointerDown}
+              onPointerMove={onHandlePointerMove}
+              onPointerUp={onHandlePointerUp}
+              onPointerCancel={onHandlePointerUp}
+            >
+              <div style={sheetHandle} />
+            </div>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
               <div>
                 <p style={{ color: accent, fontSize: 11, fontWeight: 800, letterSpacing: 1 }}>{detailExercise.muscleGroup}</p>
                 <h2 style={{ color: 'var(--text-primary)', fontSize: 20, fontWeight: 800, marginTop: 4 }}>{detailExercise.name}</h2>
               </div>
-              <button onClick={() => setDetailExercise(null)} style={closeBtn}>✕</button>
+              <button onClick={closeSheet} style={closeBtn}>✕</button>
             </div>
 
             <div style={detailStatsRow}>
@@ -231,12 +296,16 @@ const sheetBackdrop: React.CSSProperties = {
 };
 const sheetCard: React.CSSProperties = {
   width: '100%', maxWidth: 480, background: 'var(--bg-card)',
-  borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: '10px 20px max(20px, env(safe-area-inset-bottom))',
+  borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: '0 20px max(20px, env(safe-area-inset-bottom))',
   border: '1px solid var(--border-mid)', borderBottom: 'none',
-  maxHeight: '75vh', overflowY: 'auto',
+  maxHeight: '75vh', overflowY: 'auto', willChange: 'transform',
+};
+const sheetHandleZone: React.CSSProperties = {
+  padding: '10px 0 16px', margin: '0 -20px', touchAction: 'none', cursor: 'grab',
+  display: 'flex', justifyContent: 'center',
 };
 const sheetHandle: React.CSSProperties = {
-  width: 36, height: 4, borderRadius: 2, background: 'var(--border-strong)', margin: '4px auto 16px',
+  width: 36, height: 4, borderRadius: 2, background: 'var(--border-strong)',
 };
 const closeBtn: React.CSSProperties = {
   width: 30, height: 30, borderRadius: 15, background: 'var(--bg-elevated)',
