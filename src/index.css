@@ -347,23 +347,23 @@ button { cursor: pointer; }
 
 /* Glissement — l'écran entre depuis la droite. */
 @keyframes ultraSlideIn {
-  0%   { opacity: 0; transform: translateX(70px); }
-  60%  { opacity: 1; transform: translateX(-10px); }
+  0% { opacity: 0; transform: translateX(70px); }
+  60% { opacity: 1; transform: translateX(-10px); }
   100% { opacity: 1; transform: translateX(0); }
 }
 .ultra-slide-in { animation: ultraSlideIn 0.5s cubic-bezier(0.34, 1.2, 0.64, 1) both; }
 
 /* Zoom — l'écran grossit depuis un point plus petit. */
 @keyframes ultraZoomIn {
-  0%   { opacity: 0; transform: scale(0.72); }
-  60%  { opacity: 1; transform: scale(1.05); }
+  0% { opacity: 0; transform: scale(0.72); }
+  60% { opacity: 1; transform: scale(1.05); }
   100% { opacity: 1; transform: scale(1); }
 }
 .ultra-zoom-in { animation: ultraZoomIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 
 /* Rotation — léger flip 3D façon carte qui se retourne. */
 @keyframes ultraFlipIn {
-  0%   { opacity: 0; transform: perspective(900px) rotateY(-40deg); }
+  0% { opacity: 0; transform: perspective(900px) rotateY(-40deg); }
   100% { opacity: 1; transform: perspective(900px) rotateY(0deg); }
 }
 .ultra-flip-in { animation: ultraFlipIn 0.5s cubic-bezier(0.34, 1.2, 0.64, 1) both; }
@@ -417,7 +417,7 @@ button { cursor: pointer; }
    dans une direction aléatoire (--fx/--fy fixés par particule en JS, voir
    ConfettiBurst.tsx). */
 @keyframes fireworkBurst {
-  0%   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
   100% { transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) scale(0.3); opacity: 0; }
 }
 .firework-piece {
@@ -440,3 +440,16 @@ button { cursor: pointer; }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 .ultra-stat-in { animation: ultraStatIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* ─── Grands écrans (iPad, desktop) ──────────────────────────────────────── */
+/* Chaque écran limite son propre contenu à 480px de large (confort mobile)
+   via un style inline "maxWidth: 480" — sur iPad/desktop ça laisse une
+   énorme bande noire de chaque côté (voir capture Léo, app coincée au
+   centre). On élargit cette même limite ici, globalement, plutôt que
+   d'aller toucher un par un chacun des ~15 fichiers d'écran qui répètent
+   ce même motif — un seul point de correction, plus simple à maintenir. */
+@media (min-width: 700px) {
+  [style*="480px"] {
+    max-width: min(1200px, 94vw) !important;
+  }
+}
