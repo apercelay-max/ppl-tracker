@@ -33,19 +33,19 @@ const SHEET_TRANSITION = 'transform 260ms cubic-bezier(0.32, 0.72, 0, 1)';
 // Écran d'aperçu affiché avant de démarrer une séance (style "Forme" /
 // Apple Fitness+) : on voit le programme du jour et on ne rentre dans le
 // minuteur/les séries qu'après avoir appuyé sur Démarrer. Un tap sur un
-// exercice ouvre une fiche détaillée (bottom sheet, glisse depuis le bas,
-// même comportement que la barre de repos pendant la séance) avec toutes
-// les infos utiles avant de commencer (repos, superset, poids de départ,
-// notes) — on peut la fermer en tapant le fond, la croix, ou en glissant
-// la petite barre du haut vers le bas.
+// exercice ouvre une fiche détaillée (bottom sheet, glisse depuis le bas)
+// avec toutes les infos utiles avant de commencer (repos, superset, poids
+// de départ, notes) — on peut la fermer en tapant le fond, la croix, ou en
+// glissant la petite barre du haut vers le bas.
 export const WorkoutIntroScreen: React.FC<WorkoutIntroScreenProps> = ({ dayId, onBack, onStart }) => {
   const history = useWorkoutStore((s) => s.history);
   const workout = getWorkout(dayId);
   const [detailExercise, setDetailExercise] = useState<Exercise | null>(null);
   const [sheetVisible, setSheetVisible] = useState(false);
-  const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [dragY, setDragY] = useState(0);
   const dragStartY = useRef(0);
+  const dragYRef = useRef(0);
 
   // Anime l'ouverture : on monte le sheet hors écran (translateY 100%) puis,
   // une fois monté dans le DOM, on bascule sur place au frame suivant pour
@@ -53,6 +53,7 @@ export const WorkoutIntroScreen: React.FC<WorkoutIntroScreenProps> = ({ dayId, o
   useEffect(() => {
     if (detailExercise) {
       setDragY(0);
+      dragYRef.current = 0;
       const id = requestAnimationFrame(() => setSheetVisible(true));
       return () => cancelAnimationFrame(id);
     }
@@ -64,23 +65,57 @@ export const WorkoutIntroScreen: React.FC<WorkoutIntroScreenProps> = ({ dayId, o
     setTimeout(() => setDetailExercise(null), 240);
   };
 
-  const onHandlePointerDown = (e: React.PointerEvent) => {
+  // Écoute le déplacement du doigt/souris au niveau de la fenêtre (pas
+  // seulement sur la poignée) le temps du glissement — plus fiable que la
+  // capture de pointeur seule sur certains navigateurs mobiles (Safari iOS
+  // en PWA notamment).
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMove = (clientY: number) => {
+      const y = Math.max(0, clientY - dragStartY.current);
+      dragYRef.current = y;
+      setDragY(y);
+    };
+    const onPointerMove = (e: PointerEvent) => handleMove(e.clientY);
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches[0]) handleMove(e.touches[0].clientY);
+    };
+    const onEnd = () => {
+      setIsDragging(false);
+      if (dragYRef.current > CLOSE_DRAG_THRESHOLD) {
+        closeSheet();
+      } else {
+        setDragY(0);
+        dragYRef.current = 0;
+      }
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onEnd);
+    window.addEventListener('pointercancel', onEnd);
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onEnd);
+    window.addEventListener('touchcancel', onEnd);
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onEnd);
+      window.removeEventListener('pointercancel', onEnd);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onEnd);
+      window.removeEventListener('touchcancel', onEnd);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDragging]);
+
+  const startDrag = (clientY: number) => {
+    dragStartY.current = clientY;
+    dragYRef.current = 0;
     setIsDragging(true);
-    dragStartY.current = e.clientY;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
-  const onHandlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging) return;
-    setDragY(Math.max(0, e.clientY - dragStartY.current));
-  };
-  const onHandlePointerUp = () => {
-    if (!isDragging) return;
-    setIsDragging(false);
-    if (dragY > CLOSE_DRAG_THRESHOLD) {
-      closeSheet();
-    } else {
-      setDragY(0);
-    }
+  const onHandlePointerDown = (e: React.PointerEvent) => startDrag(e.clientY);
+  const onHandleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches[0]) startDrag(e.touches[0].clientY);
   };
 
   if (!workout) return null;
@@ -177,9 +212,7 @@ export const WorkoutIntroScreen: React.FC<WorkoutIntroScreenProps> = ({ dayId, o
             <div
               style={sheetHandleZone}
               onPointerDown={onHandlePointerDown}
-              onPointerMove={onHandlePointerMove}
-              onPointerUp={onHandlePointerUp}
-              onPointerCancel={onHandlePointerUp}
+              onTouchStart={onHandleTouchStart}
             >
               <div style={sheetHandle} />
             </div>
@@ -301,8 +334,8 @@ const sheetCard: React.CSSProperties = {
   maxHeight: '75vh', overflowY: 'auto', willChange: 'transform',
 };
 const sheetHandleZone: React.CSSProperties = {
-  padding: '10px 0 16px', margin: '0 -20px', touchAction: 'none', cursor: 'grab',
-  display: 'flex', justifyContent: 'center',
+  padding: '14px 0 22px', margin: '0 -20px', touchAction: 'none', cursor: 'grab',
+  display: 'flex', justifyContent: 'center', minHeight: 44,
 };
 const sheetHandle: React.CSSProperties = {
   width: 36, height: 4, borderRadius: 2, background: 'var(--border-strong)',
