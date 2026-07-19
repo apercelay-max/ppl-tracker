@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getWorkout } from '../data/workouts';
-import { Exercise } from '../data/types';
+import { Exercise, SetEntry } from '../data/types';
 import { getMuscleRecoveryStatus } from '../utils/training';
 import { useWorkoutStore } from '../store/workoutStore';
+import { ExerciseCard } from '../components/ExerciseCard';
 
 interface WorkoutIntroScreenProps {
   dayId: string;
@@ -19,28 +20,27 @@ const DAY_TYPE_LABEL: Record<string, string> = {
   'pull-b': 'PULL', 'push-b': 'PUSH', 'legs-b': 'LEGS',
 };
 
-const formatRest = (seconds: number): string => {
-  if (seconds === 0) return 'Enchaîné (superset)';
-  if (seconds < 60) return `${seconds} s`;
-  const min = Math.floor(seconds / 60);
-  const rest = seconds % 60;
-  return rest === 0 ? `${min} min` : `${min} min ${rest} s`;
-};
-
 const CLOSE_DRAG_THRESHOLD = 90; // px glissés vers le bas pour fermer la fiche
 const SHEET_TRANSITION = 'transform 260ms cubic-bezier(0.32, 0.72, 0, 1)';
+
+const emptySetEntries = (count: number): SetEntry[] =>
+  Array.from({ length: count }, () => ({ weight: '', reps: '', completed: false }));
 
 // Écran d'aperçu affiché avant de démarrer une séance (style "Forme" /
 // Apple Fitness+) : on voit le programme du jour et on ne rentre dans le
 // minuteur/les séries qu'après avoir appuyé sur Démarrer. Un tap sur un
-// exercice ouvre une fiche détaillée (bottom sheet, glisse depuis le bas)
-// avec toutes les infos utiles avant de commencer (repos, superset, poids
-// de départ, notes) — on peut la fermer en tapant le fond, la croix, ou en
-// glissant la petite barre du haut vers le bas.
+// exercice ouvre une fiche détaillée (bottom sheet, glisse depuis le bas) —
+// elle réutilise le vrai <ExerciseCard/> (celui affiché pendant la séance)
+// en mode "aperçu" : les séries cochées ici restent locales à la fiche et
+// ne touchent jamais l'historique/le store réel. On ferme en tapant le
+// fond, la croix, ou en glissant la petite barre du haut vers le bas.
 export const WorkoutIntroScreen: React.FC<WorkoutIntroScreenProps> = ({ dayId, onBack, onStart }) => {
   const history = useWorkoutStore((s) => s.history);
+  const currentWeek = useWorkoutStore((s) => s.currentWeek);
   const workout = getWorkout(dayId);
   const [detailExercise, setDetailExercise] = useState<Exercise | null>(null);
+  const [previewEntries, setPreviewEntries] = useState<SetEntry[]>([]);
+  const [previewIndex, setPreviewIndex] = useState(0);
   const [sheetVisible, setSheetVisible] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragY, setDragY] = useState(0);
@@ -49,11 +49,14 @@ export const WorkoutIntroScreen: React.FC<WorkoutIntroScreenProps> = ({ dayId, o
 
   // Anime l'ouverture : on monte le sheet hors écran (translateY 100%) puis,
   // une fois monté dans le DOM, on bascule sur place au frame suivant pour
-  // que la transition CSS ait quelque chose à animer.
+  // que la transition CSS ait quelque chose à animer. On réinitialise aussi
+  // l'aperçu des séries (indépendant de la vraie séance).
   useEffect(() => {
     if (detailExercise) {
       setDragY(0);
       dragYRef.current = 0;
+      setPreviewEntries(emptySetEntries(detailExercise.sets));
+      setPreviewIndex(0);
       const id = requestAnimationFrame(() => setSheetVisible(true));
       return () => cancelAnimationFrame(id);
     }
@@ -116,6 +119,20 @@ export const WorkoutIntroScreen: React.FC<WorkoutIntroScreenProps> = ({ dayId, o
   const onHandlePointerDown = (e: React.PointerEvent) => startDrag(e.clientY);
   const onHandleTouchStart = (e: React.TouchEvent) => {
     if (e.touches[0]) startDrag(e.touches[0].clientY);
+  };
+
+  // ── Handlers de l'aperçu de séries (locaux à la fiche, n'écrivent rien
+  // dans le store ni l'historique — juste pour voir la vraie mise en page) ──
+  const handleSetComplete = (idx: number, entry: SetEntry) => {
+    setPreviewEntries((arr) => arr.map((e, i) => (i === idx ? entry : e)));
+    setPreviewIndex(idx + 1);
+  };
+  const handleSkipSet = () => {
+    setPreviewEntries((arr) => arr.map((e, i) => (i === previewIndex ? { weight: '', reps: '—', completed: true } : e)));
+    setPreviewIndex((i) => i + 1);
+  };
+  const handleAddSet = () => {
+    setPreviewEntries((arr) => [...arr, { weight: '', reps: '', completed: false }]);
   };
 
   if (!workout) return null;
@@ -215,52 +232,20 @@ export const WorkoutIntroScreen: React.FC<WorkoutIntroScreenProps> = ({ dayId, o
               onTouchStart={onHandleTouchStart}
             >
               <div style={sheetHandle} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-              <div>
-                <p style={{ color: accent, fontSize: 11, fontWeight: 800, letterSpacing: 1 }}>{detailExercise.muscleGroup}</p>
-                <h2 style={{ color: 'var(--text-primary)', fontSize: 20, fontWeight: 800, marginTop: 4 }}>{detailExercise.name}</h2>
-              </div>
               <button onClick={closeSheet} style={closeBtn}>✕</button>
             </div>
 
-            <div style={detailStatsRow}>
-              <div style={detailStatItem}>
-                <span style={statValue}>{detailExercise.sets}</span>
-                <span style={statLabel}>SÉRIES</span>
-              </div>
-              <div style={{ ...detailStatItem, borderLeft: '1px solid var(--border-mid)', borderRight: '1px solid var(--border-mid)' }}>
-                <span style={statValue}>{detailExercise.targetReps}</span>
-                <span style={statLabel}>REPS</span>
-              </div>
-              <div style={detailStatItem}>
-                <span style={statValue}>{formatRest(detailExercise.restSeconds)}</span>
-                <span style={statLabel}>REPOS</span>
-              </div>
-            </div>
-
-            {detailExercise.defaultWeight && (
-              <div style={detailRow}>
-                <span style={detailRowLabel}>Poids de départ</span>
-                <span style={detailRowValue}>{detailExercise.defaultWeight}</span>
-              </div>
-            )}
-
-            {detailExercise.isSuperset && (
-              <div style={detailRow}>
-                <span style={detailRowLabel}>Superset</span>
-                <span style={detailRowValue}>
-                  {detailExercise.supersetOrder === 1 ? 'Enchaîné avec l\'exercice suivant' : 'Repos après cette paire'}
-                </span>
-              </div>
-            )}
-
-            {detailExercise.notes && (
-              <div style={{ marginTop: 14 }}>
-                <p style={{ ...sectionLabel, marginBottom: 6 }}>NOTES</p>
-                <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: '20px' }}>{detailExercise.notes}</p>
-              </div>
-            )}
+            <ExerciseCard
+              exercise={detailExercise}
+              setEntries={previewEntries}
+              currentSetIndex={previewIndex}
+              isActive
+              currentWeek={currentWeek}
+              onSetComplete={handleSetComplete}
+              onSkipSet={handleSkipSet}
+              onSkipExercise={closeSheet}
+              onAddSet={handleAddSet}
+            />
           </div>
         </div>
       )}
@@ -331,29 +316,18 @@ const sheetCard: React.CSSProperties = {
   width: '100%', maxWidth: 480, background: 'var(--bg-card)',
   borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: '0 20px max(20px, env(safe-area-inset-bottom))',
   border: '1px solid var(--border-mid)', borderBottom: 'none',
-  maxHeight: '75vh', overflowY: 'auto', willChange: 'transform',
+  maxHeight: '85vh', overflowY: 'auto', willChange: 'transform',
 };
 const sheetHandleZone: React.CSSProperties = {
-  padding: '14px 0 22px', margin: '0 -20px', touchAction: 'none', cursor: 'grab',
-  display: 'flex', justifyContent: 'center', minHeight: 44,
+  padding: '14px 0 12px', margin: '0 -20px 4px', touchAction: 'none', cursor: 'grab',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', minHeight: 44,
 };
 const sheetHandle: React.CSSProperties = {
   width: 36, height: 4, borderRadius: 2, background: 'var(--border-strong)',
 };
 const closeBtn: React.CSSProperties = {
+  position: 'absolute', right: 20, top: 6,
   width: 30, height: 30, borderRadius: 15, background: 'var(--bg-elevated)',
   color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', flexShrink: 0,
   border: '1px solid var(--border-strong)',
 };
-const detailStatsRow: React.CSSProperties = {
-  display: 'flex', marginTop: 18, paddingTop: 14, paddingBottom: 14,
-  borderTop: '1px solid var(--border-subtle)', borderBottom: '1px solid var(--border-subtle)',
-};
-const detailStatItem: React.CSSProperties = {
-  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '0 4px',
-};
-const detailRow: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14,
-};
-const detailRowLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 13, fontWeight: 600 };
-const detailRowValue: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700, textAlign: 'right' };
