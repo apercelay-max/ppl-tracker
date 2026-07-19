@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { getWorkout } from '../data/workouts';
+import { Exercise } from '../data/types';
 import { getMuscleRecoveryStatus } from '../utils/training';
 import { useWorkoutStore } from '../store/workoutStore';
 
@@ -18,12 +19,23 @@ const DAY_TYPE_LABEL: Record<string, string> = {
   'pull-b': 'PULL', 'push-b': 'PUSH', 'legs-b': 'LEGS',
 };
 
+const formatRest = (seconds: number): string => {
+  if (seconds === 0) return 'Enchaîné (superset)';
+  if (seconds < 60) return `${seconds} s`;
+  const min = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return rest === 0 ? `${min} min` : `${min} min ${rest} s`;
+};
+
 // Écran d'aperçu affiché avant de démarrer une séance (style "Forme" /
 // Apple Fitness+) : on voit le programme du jour et on ne rentre dans le
-// minuteur/les séries qu'après avoir appuyé sur Démarrer.
+// minuteur/les séries qu'après avoir appuyé sur Démarrer. Un tap sur un
+// exercice ouvre une fiche détaillée (bottom sheet) avec toutes les infos
+// utiles avant de commencer (repos, superset, poids de départ, notes).
 export const WorkoutIntroScreen: React.FC<WorkoutIntroScreenProps> = ({ dayId, onBack, onStart }) => {
   const history = useWorkoutStore((s) => s.history);
   const workout = getWorkout(dayId);
+  const [detailExercise, setDetailExercise] = useState<Exercise | null>(null);
   if (!workout) return null;
 
   const accent = DAY_ACCENT[dayId] ?? '#7a7a90';
@@ -87,19 +99,73 @@ export const WorkoutIntroScreen: React.FC<WorkoutIntroScreenProps> = ({ dayId, o
         <p style={{ ...sectionLabel }}>AU PROGRAMME</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 100 }}>
           {workout.exercises.map((ex, i) => (
-            <div key={ex.id} style={exerciseRow}>
+            <button key={ex.id} style={exerciseRow} onClick={() => setDetailExercise(ex)}>
               <span style={{ ...exerciseIndex, color: accent }}>{i + 1}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                 <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>{ex.name}</p>
                 <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>{ex.muscleGroup}</p>
               </div>
               <span style={{ color: 'var(--text-muted)', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
                 {ex.sets} × {ex.targetReps}
               </span>
-            </div>
+              <span style={{ color: 'var(--text-dim)', fontSize: 14, flexShrink: 0 }}>›</span>
+            </button>
           ))}
         </div>
       </div>
+
+      {detailExercise && (
+        <div style={sheetBackdrop} onClick={() => setDetailExercise(null)}>
+          <div style={sheetCard} onClick={(e) => e.stopPropagation()}>
+            <div style={sheetHandle} />
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <p style={{ color: accent, fontSize: 11, fontWeight: 800, letterSpacing: 1 }}>{detailExercise.muscleGroup}</p>
+                <h2 style={{ color: 'var(--text-primary)', fontSize: 20, fontWeight: 800, marginTop: 4 }}>{detailExercise.name}</h2>
+              </div>
+              <button onClick={() => setDetailExercise(null)} style={closeBtn}>✕</button>
+            </div>
+
+            <div style={detailStatsRow}>
+              <div style={detailStatItem}>
+                <span style={statValue}>{detailExercise.sets}</span>
+                <span style={statLabel}>SÉRIES</span>
+              </div>
+              <div style={{ ...detailStatItem, borderLeft: '1px solid var(--border-mid)', borderRight: '1px solid var(--border-mid)' }}>
+                <span style={statValue}>{detailExercise.targetReps}</span>
+                <span style={statLabel}>REPS</span>
+              </div>
+              <div style={detailStatItem}>
+                <span style={statValue}>{formatRest(detailExercise.restSeconds)}</span>
+                <span style={statLabel}>REPOS</span>
+              </div>
+            </div>
+
+            {detailExercise.defaultWeight && (
+              <div style={detailRow}>
+                <span style={detailRowLabel}>Poids de départ</span>
+                <span style={detailRowValue}>{detailExercise.defaultWeight}</span>
+              </div>
+            )}
+
+            {detailExercise.isSuperset && (
+              <div style={detailRow}>
+                <span style={detailRowLabel}>Superset</span>
+                <span style={detailRowValue}>
+                  {detailExercise.supersetOrder === 1 ? 'Enchaîné avec l\'exercice suivant' : 'Repos après cette paire'}
+                </span>
+              </div>
+            )}
+
+            {detailExercise.notes && (
+              <div style={{ marginTop: 14 }}>
+                <p style={{ ...sectionLabel, marginBottom: 6 }}>NOTES</p>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: '20px' }}>{detailExercise.notes}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div style={startBar}>
         <button onClick={onStart} style={{ ...startBtn, background: `linear-gradient(135deg, ${accent}, var(--brand-2))` }}>
@@ -146,7 +212,7 @@ const recoveryWarning: React.CSSProperties = {
 const exerciseRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 12,
   background: 'var(--bg-surface)', border: '1px solid var(--border)',
-  borderRadius: 14, padding: '10px 14px',
+  borderRadius: 14, padding: '10px 14px', width: '100%', cursor: 'pointer',
 };
 const exerciseIndex: React.CSSProperties = { fontSize: 13, fontWeight: 800, width: 16, flexShrink: 0 };
 const startBar: React.CSSProperties = {
@@ -159,3 +225,33 @@ const startBtn: React.CSSProperties = {
   padding: '16px', borderRadius: 18, color: '#fff', fontSize: 16, fontWeight: 800,
   cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
 };
+const sheetBackdrop: React.CSSProperties = {
+  position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+  display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50,
+};
+const sheetCard: React.CSSProperties = {
+  width: '100%', maxWidth: 480, background: 'var(--bg-card)',
+  borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: '10px 20px max(20px, env(safe-area-inset-bottom))',
+  border: '1px solid var(--border-mid)', borderBottom: 'none',
+  maxHeight: '75vh', overflowY: 'auto',
+};
+const sheetHandle: React.CSSProperties = {
+  width: 36, height: 4, borderRadius: 2, background: 'var(--border-strong)', margin: '4px auto 16px',
+};
+const closeBtn: React.CSSProperties = {
+  width: 30, height: 30, borderRadius: 15, background: 'var(--bg-elevated)',
+  color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', flexShrink: 0,
+  border: '1px solid var(--border-strong)',
+};
+const detailStatsRow: React.CSSProperties = {
+  display: 'flex', marginTop: 18, paddingTop: 14, paddingBottom: 14,
+  borderTop: '1px solid var(--border-subtle)', borderBottom: '1px solid var(--border-subtle)',
+};
+const detailStatItem: React.CSSProperties = {
+  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '0 4px',
+};
+const detailRow: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14,
+};
+const detailRowLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 13, fontWeight: 600 };
+const detailRowValue: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700, textAlign: 'right' };
