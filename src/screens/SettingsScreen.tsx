@@ -724,7 +724,9 @@ justifyContent: !simplicityMode ? 'flex-end' : 'flex-start',
 
 {!simplicityMode && (
 <>
-{/* Couleur d'accent */}
+{/* Couleur d'accent — masqué en mode simplifié (pur détail cosmétique,
+contrairement à la salle de sport et au thème clair/sombre juste en
+dessous, qui restent visibles quel que soit le mode). */}
 <p style={subLabel}>COULEUR D'ACCENT</p>
 <div style={swatchGrid}>
 {ACCENT_PRESETS.map((a) => (
@@ -773,9 +775,13 @@ style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: '
 />
 </label>
 </div>
+</>
+)}
 
-{/* Thème "salle de sport" */}
-<p style={{ ...subLabel, marginTop: 20 }}>SALLE DE SPORT</p>
+{/* Thème "salle de sport" — reste visible même en mode simplifié : c'est
+juste une couleur d'ambiance rapide à choisir, pas un réglage avancé
+comme la couleur d'accent perso juste au-dessus. */}
+<p style={{ ...subLabel, marginTop: simplicityMode ? 0 : 20 }}>SALLE DE SPORT</p>
 <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 12, lineHeight: '15px' }}>
 Choisis ta salle et l'appli (et le logo) reprend une couleur dans son esprit. Couleurs approximatives, pas les codes officiels de la marque.
 </p>
@@ -799,14 +805,12 @@ boxShadow: accentTheme === g.id ? `0 0 0 3px var(--bg-card), 0 0 0 5px ${g.c1}` 
 </button>
 ))}
 </div>
-</>
-)}
 
 {/* Apparence (Système/Clair/Sombre) — pilule compacte façon
 menu de réglages Claude, distincte des segmentBtn colorés
 utilisés ailleurs (transitions, effets...). Reste visible même
 en mode simplifié : c'est un réglage essentiel, pas un gadget. */}
-<p style={{ ...subLabel, marginTop: simplicityMode ? 0 : 20 }}>APPARENCE</p>
+<p style={{ ...subLabel, marginTop: 20 }}>APPARENCE</p>
 <div style={themeModePill}>
 {THEME_MODES.map((m) => (
 <button
