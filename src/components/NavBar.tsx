@@ -30,8 +30,9 @@ const TABS: { id: NavView; label: string }[] = [
 // Icônes ligne dessinées à la main (voir NavIcons.tsx) plutôt que des emojis :
 // les emojis rendent différemment selon la plateforme (tailles, styles,
 // épaisseurs incohérentes entre eux), ce qui donnait une barre "pas propre".
-// Ces icônes partagent le même trait et la même taille partout.
-const TAB_ICONS: Record<NavView, React.FC<{ size?: number }>> = {
+// Ces icônes partagent le même trait et la même taille partout, et ont
+// chacune une variante "filled" (voir plus bas, présentation façon Apple).
+const TAB_ICONS: Record<NavView, React.FC<{ size?: number; filled?: boolean }>> = {
 home: HomeIcon,
 objectifs: TargetIcon,
 historique: CalendarIcon,
@@ -131,16 +132,12 @@ const isActive = tab.id === active;
 const Icon = TAB_ICONS[tab.id];
 return (
 <button key={tab.id} onClick={() => handleNavigate(tab.id)} style={drawerBtn} aria-label={tab.label}>
-<span
-style={{
-...iconPill,
-background: isActive ? 'linear-gradient(135deg, var(--brand-1), var(--brand-2))' : 'transparent',
-color: isActive ? '#fff' : 'var(--text-muted)',
-}}
->
-<Icon size={17} />
+{/* Présentation façon Apple : pas de pastille colorée derrière l'icône,
+juste le passage outline → filled + teinte, comme SF Symbols iOS. */}
+<span style={{ ...iconWrap, color: isActive ? 'var(--brand-1)' : 'var(--text-muted)' }}>
+<Icon size={22} filled={isActive} />
 </span>
-<span style={{ fontSize: 10, fontWeight: isActive ? 800 : 600, color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+<span style={{ fontSize: 10, fontWeight: isActive ? 700 : 500, color: isActive ? 'var(--brand-1)' : 'var(--text-muted)' }}>
 {tab.label}
 </span>
 </button>
@@ -181,24 +178,16 @@ onClick={() => handleNavigate(tab.id)}
 style={tabBtn}
 aria-label={tab.label}
 >
-<span
-style={{
-...iconPill,
-background: isActive ? 'linear-gradient(135deg, var(--brand-1), var(--brand-2))' : 'transparent',
-boxShadow: isActive ? '0 2px 8px rgba(var(--brand-1-rgb), 0.45)' : 'none',
-transform: isActive ? 'translateY(-1px) scale(1)' : 'scale(0.94)',
-color: isActive ? '#fff' : 'var(--text-muted)',
-}}
->
-<Icon size={17} />
+{/* Présentation façon Apple (tab bar iOS / SF Symbols) : pas de
+pastille colorée, pas d'agrandissement — juste l'icône qui passe
+d'outline à filled et se teinte en couleur d'accent, le libellé
+toujours visible sous chaque icône (jamais masqué), comme dans
+Réglages, Musique ou l'App Store sur iPhone. */}
+<span style={{ ...iconWrap, color: isActive ? 'var(--brand-1)' : 'var(--text-muted)' }}>
+<Icon size={22} filled={isActive} />
 </span>
-{/* Le libellé ne s'affiche que pour l'onglet actif — avec 9
-onglets, les afficher tous rendrait la barre trop large
-(elle doit rester petite). On garde quand même la place
-réservée (espace insécable) pour que les icônes ne
-sautent pas verticalement selon l'onglet actif. */}
-<span style={{ ...tabLabel, color: isActive ? 'var(--text-primary)' : 'transparent', fontWeight: isActive ? 800 : 600 }}>
-{isActive ? tab.label : ' '}
+<span style={{ ...tabLabel, color: isActive ? 'var(--brand-1)' : 'var(--text-muted)', fontWeight: isActive ? 700 : 500 }}>
+{tab.label}
 </span>
 </button>
 );
@@ -206,19 +195,11 @@ sautent pas verticalement selon l'onglet actif. */}
 
 {overflowTabs.length > 0 && (
 <button onClick={() => setMoreOpen((v) => !v)} style={tabBtn} aria-label="Plus d'options">
-<span
-style={{
-...iconPill,
-background: (moreOpen || isOverflowActive) ? 'linear-gradient(135deg, var(--brand-1), var(--brand-2))' : 'transparent',
-boxShadow: (moreOpen || isOverflowActive) ? '0 2px 8px rgba(var(--brand-1-rgb), 0.45)' : 'none',
-transform: (moreOpen || isOverflowActive) ? 'translateY(-1px) scale(1)' : 'scale(0.94)',
-color: (moreOpen || isOverflowActive) ? '#fff' : 'var(--text-muted)',
-}}
->
-<PlusIcon size={17} />
+<span style={{ ...iconWrap, color: (moreOpen || isOverflowActive) ? 'var(--brand-1)' : 'var(--text-muted)' }}>
+<PlusIcon size={22} />
 </span>
-<span style={{ ...tabLabel, color: (moreOpen || isOverflowActive) ? 'var(--text-primary)' : 'transparent', fontWeight: (moreOpen || isOverflowActive) ? 800 : 600 }}>
-{(moreOpen || isOverflowActive) ? 'Plus' : ' '}
+<span style={{ ...tabLabel, color: (moreOpen || isOverflowActive) ? 'var(--brand-1)' : 'var(--text-muted)', fontWeight: (moreOpen || isOverflowActive) ? 700 : 500 }}>
+Plus
 </span>
 </button>
 )}
@@ -314,16 +295,17 @@ border: 'none',
 cursor: 'pointer',
 };
 
-const iconPill: React.CSSProperties = {
-width: 27, height: 27,
-borderRadius: 13.5,
+// Pas de fond/pastille (contrairement à avant) : uniquement l'icône et sa
+// couleur qui changent, comme sur une tab bar iOS.
+const iconWrap: React.CSSProperties = {
 display: 'flex', alignItems: 'center', justifyContent: 'center',
-transition: 'transform 0.18s cubic-bezier(0.34, 1.4, 0.64, 1), background 0.18s ease, box-shadow 0.18s ease',
+transition: 'color 0.15s ease, transform 0.18s cubic-bezier(0.34, 1.4, 0.64, 1)',
 };
 
 const tabLabel: React.CSSProperties = {
-fontSize: 8,
-letterSpacing: 0.15,
+fontSize: 9,
+letterSpacing: 0.1,
+lineHeight: 1,
 transition: 'color 0.15s ease',
 };
 
