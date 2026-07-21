@@ -1,0 +1,48 @@
+/* liquid-glass.css — styles compagnons de LiquidGlass.tsx */
+
+.lg-surface {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  filter: url(#lg-refraction); /* réfraction légère via displacement map SVG */
+}
+
+.lg-highlight {
+  position: absolute;
+  inset: -50%;
+  pointer-events: none;
+  background-position: var(--gx, 50%) var(--gy, 50%);
+  background-repeat: no-repeat;
+  background-size: 60% 60%;
+  transform: translate3d(0, 0, 0);
+  mix-blend-mode: overlay;
+  opacity: 0.9;
+  z-index: 2;
+}
+
+.lg-noise {
+  position: absolute;
+  inset: 0;
+  opacity: 0.025; /* 2-3% */
+  background-size: 120px 120px;
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: overlay;
+}
+
+.lg-content {
+  position: relative;
+  z-index: 3;
+}
+
+.lg-glow {
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.45),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.08),
+    0 20px 40px rgba(0, 0, 0, 0.15),
+    0 0 40px rgba(255, 255, 255, 0.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-surface, .lg-highlight { transition: none !important; }
+}
