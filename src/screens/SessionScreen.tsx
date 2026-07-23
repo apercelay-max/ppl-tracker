@@ -294,6 +294,13 @@ return;
 // liste "Temps de repos par exercice") → temps propre à l'exercice
 // (workouts.ts) → défaut global des réglages.
 const restSecs = customRestSeconds[exerciseId] ?? exercise.restSeconds ?? defaultRestSeconds;
+// Repos nul (ex. échauffement) : startTimer(0) ne démarre rien, donc on
+// avance directement plutôt que d'attendre un timer qui ne se lancera
+// jamais (sinon la séance reste bloquée sur l'exercice courant).
+if (restSecs <= 0) {
+advanceSession();
+return;
+}
 timerExerciseRef.current = exerciseId;
 pendingSetKeyRef.current = { exerciseId, setIndex };
 startTimer(restSecs);
