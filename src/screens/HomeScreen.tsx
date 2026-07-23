@@ -4,7 +4,7 @@ import { getProgram } from '../data/programs';
 import { useWorkoutStore, CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import type { HomeSectionKey } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
-import { getMuscleGroupsStatus } from '../utils/training';
+import { getMuscleGroupsStatus, getMuscleRecoverySummary } from '../utils/training';
 import type { CardioActivityType } from '../data/types';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
@@ -82,6 +82,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const cycleProgress = ((currentWeek - 1) / 7) * 100;
 
   const wakeLockSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator;
+
+  // ── Récupération musculaire (widget affiché en tête d'écran d'accueil) ──
+  // Quel groupe musculaire a le plus besoin de récupérer, et la moyenne de
+  // récupération tous groupes confondus — voir getMuscleRecoverySummary
+  // (utils/training.ts), qui se base sur les durées de récup recommandées
+  // par muscle et sur la dernière séance réelle où chacun a été travaillé.
+  const { leastRecovered, averagePct } = getMuscleRecoverySummary(history);
+  const recoveryColor = averagePct >= 0.8 ? '#4CAF50' : averagePct >= 0.5 ? '#f5a623' : '#e03030';
 
   // ── Effet holographique du titre ─────────────────────────────────────────
   // Le dégradé animé (.titre-irise) bouge déjà tout seul en boucle. On
@@ -452,6 +460,42 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
           </div>
         </div>
 
+        {/* Récupération musculaire — toujours visible en tête d'accueil */}
+        <div style={recoveryCard}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}>🔋 Récupération musculaire</p>
+          {history.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px' }}>
+              Termine ta première séance pour voir la récupération de chaque muscle ici.
+            </p>
+          ) : (
+            <>
+              {leastRecovered ? (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>À récupérer en priorité</span>
+                    <span style={{ color: '#f5a623', fontSize: 12, fontWeight: 800 }}>{Math.round(leastRecovered.pct * 100)}%</span>
+                  </div>
+                  <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800, marginBottom: 6 }}>{leastRecovered.group}</p>
+                  <div style={recoveryBarTrack}>
+                    <div style={{ ...recoveryBarFill, width: `${Math.round(leastRecovered.pct * 100)}%`, background: '#f5a623' }} />
+                  </div>
+                </div>
+              ) : (
+                <p style={{ color: '#4CAF50', fontSize: 12, marginBottom: 14 }}>Tous les groupes musculaires sont récupérés 💪</p>
+              )}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>Moyenne de récupération</span>
+                  <span style={{ color: recoveryColor, fontSize: 12, fontWeight: 800 }}>{Math.round(averagePct * 100)}%</span>
+                </div>
+                <div style={recoveryBarTrack}>
+                  <div style={{ ...recoveryBarFill, width: `${Math.round(averagePct * 100)}%`, background: recoveryColor }} />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
         {/* Reprise */}
         {resumeWorkout && (
           <button className="resume-btn" style={resumeCard} onClick={() => onSelectDay(resumeWorkout.id)}>
@@ -520,6 +564,17 @@ const weekMetric: React.CSSProperties = {
   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
 };
 const weekMetricLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 9, fontWeight: 700, letterSpacing: 1 };
+const recoveryCard: React.CSSProperties = {
+  background: 'var(--bg-card)', borderRadius: 18, padding: 16,
+  marginTop: 4, marginBottom: 18,
+  border: '1px solid var(--border-mid)',
+};
+const recoveryBarTrack: React.CSSProperties = {
+  width: '100%', height: 6, borderRadius: 3, background: 'var(--bg-elevated)', overflow: 'hidden',
+};
+const recoveryBarFill: React.CSSProperties = {
+  height: '100%', borderRadius: 3, transition: 'width 0.3s',
+};
 const resumeCard: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14,
   background: 'var(--bg-red-tint)',
