@@ -318,12 +318,14 @@ const RECOVERY_HOURS_BY_GROUP: Record<string, number> = {
   'DOS': 72,
   'QUADRICEPS': 72,
   'ISCHIOS & FESSIERS': 72,
+  'ISCHIO-JAMBIERS': 72, // nom utilisé depuis Strict V11 (ex "ISCHIOS & FESSIERS")
   'FESSIERS': 72,
   'MOLLETS': 72,
   'ABDOS': 24,
   'ABDOS & LOMBAIRES': 24,
   'BICEPS': 24,
   'ÉPAULES': 48,
+  'DELTOÏDE POSTÉRIEUR': 48, // nom utilisé depuis Strict V11, même délai que ÉPAULES
   'TRICEPS': 48,
   'AVANT-BRAS': 24,
 };
@@ -360,6 +362,35 @@ export const getMuscleRecoveryStatus = (history: HistoryEntry[]): MuscleRecovery
     const hoursRemaining = Math.max(0, Math.ceil(recoveryHours - hoursSince));
     return { group, recoveryHours, hoursSince, hoursRemaining, recovered: hoursRemaining === 0 };
   });
+};
+
+/** Pourcentage de récupération (0 = vient d'être travaillé, 1 = totalement récupéré). */
+export const getRecoveryPct = (s: Pick<MuscleRecoveryStatus, 'hoursRemaining' | 'recoveryHours'>): number =>
+  Math.min(1, Math.max(0, 1 - s.hoursRemaining / s.recoveryHours));
+
+export interface MuscleRecoverySummary {
+  /** Groupe musculaire le moins récupéré parmi ceux déjà travaillés au moins une fois (null si aucun historique). */
+  leastRecovered: (MuscleRecoveryStatus & { pct: number }) | null;
+  /** Moyenne de récupération (0-1) sur tous les groupes musculaires du programme, jamais travaillés compris (comptés à 100 %). */
+  averagePct: number;
+}
+
+/**
+ * Résumé de récupération musculaire pour le widget d'accueil : quel groupe
+ * a le plus besoin de récupérer, et la moyenne de récupération tous
+ * groupes confondus. Basé sur getMuscleRecoveryStatus ci-dessus.
+ */
+export const getMuscleRecoverySummary = (history: HistoryEntry[]): MuscleRecoverySummary => {
+  const statuses = getMuscleRecoveryStatus(history);
+  const withPct = statuses.map((s) => ({ ...s, pct: getRecoveryPct(s) }));
+  const trained = withPct.filter((s) => s.hoursSince !== null);
+  const leastRecovered = trained.length
+    ? trained.reduce((worst, s) => (s.pct < worst.pct ? s : worst))
+    : null;
+  const averagePct = withPct.length
+    ? withPct.reduce((sum, s) => sum + s.pct, 0) / withPct.length
+    : 1;
+  return { leastRecovered, averagePct };
 };
 
 // ─── Récupération : régions du schéma corporel ───────────────────────────────
@@ -427,9 +458,11 @@ const MUSCLE_GROUP_TO_REGIONS: Record<string, BodyRegionKey[]> = {
   'BICEPS': ['front-biceps'],
   'PECS': ['front-chest'],
   'ÉPAULES': ['front-shoulder', 'back-shoulder'],
+  'DELTOÏDE POSTÉRIEUR': ['back-shoulder'], // nom utilisé depuis Strict V11
   'TRICEPS': ['back-triceps'],
   'QUADRICEPS': ['front-quad'],
   'ISCHIOS & FESSIERS': ['back-hamstring', 'back-glute'],
+  'ISCHIO-JAMBIERS': ['back-hamstring'], // nom utilisé depuis Strict V11 (fessiers déjà séparés ci-dessous)
   'MOLLETS': ['front-calf', 'back-calf'],
   'ABDOS & LOMBAIRES': ['front-abs', 'back-lowerback'],
   'AVANT-BRAS': ['front-forearm', 'back-forearm'],
