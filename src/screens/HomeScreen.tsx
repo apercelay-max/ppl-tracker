@@ -4,7 +4,7 @@ import { getProgram } from '../data/programs';
 import { useWorkoutStore, CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import type { HomeSectionKey } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
-import { getMuscleGroupsStatus, getMuscleRecoverySummary } from '../utils/training';
+import { getMuscleGroupsStatus, getMuscleRecoverySummary, bucketByWeek, computeLoadStatus } from '../utils/training';
 import type { CardioActivityType } from '../data/types';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
@@ -90,6 +90,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   // par muscle et sur la dernière séance réelle où chacun a été travaillé.
   const { leastRecovered, averagePct } = getMuscleRecoverySummary(history);
   const recoveryColor = averagePct >= 0.8 ? '#4CAF50' : averagePct >= 0.5 ? '#f5a623' : '#e03030';
+
+  // ── Charge d'entraînement (alerte pic de charge) ─────────────────────────
+  // Compare la charge de la semaine en cours à la moyenne des semaines
+  // précédentes — voir computeLoadStatus (utils/training.ts). Renvoie null
+  // si pas assez de données plutôt que d'inventer un statut.
+  const loadStatus = computeLoadStatus(bucketByWeek(history));
 
   // ── Effet holographique du titre ─────────────────────────────────────────
   // Le dégradé animé (.titre-irise) bouge déjà tout seul en boucle. On
@@ -495,6 +501,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
             </>
           )}
         </div>
+
+        {/* Alerte pic de charge d'entraînement */}
+        {loadStatus && (
+          <div style={{ ...recoveryCard, border: loadStatus.level === 'spike' ? '1px solid rgba(224,48,48,0.35)' : '1px solid var(--border-mid)' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 6 }}>{loadStatus.label}</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px' }}>{loadStatus.detail}</p>
+          </div>
+        )}
 
         {/* Reprise */}
         {resumeWorkout && (
