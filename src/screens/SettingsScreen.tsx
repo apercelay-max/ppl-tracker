@@ -16,6 +16,19 @@ import type { CardioActivityType, NavTabKey } from '../data/types';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
+const VAPID_PUBLIC_KEY = 'BJoSxXQJwt-i1AhuIBtDocpTSPQXj7NVsNV0104CLSqX9Uj2IP_-up_cFb6StENbdJJd4pCFZ3Wx5UspZFprQH0';
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 // Métadonnées d'affichage des onglets de la barre de navigation — même liste
 // que TABS dans NavBar.tsx (sans "Réglages", qui reste toujours affiché et
 // n'a donc pas besoin d'interrupteur).
@@ -228,6 +241,50 @@ const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
 const toggleDay = (id: string) => setExpandedDays((d) => ({ ...d, [id]: !d[id] }));
 const importInputRef = useRef<HTMLInputElement>(null);
 const [importMsg, setImportMsg] = useState<string | null>(null);
+const [pushStatus, setPushStatus] = useState<'idle' | 'requesting' | 'enabled' | 'denied' | 'unsupported' | 'error'>('idle');
+const enablePushNotifications = async () => {
+  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    setPushStatus('unsupported');
+    return;
+  }
+  if (!user || !supabase) {
+    setPushStatus('error');
+    return;
+  }
+  setPushStatus('requesting');
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      setPushStatus('denied');
+      return;
+    }
+    const registration = await navigator.serviceWorker.ready;
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
+    const json = subscription.toJSON();
+    const { error } = await supabase.from('push_subscriptions').upsert(
+      {
+        user_id: user.id,
+        endpoint: json.endpoint,
+        p256dh: json.keys ? json.keys.p256dh : undefined,
+        auth: json.keys ? json.keys.auth : undefined,
+      },
+      { onConflict: 'endpoint' }
+    );
+    if (error) {
+      setPushStatus('error');
+      return;
+    }
+    setPushStatus('enabled');
+  } catch (err) {
+    setPushStatus('error');
+  }
+};
 const allPrograms = getAllPrograms(customPrograms);
 
 // Chaque catégorie est ouverte par défaut ; l'état ne stocke que celles
@@ -607,6 +664,44 @@ justifyContent: hapticsEnabled ? 'flex-end' : 'flex-start',
 >
 <span style={switchThumb} />
 </button>
+</div>
+
+{/* Notifications de récupération */}
+<p style={subLabel}>NOTIFICATIONS</p>
+<div style={{ ...toggleRow, marginBottom: 20, flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+  <div style={{ flex: 1 }}>
+    <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Notifications de récupération</p>
+    <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+      Reçois une notification (même appli fermée) quand un groupe musculaire est prêt à être retravaillé.
+    </p>
+  </div>
+  <button
+    onClick={enablePushNotifications}
+    disabled={pushStatus === 'requesting' || pushStatus === 'enabled'}
+    style={{
+      ...restBtn,
+      alignSelf: 'flex-start',
+      background: pushStatus === 'enabled' ? 'var(--brand-1)' : 'var(--bg-elevated)',
+      color: pushStatus === 'enabled' ? '#fff' : 'var(--text-muted)',
+    }}
+  >
+    {pushStatus === 'enabled' ? '✓ Activées' : pushStatus === 'requesting' ? 'Activation...' : 'Activer les notifications'}
+  </button>
+  {pushStatus === 'denied' && (
+    <p style={{ color: 'var(--text-dim)', fontSize: 11, lineHeight: '15px' }}>
+      Permission refusée. Active les notifications pour ce site dans les réglages de ton navigateur.
+    </p>
+  )}
+  {pushStatus === 'unsupported' && (
+    <p style={{ color: 'var(--text-dim)', fontSize: 11, lineHeight: '15px' }}>
+      Les notifications push ne sont pas supportées sur cet appareil/navigateur.
+    </p>
+  )}
+  {pushStatus === 'error' && (
+    <p style={{ color: 'var(--text-dim)', fontSize: 11, lineHeight: '15px' }}>
+      Une erreur est survenue. Réessaie, ou vérifie ta connexion.
+    </p>
+  )}
 </div>
 
 {/* Schéma des muscles sollicités */}
