@@ -7,6 +7,77 @@ import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
 import { getMuscleGroupsStatus, getMuscleRecoverySummary, bucketByWeek, computeLoadStatus } from '../utils/training';
 import type { CardioActivityType } from '../data/types';
 
+const IconZap = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+  </svg>
+);
+
+const IconSettings = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+);
+
+const IconBarChart = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="20" x2="18" y2="10" />
+    <line x1="12" y1="20" x2="12" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="14" />
+  </svg>
+);
+
+const IconSun = ({ size = 18, color = 'currentColor', filled = false }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? color : 'none'} stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="5" />
+    <line x1="12" y1="1" x2="12" y2="3" />
+    <line x1="12" y1="21" x2="12" y2="23" />
+    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+    <line x1="1" y1="12" x2="3" y2="12" />
+    <line x1="21" y1="12" x2="23" y2="12" />
+    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+  </svg>
+);
+
+const IconMoon = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+  </svg>
+);
+
+const IconBattery = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <rect x="1" y="6" width="18" height="12" rx="2" ry="2" />
+    <line x1="23" y1="13" x2="23" y2="11" />
+  </svg>
+);
+
+const IconTarget = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <circle cx="12" cy="12" r="6" />
+    <circle cx="12" cy="12" r="2" />
+  </svg>
+);
+
+const IconUtensils = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
+    <path d="M7 2v20" />
+    <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
+  </svg>
+);
+
+const IconActivity = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+  </svg>
+);
+
+
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
 const formatCardioDate = (ts: number): string => {
@@ -216,7 +287,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
 
   const nutritionSection = homeSections.nutrition && (
     <div key="nutrition" style={{ ...nutritionCard, ...(homeSectionColors.nutrition ? { borderLeft: `3px solid ${homeSectionColors.nutrition}` } : {}) }}>
-      <p style={{ color: 'var(--text-gold-label)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>🥩 Nutrition post-training</p>
+      <p style={{ color: 'var(--text-gold-label)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconUtensils size={13} /></span>Nutrition post-training</p>
       <p style={{ color: 'var(--text-gold-body)', fontSize: 12, lineHeight: '18px' }}>
         Dans les <strong style={{ color: '#a07030' }}>30 min</strong> après la séance :
         30-40g protéines · 50-80g glucides.
@@ -232,7 +303,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     return (
       <div key="muscleAlert" style={{ ...muscleAlertCard, ...(homeSectionColors.muscleAlert ? { borderLeft: `3px solid ${homeSectionColors.muscleAlert}` } : {}) }}>
         <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: statuses.length ? 8 : 0 }}>
-          🎯 Groupes musculaires
+          <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconTarget size={13} /></span>Groupes musculaires
         </p>
         {statuses.length === 0 ? (
           <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px' }}>
@@ -271,7 +342,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const cardioSection = homeSections.cardio && (
     <div key="cardio" style={{ ...cardioCard, ...(homeSectionColors.cardio ? { borderLeft: `3px solid ${cardioColor}` } : {}) }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: cardioFormOpen || cardioHistory.length ? 10 : 0 }}>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700 }}>🏃 Cardio</p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700 }}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconActivity size={13} /></span>Cardio</p>
         {!cardioFormOpen && (
           <button onClick={() => setCardioFormOpen(true)} style={{ ...cardioAddBtn, color: cardioColor }}>+ Ajouter</button>
         )}
@@ -378,7 +449,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const nextSessionSection = homeSections.nextSession && !resumeWorkout && nextWorkout && (
     <button key="nextSession" className="workout-card" style={{ ...nextSessionBanner, ...(homeSectionColors.nextSession ? { borderLeft: `3px solid ${nextColor}` } : {}) }} onClick={() => onSelectDay(nextWorkout.id)}>
       <div style={{ ...nextSessionIcon, background: `${nextColor}20` }}>
-        <span style={{ fontSize: 20 }}>🎯</span>
+        <span style={{ display: 'inline-flex' }}><IconTarget size={20} color={nextColor} /></span>
       </div>
       <div style={{ textAlign: 'left', flex: 1 }}>
         <p style={{ color: nextColor, fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>PROCHAINE SÉANCE</p>
@@ -407,7 +478,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
         {/* Header */}
         <div style={headerSection}>
           <div style={logoRow}>
-            <div style={{ ...logoBadge, width: iconSizes.logo, height: iconSizes.logo }}><span style={{ fontSize: iconSizes.logo * 0.46, lineHeight: 1 }}>⚡</span></div>
+            <div style={{ ...logoBadge, width: iconSizes.logo, height: iconSizes.logo }}><span style={{ display: 'inline-flex', lineHeight: 1 }}><IconZap size={iconSizes.logo * 0.5} /></span></div>
             <div>
               <div
                 ref={titleWrapRef}
@@ -437,14 +508,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
                 style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
                 title="Réglages"
               >
-                ⚙️
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconSettings size={18} /></span>
               </button>
               <button
                 onClick={onOpenDashboard}
                 style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
                 title="Dashboard"
               >
-                📊
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconBarChart size={18} /></span>
               </button>
               {wakeLockSupported && (
                 <button
@@ -452,7 +523,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
                   style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header, background: wakeLockEnabled ? 'rgba(76,175,80,0.12)' : 'var(--bg-elevated)', borderColor: wakeLockEnabled ? 'rgba(76,175,80,0.3)' : 'var(--border)' }}
                   title={wakeLockEnabled ? 'Écran toujours allumé (actif)' : 'Écran toujours allumé (inactif)'}
                 >
-                  {wakeLockEnabled ? '🔆' : '🔅'}
+                  {wakeLockEnabled ? <IconSun size={18} filled /> : <IconSun size={18} />}
                 </button>
               )}
               <button
@@ -460,7 +531,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
                 style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
                 title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
               >
-                {theme === 'dark' ? '☀️' : '🌙'}
+                {theme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
               </button>
             </div>
           </div>
@@ -468,7 +539,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
 
         {/* Récupération musculaire — toujours visible en tête d'accueil */}
         <div style={recoveryCard}>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}>🔋 Récupération musculaire</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconBattery size={13} /></span>Récupération musculaire</p>
           {history.length === 0 ? (
             <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px' }}>
               Termine ta première séance pour voir la récupération de chaque muscle ici.
