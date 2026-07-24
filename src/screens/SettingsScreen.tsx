@@ -920,7 +920,7 @@ color: themeMode === m.id ? 'var(--text-primary)' : 'var(--text-dim)',
 boxShadow: themeMode === m.id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
 }}
 >
-<span style={{ fontSize: 16, lineHeight: 1 }}>{m.icon}</span>
+<m.Icon size={16} />
 <span style={{ fontSize: 10, fontWeight: 700 }}>{m.label}</span>
 </button>
 ))}
