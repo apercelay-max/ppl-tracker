@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SetEntry } from '../data/types';
+import { useWorkoutStore } from '../store/workoutStore';
+import { formatWeightForDisplay, parseWeightInputToKg, weightUnitLabel } from '../utils/weight';
 
 interface SetRowProps {
   setNumber: number;
@@ -32,7 +34,8 @@ const isRepOutOfRange = (reps: string, targetReps: string): boolean => {
 export const SetRow: React.FC<SetRowProps> = ({
   setNumber, targetReps, defaultWeight, entry, isCurrent, onComplete, onEdit, lastTime, onWeightStart,
 }) => {
-  const [weight, setWeight] = useState(entry.weight || defaultWeight || '');
+  const weightUnit = useWorkoutStore((s) => s.weightUnit);
+  const [weight, setWeight] = useState(formatWeightForDisplay(entry.weight || defaultWeight || '', weightUnit));
   const [reps, setReps] = useState(entry.reps || '');
   // Ne déclenche onWeightStart qu'une fois par série active (reset dès
   // qu'on quitte la série active, ex. après validation ou passage suivant).
@@ -40,10 +43,10 @@ export const SetRow: React.FC<SetRowProps> = ({
 
   useEffect(() => {
     if (!entry.completed) {
-      setWeight(entry.weight || defaultWeight || '');
+      setWeight(formatWeightForDisplay(entry.weight || defaultWeight || '', weightUnit));
       setReps(entry.reps || '');
     }
-  }, [entry.completed, entry.weight, entry.reps, defaultWeight]);
+  }, [entry.completed, entry.weight, entry.reps, defaultWeight, weightUnit]);
 
   useEffect(() => {
     if (!isCurrent) weightStartFiredRef.current = false;
@@ -57,12 +60,12 @@ export const SetRow: React.FC<SetRowProps> = ({
     }
   };
 
-  const handleValidate = () => { if (!reps) return; onComplete({ weight, reps, completed: true }); };
+  const handleValidate = () => { if (!reps) return; onComplete({ weight: parseWeightInputToKg(weight, weightUnit), reps, completed: true }); };
 
   // Petit rappel "Dernière fois" affiché sous chaque série, quand on a
   // une donnée exploitable de la séance précédente pour cet exercice.
   const lastTimeHint = lastTime && lastTime.completed && lastTime.reps !== '—'
-    ? `Dernière fois : ${lastTime.weight || 'PDC'} kg × ${lastTime.reps}`
+    ? `Dernière fois : ${lastTime.weight ? formatWeightForDisplay(lastTime.weight, weightUnit) : 'PDC'} ${weightUnitLabel(weightUnit)} × ${lastTime.reps}`
     : null;
 
   // ── Série sautée ──────────────────────────────────────────────────────
@@ -93,8 +96,8 @@ export const SetRow: React.FC<SetRowProps> = ({
             <span style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontSize: 13, fontWeight: 800 }}>{setNumber}</span>
           </div>
           <div style={donePillWeight}>
-            <span style={{ color: 'var(--text-muted)', fontSize: 9, letterSpacing: 0.5 }}>KG</span>
-            <span style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 15 }}>{entry.weight || '—'}</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 9, letterSpacing: 0.5 }}>{weightUnitLabel(weightUnit).toUpperCase()}</span>
+            <span style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 15 }}>{entry.weight ? formatWeightForDisplay(entry.weight, weightUnit) : '—'}</span>
           </div>
           <div style={{
             ...donePillReps,
@@ -139,8 +142,8 @@ export const SetRow: React.FC<SetRowProps> = ({
         </div>
         <div className="input-field" style={inputWrapper}>
           <input style={inputField} type="text" inputMode="decimal" value={weight}
-            onChange={(e) => handleWeightChange(e.target.value)} placeholder="kg" onFocus={(e) => e.target.select()} />
-          <span style={inputUnit}>kg</span>
+            onChange={(e) => handleWeightChange(e.target.value)} placeholder={weightUnitLabel(weightUnit)} onFocus={(e) => e.target.select()} />
+          <span style={inputUnit}>{weightUnitLabel(weightUnit)}</span>
         </div>
         <div className="input-field" style={inputWrapper}>
           <input style={inputField} type="text" inputMode="numeric" value={reps}
