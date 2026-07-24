@@ -13,6 +13,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import type { SyncStatus } from '../hooks/useCloudSync';
 import { CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import type { CardioActivityType, NavTabKey } from '../data/types';
+import { IconHome, IconTarget, IconCalendar, IconActivity, IconDumbbell, IconScale, IconBarChart, IconUser, IconMonitor, IconSun, IconMoon, IconPalette, IconSave, IconSearch, IconRotateCcw, IconSparkles, IconPartyPopper, IconFireworks, IconBounce, IconArrowRight, IconRefreshCw, IconDownload, IconUpload } from '../components/Icons';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -32,15 +33,15 @@ function urlBase64ToUint8Array(base64String) {
 // Métadonnées d'affichage des onglets de la barre de navigation — même liste
 // que TABS dans NavBar.tsx (sans "Réglages", qui reste toujours affiché et
 // n'a donc pas besoin d'interrupteur).
-const NAV_TAB_META: { id: NavTabKey; label: string; emoji: string }[] = [
-{ id: 'home', label: 'Accueil', emoji: '🏠' },
-{ id: 'objectifs', label: 'Objectifs', emoji: '🎯' },
-{ id: 'historique', label: 'Historique', emoji: '🗓️' },
-{ id: 'cardio', label: 'Cardio', emoji: '🏃' },
-{ id: 'exercices', label: 'Exercices', emoji: '🏋️' },
-{ id: 'poids', label: 'Poids (essai)', emoji: '⚖️' },
-{ id: 'dashboard', label: 'Stats', emoji: '📊' },
-{ id: 'profil', label: 'Profil', emoji: '👤' },
+const NAV_TAB_META: { id: NavTabKey; label: string; Icon: React.FC<{ size?: number; color?: string }> }[] = [
+{ id: 'home', label: 'Accueil', Icon: IconHome },
+{ id: 'objectifs', label: 'Objectifs', Icon: IconTarget },
+{ id: 'historique', label: 'Historique', Icon: IconCalendar },
+{ id: 'cardio', label: 'Cardio', Icon: IconActivity },
+{ id: 'exercices', label: 'Exercices', Icon: IconDumbbell },
+{ id: 'poids', label: 'Poids (essai)', Icon: IconScale },
+{ id: 'dashboard', label: 'Stats', Icon: IconBarChart },
+{ id: 'profil', label: 'Profil', Icon: IconUser },
 ];
 
 const formatRest = (seconds: number): string => {
@@ -67,10 +68,10 @@ const ICON_SIZES: IconSize[] = ['sm', 'md', 'lg'];
 
 // Sélecteur Système/Clair/Sombre (Réglages → Apparence), inspiré de la
 // pilule compacte du menu de réglages de Claude.ai.
-const THEME_MODES: { id: 'system' | 'light' | 'dark'; label: string; icon: string }[] = [
-{ id: 'system', label: 'Système', icon: '🖥️' },
-{ id: 'light', label: 'Clair', icon: '☀️' },
-{ id: 'dark', label: 'Sombre', icon: '🌙' },
+const THEME_MODES: { id: 'system' | 'light' | 'dark'; label: string; Icon: React.FC<{ size?: number; color?: string }> }[] = [
+{ id: 'system', label: 'Système', Icon: IconMonitor },
+{ id: 'light', label: 'Clair', Icon: IconSun },
+{ id: 'dark', label: 'Sombre', Icon: IconMoon },
 ];
 
 const REST_OPTIONS: { seconds: number; label: string }[] = [
@@ -107,11 +108,11 @@ nextSession: { label: 'Prochaine séance', desc: 'Le bandeau qui indique la proc
 // pour que la page reste simple à parcourir malgré le nombre de réglages.
 type CategoryId = 'seance' | 'apparence' | 'objectifs' | 'donnees';
 
-const CATEGORY_META: Record<CategoryId, { label: string; emoji: string; desc: string }> = {
-seance: { label: 'Séance', emoji: '🏋️', desc: 'Programme, repos, minuteur, muscles sollicités.' },
-apparence: { label: 'Apparence', emoji: '🎨', desc: 'Couleurs, thème, texte, icônes, navigation, animations, accueil.' },
-objectifs: { label: 'Objectifs & calories', emoji: '🎯', desc: 'Badges, calories, objectif hebdo, cardio.' },
-donnees: { label: 'Données & compte', emoji: '💾', desc: 'Export, import, sauvegarde, synchronisation.' },
+const CATEGORY_META: Record<CategoryId, { label: string; Icon: React.FC<{ size?: number; color?: string }>; desc: string }> = {
+seance: { label: 'Séance', Icon: IconDumbbell, desc: 'Programme, repos, minuteur, muscles sollicités.' },
+apparence: { label: 'Apparence', Icon: IconPalette, desc: 'Couleurs, thème, texte, icônes, navigation, animations, accueil.' },
+objectifs: { label: 'Objectifs & calories', Icon: IconTarget, desc: 'Badges, calories, objectif hebdo, cardio.' },
+donnees: { label: 'Données & compte', Icon: IconSave, desc: 'Export, import, sauvegarde, synchronisation.' },
 };
 
 const CATEGORY_ORDER: CategoryId[] = ['seance', 'apparence', 'objectifs', 'donnees'];
@@ -434,7 +435,7 @@ const meta = CATEGORY_META[id];
 const collapsed = !!collapsedCategories[id];
 return (
 <button onClick={() => toggleCategory(id)} style={categoryHeaderBtn}>
-<span style={{ fontSize: 18 }}>{meta.emoji}</span>
+<meta.Icon size={18} />
 <div style={{ flex: 1, textAlign: 'left' }}>
 <p style={categoryHeaderLabel}>{meta.label}</p>
 <p style={categoryHeaderDesc}>{meta.desc}</p>
@@ -459,7 +460,7 @@ style={{
 background: !collapsedCategories[id] ? 'var(--bg-elevated)' : 'transparent',
 }}
 >
-<span style={{ fontSize: 20 }}>{CATEGORY_META[id].emoji}</span>
+{React.createElement(CATEGORY_META[id].Icon, { size: 20 })}
 <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-muted)' }}>{CATEGORY_META[id].label}</span>
 </button>
 ))}
@@ -479,7 +480,7 @@ background: !collapsedCategories[id] ? 'var(--bg-elevated)' : 'transparent',
 
 {/* Recherche — filtre les 4 catégories ci-dessous par mot-clé. */}
 <div style={settingsSearchWrap}>
-<span style={{ color: 'var(--text-dim)', fontSize: 14 }}>🔍</span>
+<IconSearch size={14} color="var(--text-dim)" />
 <input
 value={settingsQuery}
 onChange={(e) => setSettingsQuery(e.target.value)}
@@ -506,7 +507,7 @@ background: activeTab === id ? 'var(--brand-1)' : 'var(--bg-elevated)',
 color: activeTab === id ? '#fff' : 'var(--text-muted)',
 }}
 >
-<span style={{ fontSize: 15 }}>{CATEGORY_META[id].emoji}</span>
+{React.createElement(CATEGORY_META[id].Icon, { size: 15 })}
 <span style={{ fontSize: 10, fontWeight: 700 }}>{CATEGORY_META[id].label}</span>
 </button>
 ))}
@@ -767,7 +768,7 @@ onClick={() => saveCustomRest(ex.id, Math.min(300, current + 15))}
 style={stepperBtn}
 >+</button>
 {isCustom && (
-<button onClick={() => clearCustomRest(ex.id)} style={resetBtn} title="Revenir au temps d'origine">↺</button>
+<button onClick={() => clearCustomRest(ex.id)} style={resetBtn} title="Revenir au temps d'origine"><IconRotateCcw size={13} /></button>
 )}
 </div>
 );
@@ -792,7 +793,7 @@ style={stepperBtn}
 {simplicityMode && (
 <div style={simplicityBanner}>
 <p style={{ color: 'var(--text-secondary)', fontSize: 12, lineHeight: '17px' }}>
-✨ Mode simplifié activé — les réglages de personnalisation avancés (couleurs, icônes, animations, barre de menus, accueil) sont masqués. Tu peux les retrouver à tout moment ci-dessous.
+<IconSparkles size={12} /> Mode simplifié activé — les réglages de personnalisation avancés (couleurs, icônes, animations, barre de menus, accueil) sont masqués. Tu peux les retrouver à tout moment ci-dessous.
 </p>
 </div>
 )}
@@ -859,7 +860,7 @@ background: accentTheme === 'custom'
 boxShadow: accentTheme === 'custom' ? `0 0 0 3px var(--bg-card), 0 0 0 5px ${customAccentColor}` : 'none',
 fontSize: 16,
 }}>
-{accentTheme !== 'custom' && '🎨'}
+{accentTheme !== 'custom' && <IconPalette size={16} />}
 </span>
 <span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }}>Perso</span>
 <input
@@ -1022,7 +1023,7 @@ background: iconSize === sz ? '#fff' : 'var(--text-muted)',
 <p style={{ ...subLabel, marginTop: 20 }}>EFFETS</p>
 <div style={toggleRow}>
 <div style={{ flex: 1 }}>
-<p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>✨ Ultra animations</p>
+<p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}><IconSparkles size={14} /> Ultra animations</p>
 <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
 Transitions rebondissantes entre les écrans, confettis sur les records et à la fin de séance, halo lumineux. Purement visuel, à activer si tu aimes le fun.
 </p>
@@ -1045,9 +1046,9 @@ justifyContent: ultraAnimationsEnabled ? 'flex-end' : 'flex-start',
 <div style={segmentRow}>
 {(
 [
-{ id: 'confetti', emoji: '🎉', label: 'Confettis' },
-{ id: 'fireworks', emoji: '🎆', label: 'Feu d\'artifice' },
-{ id: 'sparkles', emoji: '✨', label: 'Étincelles' },
+{ id: 'confetti', Icon: IconPartyPopper, label: 'Confettis' },
+{ id: 'fireworks', Icon: IconFireworks, label: 'Feu d\'artifice' },
+{ id: 'sparkles', Icon: IconSparkles, label: 'Étincelles' },
 ] as const
 ).map((opt) => (
 <button
@@ -1059,7 +1060,7 @@ background: ultraAnimationStyle === opt.id ? 'var(--brand-1)' : 'var(--bg-elevat
 color: ultraAnimationStyle === opt.id ? '#fff' : 'var(--text-muted)',
 }}
 >
-<span style={{ fontSize: 20 }}>{opt.emoji}</span>
+<opt.Icon size={20} />
 <span style={{ fontSize: 10, fontWeight: 700 }}>{opt.label}</span>
 </button>
 ))}
@@ -1069,10 +1070,10 @@ color: ultraAnimationStyle === opt.id ? '#fff' : 'var(--text-muted)',
 <div style={segmentRow}>
 {(
 [
-{ id: 'bounce', emoji: '🏀', label: 'Rebond' },
-{ id: 'slide', emoji: '➡️', label: 'Glissement' },
-{ id: 'zoom', emoji: '🔍', label: 'Zoom' },
-{ id: 'flip', emoji: '🔃', label: 'Rotation' },
+{ id: 'bounce', Icon: IconBounce, label: 'Rebond' },
+{ id: 'slide', Icon: IconArrowRight, label: 'Glissement' },
+{ id: 'zoom', Icon: IconSearch, label: 'Zoom' },
+{ id: 'flip', Icon: IconRefreshCw, label: 'Rotation' },
 ] as const
 ).map((opt) => (
 <button
@@ -1083,7 +1084,7 @@ style={{
 color: ultraTransitionStyle === opt.id ? '#fff' : 'var(--text-muted)',
 }}
 >
-<span style={{ fontSize: 20 }}>{opt.emoji}</span>
+<opt.Icon size={20} />
 <span style={{ fontSize: 10, fontWeight: 700 }}>{opt.label}</span>
 </button>
 ))}
@@ -1149,7 +1150,7 @@ const pinned = navBarPinned[tab.id];
 return (
 <div key={tab.id} style={toggleRow}>
 <div style={{ flex: 1 }}>
-<p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>{tab.emoji} {tab.label}</p>
+<p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}><tab.Icon size={13} /> {tab.label}</p>
 </div>
 {enabled && (
 <button
@@ -1351,8 +1352,8 @@ Exporter : télécharge tout ton historique et tes réglages. Importer : restaur
 ou analyse n'importe quel autre fichier (Excel, CSV, JSON, texte) pour en faire un nouveau programme.
 </p>
 <div style={{ display: 'flex', gap: 8, marginBottom: importMsg ? 8 : 20 }}>
-<button onClick={handleExport} style={{ ...restBtn, flex: 1, padding: '12px 8px' }}>⬇ Exporter</button>
-<button onClick={() => importInputRef.current?.click()} style={{ ...restBtn, flex: 1, padding: '12px 8px' }}>⬆ Importer</button>
+<button onClick={handleExport} style={{ ...restBtn, flex: 1, padding: '12px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><IconDownload size={14} /> Exporter</button>
+<button onClick={() => importInputRef.current?.click()} style={{ ...restBtn, flex: 1, padding: '12px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><IconUpload size={14} /> Importer</button>
 <input
 ref={importInputRef}
 type="file"
