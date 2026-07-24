@@ -209,6 +209,7 @@ homeSectionOrder: HomeSectionKey[];
 iconShape: 'square' | 'rounded' | 'circle';
 iconSize: 'sm' | 'md' | 'lg';
 defaultRestSeconds: number;
+weightUnit: 'kg' | 'lbs';
 highContrast: boolean;
 cycleDoneIds: string[];
 beepEnabled: boolean;
@@ -257,6 +258,7 @@ editSet: (exerciseId: string, setIndex: number) => void;
 restoreSessionPosition: (exerciseIndex: number, setIndex: number) => void;
 skipSet: () => void;
 skipExercise: () => void;
+switchToExercise: (exerciseId: string) => void;
 addSet: (exerciseId: string) => void;
 finishSession: () => void;
 abandonSession: () => void;
@@ -280,6 +282,7 @@ moveHomeSection: (key: HomeSectionKey, direction: 'up' | 'down') => void;
 setIconShape: (shape: 'square' | 'rounded' | 'circle') => void;
 setIconSize: (size: 'sm' | 'md' | 'lg') => void;
 setDefaultRestSeconds: (seconds: number) => void;
+setWeightUnit: (unit: 'kg' | 'lbs') => void;
 setHighContrast: (enabled: boolean) => void;
 setBeepEnabled: (enabled: boolean) => void;
 setBeepTone: (tone: BeepTone) => void;
@@ -351,6 +354,7 @@ homeSectionOrder: DEFAULT_HOME_ORDER,
 iconShape: 'rounded',
 iconSize: 'md',
 defaultRestSeconds: 180,
+weightUnit: 'kg',
 highContrast: false,
 cycleDoneIds: [],
 beepEnabled: true,
@@ -435,9 +439,7 @@ exerciseProgress: updated,
 currentExerciseIndex: exIdx >= 0 ? exIdx : session.currentExerciseIndex,
 currentSetIndex: setIndex,
 },
-timer: { isRunning: false, endTimestamp: null, totalSeconds: 0 },
 });
-cancelRestNotification();
 },
 
 // Remet currentExerciseIndex/currentSetIndex à une position donnée,
@@ -486,6 +488,23 @@ get().finishSession();
 set({ session: { ...session, exerciseProgress: updated, currentExerciseIndex: nextIdx, currentSetIndex: 0 } });
 }
 get().skipTimer();
+},
+
+// Basculer sur un autre exercice que celui en cours (ex: machine occupée
+// par quelqu'un d'autre) — reprend au premier set non complété de cet
+// exercice, sans rien marquer comme sauté ni toucher au minuteur de repos
+// en cours (voir SessionScreen : bouton "Faire cet exercice maintenant").
+switchToExercise: (exerciseId) => {
+const { session } = get();
+if (!session) return;
+const workout = getWorkout(session.dayId);
+if (!workout) return;
+const exIdx = workout.exercises.findIndex((e) => e.id === exerciseId);
+if (exIdx === -1) return;
+const entries = session.exerciseProgress[exerciseId] ?? [];
+const firstIncomplete = entries.findIndex((e) => !e.completed);
+const setIdx = firstIncomplete === -1 ? Math.max(0, entries.length - 1) : firstIncomplete;
+set({ session: { ...session, currentExerciseIndex: exIdx, currentSetIndex: setIdx } });
 },
 
 // Ajouter une série à un exercice
@@ -662,6 +681,7 @@ return { homeSectionOrder: order };
 setIconShape: (shape) => set({ iconShape: shape }),
 setIconSize: (size) => set({ iconSize: size }),
 setDefaultRestSeconds: (seconds) => set({ defaultRestSeconds: seconds }),
+setWeightUnit: (unit) => set({ weightUnit: unit }),
 setHighContrast: (enabled) => set({ highContrast: enabled }),
 
 setBeepEnabled: (enabled) => set({ beepEnabled: enabled }),
@@ -774,6 +794,7 @@ homeSectionOrder: state.homeSectionOrder,
 iconShape: state.iconShape,
 iconSize: state.iconSize,
 defaultRestSeconds: state.defaultRestSeconds,
+weightUnit: state.weightUnit,
 highContrast: state.highContrast,
 cycleDoneIds: state.cycleDoneIds,
 beepEnabled: state.beepEnabled,
@@ -861,6 +882,7 @@ merged.themeMode = p.themeMode ?? 'dark';
 // change pour Léo. Seule une toute nouvelle installation (aucun state
 // du tout) verra l'écran de choix au premier lancement.
 merged.hasCompletedOnboarding = p.hasCompletedOnboarding ?? hadPriorState;
+merged.weightUnit = p.weightUnit ?? 'kg';
 merged.simplicityMode = p.simplicityMode ?? false;
 
 return merged;
