@@ -82,6 +82,11 @@ const REST_OPTIONS: { seconds: number; label: string }[] = [
 { seconds: 240, label: '4:00' },
 ];
 
+const WEIGHT_UNIT_OPTIONS: { id: 'kg' | 'lbs'; label: string }[] = [
+{ id: 'kg', label: 'Kilogrammes (kg)' },
+{ id: 'lbs', label: 'Livres (lbs)' },
+];
+
 const BEEP_TONES: { id: 'doux' | 'classique' | 'urgent' | 'melodique' | 'cloche'; label: string }[] = [
 { id: 'doux', label: 'Doux' },
 { id: 'classique', label: 'Classique' },
@@ -190,6 +195,8 @@ const iconSize = useWorkoutStore((s) => s.iconSize);
 const setIconSize = useWorkoutStore((s) => s.setIconSize);
 const defaultRestSeconds = useWorkoutStore((s) => s.defaultRestSeconds);
 const setDefaultRestSeconds = useWorkoutStore((s) => s.setDefaultRestSeconds);
+const weightUnit = useWorkoutStore((s) => s.weightUnit);
+const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
 const customRestSeconds = useWorkoutStore((s) => s.customRestSeconds);
 const saveCustomRest = useWorkoutStore((s) => s.saveCustomRest);
 const clearCustomRest = useWorkoutStore((s) => s.clearCustomRest);
@@ -476,6 +483,27 @@ background: !collapsedCategories[id] ? 'var(--bg-elevated)' : 'transparent',
 <h1 style={titleStyle}>Réglages</h1>
 <p style={subtitleStyle}>Personnalise l'appli</p>
 </div>
+</div>
+
+{/* Unité de poids */}
+<p style={subLabel}>UNITÉ DE POIDS</p>
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+Les poids déjà enregistrés sont convertis automatiquement à l'affichage.
+</p>
+<div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+{WEIGHT_UNIT_OPTIONS.map((opt) => (
+<button
+key={opt.id}
+onClick={() => setWeightUnit(opt.id)}
+style={{
+...restBtn,
+background: weightUnit === opt.id ? 'var(--brand-1)' : 'var(--bg-elevated)',
+color: weightUnit === opt.id ? '#fff' : 'var(--text-muted)',
+}}
+>
+{opt.label}
+</button>
+))}
 </div>
 
 {/* Recherche — filtre les 4 catégories ci-dessous par mot-clé. */}
