@@ -17,6 +17,7 @@ interface ExerciseCardProps {
   onEditSet?: (setIndex: number) => void;
   onSkipSet?: () => void;
   onSkipExercise?: () => void;
+  onSwitchTo?: () => void;
   onAddSet?: () => void;
   onWeightStart?: (setIndex: number) => void;
   restBar?: React.ReactNode;
@@ -31,7 +32,7 @@ const formatRest = (seconds: number): string => {
 
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   exercise, setEntries, currentSetIndex, isActive, currentWeek, onSetComplete,
-  onEditSet, onSkipSet, onSkipExercise, onAddSet, onWeightStart, restBar, restBarIndex,
+  onEditSet, onSkipSet, onSkipExercise, onAddSet, onSwitchTo, onWeightStart, restBar, restBarIndex,
 }) => {
   const [notesOpen, setNotesOpen] = useState(false);
   const iconSize = useWorkoutStore((s) => s.iconSize);
@@ -159,6 +160,9 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       ) : (
         <div style={{ padding: '8px 0 12px', textAlign: 'center' }}>
           <span style={{ color: 'var(--text-micro)', fontSize: 13 }}>{totalSets} × {exercise.targetReps}</span>
+          {onSwitchTo && (
+            <button onClick={onSwitchTo} style={switchToBtn}>↪ Faire cet exercice maintenant</button>
+          )}
         </div>
       )}
 
@@ -202,3 +206,9 @@ const actionBtn: React.CSSProperties = {
   borderRadius: 10, padding: '8px 4px', color: 'var(--text-muted)',
   fontSize: 11, fontWeight: 700, cursor: 'pointer', letterSpacing: 0.2,
 };
+const switchToBtn: React.CSSProperties = {
+  width: '100%', marginTop: 8, background: 'var(--bg-elevated)', border: '1px dashed var(--border-strong)',
+  borderRadius: 10, padding: '8px 6px', color: 'var(--brand-1)',
+  fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+};
+
