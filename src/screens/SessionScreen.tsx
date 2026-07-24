@@ -39,6 +39,7 @@ const editSet = useWorkoutStore((s) => s.editSet);
 const restoreSessionPosition = useWorkoutStore((s) => s.restoreSessionPosition);
 const skipSet = useWorkoutStore((s) => s.skipSet);
 const skipExercise = useWorkoutStore((s) => s.skipExercise);
+const switchToExercise = useWorkoutStore((s) => s.switchToExercise);
 const addSet = useWorkoutStore((s) => s.addSet);
 const abandonSession = useWorkoutStore((s) => s.abandonSession);
 const advanceSession = useWorkoutStore((s) => s.advanceSession);
@@ -102,12 +103,31 @@ const [bodyDiagramVisible, setBodyDiagramVisible] = useState(true);
 const [cardioVisible, setCardioVisible] = useState(true);
 const [cardioRunning, setCardioRunning] = useState(false);
 const [cardioSeconds, setCardioSeconds] = useState(180);
-
+// Ancrage temporel (endTimestamp) plutôt qu'un décompte seconde par
+// seconde : un setInterval/setTimeout est throttlé ou suspendu quand
+// l'onglet/l'appli passe en arrière-plan (verrouillage tél, switch
+// d'appli...), donc le minuteur "s'arrêtait" pendant l'absence. En
+// recalculant à partir de Date.now() à chaque tick ET au retour au
+// premier plan (visibilitychange), le compte à rebours reste juste même
+// après une pause de l'exécution JS.
+const cardioEndRef = useRef<number | null>(null);
 useEffect(() => {
-if (!cardioRunning || cardioSeconds <= 0) return;
-const id = setTimeout(() => setCardioSeconds((s) => Math.max(0, s - 1)), 1000);
-return () => clearTimeout(id);
-}, [cardioRunning, cardioSeconds]);
+if (!cardioRunning) return;
+if (cardioEndRef.current == null) cardioEndRef.current = Date.now() + 180 * 1000;
+const tick = () => setCardioSeconds(Math.max(0, Math.ceil((cardioEndRef.current! - Date.now()) / 1000)));
+tick();
+const id = setInterval(tick, 1000);
+return () => clearInterval(id);
+}, [cardioRunning]);
+useEffect(() => {
+const onVisible = () => {
+if (!document.hidden && cardioRunning && cardioEndRef.current != null) {
+setCardioSeconds(Math.max(0, Math.ceil((cardioEndRef.current - Date.now()) / 1000)));
+}
+};
+document.addEventListener('visibilitychange', onVisible);
+return () => document.removeEventListener('visibilitychange', onVisible);
+}, [cardioRunning]);
 
 useEffect(() => {
 if (cardioRunning && cardioSeconds === 0 && 'vibrate' in navigator) navigator.vibrate([150, 80, 150]);
@@ -121,11 +141,28 @@ if (cardioRunning && cardioSeconds === 0 && 'vibrate' in navigator) navigator.vi
 const [deloadActive, setDeloadActive] = useState(false);
 const [deloadRunning, setDeloadRunning] = useState(true);
 const [deloadSeconds, setDeloadSeconds] = useState(180);
+// Même correctif d'ancrage temporel que l'échauffement cardio plus haut
+// (voir cardioEndRef) — en plus pausable : on efface l'ancrage à la
+// pause (le décompte reste figé sur la valeur courante) et on le
+// recrée à la reprise à partir du temps restant, jamais du plein 180s.
+const deloadEndRef = useRef<number | null>(null);
 useEffect(() => {
-if (!deloadActive || !deloadRunning || deloadSeconds <= 0) return;
-const id = setTimeout(() => setDeloadSeconds((s) => Math.max(0, s - 1)), 1000);
-return () => clearTimeout(id);
-}, [deloadActive, deloadRunning, deloadSeconds]);
+if (!deloadActive || !deloadRunning) { deloadEndRef.current = null; return; }
+if (deloadEndRef.current == null) deloadEndRef.current = Date.now() + deloadSeconds * 1000;
+const tick = () => setDeloadSeconds(Math.max(0, Math.ceil((deloadEndRef.current! - Date.now()) / 1000)));
+tick();
+const id = setInterval(tick, 1000);
+return () => clearInterval(id);
+}, [deloadActive, deloadRunning]);
+useEffect(() => {
+const onVisible = () => {
+if (!document.hidden && deloadActive && deloadRunning && deloadEndRef.current != null) {
+setDeloadSeconds(Math.max(0, Math.ceil((deloadEndRef.current - Date.now()) / 1000)));
+}
+};
+document.addEventListener('visibilitychange', onVisible);
+return () => document.removeEventListener('visibilitychange', onVisible);
+}, [deloadActive, deloadRunning]);
 useEffect(() => {
 if (deloadActive && deloadRunning && deloadSeconds === 0 && 'vibrate' in navigator) navigator.vibrate([150, 80, 150]);
 }, [deloadActive, deloadRunning, deloadSeconds]);
@@ -546,6 +583,7 @@ onSkipSet={exIdx === currentExIdx ? skipSet : undefined}
 onSkipExercise={exIdx === currentExIdx ? skipExercise : undefined}
 onAddSet={() => addSet(exercise.id)}
 onWeightStart={(setIndex) => handleWeightEntered(exercise.id, setIndex)}
+onSwitchTo={() => switchToExercise(exercise.id)}
 restBar={isRestTarget ? restBarNode : null}
 restBarIndex={isRestTarget ? restBarTargetIndex : undefined}
 />
@@ -572,6 +610,7 @@ onSkipSet={exIdx === currentExIdx ? skipSet : undefined}
 onSkipExercise={exIdx === currentExIdx ? skipExercise : undefined}
 onAddSet={() => addSet(exercise.id)}
 onWeightStart={(setIndex) => handleWeightEntered(exercise.id, setIndex)}
+onSwitchTo={() => switchToExercise(exercise.id)}
 restBar={isRestTarget ? restBarNode : null}
 restBarIndex={isRestTarget ? restBarTargetIndex : undefined}
 />
