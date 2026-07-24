@@ -6,6 +6,7 @@ import { InlineRestBar } from '../components/InlineRestBar';
 import { StatsPanel } from '../components/StatsPanel';
 import { BodyDiagram } from '../components/BodyDiagram';
 import { ConfettiBurst } from '../components/ConfettiBurst';
+import { IconTrophy, IconSettings, IconMoon, IconSun, IconBell, IconVibrate, IconLightbulb, IconActivity, IconWind, IconScale, IconThumbsUp, IconTarget, IconClock, IconFlame, IconDumbbell, IconPlate, IconTrendingUp, IconUtensils } from '../components/Icons';
 import { useRestTimer } from '../hooks/useRestTimer';
 import { computeTonnage, computeTrainingLoad, compareSessionToHistory, getWorkoutBodyIntensity, getMaxWeightEver } from '../utils/training';
 import { SetEntry, Exercise, ExerciseProgress, HistoryEntry } from '../data/types';
@@ -428,7 +429,7 @@ return (
 {confettiBurst && <ConfettiBurst style={ultraAnimationStyle} />}
 {prBanner && (
 <div style={prBannerStyle} className={ultraAnimationsEnabled ? 'ultra-pop-glow' : 'fade-in'}>
-<span style={{ fontSize: 20 }}>🏆</span>
+<span style={{ display: 'inline-flex' }}><IconTrophy size={20} /></span>
 <div>
 <p style={{ color: '#fff', fontSize: 13, fontWeight: 800 }}>Nouveau record !</p>
 <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11 }}>{prBanner}</p>
@@ -444,7 +445,7 @@ return (
 {completedSets}/{totalSets} séries · SEM. {currentWeek} · RIR {weekData.rir.replace('RIR ', '')}
 </p>
 </div>
-<button onClick={onOpenSettings} style={settingsBtn} title="Réglages (sans quitter la séance)">⚙️</button>
+<button onClick={onOpenSettings} style={settingsBtn} title="Réglages (sans quitter la séance)"><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconSettings size={18} /></span></button>
 <div style={{ width: 52, height: 5, background: 'var(--bg-elevated)', borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
 <div style={{ height: '100%', width: `${progressPct}%`, background: 'linear-gradient(90deg, var(--brand-1), var(--brand-2))', borderRadius: 3, transition: 'width 0.3s', boxShadow: '0 0 8px rgba(var(--brand-1-rgb),0.4)' }} />
 </div>
@@ -460,28 +461,28 @@ onClick={() => setThemeMode(theme === 'dark' ? 'light' : 'dark')}
 style={quickActionBtn}
 title="Mode clair / sombre"
 >
-{theme === 'dark' ? '🌙' : '☀️'}
+{theme === 'dark' ? <IconMoon size={18} /> : <IconSun size={18} />}
 </button>
 <button
 onClick={() => setBeepEnabled(!beepEnabled)}
 style={{ ...quickActionBtn, opacity: beepEnabled ? 1 : 0.4 }}
 title={beepEnabled ? 'Bip de fin de repos activé' : 'Bip de fin de repos coupé'}
 >
-🔔
+<span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconBell size={18} /></span>
 </button>
 <button
 onClick={() => setHapticsEnabled(!hapticsEnabled)}
 style={{ ...quickActionBtn, opacity: hapticsEnabled ? 1 : 0.4 }}
 title={hapticsEnabled ? 'Vibrations activées' : 'Vibrations coupées'}
 >
-📳
+<span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconVibrate size={18} /></span>
 </button>
 <button
 onClick={() => setWakeLockEnabled(!wakeLockEnabled)}
 style={{ ...quickActionBtn, opacity: wakeLockEnabled ? 1 : 0.4 }}
 title={wakeLockEnabled ? "Écran maintenu allumé" : "Écran peut s'éteindre"}
 >
-💡
+<span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconLightbulb size={18} /></span>
 </button>
 </div>
 
@@ -499,7 +500,7 @@ title={wakeLockEnabled ? "Écran maintenu allumé" : "Écran peut s'éteindre"}
 {cardioVisible && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
 <div style={cardioCard}>
 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: cardioRunning ? 10 : 6 }}>
-<span style={{ fontSize: 20 }}>🏃</span>
+<span style={{ display: 'inline-flex' }}><IconActivity size={20} color="#5560cc" /></span>
 <div style={{ flex: 1 }}>
 <p style={{ color: '#5560cc', fontSize: 12, fontWeight: 800, letterSpacing: 0.5 }}>ÉCHAUFFEMENT CARDIO</p>
 <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>3 minutes avant d'attaquer, pour monter en température.</p>
@@ -641,7 +642,7 @@ const isDone = seconds === 0;
 return (
 <div style={completeScreen}>
 <div style={{ maxWidth: 380, width: '100%', textAlign: 'center' }}>
-<div style={deloadBadge}><span style={{ fontSize: 40 }}>🧘</span></div>
+<div style={deloadBadge}><span style={{ display: 'inline-flex' }}><IconWind size={40} color="#4CAF50" /></span></div>
 <h2 style={{ color: 'var(--text-primary)', fontSize: 22, fontWeight: 800, marginBottom: 6, letterSpacing: -0.5 }}>
 Retour au calme
 </h2>
@@ -738,9 +739,9 @@ const outOfRangeCount = allEntries.filter((e) => isRepOutOfRange(e.reps, e.targe
 const pct = allEntries.length > 0 ? outOfRangeCount / allEntries.length : 0;
 
 const getRec = () => {
-if (pct > 0.35) return { emoji: '⚖️', title: 'Calibration poids requise', detail: `${outOfRangeCount} série(s) hors plage cible. Ajuste les charges de ±2.5 kg.`, color: '#f5a623' };
-if (pct > 0.1) return { emoji: '👍', title: 'Bonne séance, quelques ajustements', detail: `${outOfRangeCount} série(s) légèrement hors cible. Surveille la semaine prochaine.`, color: '#e8a020' };
-return { emoji: '🎯', title: 'Exécution parfaite !', detail: 'Toutes les séries dans la plage cible. +2.5 kg envisageable la semaine prochaine.', color: '#4CAF50' };
+if (pct > 0.35) return { icon: <IconScale size={20} color="#f5a623" />, title: 'Calibration poids requise', detail: `${outOfRangeCount} série(s) hors plage cible. Ajuste les charges de ±2.5 kg.`, color: '#f5a623' };
+if (pct > 0.1) return { icon: <IconThumbsUp size={20} color="#e8a020" />, title: 'Bonne séance, quelques ajustements', detail: `${outOfRangeCount} série(s) légèrement hors cible. Surveille la semaine prochaine.`, color: '#e8a020' };
+return { icon: <IconTarget size={20} color="#4CAF50" />, title: 'Exécution parfaite !', detail: 'Toutes les séries dans la plage cible. +2.5 kg envisageable la semaine prochaine.', color: '#4CAF50' };
 };
 const rec = getRec();
 
@@ -758,7 +759,7 @@ return (
 <div
 style={trophyBadge}
 className={ultraAnimationsEnabled ? 'ultra-pop-glow' : undefined}
-><span style={{ fontSize: 44 }}>🏆</span></div>
+><span style={{ display: 'inline-flex' }}><IconTrophy size={44} /></span></div>
 <h2 style={{ color: 'var(--text-primary)', fontSize: 24, fontWeight: 800, marginBottom: 6, letterSpacing: -0.5 }}>Séance terminée !</h2>
 <p style={{ color: 'var(--brand-1)', fontSize: 17, fontWeight: 700, marginBottom: 2 }}>{workout.name}</p>
 <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>{totalSets} séries · {durationMin} min</p>
@@ -766,30 +767,30 @@ className={ultraAnimationsEnabled ? 'ultra-pop-glow' : undefined}
 
 <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
 <div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
-<span style={{ fontSize: 22 }}>⏱</span>
+<span style={{ display: 'inline-flex' }}><IconClock size={22} color="#4CAF50" /></span>
 <span style={{ color: '#4CAF50', fontSize: 20, fontWeight: 200 }}>{durationMin}<span style={{ fontSize: 11 }}> min</span></span>
 <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>DURÉE</span>
 </div>
 <div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.08s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
-<span style={{ fontSize: 22 }}>🔥</span>
+<span style={{ display: 'inline-flex' }}><IconFlame size={22} color="#e8a020" /></span>
 <span style={{ color: '#e8a020', fontSize: 20, fontWeight: 200 }}>{cal}<span style={{ fontSize: 11 }}> kcal</span></span>
 <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>CALORIES</span>
 </div>
 <div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.16s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
-<span style={{ fontSize: 22 }}>💪</span>
+<span style={{ display: 'inline-flex' }}><IconDumbbell size={22} color="#9b27af" /></span>
 <span style={{ color: '#9b27af', fontSize: 20, fontWeight: 200 }}>{totalSets}</span>
 <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>SÉRIES</span>
 </div>
 {totalRestSeconds > 0 && (
 <div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.20s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
-<span style={{ fontSize: 22 }}>😴</span>
+<span style={{ display: 'inline-flex' }}><IconMoon size={22} color="#4fa8e0" /></span>
 <span style={{ color: '#4fa8e0', fontSize: 20, fontWeight: 200 }}>{restMin}<span style={{ fontSize: 11 }}> min</span></span>
 <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>REPOS</span>
 </div>
 )}
 {tonnage > 0 && (
 <div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.24s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
-<span style={{ fontSize: 22 }}>🏋️</span>
+<span style={{ display: 'inline-flex' }}><IconPlate size={22} color="#5560cc" /></span>
 <span style={{ color: '#5560cc', fontSize: 20, fontWeight: 200 }}>{tonnage}<span style={{ fontSize: 11 }}> kg</span></span>
 <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>TONNAGE</span>
 </div>
@@ -799,7 +800,7 @@ className={ultraAnimationsEnabled ? 'ultra-pop-glow' : undefined}
 {(comparison.tonnagePctVsPrevious !== undefined || comparison.tonnagePctVsFirst !== undefined) && tonnage > 0 && (
 <div style={progressionCard}>
 <p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 10 }}>
-📈 ÉVOLUTION DU TONNAGE
+<span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconTrendingUp size={12} /></span>ÉVOLUTION DU TONNAGE
 </p>
 {comparison.tonnagePctVsPrevious !== undefined && comparison.previous && (
 <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: '19px', marginBottom: comparison.tonnagePctVsFirst !== undefined ? 6 : 0 }}>
@@ -860,14 +861,14 @@ style={noteInput}
 
 <div style={{ borderRadius: 16, padding: 16, marginBottom: 12, border: `1px solid ${rec.color}30`, background: `${rec.color}08` }}>
 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-<span style={{ fontSize: 20 }}>{rec.emoji}</span>
+<span style={{ display: 'inline-flex' }}>{rec.icon}</span>
 <p style={{ color: rec.color, fontSize: 13, fontWeight: 700 }}>{rec.title}</p>
 </div>
 <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: '18px' }}>{rec.detail}</p>
 </div>
 
 <div style={{ background: 'var(--bg-gold-tint)', borderRadius: 14, padding: 14, marginBottom: 20, border: '1px solid var(--border-gold-tint)' }}>
-<p style={{ color: 'var(--text-gold-label)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>🥩 Nutrition maintenant</p>
+<p style={{ color: 'var(--text-gold-label)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconUtensils size={13} /></span>Nutrition maintenant</p>
 <p style={{ color: 'var(--text-gold-body)', fontSize: 13, lineHeight: '19px' }}>
 <strong style={{ color: '#e8a020' }}>30-40g</strong> protéines + <strong style={{ color: '#e8a020' }}>50-80g</strong> glucides dans les <strong style={{ color: '#e8a020' }}>30 minutes</strong>.
 </p>
