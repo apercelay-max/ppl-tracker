@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getWorkout } from '../data/workouts';
 import { computeTonnage } from '../utils/training';
+import { formatWeightForDisplay, weightUnitLabel } from '../utils/weight';
 import type { HistoryEntry } from '../data/types';
 
 interface HistoryScreenProps { onBack: () => void; }
@@ -98,6 +99,7 @@ const MonthCalendar: React.FC<{ history: HistoryEntry[] }> = ({ history }) => {
 // finishSession dans workoutStore.ts) — pas besoin de re-trier ici.
 export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
   const history = useWorkoutStore((s) => s.history);
+  const weightUnit = useWorkoutStore((s) => s.weightUnit);
 
   return (
     <div style={container}>
@@ -137,7 +139,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
                   </div>
                   <div style={{ display: 'flex', gap: 14, marginTop: 8, flexWrap: 'wrap' }}>
                     <span style={statChip}>⏱ {minutes} min</span>
-                    <span style={statChip}>🏋️ {Math.round(tonnage)} kg</span>
+                    <span style={statChip}>🏋️ {formatWeightForDisplay(String(Math.round(tonnage)), weightUnit)} {weightUnitLabel(weightUnit)}</span>
                     {entry.rpe && <span style={statChip}>💥 RPE {entry.rpe}</span>}
                   </div>
                   {entry.note && (
