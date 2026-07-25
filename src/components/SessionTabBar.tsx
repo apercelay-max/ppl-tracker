@@ -1,20 +1,22 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { DumbbellIcon, ChartIcon } from './NavIcons';
+import { DumbbellIcon, ChartIcon, ListIcon, TimerIcon } from './NavIcons';
 
 // Barre du bas pendant une seance : meme traitement "verre liquide" que la
 // NavBar principale (voir NavBar.tsx), reduite a 2 onglets fixes (pas de
 // tiroir +, pas d'epinglage) puisque c'est une mini barre contextuelle.
 // D'autres onglets pourront s'ajouter ici plus tard (Leo, juillet 2026).
 
-export type SessionTabId = 'exercise' | 'stats';
+export type SessionTabId = 'exercise' | 'stats' | 'programme' | 'repos';
 
 interface SessionTabBarProps {
   active: SessionTabId;
   onChange: (tab: SessionTabId) => void;
+  restActive: boolean;
 }
 
-const TABS: { id: SessionTabId; label: string; Icon: React.FC<{ size?: number; filled?: boolean }> }[] = [
+const BASE_TABS: { id: SessionTabId; label: string; Icon: React.FC<{ size?: number; filled?: boolean }> }[] = [
   { id: 'exercise', label: 'Exercice', Icon: DumbbellIcon },
+  { id: 'programme', label: 'Programme', Icon: ListIcon },
   { id: 'stats', label: 'Stats', Icon: ChartIcon },
 ];
 
@@ -26,11 +28,12 @@ const supportsLiquidRefraction = (): boolean => {
   return isBlink && !isIOS;
 };
 
-export const SessionTabBar: React.FC<SessionTabBarProps> = ({ active, onChange }) => {
+export const SessionTabBar: React.FC<SessionTabBarProps> = ({ active, onChange, restActive }) => {
   const [refraction, setRefraction] = useState(false);
   useEffect(() => { setRefraction(supportsLiquidRefraction()); }, []);
   const glassRef = useRef<HTMLDivElement>(null);
   const [pressed, setPressed] = useState(false);
+  const tabs = restActive ? [...BASE_TABS, { id: 'repos' as SessionTabId, label: 'Repos', Icon: TimerIcon }] : BASE_TABS;
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     const el = glassRef.current;
@@ -60,7 +63,7 @@ export const SessionTabBar: React.FC<SessionTabBarProps> = ({ active, onChange }
       >
         <div style={sheen} />
         <div style={pointerGlow} />
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const isActive = tab.id === active;
           const Icon = tab.Icon;
           return (
@@ -133,7 +136,7 @@ const tabBtn: React.CSSProperties = {
   flexDirection: 'column',
   alignItems: 'center',
   gap: 2,
-  padding: '3px 22px',
+  padding: '3px 16px',
   background: 'transparent',
   border: 'none',
   cursor: 'pointer',
