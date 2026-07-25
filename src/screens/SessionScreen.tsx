@@ -44,6 +44,8 @@ const restoreSessionPosition = useWorkoutStore((s) => s.restoreSessionPosition);
 const skipSet = useWorkoutStore((s) => s.skipSet);
 const skipExercise = useWorkoutStore((s) => s.skipExercise);
 const switchToExercise = useWorkoutStore((s) => s.switchToExercise);
+const weightUnit = useWorkoutStore((s) => s.weightUnit);
+const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
 const addSet = useWorkoutStore((s) => s.addSet);
 const abandonSession = useWorkoutStore((s) => s.abandonSession);
 const advanceSession = useWorkoutStore((s) => s.advanceSession);
