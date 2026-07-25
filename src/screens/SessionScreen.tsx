@@ -8,6 +8,8 @@ import { BodyDiagram } from '../components/BodyDiagram';
 import { ConfettiBurst } from '../components/ConfettiBurst';
 import { SessionTabBar } from '../components/SessionTabBar';
 import { SessionStatsBig } from '../components/SessionStatsBig';
+import { SessionProgramme } from '../components/SessionProgramme';
+import { SessionRestBig } from '../components/SessionRestBig';
 import { buildSessionRecapImage, shareOrDownloadRecapImage } from '../utils/shareImage';
 import { weightUnitLabel, kgToLbs } from '../utils/weight';
 import { IconTrophy, IconSettings, IconMoon, IconSun, IconBell, IconVibrate, IconLightbulb, IconActivity, IconWind, IconScale, IconThumbsUp, IconTarget, IconClock, IconFlame, IconDumbbell, IconPlate, IconTrendingUp, IconUtensils, IconShare } from '../components/Icons';
@@ -72,7 +74,7 @@ const setHapticsEnabled = useWorkoutStore((s) => s.setHapticsEnabled);
 const wakeLockEnabled = useWorkoutStore((s) => s.wakeLockEnabled);
 const setWakeLockEnabled = useWorkoutStore((s) => s.setWakeLockEnabled);
 const [isWide, setIsWide] = useState(() => window.innerWidth >= 700);
-  const [sessionTab, setSessionTab] = useState<'exercise' | 'stats'>('exercise');
+  const [sessionTab, setSessionTab] = useState<'exercise' | 'stats' | 'programme' | 'repos'>('exercise');
 
 // ── Détection de record personnel (PR) ───────────────────────────────────
 const [prBanner, setPrBanner] = useState<string | null>(null);
@@ -233,6 +235,12 @@ timerAlreadyElapsedRef.current = true;
 }, [advanceSession, saveCustomRest, defaultRestSeconds]);
 
 const { secondsLeft, isRunning: timerIsRunning, progress, formattedTime } = useRestTimer(handleTimerComplete);
+
+useEffect(() => {
+if (sessionTab === 'repos' && !timerIsRunning) {
+setSessionTab('exercise');
+}
+}, [timerIsRunning, sessionTab]);
 
 const handleSkipRest = useCallback(() => {
 if (timerExerciseRef.current && timer.totalSeconds) {
@@ -695,7 +703,27 @@ restBarIndex={isRestTarget ? restBarTargetIndex : undefined}
             history={history}
           />
         )}
-        <SessionTabBar active={sessionTab} onChange={setSessionTab} />
+        {sessionTab === 'programme' && (
+          <SessionProgramme
+            workout={workout}
+            session={session}
+            onSwitchTo={(exerciseId) => { switchToExercise(exerciseId); setSessionTab('exercise'); }}
+          />
+        )}
+        {sessionTab === 'repos' && timerIsRunning && (
+          <SessionRestBig
+            secondsLeft={secondsLeft}
+            formattedTime={formattedTime}
+            progress={progress}
+            finished={secondsLeft <= 0}
+            nextLabel={restBarLabel}
+            nextNote={restBarNote}
+            onSkip={handleSkipRest}
+            onReduce={handleReduceRest}
+            onAdd={handleAddRest}
+          />
+        )}
+        <SessionTabBar active={sessionTab} onChange={setSessionTab} restActive={timerIsRunning} />
 </div>
 );
 };
