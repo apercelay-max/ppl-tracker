@@ -104,6 +104,11 @@ const pendingSetKeyRef = useRef<{ exerciseId: string; setIndex: number } | null>
 // Vrai si le repos s'est terminé alors que la série n'était pas encore
 // validée : on n'avance pas la séance tant que ✓ n'a pas été pressé.
 const timerAlreadyElapsedRef = useRef(false);
+// Vrai quand on vient d'avancer la séance immédiatement après la
+// dernière série d'un exercice (pour débloquer le suivant tout de suite),
+// sans attendre la fin du repos : évite que handleTimerComplete ne fasse
+// avancer la séance une 2e fois quand ce repos se termine pour de vrai.
+const skipTimerAdvanceRef = useRef(false);
 // Position réelle de la séance avant d'ouvrir l'édition d'une série déjà
 // passée (bouton crayon) — non-null tant qu'une correction est en cours.
 // Sert à revenir pile où on en était sans relancer de repos ni avancer/
@@ -220,6 +225,14 @@ saveCustomRest(timerExerciseRef.current, used > 0 ? used : t.totalSeconds ?? def
 }
 }
 }
+// La séance a déjà été avancée immédiatement à la fin de la dernière
+// série d'un exercice (déblocage anticipé du suivant) : ce repos n'est
+// plus qu'un affichage, sa fin ne doit pas avancer la séance une 2e fois.
+if (skipTimerAdvanceRef.current) {
+skipTimerAdvanceRef.current = false;
+pendingSetKeyRef.current = null;
+return;
+}
 // Le repos peut avoir démarré dès la saisie du poids, avant validation.
 // Si la série visée n'est pas encore validée, on ne fait pas avancer la
 // séance tout de suite : on avancera quand ✓ sera pressé.
@@ -335,6 +348,19 @@ setDeloadRunning(true);
 setDeloadActive(true);
 return;
 }
+// Dernière série de l'exercice (mais pas de la séance) : on débloque le
+// suivant tout de suite, sans attendre la fin du repos, pour pouvoir
+// enchaîner (autre machine, autres muscles) pendant qu'on récupère du
+// précédent. Le repos continue de tourner et de s'afficher normalement ;
+// on empêche juste sa fin de faire avancer la séance une 2e fois (voir
+// handleTimerComplete).
+const exTotalSets = session?.exerciseProgress[exerciseId]?.length ?? exercise.sets;
+skipTimerAdvanceRef.current = false;
+if (setIndex === exTotalSets - 1) {
+timerAlreadyElapsedRef.current = false;
+skipTimerAdvanceRef.current = true;
+advanceSession();
+}
 // Le repos peut avoir déjà démarré à la saisie du poids (voir
 // handleWeightEntered). S'il s'est déjà terminé pendant qu'on
 // remplissait la série, on avance direct sans relancer de repos.
@@ -417,12 +443,23 @@ const currentExIdx = session.currentExerciseIndex;
 const currentSetIdx = session.currentSetIndex;
 const currentEx = exercises[currentExIdx];
 
+// Le repos affiché doit rester rattaché à la série qui l'a réellement
+// déclenché, même si la séance a déjà avancé sur l'exercice suivant
+// entre-temps (déblocage anticipé pendant le repos de la dernière série
+// du précédent, voir handleSetComplete) — sinon la barre de repos et son
+// libellé se retrouveraient décalés sur le nouvel exercice actif au lieu
+// de rester sur celui qui repose vraiment.
+const pendingRestKey = pendingSetKeyRef.current;
+const restRefExIdx = pendingRestKey ? exercises.findIndex((e) => e.id === pendingRestKey.exerciseId) : currentExIdx;
+const restRefEx = restRefExIdx >= 0 ? exercises[restRefExIdx] : currentEx;
+const restRefSetIdx = pendingRestKey ? pendingRestKey.setIndex : currentSetIdx;
+
 const getNextInfo = (): { exercise?: Exercise; setNumber?: number } => {
-if (!currentEx) return {};
-const totalSets = session.exerciseProgress[currentEx.id]?.length ?? currentEx.sets;
-const setsLeft = totalSets - (currentSetIdx + 1);
-if (setsLeft > 0) return { exercise: currentEx, setNumber: currentSetIdx + 2 };
-const nextEx = exercises[currentExIdx + 1];
+if (!restRefEx) return {};
+const totalSets = session.exerciseProgress[restRefEx.id]?.length ?? restRefEx.sets;
+const setsLeft = totalSets - (restRefSetIdx + 1);
+if (setsLeft > 0) return { exercise: restRefEx, setNumber: restRefSetIdx + 2 };
+const nextEx = exercises[restRefExIdx + 1];
 if (nextEx) return { exercise: nextEx, setNumber: 1 };
 return {};
 };
@@ -454,12 +491,12 @@ i++;
 // ── Barre de repos inline : toujours injectée dans la carte de l'exercice
 // actuellement actif (garanti visible), soit entre deux séries du même
 // exercice, soit après la dernière série avant de passer au suivant.
-const stayingSameExercise = currentEx && nextInfo.exercise?.id === currentEx.id;
-const restBarTargetExerciseId = currentEx?.id;
-const restBarTargetIndex = currentEx
+const stayingSameExercise = restRefEx && nextInfo.exercise?.id === restRefEx.id;
+const restBarTargetExerciseId = restRefEx?.id;
+const restBarTargetIndex = restRefEx
 ? (stayingSameExercise
 ? (nextInfo.setNumber ?? 1) - 1
-: (session.exerciseProgress[currentEx.id]?.length ?? 0))
+: (session.exerciseProgress[restRefEx.id]?.length ?? 0))
 : undefined;
 const restBarLabel = nextInfo.exercise
 ? (stayingSameExercise ? `Série ${nextInfo.setNumber}` : `Ensuite : ${nextInfo.exercise.name}`)
