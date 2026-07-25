@@ -46,6 +46,7 @@ const skipExercise = useWorkoutStore((s) => s.skipExercise);
 const switchToExercise = useWorkoutStore((s) => s.switchToExercise);
 const weightUnit = useWorkoutStore((s) => s.weightUnit);
 const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
+const weightUnitToggleStyle = useWorkoutStore((s) => s.weightUnitToggleStyle);
 const addSet = useWorkoutStore((s) => s.addSet);
 const abandonSession = useWorkoutStore((s) => s.abandonSession);
 const advanceSession = useWorkoutStore((s) => s.advanceSession);
@@ -81,6 +82,9 @@ useEffect(() => () => { if (prTimeoutRef.current) clearTimeout(prTimeoutRef.curr
 
 // ── Confettis (mode "Ultra animations", réglable dans les Réglages) ─────
 const [confettiBurst, setConfettiBurst] = useState(false);
+const [showUnitMenu, setShowUnitMenu] = useState(false);
+const [unitToast, setUnitToast] = useState<string | null>(null);
+const unitToastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 const confettiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 useEffect(() => () => { if (confettiTimeoutRef.current) clearTimeout(confettiTimeoutRef.current); }, []);
 const fireConfetti = useCallback((durationMs = 1700) => {
@@ -531,13 +535,51 @@ title={wakeLockEnabled ? "Écran maintenu allumé" : "Écran peut s'éteindre"}
 >
 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconLightbulb size={18} /></span>
 </button>
+<div style={{ position: 'relative' }}>
 <button
-onClick={() => setWeightUnit(weightUnit === 'kg' ? 'lbs' : 'kg')}
+onClick={() => {
+if (weightUnitToggleStyle === 'menu') {
+setShowUnitMenu((v) => !v);
+} else {
+const next = weightUnit === 'kg' ? 'lbs' : 'kg';
+setWeightUnit(next);
+if (unitToastTimeoutRef.current) clearTimeout(unitToastTimeoutRef.current);
+setUnitToast(next === 'kg' ? 'Unité : Kilogrammes sélectionné' : 'Unité : Livres sélectionné');
+unitToastTimeoutRef.current = setTimeout(() => setUnitToast(null), 1400);
+}
+}}
 style={quickActionBtn}
 title={weightUnit === 'kg' ? "Unité : kilogrammes — toucher pour passer en livres" : "Unité : livres — toucher pour passer en kilogrammes"}
 >
 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconScale size={18} /></span>
 </button>
+{weightUnitToggleStyle === 'menu' && showUnitMenu && (
+<>
+<div onClick={() => setShowUnitMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+<div className="fade-in" style={{ position: 'absolute', top: 38, left: 0, zIndex: 50, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 4, minWidth: 150, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+<button
+onClick={() => { setWeightUnit('kg'); setShowUnitMenu(false); }}
+style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 10px', background: 'transparent', border: 'none', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer' }}
+>
+<span>Kilogrammes (kg)</span>
+{weightUnit === 'kg' && <span style={{ color: 'var(--brand-1)', fontWeight: 700 }}>✓</span>}
+</button>
+<button
+onClick={() => { setWeightUnit('lbs'); setShowUnitMenu(false); }}
+style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 10px', background: 'transparent', border: 'none', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer' }}
+>
+<span>Livres (lbs)</span>
+{weightUnit === 'lbs' && <span style={{ color: 'var(--brand-1)', fontWeight: 700 }}>✓</span>}
+</button>
+</div>
+</>
+)}
+{weightUnitToggleStyle !== 'menu' && unitToast && (
+<div className="fade-in" style={{ position: 'absolute', top: 38, left: '50%', transform: 'translateX(-50%)', zIndex: 50, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '6px 12px', color: 'var(--text-primary)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+{unitToast}
+</div>
+)}
+</div>
 </div>
 
 <div style={scrollArea}>
