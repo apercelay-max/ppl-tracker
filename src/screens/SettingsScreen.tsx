@@ -87,6 +87,11 @@ const WEIGHT_UNIT_OPTIONS: { id: 'kg' | 'lbs'; label: string }[] = [
 { id: 'lbs', label: 'Livres (lbs)' },
 ];
 
+const WEIGHT_TOGGLE_STYLE_OPTIONS: { id: 'toast' | 'menu'; label: string }[] = [
+{ id: 'toast', label: 'Bascule rapide' },
+{ id: 'menu', label: 'Menu déroulant' },
+];
+
 const BEEP_TONES: { id: 'doux' | 'classique' | 'urgent' | 'melodique' | 'cloche'; label: string }[] = [
 { id: 'doux', label: 'Doux' },
 { id: 'classique', label: 'Classique' },
@@ -197,6 +202,8 @@ const defaultRestSeconds = useWorkoutStore((s) => s.defaultRestSeconds);
 const setDefaultRestSeconds = useWorkoutStore((s) => s.setDefaultRestSeconds);
 const weightUnit = useWorkoutStore((s) => s.weightUnit);
 const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
+const weightUnitToggleStyle = useWorkoutStore((s) => s.weightUnitToggleStyle);
+const setWeightUnitToggleStyle = useWorkoutStore((s) => s.setWeightUnitToggleStyle);
 const customRestSeconds = useWorkoutStore((s) => s.customRestSeconds);
 const saveCustomRest = useWorkoutStore((s) => s.saveCustomRest);
 const clearCustomRest = useWorkoutStore((s) => s.clearCustomRest);
@@ -499,6 +506,27 @@ style={{
 ...restBtn,
 background: weightUnit === opt.id ? 'var(--brand-1)' : 'var(--bg-elevated)',
 color: weightUnit === opt.id ? '#fff' : 'var(--text-muted)',
+}}
+>
+{opt.label}
+</button>
+))}
+</div>
+
+{/* Type de sélecteur pour le bouton balance en haut de l'écran de séance */}
+<p style={subLabel}>MENU DE CHANGEMENT D'UNITÉ</p>
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+Comportement du bouton balance en haut de l'écran de séance.
+</p>
+<div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+{WEIGHT_TOGGLE_STYLE_OPTIONS.map((opt) => (
+<button
+key={opt.id}
+onClick={() => setWeightUnitToggleStyle(opt.id)}
+style={{
+...restBtn,
+background: weightUnitToggleStyle === opt.id ? 'var(--brand-1)' : 'var(--bg-elevated)',
+color: weightUnitToggleStyle === opt.id ? '#fff' : 'var(--text-muted)',
 }}
 >
 {opt.label}
