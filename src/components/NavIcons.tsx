@@ -172,3 +172,39 @@ export const PlusIcon: React.FC<IconProps> = ({ size = 18 }) => (
 <line x1="5" y1="12" x2="19" y2="12" />
 </svg>
 );
+
+export const ListIcon: React.FC<IconProps> = ({ size = 18, filled }) =>
+  filled ? (
+    <svg width={size} height={size} viewBox='0 0 24 24' fill='currentColor'>
+      <rect x='9' y='5.2' width='12' height='1.8' rx='0.9' />
+      <rect x='9' y='11.1' width='12' height='1.8' rx='0.9' />
+      <rect x='9' y='17' width='12' height='1.8' rx='0.9' />
+      <circle cx='4' cy='6.1' r='2.1' />
+      <circle cx='4' cy='12' r='2.1' />
+      <circle cx='4' cy='17.9' r='2.1' />
+    </svg>
+  ) : (
+    <svg width={size} height={size} {...base}>
+      <line x1='9' y1='6' x2='21' y2='6' />
+      <line x1='9' y1='12' x2='21' y2='12' />
+      <line x1='9' y1='18' x2='21' y2='18' />
+      <circle cx='4' cy='6' r='1.6' />
+      <circle cx='4' cy='12' r='1.6' />
+      <circle cx='4' cy='18' r='1.6' />
+    </svg>
+  );
+
+export const TimerIcon: React.FC<IconProps> = ({ size = 18, filled }) =>
+  filled ? (
+    <svg width={size} height={size} viewBox='0 0 24 24' fill='currentColor'>
+      <rect x='9' y='1.4' width='6' height='2' rx='1' />
+      <circle cx='12' cy='13.5' r='8.6' />
+    </svg>
+  ) : (
+    <svg width={size} height={size} {...base}>
+      <circle cx='12' cy='13.5' r='8.6' />
+      <line x1='12' y1='13.5' x2='12' y2='9' />
+      <line x1='12' y1='13.5' x2='15' y2='15.5' />
+      <line x1='9' y1='2.4' x2='15' y2='2.4' />
+    </svg>
+  );
