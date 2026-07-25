@@ -8,7 +8,9 @@ import { BodyDiagram } from '../components/BodyDiagram';
 import { ConfettiBurst } from '../components/ConfettiBurst';
 import { SessionTabBar } from '../components/SessionTabBar';
 import { SessionStatsBig } from '../components/SessionStatsBig';
-import { IconTrophy, IconSettings, IconMoon, IconSun, IconBell, IconVibrate, IconLightbulb, IconActivity, IconWind, IconScale, IconThumbsUp, IconTarget, IconClock, IconFlame, IconDumbbell, IconPlate, IconTrendingUp, IconUtensils } from '../components/Icons';
+import { buildSessionRecapImage, shareOrDownloadRecapImage } from '../utils/shareImage';
+import { weightUnitLabel, kgToLbs } from '../utils/weight';
+import { IconTrophy, IconSettings, IconMoon, IconSun, IconBell, IconVibrate, IconLightbulb, IconActivity, IconWind, IconScale, IconThumbsUp, IconTarget, IconClock, IconFlame, IconDumbbell, IconPlate, IconTrendingUp, IconUtensils, IconShare } from '../components/Icons';
 import { useRestTimer } from '../hooks/useRestTimer';
 import { computeTonnage, computeTrainingLoad, compareSessionToHistory, getWorkoutBodyIntensity, getMaxWeightEver } from '../utils/training';
 import { SetEntry, Exercise, ExerciseProgress, HistoryEntry } from '../data/types';
@@ -639,6 +641,7 @@ restBarIndex={isRestTarget ? restBarTargetIndex : undefined}
             progressPct={progressPct}
             bodyIntensity={bodyIntensity}
             prList={sessionPRs}
+            history={history}
           />
         )}
         <SessionTabBar active={sessionTab} onChange={setSessionTab} />
@@ -758,6 +761,8 @@ const ultraAnimationsEnabled = useWorkoutStore((s) => s.ultraAnimationsEnabled);
 const ultraAnimationStyle = useWorkoutStore((s) => s.ultraAnimationStyle);
 const [rpe, setRpe] = useState<number | null>(null);
 const [note, setNote] = useState('');
+const [sharing, setSharing] = useState(false);
+const weightUnit = useWorkoutStore((s) => s.weightUnit);
 // Grosse pluie de confettis à l'arrivée sur l'écran de fin, uniquement en
 // mode "Ultra animations" — se retire tout seul après ~2.2s.
 const [showConfetti, setShowConfetti] = useState(ultraAnimationsEnabled);
@@ -809,6 +814,43 @@ const handleSelectRpe = (value: number) => {
 setRpe(value);
 const trainingLoad = computeTrainingLoad(value, durationMs);
 updateLastSessionRPE(value, tonnage, trainingLoad);
+};
+
+const handleShare = async () => {
+if (sharing) return;
+setSharing(true);
+try {
+const completedSetsCount = Object.values(session.exerciseProgress).reduce(
+(sum, sets) => sum + sets.filter((s) => s.completed).length,
+0
+);
+const tonnageDisplayShare = weightUnit === 'lbs' ? Math.round(kgToLbs(tonnage)) : tonnage;
+const dateLabel = new Date(session.startTime).toLocaleDateString('fr-FR', {
+weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+});
+const blob = await buildSessionRecapImage({
+workoutName: workout.name,
+dateLabel,
+durationMin,
+tonnageDisplay: tonnageDisplayShare,
+weightUnit,
+completedSets: completedSetsCount,
+totalSets,
+calories: cal,
+tonnagePctVsPrevious: comparison.tonnagePctVsPrevious,
+prNames: [],
+});
+await shareOrDownloadRecapImage(
+blob,
+'ppl-tracker-seance.png',
+'Ma séance PPL Tracker',
+workout.name + ' - ' + tonnageDisplayShare + ' ' + weightUnitLabel(weightUnit) + ' soulevés !'
+);
+} catch (err) {
+console.error('share recap failed', err);
+} finally {
+setSharing(false);
+}
 };
 
 return (
@@ -935,6 +977,20 @@ style={noteInput}
 <p style={{ color: 'var(--text-gold-footer)', fontSize: 11, marginTop: 6 }}>~{cal} kcal dépensées · hydrate-toi !</p>
 </div>
 
+<button
+onClick={handleShare}
+disabled={sharing}
+style={{
+width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+borderRadius: 16, padding: '14px 32px', marginBottom: 12,
+color: 'var(--text-secondary)', fontSize: 15, fontWeight: 700,
+cursor: sharing ? 'default' : 'pointer', opacity: sharing ? 0.6 : 1,
+display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+}}
+>
+<span style={{ display: 'inline-flex' }}><IconShare size={18} /></span>
+{sharing ? 'Génération...' : 'Partager ma séance'}
+</button>
 <button style={completeBtnStyle} onClick={onBack}>Retour à l'accueil</button>
 </div>
 </div>
