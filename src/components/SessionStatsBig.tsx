@@ -3,10 +3,10 @@ import { useWorkoutStore } from '../store/workoutStore';
 import { useSessionChrono } from '../hooks/useSessionChrono';
 import { useHeartRate } from '../hooks/useHeartRate';
 import { BodyDiagram } from './BodyDiagram';
-import { IconTrophy } from './Icons';
+import { IconTrophy, IconTrendingUp } from './Icons';
 import { computeTonnage, BodyRegionKey } from '../utils/training';
 import { kgToLbs, weightUnitLabel } from '../utils/weight';
-import { WorkoutSession, WorkoutDay } from '../data/types';
+import { WorkoutSession, WorkoutDay, HistoryEntry } from '../data/types';
 
 interface SessionStatsBigProps {
   session: WorkoutSession;
@@ -16,6 +16,7 @@ interface SessionStatsBigProps {
   progressPct: number;
   bodyIntensity: Partial<Record<BodyRegionKey, number>>;
   prList: string[];
+  history: HistoryEntry[];
 }
 
 // Estimation calories : meme formule que StatsPanel.tsx (barre compacte
@@ -29,7 +30,7 @@ const estCal = (ms: number, hr: number | null, caloriesPerHour: number): number 
 };
 
 export const SessionStatsBig: React.FC<SessionStatsBigProps> = ({
-  session, workout, completedSets, totalSets, progressPct, bodyIntensity, prList,
+  session, workout, completedSets, totalSets, progressPct, bodyIntensity, prList, history,
 }) => {
   const { elapsed, formatted: chrono } = useSessionChrono(session.startTime);
   const { hr, status, connect, disconnect, isSupported, error } = useHeartRate();
@@ -43,6 +44,11 @@ export const SessionStatsBig: React.FC<SessionStatsBigProps> = ({
 
   const tonnageKg = computeTonnage(session.exerciseProgress);
   const tonnageDisplay = weightUnit === 'lbs' ? Math.round(kgToLbs(tonnageKg)) : tonnageKg;
+  const sameDayHistory = history.filter((h) => h.dayId === session.dayId);
+  const previousEntry = sameDayHistory[0];
+  const previousTonnageKg = previousEntry ? (previousEntry.tonnage ?? computeTonnage(previousEntry.exerciseProgress)) : 0;
+  const tonnagePctVsPrevious = previousTonnageKg > 0 ? Math.round(((tonnageKg - previousTonnageKg) / previousTonnageKg) * 100) : undefined;
+  const previousTonnageDisplay = weightUnit === 'lbs' ? Math.round(kgToLbs(previousTonnageKg)) : previousTonnageKg;
 
   return (
     <div style={scrollArea}>
@@ -67,7 +73,30 @@ export const SessionStatsBig: React.FC<SessionStatsBigProps> = ({
           <p style={bigNum}>{tonnageDisplay} <span style={unitSpan}>{weightUnitLabel(weightUnit)}</span></p>
         </div>
 
-        <div style={cardRow}>
+        {previousEntry && previousTonnageKg > 0 && (
+              <div style={card}>
+                <p style={label}>
+                  <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconTrendingUp size={12} /></span>
+                  VS SEANCE PRECEDENTE
+                </p>
+                {tonnageKg > 0 ? (
+                  <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: '19px', marginBottom: 10 }}>
+                    {workout.name} précédente ({previousTonnageDisplay} {weightUnitLabel(weightUnit)}) :{' '}
+                    <strong style={{ color: (tonnagePctVsPrevious ?? 0) >= 0 ? '#4CAF50' : '#f5a623' }}>
+                      {(tonnagePctVsPrevious ?? 0) >= 0 ? '+' : ''}{tonnagePctVsPrevious}%
+                    </strong>
+                  </p>
+                ) : (
+                  <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: '19px', marginBottom: 10 }}>
+                    Objectif : dépasser {previousTonnageDisplay} {weightUnitLabel(weightUnit)}
+                  </p>
+                )}
+                <div style={progressTrack}>
+                  <div style={{ ...progressFill, width: Math.min(100, (tonnageKg / previousTonnageKg) * 100) + '%' }} />
+                </div>
+              </div>
+            )}
+            <div style={cardRow}>
           <div style={{ ...card, flex: 1 }}>
             <p style={label}>FREQUENCE CARDIAQUE</p>
             {connected ? (
