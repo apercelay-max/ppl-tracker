@@ -529,6 +529,13 @@ title={wakeLockEnabled ? "Écran maintenu allumé" : "Écran peut s'éteindre"}
 >
 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconLightbulb size={18} /></span>
 </button>
+<button
+onClick={() => setWeightUnit(weightUnit === 'kg' ? 'lbs' : 'kg')}
+style={quickActionBtn}
+title={weightUnit === 'kg' ? "Unité : kilogrammes — toucher pour passer en livres" : "Unité : livres — toucher pour passer en kilogrammes"}
+>
+<span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconScale size={18} /></span>
+</button>
 </div>
 
 <div style={scrollArea}>
@@ -763,6 +770,7 @@ const [rpe, setRpe] = useState<number | null>(null);
 const [note, setNote] = useState('');
 const [sharing, setSharing] = useState(false);
 const weightUnit = useWorkoutStore((s) => s.weightUnit);
+const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
 // Grosse pluie de confettis à l'arrivée sur l'écran de fin, uniquement en
 // mode "Ultra animations" — se retire tout seul après ~2.2s.
 const [showConfetti, setShowConfetti] = useState(ultraAnimationsEnabled);
