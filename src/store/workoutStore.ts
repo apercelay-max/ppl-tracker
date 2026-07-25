@@ -210,6 +210,7 @@ iconShape: 'square' | 'rounded' | 'circle';
 iconSize: 'sm' | 'md' | 'lg';
 defaultRestSeconds: number;
 weightUnit: 'kg' | 'lbs';
+  weightUnitToggleStyle: 'toast' | 'menu';
 highContrast: boolean;
 cycleDoneIds: string[];
 beepEnabled: boolean;
@@ -283,6 +284,7 @@ setIconShape: (shape: 'square' | 'rounded' | 'circle') => void;
 setIconSize: (size: 'sm' | 'md' | 'lg') => void;
 setDefaultRestSeconds: (seconds: number) => void;
 setWeightUnit: (unit: 'kg' | 'lbs') => void;
+  setWeightUnitToggleStyle: (style: 'toast' | 'menu') => void;
 setHighContrast: (enabled: boolean) => void;
 setBeepEnabled: (enabled: boolean) => void;
 setBeepTone: (tone: BeepTone) => void;
@@ -355,6 +357,7 @@ iconShape: 'rounded',
 iconSize: 'md',
 defaultRestSeconds: 180,
 weightUnit: 'kg',
+  weightUnitToggleStyle: 'toast',
 highContrast: false,
 cycleDoneIds: [],
 beepEnabled: true,
@@ -682,6 +685,7 @@ setIconShape: (shape) => set({ iconShape: shape }),
 setIconSize: (size) => set({ iconSize: size }),
 setDefaultRestSeconds: (seconds) => set({ defaultRestSeconds: seconds }),
 setWeightUnit: (unit) => set({ weightUnit: unit }),
+  setWeightUnitToggleStyle: (style) => set({ weightUnitToggleStyle: style }),
 setHighContrast: (enabled) => set({ highContrast: enabled }),
 
 setBeepEnabled: (enabled) => set({ beepEnabled: enabled }),
@@ -795,6 +799,7 @@ iconShape: state.iconShape,
 iconSize: state.iconSize,
 defaultRestSeconds: state.defaultRestSeconds,
 weightUnit: state.weightUnit,
+      weightUnitToggleStyle: state.weightUnitToggleStyle,
 highContrast: state.highContrast,
 cycleDoneIds: state.cycleDoneIds,
 beepEnabled: state.beepEnabled,
@@ -883,6 +888,7 @@ merged.themeMode = p.themeMode ?? 'dark';
 // du tout) verra l'écran de choix au premier lancement.
 merged.hasCompletedOnboarding = p.hasCompletedOnboarding ?? hadPriorState;
 merged.weightUnit = p.weightUnit ?? 'kg';
+    merged.weightUnitToggleStyle = p.weightUnitToggleStyle ?? 'toast';
 merged.simplicityMode = p.simplicityMode ?? false;
 
 return merged;
