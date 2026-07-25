@@ -6,6 +6,8 @@ import { InlineRestBar } from '../components/InlineRestBar';
 import { StatsPanel } from '../components/StatsPanel';
 import { BodyDiagram } from '../components/BodyDiagram';
 import { ConfettiBurst } from '../components/ConfettiBurst';
+import { SessionTabBar } from '../components/SessionTabBar';
+import { SessionStatsBig } from '../components/SessionStatsBig';
 import { IconTrophy, IconSettings, IconMoon, IconSun, IconBell, IconVibrate, IconLightbulb, IconActivity, IconWind, IconScale, IconThumbsUp, IconTarget, IconClock, IconFlame, IconDumbbell, IconPlate, IconTrendingUp, IconUtensils } from '../components/Icons';
 import { useRestTimer } from '../hooks/useRestTimer';
 import { computeTonnage, computeTrainingLoad, compareSessionToHistory, getWorkoutBodyIntensity, getMaxWeightEver } from '../utils/training';
@@ -65,10 +67,12 @@ const setHapticsEnabled = useWorkoutStore((s) => s.setHapticsEnabled);
 const wakeLockEnabled = useWorkoutStore((s) => s.wakeLockEnabled);
 const setWakeLockEnabled = useWorkoutStore((s) => s.setWakeLockEnabled);
 const [isWide, setIsWide] = useState(() => window.innerWidth >= 700);
+  const [sessionTab, setSessionTab] = useState<'exercise' | 'stats'>('exercise');
 
 // ── Détection de record personnel (PR) ───────────────────────────────────
 const [prBanner, setPrBanner] = useState<string | null>(null);
 const prTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [sessionPRs, setSessionPRs] = useState<string[]>([]);
 useEffect(() => () => { if (prTimeoutRef.current) clearTimeout(prTimeoutRef.current); }, []);
 
 // ── Confettis (mode "Ultra animations", réglable dans les Réglages) ─────
@@ -282,6 +286,7 @@ if (previousMax > 0 && newWeight > previousMax) {
 const exerciseName = workout?.exercises.find((e) => e.id === exerciseId)?.name ?? '';
 if (prTimeoutRef.current) clearTimeout(prTimeoutRef.current);
 setPrBanner(exerciseName);
+            setSessionPRs((list) => (list.includes(exerciseName) ? list : [...list, exerciseName]));
 prTimeoutRef.current = setTimeout(() => setPrBanner(null), 3500);
 try { if ('vibrate' in navigator) navigator.vibrate([80, 40, 80, 40, 160]); } catch (_) {}
 if (ultraAnimationsEnabled) fireConfetti();
@@ -473,7 +478,8 @@ return (
 </div>
 </div>
 )}
-<div style={isWide ? mainArea : { display: 'contents' }}>
+{sessionTab === 'exercise' && (
+        <div style={isWide ? mainArea : { display: 'contents' }}>
 <div style={headerBar}>
 <button onClick={handleAbandon} style={backBtn}>←</button>
 <div style={{ flex: 1, minWidth: 0 }}>
@@ -620,7 +626,22 @@ restBarIndex={isRestTarget ? restBarTargetIndex : undefined}
 </div>
 </div>
 
-<StatsPanel startTime={session.startTime} compact={!isWide} />
+)}
+        {sessionTab === 'exercise' && (
+          <StatsPanel startTime={session.startTime} compact={!isWide} />
+        )}
+        {sessionTab === 'stats' && (
+          <SessionStatsBig
+            session={session}
+            workout={workout}
+            completedSets={completedSets}
+            totalSets={totalSets}
+            progressPct={progressPct}
+            bodyIntensity={bodyIntensity}
+            prList={sessionPRs}
+          />
+        )}
+        <SessionTabBar active={sessionTab} onChange={setSessionTab} />
 </div>
 );
 };
