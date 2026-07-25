@@ -12,9 +12,9 @@ interface SetRowProps {
   onComplete: (entry: SetEntry) => void;
   onEdit?: () => void;
   lastTime?: SetEntry;
-  // AppelÃ© la 1Ã¨re fois que l'utilisateur modifie le poids de la sÃ©rie
-  // active, pour dÃ©marrer le repos dÃ¨s la saisie plutÃ´t que d'attendre
-  // la validation (â) â voir SessionScreen.handleWeightEntered.
+  // Appelé la 1ère fois que l'utilisateur modifie le poids de la série
+  // active, pour démarrer le repos dès la saisie plutôt que d'attendre
+  // la validation (✓) — voir SessionScreen.handleWeightEntered.
   onWeightStart?: () => void;
 }
 
@@ -38,8 +38,8 @@ export const SetRow: React.FC<SetRowProps> = ({
   const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
   const [weight, setWeight] = useState(formatWeightForDisplay(entry.weight || defaultWeight || '', weightUnit));
   const [reps, setReps] = useState(entry.reps || '');
-  // Ne dÃ©clenche onWeightStart qu'une fois par sÃ©rie active (reset dÃ¨s
-  // qu'on quitte la sÃ©rie active, ex. aprÃ¨s validation ou passage suivant).
+  // Ne déclenche onWeightStart qu'une fois par série active (reset dès
+  // qu'on quitte la série active, ex. après validation ou passage suivant).
   const weightStartFiredRef = useRef(false);
 
   useEffect(() => {
@@ -79,14 +79,14 @@ export const SetRow: React.FC<SetRowProps> = ({
 
   const handleValidate = () => { if (!reps) return; onComplete({ weight: parseWeightInputToKg(weight, weightUnit), reps, completed: true }); };
 
-  // Petit rappel "DerniÃ¨re fois" affichÃ© sous chaque sÃ©rie, quand on a
-  // une donnÃ©e exploitable de la sÃ©ance prÃ©cÃ©dente pour cet exercice.
-  const lastTimeHint = lastTime && lastTime.completed && lastTime.reps !== 'â'
-    ? `DerniÃ¨re fois : ${lastTime.weight ? formatWeightForDisplay(lastTime.weight, weightUnit) : 'PDC'} ${weightUnitLabel(weightUnit)} Ã ${lastTime.reps}`
+  // Petit rappel "Dernière fois" affiché sous chaque série, quand on a
+  // une donnée exploitable de la séance précédente pour cet exercice.
+  const lastTimeHint = lastTime && lastTime.completed && lastTime.reps !== '—'
+    ? `Dernière fois : ${lastTime.weight ? formatWeightForDisplay(lastTime.weight, weightUnit) : 'PDC'} ${weightUnitLabel(weightUnit)} × ${lastTime.reps}`
     : null;
 
-  // ââ SÃ©rie sautÃ©e ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-  if (entry.completed && entry.reps === 'â') {
+  // ── Série sautée ──────────────────────────────────────────────────────
+  if (entry.completed && entry.reps === '—') {
     return (
       <div style={rowWrap}>
         <div style={{ ...rowDone, opacity: 0.45 }}>
@@ -94,15 +94,15 @@ export const SetRow: React.FC<SetRowProps> = ({
             <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>S</span>
             <span style={{ color: 'var(--text-dim)', fontSize: 13, fontWeight: 800 }}>{setNumber}</span>
           </div>
-          <span style={{ flex: 1, color: 'var(--text-dim)', fontSize: 13, fontStyle: 'italic' }}>passÃ©e</span>
-          {onEdit && <button onClick={onEdit} style={editBtn} title="Modifier">â</button>}
+          <span style={{ flex: 1, color: 'var(--text-dim)', fontSize: 13, fontStyle: 'italic' }}>passée</span>
+          {onEdit && <button onClick={onEdit} style={editBtn} title="Modifier">✎</button>}
         </div>
         {lastTimeHint && <p style={lastTimeText}>{lastTimeHint}</p>}
       </div>
     );
   }
 
-  // ââ SÃ©rie validÃ©e âââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ── Série validée ─────────────────────────────────────────────────────
   if (entry.completed) {
     const outOfRange = isRepOutOfRange(entry.reps, targetReps);
     return (
@@ -114,7 +114,7 @@ export const SetRow: React.FC<SetRowProps> = ({
           </div>
           <div style={donePillWeight}>
             <span style={{ color: 'var(--text-muted)', fontSize: 9, letterSpacing: 0.5 }}>{weightUnitLabel(weightUnit).toUpperCase()}</span>
-            <span style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 15 }}>{entry.weight ? formatWeightForDisplay(entry.weight, weightUnit) : 'â'}</span>
+            <span style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 15 }}>{entry.weight ? formatWeightForDisplay(entry.weight, weightUnit) : '—'}</span>
           </div>
           <div style={{
             ...donePillReps,
@@ -124,20 +124,20 @@ export const SetRow: React.FC<SetRowProps> = ({
             <span style={{ color: outOfRange ? '#a06a00' : '#3a7a3a', fontSize: 9, letterSpacing: 0.5 }}>REPS</span>
             <span className={outOfRange ? 'amber-pulse' : ''} style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontWeight: 700, fontSize: 15 }}>
               {entry.reps}
-              {outOfRange && <span style={{ fontSize: 9, marginLeft: 2, verticalAlign: 'super' }}>â </span>}
+              {outOfRange && <span style={{ fontSize: 9, marginLeft: 2, verticalAlign: 'super' }}>⚠</span>}
             </span>
           </div>
           <span className="check-pop" style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontSize: 13, width: 20, textAlign: 'center', flexShrink: 0, fontWeight: 700 }}>
-            {outOfRange ? '!' : 'â'}
+            {outOfRange ? '!' : '✓'}
           </span>
-          {onEdit && <button onClick={onEdit} style={editBtn} title="Modifier cette sÃ©rie">â</button>}
+          {onEdit && <button onClick={onEdit} style={editBtn} title="Modifier cette série">✎</button>}
         </div>
         {lastTimeHint && <p style={lastTimeText}>{lastTimeHint}</p>}
       </div>
     );
   }
 
-  // ââ SÃ©rie future âââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ── Série future ─────────────────────────────────────────────────────
   if (!isCurrent) {
     return (
       <div style={rowWrap}>
@@ -150,7 +150,7 @@ export const SetRow: React.FC<SetRowProps> = ({
     );
   }
 
-  // ââ SÃ©rie active âââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ── Série active ─────────────────────────────────────────────────────
   return (
     <div style={{ ...rowWrap, marginBottom: 2 }}>
       <div style={rowActive}>
@@ -173,7 +173,7 @@ export const SetRow: React.FC<SetRowProps> = ({
           background: reps ? 'linear-gradient(135deg, var(--brand-1), var(--brand-2))' : 'var(--bg-elevated)',
           cursor: reps ? 'pointer' : 'not-allowed',
           boxShadow: reps ? '0 4px 14px rgba(var(--brand-1-rgb),0.35)' : 'none',
-        }} onClick={handleValidate} disabled={!reps}>â</button>
+        }} onClick={handleValidate} disabled={!reps}>✓</button>
       </div>
       {lastTimeHint && <p style={{ ...lastTimeText, marginLeft: 8, marginTop: 4 }}>{lastTimeHint}</p>}
     </div>
