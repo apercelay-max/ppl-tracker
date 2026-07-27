@@ -60,6 +60,8 @@ export interface WorkoutSession {
   currentExerciseIndex: number;
     currentSetIndex: number;
     isComplete: boolean;
+    exerciseNameOverrides?: { [exerciseId: string]: string };
+    disabledSupersetGroupIds?: string[];
 }
 
 // ─── History ──────────────────────────────────────────────────────────────
