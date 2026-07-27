@@ -46,6 +46,8 @@ const restoreSessionPosition = useWorkoutStore((s) => s.restoreSessionPosition);
 const skipSet = useWorkoutStore((s) => s.skipSet);
 const skipExercise = useWorkoutStore((s) => s.skipExercise);
 const switchToExercise = useWorkoutStore((s) => s.switchToExercise);
+const toggleSupersetRest = useWorkoutStore((s) => s.toggleSupersetRest);
+const setExerciseNameOverride = useWorkoutStore((s) => s.setExerciseNameOverride);
 const weightUnit = useWorkoutStore((s) => s.weightUnit);
 const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
 const weightUnitToggleStyle = useWorkoutStore((s) => s.weightUnitToggleStyle);
@@ -335,7 +337,7 @@ restoreSessionPosition(restore.exerciseIndex, restore.setIndex);
 return;
 }
 // Superset order 1 → pas de timer, on enchaîne
-if (exercise.restMode === 'superset' && exercise.supersetOrder === 1) {
+if (exercise.restMode === 'superset' && exercise.supersetOrder === 1 && !(session?.disabledSupersetGroupIds ?? []).includes(exercise.supersetGroupId ?? '')) {
 advanceSession();
 return;
 }
@@ -397,7 +399,7 @@ startTimer(restSecs);
 const handleWeightEntered = useCallback((exerciseId: string, setIndex: number) => {
 const exercise = workout?.exercises.find((e) => e.id === exerciseId);
 if (!exercise) return;
-if (exercise.restMode === 'superset' && exercise.supersetOrder === 1) return;
+if (exercise.restMode === 'superset' && exercise.supersetOrder === 1 && !(session?.disabledSupersetGroupIds ?? []).includes(exercise.supersetGroupId ?? '')) return;
 // Toute dernière série de la séance : pas de repos anticipé non plus,
 // le deload prendra le relais une fois la série validée.
 if (isFinalSetOfSession(exerciseId, setIndex)) return;
@@ -673,10 +675,11 @@ return (
 {item.map((exercise, idx) => {
 const exIdx = exercises.indexOf(exercise);
 const isRestTarget = exercise.id === restBarTargetExerciseId;
+const displayExercise = session.exerciseNameOverrides?.[exercise.id] ? { ...exercise, name: session.exerciseNameOverrides[exercise.id] } : exercise;
 return (
 <ExerciseCard
 key={exercise.id}
-exercise={exercise}
+exercise={displayExercise}
 setEntries={session.exerciseProgress[exercise.id] ?? []}
 currentSetIndex={exIdx === currentExIdx ? currentSetIdx : 0}
 isActive={exIdx === currentExIdx}
@@ -700,10 +703,11 @@ restBarIndex={isRestTarget ? restBarTargetIndex : undefined}
 const exercise = item;
 const exIdx = exercises.indexOf(exercise);
 const isRestTarget = exercise.id === restBarTargetExerciseId;
+const displayExercise = session.exerciseNameOverrides?.[exercise.id] ? { ...exercise, name: session.exerciseNameOverrides[exercise.id] } : exercise;
 return (
 <ExerciseCard
 key={exercise.id}
-exercise={exercise}
+exercise={displayExercise}
 setEntries={session.exerciseProgress[exercise.id] ?? []}
 currentSetIndex={exIdx === currentExIdx ? currentSetIdx : 0}
 isActive={exIdx === currentExIdx}
@@ -745,6 +749,8 @@ restBarIndex={isRestTarget ? restBarTargetIndex : undefined}
             workout={workout}
             session={session}
             onSwitchTo={(exerciseId) => { switchToExercise(exerciseId); setSessionTab('exercise'); }}
+            onToggleSupersetRest={toggleSupersetRest}
+            onSetNameOverride={setExerciseNameOverride}
           />
         )}
         {sessionTab === 'repos' && timerIsRunning && (
@@ -903,7 +909,7 @@ const comparison = compareSessionToHistory(history, session.dayId, tonnage);
 // d'un superset (jamais de repos après) et la toute dernière série de la
 // séance (remplacée par le deload, plus par un repos classique).
 const totalRestSeconds = workout.exercises.reduce((sum, ex, exIdx) => {
-if (ex.restMode === 'superset' && ex.supersetOrder === 1) return sum;
+if (ex.restMode === 'superset' && ex.supersetOrder === 1 && !(session.disabledSupersetGroupIds ?? []).includes(ex.supersetGroupId ?? '')) return sum;
 const entries = session.exerciseProgress[ex.id] ?? [];
 const completedCount = entries.filter((e) => e.completed).length;
 if (completedCount === 0) return sum;
