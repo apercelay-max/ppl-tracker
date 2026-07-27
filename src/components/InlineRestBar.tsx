@@ -10,10 +10,13 @@ interface InlineRestBarProps {
   onSkip: () => void;
   onReduce: () => void;
   onAdd: () => void;
+  isPaused: boolean;
+  onTogglePause: () => void;
 }
 
 export const InlineRestBar: React.FC<InlineRestBarProps> = ({
   secondsLeft, formattedTime, progress, finished, nextLabel, nextNote, onSkip, onReduce, onAdd,
+  isPaused, onTogglePause,
 }) => {
   // progress va de 1 (début du repos) à 0 (temps écoulé). On garde des
   // couleurs d'urgence universelles (vert/orange/rouge) mais la couleur
@@ -32,10 +35,11 @@ export const InlineRestBar: React.FC<InlineRestBarProps> = ({
     <div className={`fade-in${finished ? ' rest-bar-blink' : ''}`} style={{ ...wrap, borderColor: borderColorValue }}>
       <div style={{ ...fill, width: `${fillPct}%`, background: accentColor }} />
       <div style={content}>
+        <button className="rest-bar-btn" onClick={onTogglePause} style={smallBtn}>{isPaused ? '▶' : '⏸'}</button>
         <button className="rest-bar-btn" onClick={onReduce} style={smallBtn}>-30s</button>
         <div style={center}>
           <span style={{ ...timeText, color: accentColor }}>{finished ? '0:00' : formattedTime}</span>
-          <span style={label}>{finished ? "C'est reparti 💪" : (nextLabel ?? 'Repos')}</span>
+          <span style={label}>{isPaused ? 'En pause' : finished ? "C'est reparti 💪" : (nextLabel ?? 'Repos')}</span>
         </div>
         <button className="rest-bar-btn" onClick={onAdd} style={smallBtn}>+30s</button>
         <button
