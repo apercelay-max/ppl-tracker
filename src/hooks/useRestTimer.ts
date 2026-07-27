@@ -18,6 +18,7 @@ interface UseRestTimerReturn {
   secondsLeft: number;
   totalSeconds: number;
   isRunning: boolean;
+  isPaused: boolean;
   progress: number;
   formattedTime: string;
 }
@@ -54,6 +55,11 @@ export const useRestTimer = (onComplete: () => void): UseRestTimerReturn => {
 
   // ââ setInterval principal (foreground) ââââââââââââââââââââââââââââââââââ
   useEffect(() => {
+    if (timer.isPaused) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setSecondsLeft(timer.pausedRemainingSeconds ?? 0);
+      return;
+    }
     if (!timer.isRunning || !timer.endTimestamp) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       setSecondsLeft(0);
@@ -74,12 +80,12 @@ export const useRestTimer = (onComplete: () => void): UseRestTimerReturn => {
     tick();
     intervalRef.current = setInterval(tick, 500);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [timer.isRunning, timer.endTimestamp]);
+  }, [timer.isRunning, timer.endTimestamp, timer.isPaused, timer.pausedRemainingSeconds]);
 
   // ââ visibilitychange : recalcul au retour sur l'onglet ââââââââââââââââââ
   useEffect(() => {
     const onVisible = () => {
-      if (!document.hidden && timer.isRunning && timer.endTimestamp) {
+      if (!document.hidden && timer.isRunning && timer.endTimestamp && !timer.isPaused) {
         const remaining = calcRemaining();
         setSecondsLeft(remaining);
         if (remaining <= 0) handleComplete();
@@ -87,19 +93,20 @@ export const useRestTimer = (onComplete: () => void): UseRestTimerReturn => {
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [timer.isRunning, timer.endTimestamp, calcRemaining, handleComplete]);
+  }, [timer.isRunning, timer.endTimestamp, timer.isPaused, calcRemaining, handleComplete]);
 
   // Sync si le endTimestamp change (addTimer / reduceTimer)
   useEffect(() => {
-    if (timer.isRunning && timer.endTimestamp) {
+    if (timer.isRunning && timer.endTimestamp && !timer.isPaused) {
       setSecondsLeft(calcRemaining());
     }
-  }, [timer.endTimestamp]);
+  }, [timer.endTimestamp, timer.isPaused]);
 
   return {
     secondsLeft,
     totalSeconds: timer.totalSeconds,
     isRunning: timer.isRunning,
+    isPaused: timer.isPaused ?? false,
     progress: timer.totalSeconds > 0 ? secondsLeft / timer.totalSeconds : 0,
     formattedTime: formatTime(secondsLeft),
   };
