@@ -10,10 +10,13 @@ interface SessionRestBigProps {
   onSkip: () => void;
   onReduce: () => void;
   onAdd: () => void;
+  isPaused: boolean;
+  onTogglePause: () => void;
 }
 
 export const SessionRestBig: React.FC<SessionRestBigProps> = ({
   secondsLeft, formattedTime, progress, finished, nextLabel, nextNote, onSkip, onReduce, onAdd,
+  isPaused, onTogglePause,
 }) => {
   const usesBrand = !finished && progress > 0.5;
   const accentColor = finished ? '#4CAF50' : usesBrand ? 'var(--brand-1)' : progress > 0.25 ? '#FF9800' : '#e03030';
@@ -25,7 +28,7 @@ export const SessionRestBig: React.FC<SessionRestBigProps> = ({
         <p style={screenTitle}>REPOS EN COURS</p>
         <div style={{ ...timeCard, borderColor: accentColor + '55' }}>
           <p style={{ ...bigTime, color: accentColor }}>{finished ? '0:00' : formattedTime}</p>
-          <p style={nextLabelStyle}>{finished ? 'On repart !' : (nextLabel ?? 'Repos')}</p>
+          <p style={nextLabelStyle}>{isPaused ? 'En pause' : finished ? 'On repart !' : (nextLabel ?? 'Repos')}</p>
           <div style={track}>
             <div style={{ ...fillBar, width: fillPct + '%', background: accentColor }} />
           </div>
@@ -45,6 +48,7 @@ export const SessionRestBig: React.FC<SessionRestBigProps> = ({
           </button>
           <button onClick={onAdd} style={sideBtn}>+30s</button>
         </div>
+        <button onClick={onTogglePause} style={pauseBtnBig}>{isPaused ? '▶ Reprendre' : '⏸ Mettre en pause'}</button>
       </div>
     </div>
   );
@@ -64,3 +68,5 @@ const btnRow: React.CSSProperties = { display: 'flex', gap: 10, alignItems: 'cen
 const sideBtn: React.CSSProperties = { width: 64, height: 52, borderRadius: 14, flexShrink: 0, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700, cursor: 'pointer' };
 const skipBtnBig: React.CSSProperties = { flex: 1, height: 52, borderRadius: 14, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)', fontSize: 15, fontWeight: 700, cursor: 'pointer' };
 const skipBtnBigReady: React.CSSProperties = { background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))', border: '1px solid transparent', color: '#fff' };
+
+const pauseBtnBig: React.CSSProperties = { width: '100%', marginTop: 10, background: 'var(--bg-elevated)', border: '1px dashed var(--border-strong)', borderRadius: 14, padding: '10px 12px', color: 'var(--text-muted)', fontSize: 13, fontWeight: 700, cursor: 'pointer' };
