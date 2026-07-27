@@ -58,6 +58,8 @@ const startTimer = useWorkoutStore((s) => s.startTimer);
 const skipTimer = useWorkoutStore((s) => s.skipTimer);
 const reduceTimer = useWorkoutStore((s) => s.reduceTimer);
 const addTimer = useWorkoutStore((s) => s.addTimer);
+const pauseTimer = useWorkoutStore((s) => s.pauseTimer);
+const resumeTimer = useWorkoutStore((s) => s.resumeTimer);
 const saveCustomRest = useWorkoutStore((s) => s.saveCustomRest);
 const bodyDiagramEnabled = useWorkoutStore((s) => s.bodyDiagramEnabled);
 const ultraAnimationsEnabled = useWorkoutStore((s) => s.ultraAnimationsEnabled);
@@ -249,7 +251,7 @@ timerAlreadyElapsedRef.current = true;
 }
 }, [advanceSession, saveCustomRest, defaultRestSeconds]);
 
-const { secondsLeft, isRunning: timerIsRunning, progress, formattedTime } = useRestTimer(handleTimerComplete);
+const { secondsLeft, isRunning: timerIsRunning, progress, formattedTime, isPaused } = useRestTimer(handleTimerComplete);
 
 useEffect(() => {
 if (sessionTab === 'repos' && !timerIsRunning) {
@@ -279,6 +281,14 @@ if (timerExerciseRef.current && timer.totalSeconds) {
 saveCustomRest(timerExerciseRef.current, (timer.totalSeconds ?? 0) + 30);
 }
 }, [addTimer, timer.totalSeconds, saveCustomRest]);
+
+const handleToggleRestPause = useCallback(() => {
+if (isPaused) {
+resumeTimer();
+} else {
+pauseTimer();
+}
+}, [isPaused, pauseTimer, resumeTimer]);
 
 // Vrai si (exerciseId, setIndex) est la toute dernière série de la séance
 // (dernier exercice de la liste + dernière série de cet exercice) — sert à
@@ -518,6 +528,8 @@ nextNote={restBarNote}
 onSkip={handleSkipRest}
 onReduce={handleReduceRest}
 onAdd={handleAddRest}
+isPaused={isPaused}
+onTogglePause={handleToggleRestPause}
 />
 ) : null;
 
@@ -764,6 +776,8 @@ restBarIndex={isRestTarget ? restBarTargetIndex : undefined}
             onSkip={handleSkipRest}
             onReduce={handleReduceRest}
             onAdd={handleAddRest}
+            isPaused={isPaused}
+            onTogglePause={handleToggleRestPause}
           />
         )}
         <SessionTabBar active={sessionTab} onChange={setSessionTab} restActive={timerIsRunning} />
