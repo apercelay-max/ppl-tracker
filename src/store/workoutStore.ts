@@ -260,6 +260,8 @@ restoreSessionPosition: (exerciseIndex: number, setIndex: number) => void;
 skipSet: () => void;
 skipExercise: () => void;
 switchToExercise: (exerciseId: string) => void;
+setExerciseNameOverride: (exerciseId: string, name: string | null) => void;
+toggleSupersetRest: (groupId: string, disabled: boolean) => void;
 addSet: (exerciseId: string) => void;
 finishSession: () => void;
 abandonSession: () => void;
@@ -508,6 +510,34 @@ const entries = session.exerciseProgress[exerciseId] ?? [];
 const firstIncomplete = entries.findIndex((e) => !e.completed);
 const setIdx = firstIncomplete === -1 ? Math.max(0, entries.length - 1) : firstIncomplete;
 set({ session: { ...session, currentExerciseIndex: exIdx, currentSetIndex: setIdx } });
+},
+
+// Remplacer temporairement le nom affiché d'un exercice pour cette séance
+// (ex: machine occupée, on fait un exercice de substitution) — ne touche pas
+// au programme d'entraînement, juste à l'affichage de cette séance en cours.
+setExerciseNameOverride: (exerciseId, name) => {
+const { session } = get();
+if (!session) return;
+const updated = { ...(session.exerciseNameOverrides ?? {}) };
+if (name && name.trim()) {
+updated[exerciseId] = name.trim();
+} else {
+delete updated[exerciseId];
+}
+set({ session: { ...session, exerciseNameOverrides: updated } });
+},
+
+// Activer/désactiver le repos entre les 2 exercices d'un superset pour
+// cette séance (ex: une des deux machines est occupée) — ne touche pas au
+// programme, uniquement à la séance en cours.
+toggleSupersetRest: (groupId, disabled) => {
+const { session } = get();
+if (!session) return;
+const current = session.disabledSupersetGroupIds ?? [];
+const updated = disabled
+? (current.includes(groupId) ? current : [...current, groupId])
+: current.filter((id) => id !== groupId);
+set({ session: { ...session, disabledSupersetGroupIds: updated } });
 },
 
 // Ajouter une série à un exercice
