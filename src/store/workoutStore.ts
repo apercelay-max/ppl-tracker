@@ -269,6 +269,8 @@ startTimer: (seconds: number) => void;
 skipTimer: () => void;
 reduceTimer: (secondsToRemove: number) => void;
 addTimer: (secondsToAdd: number) => void;
+pauseTimer: () => void;
+resumeTimer: () => void;
 setCurrentWeek: (week: number) => void;
 setTheme: (t: 'dark' | 'light') => void;
 setThemeMode: (m: 'system' | 'light' | 'dark') => void;
@@ -620,6 +622,11 @@ cancelRestNotification();
 
 reduceTimer: (secondsToRemove) => {
 const { timer } = get();
+if (timer.isPaused) {
+const newRemaining = Math.max(1, (timer.pausedRemainingSeconds ?? 0) - secondsToRemove);
+set({ timer: { ...timer, pausedRemainingSeconds: newRemaining } });
+return;
+}
 if (!timer.endTimestamp) return;
 const newEnd = Math.max(Date.now() + 1000, timer.endTimestamp - secondsToRemove * 1000);
 set({ timer: { ...timer, endTimestamp: newEnd } });
@@ -628,10 +635,37 @@ scheduleRestNotification(Math.ceil((newEnd - Date.now()) / 1000));
 
 addTimer: (secondsToAdd) => {
 const { timer } = get();
+if (timer.isPaused) {
+const newRemaining = (timer.pausedRemainingSeconds ?? 0) + secondsToAdd;
+set({ timer: { ...timer, pausedRemainingSeconds: newRemaining } });
+return;
+}
 if (!timer.endTimestamp) return;
 const newEnd = timer.endTimestamp + secondsToAdd * 1000;
 set({ timer: { ...timer, endTimestamp: newEnd } });
 scheduleRestNotification(Math.ceil((newEnd - Date.now()) / 1000));
+},
+
+// Met le repos en pause : fige le temps restant, annule la notification
+// programmée (sinon elle sonnerait quand même à l'heure prévue initiale) et
+// bascule isPaused à vrai. Le decompte visuel reste figé jusqu a resumeTimer.
+pauseTimer: () => {
+const { timer } = get();
+if (!timer.isRunning || !timer.endTimestamp || timer.isPaused) return;
+const remaining = Math.max(0, Math.ceil((timer.endTimestamp - Date.now()) / 1000));
+set({ timer: { ...timer, isPaused: true, pausedRemainingSeconds: remaining, endTimestamp: null } });
+cancelRestNotification();
+},
+
+// Reprend le repos : recalcule un nouvel endTimestamp a partir du temps
+// figé et reprogramme la notification de fin de repos.
+resumeTimer: () => {
+const { timer } = get();
+if (!timer.isPaused || timer.pausedRemainingSeconds == null) return;
+const seconds = timer.pausedRemainingSeconds;
+const endTimestamp = Date.now() + seconds * 1000;
+set({ timer: { ...timer, isPaused: false, pausedRemainingSeconds: null, endTimestamp } });
+scheduleRestNotification(seconds);
 },
 
 setCurrentWeek: (week) => set({ currentWeek: Math.min(8, Math.max(1, week)) }),
