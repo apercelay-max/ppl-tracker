@@ -84,6 +84,8 @@ export interface TimerState {
     isRunning: boolean;
     endTimestamp: number | null;   // Date.now() + duration*1000 au démarrage
   totalSeconds: number;          // Durée initiale (pour la progress bar)
+  isPaused?: boolean;             // vrai quand le repos est mis en pause manuellement
+  pausedRemainingSeconds?: number | null; // secondes figées pendant la pause
 }
 
 // ─── Cardio (hors-programme PPL) ────────────────────────────────────────────
