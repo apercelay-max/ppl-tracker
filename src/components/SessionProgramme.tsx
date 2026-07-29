@@ -12,25 +12,42 @@ interface SessionProgrammeProps {
 export const SessionProgramme: React.FC<SessionProgrammeProps> = ({
   workout, session, onSwitchTo, onToggleSupersetRest, onSetNameOverride,
 }) => {
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [modalExerciseId, setModalExerciseId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const overrides = session.exerciseNameOverrides ?? {};
   const disabledGroups = session.disabledSupersetGroupIds ?? [];
 
-  const startEdit = (exerciseId: string, current: string) => {
-    setEditingId(exerciseId);
-    setDraft(current);
+  const modalExercise = workout.exercises.find((e) => e.id === modalExerciseId) ?? null;
+  const modalGroupDisabled = modalExercise?.supersetGroupId
+    ? disabledGroups.includes(modalExercise.supersetGroupId)
+    : false;
+
+  const openModal = (exerciseId: string) => {
+    setModalExerciseId(exerciseId);
+    setDraft(overrides[exerciseId] ?? '');
   };
 
-  const confirmEdit = (exerciseId: string) => {
-    onSetNameOverride(exerciseId, draft.trim().length > 0 ? draft.trim() : null);
-    setEditingId(null);
+  const closeModal = () => {
+    setModalExerciseId(null);
     setDraft('');
   };
 
-  const cancelEdit = () => {
-    setEditingId(null);
-    setDraft('');
+  const saveDraft = () => {
+    if (!modalExerciseId) return;
+    onSetNameOverride(modalExerciseId, draft.trim() ? draft.trim() : null);
+    closeModal();
+  };
+
+  const resetOverride = () => {
+    if (!modalExerciseId) return;
+    onSetNameOverride(modalExerciseId, null);
+    closeModal();
+  };
+
+  const goToExercise = () => {
+    if (!modalExerciseId) return;
+    onSwitchTo(modalExerciseId);
+    closeModal();
   };
 
   return (
@@ -48,11 +65,10 @@ export const SessionProgramme: React.FC<SessionProgrammeProps> = ({
           const overrideName = overrides[ex.id];
           const displayName = overrideName ?? ex.name;
           const groupDisabled = ex.supersetGroupId ? disabledGroups.includes(ex.supersetGroupId) : false;
-          const isEditing = editingId === ex.id;
           return (
             <div key={ex.id} style={rowWrap}>
               <button
-                onClick={() => onSwitchTo(ex.id)}
+                onClick={() => openModal(ex.id)}
                 style={{
                   ...row,
                   borderColor: isCurrent ? 'var(--brand-1)' : 'var(--border-mid)',
@@ -68,52 +84,57 @@ export const SessionProgramme: React.FC<SessionProgrammeProps> = ({
                       {displayName}
                       {overrideName && <span style={substTag}> (remplace {ex.name})</span>}
                     </p>
-                    <p style={rowMeta}>{ex.muscleGroup} - {doneCount}/{totalCount} series</p>
+                    <p style={rowMeta}>
+                      {ex.muscleGroup} - {doneCount}/{totalCount} series
+                      {groupDisabled && ' - Repos ajoute'}
+                    </p>
                   </div>
                 </div>
                 <span style={{ ...statusPill, color: statusColor, borderColor: statusColor + '55' }}>
                   {statusLabel}
                 </span>
               </button>
-              {ex.isSuperset && (
-                <div style={ssControls}>
-                  {ex.supersetOrder === 1 && ex.supersetGroupId && (
-                    <button
-                      onClick={() => onToggleSupersetRest(ex.supersetGroupId as string, !groupDisabled)}
-                      style={{ ...ssBtn, color: groupDisabled ? '#FF9800' : 'var(--text-muted)' }}
-                    >
-                      {groupDisabled ? '⟳ Repos ajoute - remettre le superset' : '⏸ Machine occupee - ajouter du repos'}
-                    </button>
-                  )}
-                  {!isEditing && (
-                    <button onClick={() => startEdit(ex.id, overrideName ?? '')} style={ssBtn}>
-                      {overrideName ? 'Modifier le remplacant' : 'Remplacer cet exercice'}
-                    </button>
-                  )}
-                  {overrideName && !isEditing && (
-                    <button onClick={() => onSetNameOverride(ex.id, null)} style={{ ...ssBtn, color: 'var(--text-dim)' }}>
-                      Annuler le remplacement
-                    </button>
-                  )}
-                  {isEditing && (
-                    <div style={editRow}>
-                      <input
-                        value={draft}
-                        onChange={(e) => setDraft(e.target.value)}
-                        placeholder='Exercice de remplacement'
-                        style={editInput}
-                        autoFocus
-                      />
-                      <button onClick={() => confirmEdit(ex.id)} style={editConfirmBtn}>OK</button>
-                      <button onClick={cancelEdit} style={editCancelBtn}>Annuler</button>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           );
         })}
       </div>
+
+      {modalExercise && (
+        <div style={modalBackdrop} onClick={closeModal}>
+          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
+            <p style={modalTitle}>{modalExercise.name}</p>
+            <p style={modalMeta}>{modalExercise.muscleGroup}</p>
+
+            <label style={modalLabel}>Nom pour cette seance</label>
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={modalExercise.name}
+              style={modalInput}
+              autoFocus
+            />
+
+            <div style={modalBtnRow}>
+              {overrides[modalExercise.id] && (
+                <button onClick={resetOverride} style={modalSecondaryBtn}>Reinitialiser</button>
+              )}
+              <button onClick={saveDraft} style={modalPrimaryBtn}>Enregistrer</button>
+            </div>
+
+            {modalExercise.isSuperset && modalExercise.supersetOrder === 1 && modalExercise.supersetGroupId && (
+              <button
+                onClick={() => onToggleSupersetRest(modalExercise.supersetGroupId as string, !modalGroupDisabled)}
+                style={{ ...modalToggleBtn, color: modalGroupDisabled ? '#FF9800' : 'var(--text-muted)' }}
+              >
+                {modalGroupDisabled ? 'Repos ajoute - remettre le superset' : 'Machine occupee - ajouter du repos'}
+              </button>
+            )}
+
+            <button onClick={goToExercise} style={modalGoBtn}>Aller a cet exercice</button>
+            <button onClick={closeModal} style={modalCloseBtn}>Fermer</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -130,9 +151,16 @@ const rowName: React.CSSProperties = { color: 'var(--text-primary)', fontSize: 1
 const substTag: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 11, fontWeight: 500 };
 const rowMeta: React.CSSProperties = { color: 'var(--text-muted)', fontSize: 12 };
 const statusPill: React.CSSProperties = { fontSize: 10, fontWeight: 700, letterSpacing: 0.3, padding: '4px 10px', borderRadius: 20, border: '1px solid', flexShrink: 0, whiteSpace: 'nowrap' };
-const ssControls: React.CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6, paddingLeft: 4 };
-const ssBtn: React.CSSProperties = { background: 'var(--bg-elevated)', border: '1px dashed var(--border-strong)', borderRadius: 10, padding: '6px 10px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 700, cursor: 'pointer' };
-const editRow: React.CSSProperties = { display: 'flex', gap: 6, width: '100%', marginTop: 2, alignItems: 'center' };
-const editInput: React.CSSProperties = { flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border-strong)', borderRadius: 10, padding: '8px 10px', color: 'var(--text-primary)', fontSize: 13 };
-const editConfirmBtn: React.CSSProperties = { background: 'var(--brand-1)', border: '1px solid transparent', borderRadius: 10, padding: '8px 12px', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' };
-const editCancelBtn: React.CSSProperties = { background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', borderRadius: 10, padding: '8px 12px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 700, cursor: 'pointer' };
+
+const modalBackdrop: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200 };
+const modalCard: React.CSSProperties = { width: '100%', maxWidth: 480, background: 'var(--bg-card)', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: '20px 18px 28px', display: 'flex', flexDirection: 'column', gap: 10 };
+const modalTitle: React.CSSProperties = { color: 'var(--text-primary)', fontSize: 17, fontWeight: 800 };
+const modalMeta: React.CSSProperties = { color: 'var(--text-muted)', fontSize: 12, marginTop: -6, marginBottom: 4 };
+const modalLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 11, fontWeight: 700, letterSpacing: 0.3, marginTop: 4 };
+const modalInput: React.CSSProperties = { width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', borderRadius: 12, padding: '12px 14px', color: 'var(--text-primary)', fontSize: 15, boxSizing: 'border-box' };
+const modalBtnRow: React.CSSProperties = { display: 'flex', gap: 8 };
+const modalPrimaryBtn: React.CSSProperties = { flex: 1, background: 'var(--brand-1)', border: '1px solid transparent', borderRadius: 12, padding: '12px', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' };
+const modalSecondaryBtn: React.CSSProperties = { flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', borderRadius: 12, padding: '12px', color: 'var(--text-muted)', fontSize: 14, fontWeight: 700, cursor: 'pointer' };
+const modalToggleBtn: React.CSSProperties = { background: 'var(--bg-elevated)', border: '1px dashed var(--border-strong)', borderRadius: 12, padding: '10px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', textAlign: 'center' };
+const modalGoBtn: React.CSSProperties = { background: 'transparent', border: '1px solid var(--border-mid)', borderRadius: 12, padding: '12px', color: 'var(--text-primary)', fontSize: 14, fontWeight: 700, cursor: 'pointer', marginTop: 4 };
+const modalCloseBtn: React.CSSProperties = { background: 'transparent', border: 'none', color: 'var(--text-dim)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: '6px', textAlign: 'center' };
