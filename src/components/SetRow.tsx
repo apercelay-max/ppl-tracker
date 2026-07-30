@@ -164,7 +164,7 @@ export const SetRow: React.FC<SetRowProps> = ({
         </div>
         <div className="input-field" style={inputWrapper}>
           <input style={inputField} type="text" inputMode="numeric" value={reps}
-            onChange={(e) => setReps(e.target.value)} placeholder={targetReps} onFocus={(e) => e.target.select()}
+            onChange={(e) => setReps(e.target.value)} placeholder="Reps" onFocus={(e) => e.target.select()}
             onKeyDown={(e) => e.key === 'Enter' && handleValidate()} />
           <span style={inputUnit}>{targetReps}</span>
         </div>
@@ -190,8 +190,8 @@ const editBtn: React.CSSProperties = { width: 40, height: 40, borderRadius: 10, 
 const rowPending: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, padding: '7px 6px 2px' };
 const activeNumBadge: React.CSSProperties = { width: 28, height: 28, borderRadius: 8, background: 'rgba(var(--brand-1-rgb),0.12)', border: '1px solid rgba(var(--brand-1-rgb),0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
 const rowActive: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, padding: '10px 8px', background: 'var(--bg-red-tint)', borderRadius: 12, border: '1px solid #3a1818' };
-const inputWrapper: React.CSSProperties = { flex: 1, display: 'flex', alignItems: 'center', background: 'var(--bg-red-input)', borderRadius: 10, padding: '8px 10px', border: '1px solid rgba(var(--brand-1-rgb),0.2)', transition: 'border-color 0.15s, box-shadow 0.15s' };
+const inputWrapper: React.CSSProperties = { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', background: 'var(--bg-red-input)', borderRadius: 10, padding: '8px 10px', border: '1px solid rgba(var(--brand-1-rgb),0.2)', transition: 'border-color 0.15s, box-shadow 0.15s', overflow: 'hidden' };
 const inputField: React.CSSProperties = { flex: 1, background: 'none', color: 'var(--text-primary)', fontSize: 16, fontWeight: 600, width: 0 };
-const inputUnit: React.CSSProperties = { color: 'rgba(var(--brand-1-rgb),0.5)', fontSize: 11, marginLeft: 4, flexShrink: 0 };
+const inputUnit: React.CSSProperties = { color: 'rgba(var(--brand-1-rgb),0.5)', fontSize: 11, marginLeft: 4, flexShrink: 0, display: 'inline-block', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
 const inputUnitBtn: React.CSSProperties = { color: 'rgba(var(--brand-1-rgb),0.85)', fontSize: 10, fontWeight: 800, letterSpacing: 0.4, marginLeft: 4, flexShrink: 0, background: 'rgba(var(--brand-1-rgb),0.14)', border: '1px solid rgba(var(--brand-1-rgb),0.35)', borderRadius: 6, padding: '4px 7px', textTransform: 'uppercase' };
 const validateBtn: React.CSSProperties = { width: 42, height: 42, borderRadius: 12, color: '#fff', fontSize: 16, fontWeight: 800, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s, box-shadow 0.2s, transform 0.1s' };
