@@ -38,6 +38,7 @@ const currentWeek = useWorkoutStore((s) => s.currentWeek);
 const customRestSeconds = useWorkoutStore((s) => s.customRestSeconds);
 const defaultRestSeconds = useWorkoutStore((s) => s.defaultRestSeconds);
 const history = useWorkoutStore((s) => s.history);
+const lastSessionNote = [...history].reverse().find((h) => h.dayId === dayId && h.note && h.note.trim())?.note ?? null;
 const timer = useWorkoutStore((s) => s.timer);
 const startSession = useWorkoutStore((s) => s.startSession);
 const completeSet = useWorkoutStore((s) => s.completeSet);
@@ -643,6 +644,12 @@ style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
 
 <div style={scrollArea}>
 <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 16px 80px' }}>
+{lastSessionNote && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
+<div style={lastNoteBanner}>
+<p style={lastNoteLabel}>Note de la derniere fois</p>
+<p style={lastNoteText}>{lastSessionNote}</p>
+</div>
+)}
 {bodyDiagramEnabled && bodyDiagramVisible && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
 <div style={bodyDiagramCard}>
 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -803,6 +810,12 @@ const cardioCard: React.CSSProperties = {
 background: 'var(--bg-blue-tint)', border: '1px solid var(--border-blue-tint)',
 borderRadius: 18, padding: '14px 14px', marginBottom: 14,
 };
+const lastNoteBanner: React.CSSProperties = {
+background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)',
+borderRadius: 18, padding: '14px 14px', marginBottom: 14,
+};
+const lastNoteLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 6 };
+const lastNoteText: React.CSSProperties = { color: 'var(--text-primary)', fontSize: 13, lineHeight: '18px', fontStyle: 'italic' };
 const cardioBtnPrimary: React.CSSProperties = {
 flex: 1, background: 'linear-gradient(135deg, #5560cc, #3d47a0)', color: '#fff',
 borderRadius: 12, padding: '10px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
