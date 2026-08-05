@@ -5,7 +5,8 @@ import { SetRow } from './SetRow';
 import { ExerciseAnimation } from './ExerciseAnimation';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
-import { getLastExerciseSets } from '../utils/training';
+import { getLastExerciseSets, getMaxWeightEver } from '../utils/training';
+import { formatWeightForDisplay, weightUnitLabel } from '../utils/weight';
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -30,6 +31,18 @@ const formatRest = (seconds: number): string => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
+const bestCompletedSet = (sets: SetEntry[] | null | undefined): { weight: number; reps: string } | null => {
+  if (!sets) return null;
+  let best: { weight: number; reps: string } | null = null;
+  for (const s of sets) {
+    if (!s.completed) continue;
+    const w = parseFloat(s.weight);
+    if (isNaN(w)) continue;
+    if (!best || w > best.weight) best = { weight: w, reps: s.reps };
+  }
+  return best;
+};
+
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   exercise, setEntries, currentSetIndex, isActive, currentWeek, onSetComplete,
   onEditSet, onSkipSet, onSkipExercise, onAddSet, onSwitchTo, onWeightStart, restBar, restBarIndex,
@@ -40,6 +53,24 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   const customRestSeconds = useWorkoutStore((s) => s.customRestSeconds);
   const history = useWorkoutStore((s) => s.history);
   const lastTimeSets = getLastExerciseSets(history, exercise.id);
+  const weightUnit = useWorkoutStore((s) => s.weightUnit);
+  const previousMaxWeight = getMaxWeightEver(history, exercise.id);
+  const lastBestSet = bestCompletedSet(lastTimeSets);
+  const currentBestSet = bestCompletedSet(setEntries);
+  let exerciseDeltaLabel: string | null = null;
+  if (lastBestSet && currentBestSet) {
+    const diffKg = currentBestSet.weight - lastBestSet.weight;
+    if (Math.abs(diffKg) < 0.01) {
+      exerciseDeltaLabel = 'Meme charge que la derniere fois (' + lastBestSet.reps + ' reps)';
+    } else {
+      const sign = diffKg > 0 ? '+' : '-';
+      const diffDisplay = formatWeightForDisplay(Math.abs(diffKg).toFixed(2), weightUnit);
+      exerciseDeltaLabel = sign + diffDisplay + ' ' + weightUnitLabel(weightUnit) + ' vs derniere fois';
+    }
+  } else if (lastBestSet) {
+    const lastDisplay = formatWeightForDisplay(String(lastBestSet.weight), weightUnit);
+    exerciseDeltaLabel = 'Derniere fois : ' + lastDisplay + ' ' + weightUnitLabel(weightUnit) + ' x ' + lastBestSet.reps;
+  }
 
   const weekIdx = currentWeek <= 2 ? 0 : currentWeek <= 4 ? 1 : currentWeek <= 6 ? 2 : currentWeek === 7 ? 3 : 4;
   const weekData = PROGRESSION_WEEKS[weekIdx];
@@ -89,11 +120,16 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       {/* Nom + Animation */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
         <ExerciseAnimation exerciseId={exercise.id} size={animSize} />
-        <p style={{
-          color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-          fontSize: 18, fontWeight: 800, lineHeight: '22px', letterSpacing: -0.3,
-          transition: 'color 0.3s', margin: 0,
-        }}>{exercise.name}</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+          <p style={{
+            color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+            fontSize: 18, fontWeight: 800, lineHeight: '22px', letterSpacing: -0.3,
+            transition: 'color 0.3s', margin: 0,
+          }}>{exercise.name}</p>
+          {exerciseDeltaLabel && (
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{exerciseDeltaLabel}</p>
+          )}
+        </div>
       </div>
 
       {/* Badges cibles */}
@@ -152,6 +188,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 onEdit={onEditSet ? () => onEditSet(idx) : undefined}
                 onWeightStart={onWeightStart ? () => onWeightStart(idx) : undefined}
                 lastTime={lastTimeSets?.[idx]}
+                previousMaxWeight={previousMaxWeight}
               />
             </React.Fragment>
           ))}
