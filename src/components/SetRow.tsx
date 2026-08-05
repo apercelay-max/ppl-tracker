@@ -36,7 +36,7 @@ const isRepOutOfRange = (reps: string, targetReps: string): boolean => {
 };
 
 export const SetRow: React.FC<SetRowProps> = ({
-  setNumber, targetReps, defaultWeight, entry, isCurrent, onComplete, onEdit, lastTime, onWeightStart,
+  setNumber, targetReps, defaultWeight, entry, isCurrent, onComplete, onEdit, lastTime, previousMaxWeight, onWeightStart,
 }) => {
   const weightUnit = useWorkoutStore((s) => s.weightUnit);
   const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
