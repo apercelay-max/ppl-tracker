@@ -12,6 +12,10 @@ interface SetRowProps {
   onComplete: (entry: SetEntry) => void;
   onEdit?: () => void;
   lastTime?: SetEntry;
+  // Meilleur poids jamais soulevé sur cet exercice (kg), toutes séances
+  // confondues (avant la séance en cours) — sert à animer le bouton
+  // valider quand la saisie en cours dépasserait ce record.
+  previousMaxWeight?: number;
   // Appelé la 1ère fois que l'utilisateur modifie le poids de la série
   // active, pour démarrer le repos dès la saisie plutôt que d'attendre
   // la validation (✓) — voir SessionScreen.handleWeightEntered.
@@ -78,6 +82,15 @@ export const SetRow: React.FC<SetRowProps> = ({
   };
 
   const handleValidate = () => { if (!reps) return; onComplete({ weight: parseWeightInputToKg(weight, weightUnit), reps, completed: true }); };
+
+  // ── Pulsation "record en vue" sur le bouton valider ─────────────────────
+  // Compare en direct (avant validation) le poids en cours de saisie au
+  // record perso existant, pour donner un retour visuel immédiat pendant
+  // la frappe — indépendant du "Nouveau record !" (bandeau + confettis)
+  // qui, lui, se déclenche après validation dans SessionScreen.
+  const currentWeightKg = parseFloat(parseWeightInputToKg(weight, weightUnit));
+  const isLivePR = isCurrent && !entry.completed && !!reps && !isNaN(currentWeightKg)
+    && typeof previousMaxWeight === 'number' && previousMaxWeight > 0 && currentWeightKg > previousMaxWeight;
 
   // Petit rappel "Dernière fois" affiché sous chaque série, quand on a
   // une donnée exploitable de la séance précédente pour cet exercice.
@@ -168,12 +181,15 @@ export const SetRow: React.FC<SetRowProps> = ({
             onKeyDown={(e) => e.key === 'Enter' && handleValidate()} />
           <span style={inputUnit}>{targetReps}</span>
         </div>
-        <button className="validate-btn" style={{
+        <button className={'validate-btn' + (isLivePR ? ' validate-btn-pr' : '')} style={{
           ...validateBtn,
-          background: reps ? 'linear-gradient(135deg, var(--brand-1), var(--brand-2))' : 'var(--bg-elevated)',
+          background: isLivePR
+            ? 'linear-gradient(120deg, #ffb21d, #ff7a1d, #ffd93d, #ff9d1d)'
+            : reps ? 'linear-gradient(135deg, var(--brand-1), var(--brand-2))' : 'var(--bg-elevated)',
+          backgroundSize: isLivePR ? '300% 300%' : undefined,
           cursor: reps ? 'pointer' : 'not-allowed',
-          boxShadow: reps ? '0 4px 14px rgba(var(--brand-1-rgb),0.35)' : 'none',
-        }} onClick={handleValidate} disabled={!reps}>✓</button>
+          boxShadow: isLivePR ? undefined : (reps ? '0 4px 14px rgba(var(--brand-1-rgb),0.35)' : 'none'),
+        }} onClick={handleValidate} disabled={!reps} title={isLivePR ? 'Nouveau record en vue !' : undefined}>✓</button>
       </div>
       {lastTimeHint && <p style={{ ...lastTimeText, marginLeft: 8, marginTop: 4 }}>{lastTimeHint}</p>}
     </div>
