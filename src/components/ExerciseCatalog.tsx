@@ -392,7 +392,9 @@ const favBtn: React.CSSProperties = {
   fontSize: 17, background: 'none', border: 'none', cursor: 'pointer', padding: '10px 12px', flexShrink: 0,
 };
 const sheetOverlay: React.CSSProperties = {
-  position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 60,
+  // z-index au-dessus de la NavBar flottante (z 50), sinon la barre du bas
+  // reste posée par-dessus la fiche et on peut cliquer dedans par erreur.
+  position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 200,
   display: 'flex', justifyContent: 'center',
 };
 const sheet: React.CSSProperties = {
