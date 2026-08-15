@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   EXERCISE_CATALOG, EXERCISE_IMG_BASE, CATALOG_GROUPS, CATALOG_EQUIPMENT,
   getGuide, type CatalogExercise, type Equipment,
@@ -231,7 +232,11 @@ const ExerciseSheet: React.FC<{
 }> = ({ ex, isFav, onToggleFav, onClose }) => {
   const guide = getGuide(ex);
   const url = imgUrl(ex);
-  return (
+  // Portail vers <body> : l'écran est rendu dans un conteneur animé (classes de
+  // transition d'App.tsx) dont le `transform` crée un contexte d'empilement.
+  // Sans portail, la fiche resterait piégée SOUS la barre de navigation, quel
+  // que soit son z-index.
+  return createPortal(
     <div style={sheetOverlay} onClick={onClose}>
       <div style={sheet} onClick={(e) => e.stopPropagation()}>
         <div style={sheetHeader}>
@@ -298,7 +303,8 @@ const ExerciseSheet: React.FC<{
           </p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
