@@ -2,8 +2,18 @@ import React, { useState } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ALL_EXERCISES, ALL_MUSCLE_GROUPS, getExerciseWeightHistory, getMaxWeightEver, getExerciseE1RMHistory, getMaxE1RMEver } from '../utils/training';
 import { MiniLineChart } from '../components/MiniLineChart';
+import { ExerciseCatalog } from '../components/ExerciseCatalog';
 
 interface ExercicesScreenProps { onBack: () => void; }
+
+/**
+ * Deux onglets :
+ * - "Ma progression" : les exercices de TON programme, avec records et courbes.
+ * - "Catalogue" : la base d'exercices de musculation (muscles, matériel, photos,
+ *   exécution) — utile pour trouver un remplaçant quand une machine est prise,
+ *   ou juste pour vérifier comment se fait un mouvement.
+ */
+type Tab = 'progression' | 'catalogue';
 
 const formatLastDate = (ts: number): string => {
   const diffDays = Math.floor((Date.now() - ts) / 86400000);
@@ -15,6 +25,7 @@ const formatLastDate = (ts: number): string => {
 
 export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
   const history = useWorkoutStore((s) => s.history);
+  const [tab, setTab] = useState<Tab>('progression');
   const [openId, setOpenId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   // Vue affichée dans le graphique déplié : poids max soulevé, ou 1RM estimé
@@ -44,93 +55,114 @@ export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
           <button onClick={onBack} style={backBtn} aria-label="Retour">←</button>
           <div>
             <h1 style={title}>🏋️ Exercices</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Ta progression, exercice par exercice</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>
+              {tab === 'progression' ? 'Ta progression, exercice par exercice' : 'La base d\'exercices de musculation'}
+            </p>
           </div>
         </div>
 
-        <div style={searchWrap}>
-          <span style={searchIcon}>🔍</span>
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher un exercice..."
-            style={searchInput}
-          />
-          {query !== '' && (
-            <button onClick={() => setQuery('')} style={searchClearBtn} aria-label="Effacer">✕</button>
-          )}
-        </div>
-
-        {groups.length === 0 && (
-          <p style={{ color: 'var(--text-dim)', fontSize: 13, textAlign: 'center', marginTop: 24 }}>
-            Aucun exercice ne correspond à "{query}".
-          </p>
-        )}
-
-        <div style={modeSwitch}>
+        <div style={tabSwitch}>
           <button
-            onClick={() => setChartMode('weight')}
-            style={{ ...modeBtn, ...(chartMode === 'weight' ? modeBtnActive : {}) }}
+            onClick={() => setTab('progression')}
+            style={{ ...tabBtn, ...(tab === 'progression' ? tabBtnActive : {}) }}
           >
-            Poids soulevé
+            Ma progression
           </button>
           <button
-            onClick={() => setChartMode('e1rm')}
-            style={{ ...modeBtn, ...(chartMode === 'e1rm' ? modeBtnActive : {}) }}
+            onClick={() => setTab('catalogue')}
+            style={{ ...tabBtn, ...(tab === 'catalogue' ? tabBtnActive : {}) }}
           >
-            1RM estimé
+            Catalogue
           </button>
         </div>
-        {chartMode === 'e1rm' && (
-          <p style={{ color: 'var(--text-dim)', fontSize: 10.5, lineHeight: '14px', marginTop: -10, marginBottom: 16 }}>
-            Estimation (formule d'Epley) à partir de ton poids × reps — une tendance, pas une vraie mesure de force max.
-          </p>
-        )}
 
-        {groups.map(({ group, exercises }) => (
-          <div key={group} style={{ marginBottom: 18 }}>
-            <p style={sectionLabel}>{group}</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {exercises.map((ex) => {
-                const isOpen = openId === ex.id;
-                const max = getMaxWeightEver(history, ex.id);
-                const maxE1rm = getMaxE1RMEver(history, ex.id);
-                const points = getExerciseWeightHistory(history, ex.id);
-                const e1rmPoints = getExerciseE1RMHistory(history, ex.id);
-                const lastPoint = points[points.length - 1];
-                const chartPoints = chartMode === 'weight'
-                  ? points.map((p) => ({ date: p.date, value: p.maxWeight }))
-                  : e1rmPoints.map((p) => ({ date: p.date, value: p.e1rm }));
-                return (
-                  <div key={ex.id} style={card}>
-                    <button onClick={() => setOpenId(isOpen ? null : ex.id)} style={exRow}>
-                      <div style={{ flex: 1, textAlign: 'left' }}>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>{ex.name}</p>
-                        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>
-                          {chartMode === 'weight'
-                            ? (max > 0 ? `Record : ${max} kg` : 'Pas encore testé')
-                            : (maxE1rm > 0 ? `1RM est. : ~${Math.round(maxE1rm)} kg` : 'Pas encore testé')}
-                          {lastPoint ? ` · dernière fois ${formatLastDate(lastPoint.date)}` : ''}
-                        </p>
-                      </div>
-                      <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{isOpen ? '▴' : '▾'}</span>
-                    </button>
-                    {isOpen && (
-                      <div style={{ padding: '4px 2px 2px' }}>
-                        <MiniLineChart
-                          points={chartPoints}
-                          unit="kg"
-                          emptyMessage="Pas encore assez de séances chiffrées sur cet exercice pour voir une courbe."
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+        {tab === 'catalogue' ? <ExerciseCatalog /> : (
+          <>
+            <div style={searchWrap}>
+              <span style={searchIcon}>🔍</span>
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Rechercher un exercice..."
+                style={searchInput}
+              />
+              {query !== '' && (
+                <button onClick={() => setQuery('')} style={searchClearBtn} aria-label="Effacer">✕</button>
+              )}
             </div>
-          </div>
-        ))}
+
+            {groups.length === 0 && (
+              <p style={{ color: 'var(--text-dim)', fontSize: 13, textAlign: 'center', marginTop: 24 }}>
+                Aucun exercice ne correspond à "{query}".
+              </p>
+            )}
+
+            <div style={modeSwitch}>
+              <button
+                onClick={() => setChartMode('weight')}
+                style={{ ...modeBtn, ...(chartMode === 'weight' ? modeBtnActive : {}) }}
+              >
+                Poids soulevé
+              </button>
+              <button
+                onClick={() => setChartMode('e1rm')}
+                style={{ ...modeBtn, ...(chartMode === 'e1rm' ? modeBtnActive : {}) }}
+              >
+                1RM estimé
+              </button>
+            </div>
+            {chartMode === 'e1rm' && (
+              <p style={{ color: 'var(--text-dim)', fontSize: 10.5, lineHeight: '14px', marginTop: -10, marginBottom: 16 }}>
+                Estimation (formule d'Epley) à partir de ton poids × reps — une tendance, pas une vraie mesure de force max.
+              </p>
+            )}
+
+            {groups.map(({ group, exercises }) => (
+              <div key={group} style={{ marginBottom: 18 }}>
+                <p style={sectionLabel}>{group}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {exercises.map((ex) => {
+                    const isOpen = openId === ex.id;
+                    const max = getMaxWeightEver(history, ex.id);
+                    const maxE1rm = getMaxE1RMEver(history, ex.id);
+                    const points = getExerciseWeightHistory(history, ex.id);
+                    const e1rmPoints = getExerciseE1RMHistory(history, ex.id);
+                    const lastPoint = points[points.length - 1];
+                    const chartPoints = chartMode === 'weight'
+                      ? points.map((p) => ({ date: p.date, value: p.maxWeight }))
+                      : e1rmPoints.map((p) => ({ date: p.date, value: p.e1rm }));
+                    return (
+                      <div key={ex.id} style={card}>
+                        <button onClick={() => setOpenId(isOpen ? null : ex.id)} style={exRow}>
+                          <div style={{ flex: 1, textAlign: 'left' }}>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>{ex.name}</p>
+                            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>
+                              {chartMode === 'weight'
+                                ? (max > 0 ? `Record : ${max} kg` : 'Pas encore testé')
+                                : (maxE1rm > 0 ? `1RM est. : ~${Math.round(maxE1rm)} kg` : 'Pas encore testé')}
+                              {lastPoint ? ` · dernière fois ${formatLastDate(lastPoint.date)}` : ''}
+                            </p>
+                          </div>
+                          <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{isOpen ? '▴' : '▾'}</span>
+                        </button>
+                        {isOpen && (
+                          <div style={{ padding: '4px 2px 2px' }}>
+                            <MiniLineChart
+                              points={chartPoints}
+                              unit="kg"
+                              emptyMessage="Pas encore assez de séances chiffrées sur cet exercice pour voir une courbe."
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </>
+        )}
 
       </div>
     </div>
@@ -168,6 +200,16 @@ const searchInput: React.CSSProperties = {
 };
 const searchClearBtn: React.CSSProperties = {
   color: 'var(--text-dim)', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+};
+const tabSwitch: React.CSSProperties = {
+  display: 'flex', gap: 6, marginBottom: 14,
+};
+const tabBtn: React.CSSProperties = {
+  flex: 1, padding: '10px 0', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+  background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-mid)',
+};
+const tabBtnActive: React.CSSProperties = {
+  background: 'var(--brand-1)', color: '#fff', border: '1px solid transparent',
 };
 const modeSwitch: React.CSSProperties = {
   display: 'flex', gap: 6, marginBottom: 12,
