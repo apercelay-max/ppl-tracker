@@ -3,17 +3,19 @@ import { useWorkoutStore } from '../store/workoutStore';
 import { ALL_EXERCISES, ALL_MUSCLE_GROUPS, getExerciseWeightHistory, getMaxWeightEver, getExerciseE1RMHistory, getMaxE1RMEver } from '../utils/training';
 import { MiniLineChart } from '../components/MiniLineChart';
 import { ExerciseCatalog } from '../components/ExerciseCatalog';
+import { ProgrammesPanel } from '../components/ProgrammesPanel';
 
 interface ExercicesScreenProps { onBack: () => void; }
 
 /**
- * Deux onglets :
+ * Trois onglets :
  * - "Ma progression" : les exercices de TON programme, avec records et courbes.
  * - "Catalogue" : la base d'exercices de musculation (muscles, matériel, photos,
- *   exécution) — utile pour trouver un remplaçant quand une machine est prise,
- *   ou juste pour vérifier comment se fait un mouvement.
+ *   exécution) — utile pour trouver un remplaçant quand une machine est prise.
+ * - "Programmes" : les programmes disponibles + le générateur, qui compose un
+ *   programme complet à partir du catalogue et de tes préférences.
  */
-type Tab = 'progression' | 'catalogue';
+type Tab = 'progression' | 'catalogue' | 'programmes';
 
 const formatLastDate = (ts: number): string => {
   const diffDays = Math.floor((Date.now() - ts) / 86400000);
@@ -56,7 +58,9 @@ export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
           <div>
             <h1 style={title}>🏋️ Exercices</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>
-              {tab === 'progression' ? 'Ta progression, exercice par exercice' : 'La base d\'exercices de musculation'}
+              {tab === 'progression' ? 'Ta progression, exercice par exercice'
+                : tab === 'catalogue' ? 'La base d\'exercices de musculation'
+                : 'Tes programmes, et le générateur'}
             </p>
           </div>
         </div>
@@ -74,9 +78,15 @@ export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
           >
             Catalogue
           </button>
+          <button
+            onClick={() => setTab('programmes')}
+            style={{ ...tabBtn, ...(tab === 'programmes' ? tabBtnActive : {}) }}
+          >
+            Programmes
+          </button>
         </div>
 
-        {tab === 'catalogue' ? <ExerciseCatalog /> : (
+        {tab === 'programmes' ? <ProgrammesPanel /> : tab === 'catalogue' ? <ExerciseCatalog /> : (
           <>
             <div style={searchWrap}>
               <span style={searchIcon}>🔍</span>
@@ -205,7 +215,7 @@ const tabSwitch: React.CSSProperties = {
   display: 'flex', gap: 6, marginBottom: 14,
 };
 const tabBtn: React.CSSProperties = {
-  flex: 1, padding: '10px 0', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+  flex: 1, padding: '10px 0', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer',
   background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-mid)',
 };
 const tabBtnActive: React.CSSProperties = {
