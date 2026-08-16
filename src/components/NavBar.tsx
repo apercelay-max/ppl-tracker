@@ -8,6 +8,20 @@ DumbbellIcon, ScaleIcon, ChartIcon, UserIcon, SlidersIcon, PlusIcon,
 
 // Le schéma corporel ("Corps") vit maintenant dans l'écran Objectifs (section
 // dédiée) plutôt que dans un onglet séparé — voir ObjectivesScreen.tsx.
+
+// Icône du catalogue (livre ouvert) définie ici plutôt que dans NavIcons.tsx :
+// elle n'est utilisée que par la barre, autant garder le changement contenu.
+// Même trait et même taille que les autres icônes, avec sa variante "filled".
+const BookIcon: React.FC<{ size?: number; filled?: boolean }> = ({ size = 22, filled }) => (
+<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+strokeWidth={filled ? 2 : 1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+<path d="M3 5.6A1.6 1.6 0 0 1 4.6 4H9a3 3 0 0 1 3 3v12a2.6 2.6 0 0 0-2.6-2.6H4.6A1.6 1.6 0 0 1 3 14.8V5.6Z"
+fill={filled ? 'currentColor' : 'none'} fillOpacity={filled ? 0.2 : 0} />
+<path d="M21 5.6A1.6 1.6 0 0 0 19.4 4H15a3 3 0 0 0-3 3v12a2.6 2.6 0 0 1 2.6-2.6h4.8A1.6 1.6 0 0 0 21 14.8V5.6Z"
+fill={filled ? 'currentColor' : 'none'} fillOpacity={filled ? 0.2 : 0} />
+</svg>
+);
+
 export type NavView = NavTabKey;
 
 interface NavBarProps {
@@ -21,6 +35,7 @@ const TABS: { id: NavView; label: string }[] = [
 { id: 'historique', label: 'Historique' },
 { id: 'cardio', label: 'Cardio' },
 { id: 'exercices', label: 'Exercices' },
+{ id: 'catalogue', label: 'Catalogue' },
 { id: 'poids', label: 'Poids' },
 { id: 'dashboard', label: 'Stats' },
 { id: 'profil', label: 'Profil' },
@@ -38,6 +53,7 @@ objectifs: TargetIcon,
 historique: CalendarIcon,
 cardio: HeartPulseIcon,
 exercices: DumbbellIcon,
+catalogue: BookIcon,
 poids: ScaleIcon,
 dashboard: ChartIcon,
 profil: UserIcon,
