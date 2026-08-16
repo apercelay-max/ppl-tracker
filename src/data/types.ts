@@ -125,4 +125,4 @@ export interface BodyWeightEntry {
 // ─── Barre de navigation : clé de chaque onglet possible ───────────────────
 
 export type NavTabKey =
-    | 'home' | 'objectifs' | 'historique' | 'cardio' | 'exercices' | 'poids' | 'dashboard' | 'profil' | 'settings';
+    | 'home' | 'objectifs' | 'historique' | 'cardio' | 'exercices' | 'catalogue' | 'poids' | 'dashboard' | 'profil' | 'settings';
