@@ -168,12 +168,12 @@ autre: { label: 'Autre', emoji: '⚡' },
 // individuellement dans les Réglages — "settings" reste toujours affiché (voir
 // NavBar.tsx) pour ne jamais bloquer l'accès aux réglages.
 export const NAV_TAB_ORDER: NavTabKey[] = [
-'home', 'objectifs', 'historique', 'cardio', 'exercices', 'poids', 'dashboard', 'profil', 'settings',
+'home', 'objectifs', 'historique', 'cardio', 'exercices', 'catalogue', 'poids', 'dashboard', 'profil', 'settings',
 ];
 
 const DEFAULT_NAV_TABS_ENABLED: Record<NavTabKey, boolean> = {
 home: true, objectifs: true, historique: true, cardio: true,
-exercices: true, poids: true, dashboard: true, profil: true, settings: true,
+exercices: true, catalogue: true, poids: true, dashboard: true, profil: true, settings: true,
 };
 
 // Parmi les onglets activés, ceux qui restent épinglés directement dans la
@@ -182,7 +182,7 @@ exercices: true, poids: true, dashboard: true, profil: true, settings: true,
 // personnalise pas la répartition lui-même.
 const DEFAULT_NAV_TABS_PINNED: Record<NavTabKey, boolean> = {
 home: true, objectifs: true, historique: true, cardio: true,
-exercices: true, poids: true, dashboard: true, profil: true, settings: true,
+exercices: true, catalogue: true, poids: true, dashboard: true, profil: true, settings: true,
 };
 
 interface WorkoutStore {
