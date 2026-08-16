@@ -1,6 +1,7 @@
 import { WorkoutDay } from './types';
 import { WORKOUTS } from './workouts';
 import { PPL_DEBUTANT_WORKOUTS, FULL_BODY_WORKOUTS, FORCE_5X5_WORKOUTS, WRIST_CONSOLIDATION_WORKOUTS } from './extraPrograms';
+import { CATALOG_PROGRAMS } from './catalogPrograms';
 
 // ─── Programmes sélectionnables (Réglages → Programme d'entraînement) ─────
 // "Strict V11" est le programme historique de l'appli (ex-V10), toujours
@@ -101,6 +102,8 @@ export const BUILT_IN_PROGRAMS: Program[] = [
   FULL_BODY_PROGRAM,
   FORCE_5X5_PROGRAM,
   WRIST_CONSOLIDATION_PROGRAM,
+// Programmes batis sur le catalogue d'exercices (voir catalogPrograms.ts).
+...CATALOG_PROGRAMS,
 ];
 
 // Combine programmes intégrés + programmes importés (donnés en argument,
