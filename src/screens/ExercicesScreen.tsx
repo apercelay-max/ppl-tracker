@@ -2,20 +2,12 @@ import React, { useState } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ALL_EXERCISES, ALL_MUSCLE_GROUPS, getExerciseWeightHistory, getMaxWeightEver, getExerciseE1RMHistory, getMaxE1RMEver } from '../utils/training';
 import { MiniLineChart } from '../components/MiniLineChart';
-import { ExerciseCatalog } from '../components/ExerciseCatalog';
-import { ProgrammesPanel } from '../components/ProgrammesPanel';
 
 interface ExercicesScreenProps { onBack: () => void; }
 
-/**
- * Trois onglets :
- * - "Ma progression" : les exercices de TON programme, avec records et courbes.
- * - "Catalogue" : la base d'exercices de musculation (muscles, matériel, photos,
- *   exécution) — utile pour trouver un remplaçant quand une machine est prise.
- * - "Programmes" : les programmes disponibles + le générateur, qui compose un
- *   programme complet à partir du catalogue et de tes préférences.
- */
-type Tab = 'progression' | 'catalogue' | 'programmes';
+// Le catalogue d'exercices et les programmes vivent maintenant dans leur propre
+// écran (onglet Catalogue de la barre du bas, voir CatalogueScreen.tsx). Cet
+// écran-ci reste concentré sur une seule chose : ta progression.
 
 const formatLastDate = (ts: number): string => {
   const diffDays = Math.floor((Date.now() - ts) / 86400000);
@@ -27,7 +19,6 @@ const formatLastDate = (ts: number): string => {
 
 export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
   const history = useWorkoutStore((s) => s.history);
-  const [tab, setTab] = useState<Tab>('progression');
   const [openId, setOpenId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   // Vue affichée dans le graphique déplié : poids max soulevé, ou 1RM estimé
@@ -57,37 +48,10 @@ export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
           <button onClick={onBack} style={backBtn} aria-label="Retour">←</button>
           <div>
             <h1 style={title}>🏋️ Exercices</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>
-              {tab === 'progression' ? 'Ta progression, exercice par exercice'
-                : tab === 'catalogue' ? 'La base d\'exercices de musculation'
-                : 'Tes programmes, et le générateur'}
-            </p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Ta progression, exercice par exercice</p>
           </div>
         </div>
 
-        <div style={tabSwitch}>
-          <button
-            onClick={() => setTab('progression')}
-            style={{ ...tabBtn, ...(tab === 'progression' ? tabBtnActive : {}) }}
-          >
-            Ma progression
-          </button>
-          <button
-            onClick={() => setTab('catalogue')}
-            style={{ ...tabBtn, ...(tab === 'catalogue' ? tabBtnActive : {}) }}
-          >
-            Catalogue
-          </button>
-          <button
-            onClick={() => setTab('programmes')}
-            style={{ ...tabBtn, ...(tab === 'programmes' ? tabBtnActive : {}) }}
-          >
-            Programmes
-          </button>
-        </div>
-
-        {tab === 'programmes' ? <ProgrammesPanel /> : tab === 'catalogue' ? <ExerciseCatalog /> : (
-          <>
             <div style={searchWrap}>
               <span style={searchIcon}>🔍</span>
               <input
@@ -171,8 +135,6 @@ export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
                 </div>
               </div>
             ))}
-          </>
-        )}
 
       </div>
     </div>
@@ -210,16 +172,6 @@ const searchInput: React.CSSProperties = {
 };
 const searchClearBtn: React.CSSProperties = {
   color: 'var(--text-dim)', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-};
-const tabSwitch: React.CSSProperties = {
-  display: 'flex', gap: 6, marginBottom: 14,
-};
-const tabBtn: React.CSSProperties = {
-  flex: 1, padding: '10px 0', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-  background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-mid)',
-};
-const tabBtnActive: React.CSSProperties = {
-  background: 'var(--brand-1)', color: '#fff', border: '1px solid transparent',
 };
 const modeSwitch: React.CSSProperties = {
   display: 'flex', gap: 6, marginBottom: 12,
