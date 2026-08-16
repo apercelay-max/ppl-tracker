@@ -8,6 +8,7 @@ import { ObjectivesScreen } from './screens/ObjectivesScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { CardioScreen } from './screens/CardioScreen';
 import { ExercicesScreen } from './screens/ExercicesScreen';
+import { CatalogueScreen } from './screens/CatalogueScreen';
 import { PoidsScreen } from './screens/PoidsScreen';
 import { ProfilScreen } from './screens/ProfilScreen';
 import { AuthScreen } from './screens/AuthScreen';
@@ -23,7 +24,7 @@ import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 
 type View =
 | 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'historique'
-| 'cardio' | 'exercices' | 'poids' | 'profil' | 'auth';
+| 'cardio' | 'exercices' | 'catalogue' | 'poids' | 'profil' | 'auth';
 
 // Durée d'affichage du splash "PPL" au démarrage, avant le fondu de sortie
 // (voir .splash-fade dans index.css). Volontairement court pour ne pas
@@ -184,6 +185,8 @@ screen = <ObjectivesScreen onBack={handleBack} />;
 screen = <HistoryScreen onBack={handleBack} />;
 } else if (view === 'cardio') {
 screen = <CardioScreen onBack={handleBack} />;
+} else if (view === 'catalogue') {
+screen = <CatalogueScreen onBack={handleBack} />;
 } else if (view === 'exercices') {
 screen = <ExercicesScreen onBack={handleBack} />;
 } else if (view === 'poids') {
@@ -207,7 +210,7 @@ screen = <HomeScreen onSelectDay={handleSelectDay} onOpenDashboard={handleOpenDa
 
 // La barre ne s'affiche jamais pendant une séance (intro/session) — même
 // activée dans les Réglages, elle distrairait pendant l'entraînement.
-const NAV_VIEWS: View[] = ['home', 'objectifs', 'historique', 'cardio', 'exercices', 'poids', 'dashboard', 'profil', 'settings'];
+const NAV_VIEWS: View[] = ['home', 'objectifs', 'historique', 'cardio', 'exercices', 'catalogue', 'poids', 'dashboard', 'profil', 'settings'];
 const showNavBar = navBarEnabled && NAV_VIEWS.includes(view);
 const activeNavTab: NavView = (NAV_VIEWS.includes(view) ? view : 'home') as NavView;
 
