@@ -1,5 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useWorkoutStore } from '../store/workoutStore';
+import { getAllPrograms, type Program } from '../data/programs';
+import { addCatalogExerciseToWorkout } from '../utils/workoutGenerator';
+import { replaceCustomProgram } from './ProgrammesPanel';
 import {
   EXERCISE_CATALOG, EXERCISE_IMG_BASE, CATALOG_GROUPS, CATALOG_EQUIPMENT,
   getGuide, type CatalogExercise, type Equipment,
@@ -232,6 +236,7 @@ const ExerciseSheet: React.FC<{
 }> = ({ ex, isFav, onToggleFav, onClose }) => {
   const guide = getGuide(ex);
   const url = imgUrl(ex);
+  const [adding, setAdding] = useState(false);
   // Portail vers <body> : l'écran est rendu dans un conteneur animé (classes de
   // transition d'App.tsx) dont le `transform` crée un contexte d'empilement.
   // Sans portail, la fiche resterait piégée SOUS la barre de navigation, quel
@@ -264,6 +269,12 @@ const ExerciseSheet: React.FC<{
             <Badge>{ex.pattern}</Badge>
             <Badge>{ex.level}</Badge>
           </div>
+
+          <button onClick={() => setAdding(true)} style={addBtn}>
+            + Ajouter cet exercice à une séance
+          </button>
+
+          {adding && <AddToWorkout ex={ex} onDone={() => setAdding(false)} />}
 
           <Section title="Muscles ciblés">
             <p style={bodyText}>
@@ -305,6 +316,111 @@ const ExerciseSheet: React.FC<{
       </div>
     </div>,
     document.body
+  );
+};
+
+// ─── Ajouter un exercice à une séance existante ──────────────────────────────
+
+/**
+ * Ajoute un exercice du catalogue à une séance.
+ *
+ * Les programmes intégrés (Strict V11, PPL Débutant…) sont écrits en dur dans le
+ * code : impossible de les modifier. On propose donc d'en faire une copie
+ * modifiable, qui devient un programme importé comme les autres. Les identifiants
+ * d'exercice ne changent pas, donc les records suivent dans la copie.
+ */
+const AddToWorkout: React.FC<{ ex: CatalogExercise; onDone: () => void }> = ({ ex, onDone }) => {
+  const customPrograms = useWorkoutStore((s) => s.customPrograms);
+  const activeProgramId = useWorkoutStore((s) => s.activeProgramId);
+  const addCustomProgram = useWorkoutStore((s) => s.addCustomProgram);
+  const setActiveProgram = useWorkoutStore((s) => s.setActiveProgram);
+  const [programId, setProgramId] = useState(activeProgramId);
+  const [done, setDone] = useState<string | null>(null);
+
+  const programs = getAllPrograms(customPrograms);
+  const program = programs.find((p) => p.id === programId) ?? programs[0];
+  const editable = program?.isCustom === true;
+
+  if (!program) return null;
+
+  const duplicate = (): Program => {
+    const stamp = Date.now();
+    return {
+      ...program,
+      id: `copie-${program.id}-${stamp}`,
+      name: `${program.name} (ma version)`,
+      isCustom: true,
+      source: `Copie modifiable de « ${program.name} », créée depuis le catalogue d'exercices.`,
+      // Nouveaux identifiants de séance, sinon ils entreraient en conflit avec
+      // ceux du programme d'origine (deux séances ne peuvent pas partager un id).
+      workouts: program.workouts.map((w, i) => ({ ...w, id: `${'copie'}-${stamp}-${i + 1}` })),
+      dayAccents: Object.fromEntries(
+        program.workouts.map((w, i) => [`copie-${stamp}-${i + 1}`, program.dayAccents[w.id] ?? '#7c6fcd'])
+      ),
+      dayTypeLabels: Object.fromEntries(
+        program.workouts.map((w, i) => [`copie-${stamp}-${i + 1}`, program.dayTypeLabels[w.id] ?? w.name.toUpperCase()])
+      ),
+    };
+  };
+
+  const handleAdd = (dayId: string, dayName: string) => {
+    if (editable) {
+      replaceCustomProgram(addCatalogExerciseToWorkout(program, dayId, ex));
+      setDone(`Ajouté à « ${dayName} ».`);
+      return;
+    }
+    // Programme intégré : on duplique, on ajoute dans la copie, on l'active.
+    const copy = duplicate();
+    const index = program.workouts.findIndex((w) => w.id === dayId);
+    const copyDayId = copy.workouts[index].id;
+    addCustomProgram(addCatalogExerciseToWorkout(copy, copyDayId, ex));
+    setActiveProgram(copy.id);
+    setDone(`Copie « ${copy.name} » créée et activée, avec l'exercice ajouté à « ${dayName} ».`);
+  };
+
+  if (done) {
+    return (
+      <div style={addPanel}>
+        <p style={{ ...bodyText, marginBottom: 10 }}>{done}</p>
+        <button onClick={onDone} style={addPanelBtn}>Fermer</button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={addPanel}>
+      <p style={sectionLabel}>Programme</p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+        {programs.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => setProgramId(p.id)}
+            style={{ ...chip, ...(p.id === programId ? chipActive : {}) }}
+          >
+            {p.name}
+          </button>
+        ))}
+      </div>
+
+      {!editable && (
+        <p style={{ ...bodyText, fontSize: 11.5, marginBottom: 10 }}>
+          « {program.name} » est un programme intégré, il ne peut pas être modifié directement.
+          Choisir une séance en créera une copie modifiable, qui deviendra ton programme actif.
+        </p>
+      )}
+
+      <p style={sectionLabel}>Ajouter à quelle séance ?</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {program.workouts.map((w) => (
+          <button key={w.id} onClick={() => handleAdd(w.id, w.name)} style={dayPickBtn}>
+            <span style={{ color: 'var(--text-secondary)', fontWeight: 700 }}>{w.name}</span>
+            <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>{w.exercises.length} exos</span>
+          </button>
+        ))}
+      </div>
+
+      <button onClick={onDone} style={{ ...addPanelBtn, marginTop: 10 }}>Annuler</button>
+    </div>
   );
 };
 
@@ -432,6 +548,23 @@ const badge: React.CSSProperties = {
 };
 const bodyText: React.CSSProperties = {
   color: 'var(--text-muted)', fontSize: 13, lineHeight: '19px',
+};
+const addBtn: React.CSSProperties = {
+  width: '100%', padding: '11px 0', borderRadius: 10, fontSize: 12.5, fontWeight: 700,
+  cursor: 'pointer', background: 'var(--brand-1)', color: '#fff', border: 'none', marginBottom: 18,
+};
+const addPanel: React.CSSProperties = {
+  background: 'var(--bg-card)', border: '1px solid var(--border-mid)',
+  borderRadius: 12, padding: 12, marginBottom: 18, marginTop: -8,
+};
+const addPanelBtn: React.CSSProperties = {
+  width: '100%', padding: '9px 0', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+  background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-mid)',
+};
+const dayPickBtn: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
+  padding: '10px 12px', borderRadius: 10, cursor: 'pointer', fontSize: 12.5,
+  background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)',
 };
 const sourceNote: React.CSSProperties = {
   color: 'var(--text-dim)', fontSize: 10.5, lineHeight: '15px', marginTop: 8,
