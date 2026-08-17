@@ -2,8 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getAllPrograms, type Program } from '../data/programs';
-import { addCatalogExerciseToWorkout } from '../utils/workoutGenerator';
-import { replaceCustomProgram } from './ProgrammesPanel';
+import { addCatalogExerciseToWorkout, replaceCustomProgram } from '../utils/workoutGenerator';
 import {
   EXERCISE_CATALOG, EXERCISE_IMG_BASE, CATALOG_GROUPS, CATALOG_EQUIPMENT,
   getGuide, type CatalogExercise, type Equipment,
@@ -19,7 +18,7 @@ import {
 
 const FAVS_KEY = 'ppl-catalog-favoris';
 
-const readFavs = (): string[] => {
+export const readFavs = (): string[] => {
   try {
     const raw = localStorage.getItem(FAVS_KEY);
     return raw ? (JSON.parse(raw) as string[]) : [];
@@ -28,7 +27,7 @@ const readFavs = (): string[] => {
   }
 };
 
-const writeFavs = (ids: string[]) => {
+export const writeFavs = (ids: string[]) => {
   try { localStorage.setItem(FAVS_KEY, JSON.stringify(ids)); } catch { /* ignoré */ }
 };
 
@@ -36,6 +35,30 @@ const writeFavs = (ids: string[]) => {
 const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 
 const imgUrl = (ex: CatalogExercise) => (ex.img ? `${EXERCISE_IMG_BASE}/${ex.img}` : null);
+
+
+/**
+ * Retrouve l'exercice du catalogue correspondant à une ligne de programme.
+ * Les programmes bâtis sur le catalogue utilisent des identifiants `cat-<slug>`,
+ * donc la correspondance est directe. Pour les programmes plus anciens (Strict
+ * V11, séances importées), on retombe sur une comparaison par nom, sans accents
+ * ni ponctuation — approximatif mais suffisant pour retrouver la photo.
+ */
+const byNormalizedName = new Map(
+  EXERCISE_CATALOG.map((ex) => [normalize(ex.name), ex] as const)
+);
+
+export const findCatalogExercise = (
+  exerciseId: string,
+  exerciseName: string
+): CatalogExercise | null => {
+  if (exerciseId.startsWith('cat-')) {
+    const slug = exerciseId.slice(4);
+    const hit = EXERCISE_CATALOG.find((ex) => ex.id === slug);
+    if (hit) return hit;
+  }
+  return byNormalizedName.get(normalize(exerciseName)) ?? null;
+};
 
 type TypeFilter = 'Tous' | 'Polyarticulaire' | 'Isolation';
 type LevelFilter = 'Tous' | 'Débutant' | 'Intermédiaire' | 'Avancé';
@@ -231,7 +254,7 @@ const ExerciseRow: React.FC<{
 
 // ─── Fiche détaillée (feuille plein écran) ───────────────────────────────────
 
-const ExerciseSheet: React.FC<{
+export const ExerciseSheet: React.FC<{
   ex: CatalogExercise; isFav: boolean; onToggleFav: () => void; onClose: () => void;
 }> = ({ ex, isFav, onToggleFav, onClose }) => {
   const guide = getGuide(ex);

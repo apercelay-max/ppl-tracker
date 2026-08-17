@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
+import { ExerciseSheet, findCatalogExercise, readFavs, writeFavs } from './ExerciseCatalog';
+import { EXERCISE_IMG_BASE } from '../data/exercisesCatalog';
+import type { Exercise } from '../data/types';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getAllPrograms, type Program } from '../data/programs';
-import { setCustomWorkouts } from '../data/workouts';
 import { CATALOG_GROUPS, CATALOG_EQUIPMENT, type Equipment } from '../data/exercisesCatalog';
 import {
   generateProgram, weeklySetsByGroup, DEFAULT_PREFS,
@@ -17,15 +19,6 @@ import {
  * tonnage — sans rien changer au store.
  */
 
-/** Remplace un programme importé et resynchronise le registre des séances. */
-export const replaceCustomProgram = (updated: Program) => {
-  const { customPrograms } = useWorkoutStore.getState();
-  const next = customPrograms.map((p) => (p.id === updated.id ? updated : p));
-  useWorkoutStore.setState({ customPrograms: next });
-  // Indispensable : c'est ce registre que getWorkout() interroge pour retrouver
-  // une séance importée. Sans ça, la séance modifiée resterait introuvable.
-  setCustomWorkouts(next.flatMap((p) => p.workouts));
-};
 
 type Mode = 'liste' | 'generateur';
 
@@ -137,9 +130,7 @@ const ProgramCard: React.FC<{
                 {w.name} <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>· {w.estimatedDuration}</span>
               </p>
               {w.exercises.map((ex) => (
-                <p key={ex.id} style={exLine}>
-                  <span style={{ color: 'var(--text-dim)' }}>{ex.sets}×{ex.targetReps}</span> {ex.name}
-                </p>
+                <ProgramExerciseLine key={ex.id} ex={ex} />
               ))}
               {w.exercises.length === 0 && <p style={exLine}>(aucun exercice)</p>}
             </div>
@@ -270,9 +261,7 @@ const GeneratorForm: React.FC<{ onSave: (p: Program) => void; onCancel: () => vo
                 {w.name} <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>· {w.estimatedDuration}</span>
               </p>
               {w.exercises.map((ex) => (
-                <p key={ex.id} style={exLine}>
-                  <span style={{ color: 'var(--text-dim)' }}>{ex.sets}×{ex.targetReps}</span> {ex.name}
-                </p>
+                <ProgramExerciseLine key={ex.id} ex={ex} />
               ))}
             </div>
           ))}
@@ -380,4 +369,70 @@ const warnBox: React.CSSProperties = {
 const toastBox: React.CSSProperties = {
   background: 'var(--bg-elevated)', border: '1px solid var(--brand-1)', borderRadius: 10,
   padding: '9px 12px', color: 'var(--text-secondary)', fontSize: 12, marginBottom: 12,
+};
+
+/**
+ * Ligne d'exercice dans le détail d'un programme : même présentation que le
+ * catalogue (photo + nom), et au clic la fiche complète (muscles, exécution,
+ * conseils, erreurs courantes).
+ *
+ * La fiche s'affiche via un portail vers <body> (voir ExerciseSheet), donc
+ * chaque ligne peut gérer son ouverture toute seule sans faire remonter l'état.
+ *
+ * Certains exercices des anciens programmes n'ont pas d'équivalent dans le
+ * catalogue : la ligne reste alors affichée, simplement sans photo ni fiche.
+ */
+const ProgramExerciseLine: React.FC<{ ex: Exercise }> = ({ ex }) => {
+  const [open, setOpen] = useState(false);
+  const [favs, setFavs] = useState<string[]>(readFavs);
+  const cat = findCatalogExercise(ex.id, ex.name);
+
+  const toggleFav = () => {
+    if (!cat) return;
+    setFavs((prev) => {
+      const next = prev.includes(cat.id) ? prev.filter((x) => x !== cat.id) : [...prev, cat.id];
+      writeFavs(next);
+      return next;
+    });
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => cat && setOpen(true)}
+        style={{ ...exRowBtn, cursor: cat ? 'pointer' : 'default' }}
+      >
+        <span style={exThumb}>
+          {cat?.img
+            ? <img src={`${EXERCISE_IMG_BASE}/${cat.img}`} alt="" loading="lazy"
+                   style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <span style={{ fontSize: 13, opacity: 0.4 }}>🏋️</span>}
+        </span>
+        <span style={exRowText}>
+          <span style={{ color: 'var(--text-dim)' }}>{ex.sets}×{ex.targetReps}</span> {ex.name}
+        </span>
+        {cat && <span style={{ color: 'var(--text-dim)', fontSize: 13, flexShrink: 0 }}>›</span>}
+      </button>
+      {open && cat && (
+        <ExerciseSheet
+          ex={cat}
+          isFav={favs.includes(cat.id)}
+          onToggleFav={toggleFav}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+};
+
+const exRowBtn: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 9, width: '100%',
+  padding: '5px 4px', background: 'none', border: 'none', textAlign: 'left',
+};
+const exThumb: React.CSSProperties = {
+  width: 34, height: 34, borderRadius: 8, flexShrink: 0, overflow: 'hidden',
+  background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+};
+const exRowText: React.CSSProperties = {
+  flex: 1, minWidth: 0, color: 'var(--text-muted)', fontSize: 12.5, lineHeight: '17px',
 };
