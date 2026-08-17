@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { WorkoutSession, ExerciseProgress, SetEntry, HistoryEntry, TimerState, CardioActivityType, CardioEntry, BodyWeightEntry, NavTabKey } from '../data/types';
-import { getWorkout, setCustomWorkouts } from '../data/workouts';
+import { getWorkout, getBaseWorkout, setCustomWorkouts, setSessionWorkoutOverride } from '../data/workouts';
+import { applyAdaptation, type GymProfile, type SessionAdaptation } from '../utils/gymAdapt';
 import { Program } from '../data/programs';
 import { bucketByWeek } from '../utils/training';
 
@@ -185,6 +186,18 @@ home: true, objectifs: true, historique: true, cardio: true,
 exercices: true, catalogue: true, poids: true, dashboard: true, profil: true, settings: true,
 };
 
+// Matériel de la salle — sert au calcul des disques (« 2×10 + 2,5 par côté »)
+// et au mode « salle inconnue ». Valeurs par défaut = salle française
+// classique : barre olympique 20 kg, barre EZ 10 kg, disques de 1,25 à 25.
+const DEFAULT_GYM_PROFILE: GymProfile = {
+  barKg: 20,
+  ezBarKg: 10,
+  plates: [25, 20, 15, 10, 5, 2.5, 1.25],
+  otherIncrementKg: 2.5,
+  availableEquipment: ['Barre', 'Barre EZ', 'Haltères', 'Machine', 'Poulie', 'Poids du corps'],
+  plateHelperEnabled: true,
+};
+
 interface WorkoutStore {
 session: WorkoutSession | null;
 timer: TimerState;
@@ -225,6 +238,12 @@ homeSectionColors: Partial<Record<HomeSectionKey, string>>;
 navBarEnabled: boolean;
 navBarTabsEnabled: Record<NavTabKey, boolean>;
 navBarPinned: Record<NavTabKey, boolean>;
+gymProfile: GymProfile;
+// Valider une série en secouant le téléphone (mains prises/pleines de magnésie).
+shakeToValidateEnabled: boolean;
+// Adaptation appliquée à la séance en cours (temps dispo, forme du jour,
+// matériel dispo) — null quand la séance est celle du programme.
+sessionAdaptation: SessionAdaptation | null;
 bodyWeightHistory: BodyWeightEntry[];
 activeProgramId: string;
 customPrograms: Program[];
@@ -253,7 +272,7 @@ hasCompletedOnboarding: boolean;
 // depuis Réglages → Apparence → "Réglages avancés", pas figé après le choix
 // initial.
 simplicityMode: boolean;
-startSession: (dayId: string) => void;
+startSession: (dayId: string, adaptation?: SessionAdaptation | null) => void;
 completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
 editSet: (exerciseId: string, setIndex: number) => void;
 restoreSessionPosition: (exerciseIndex: number, setIndex: number) => void;
@@ -306,6 +325,8 @@ setHomeSectionColor: (key: HomeSectionKey, hex: string | null) => void;
 setNavBarEnabled: (enabled: boolean) => void;
 setNavBarTabEnabled: (key: NavTabKey, enabled: boolean) => void;
 setNavBarTabPinned: (key: NavTabKey, pinned: boolean) => void;
+setGymProfile: (patch: Partial<GymProfile>) => void;
+setShakeToValidateEnabled: (enabled: boolean) => void;
 addBodyWeightEntry: (weightKg: number) => void;
 deleteBodyWeightEntry: (id: string) => void;
 setActiveProgram: (id: string) => void;
@@ -376,6 +397,9 @@ homeSectionColors: {},
 navBarEnabled: false,
 navBarTabsEnabled: { ...DEFAULT_NAV_TABS_ENABLED },
 navBarPinned: { ...DEFAULT_NAV_TABS_PINNED },
+gymProfile: { ...DEFAULT_GYM_PROFILE },
+shakeToValidateEnabled: false,
+sessionAdaptation: null,
 bodyWeightHistory: [],
 activeProgramId: 'strict-v10',
 customPrograms: [],
@@ -390,9 +414,14 @@ ultraTransitionStyle: 'bounce',
 hasCompletedOnboarding: false,
 simplicityMode: false,
 
-startSession: (dayId) => {
-const workout = getWorkout(dayId);
-if (!workout) return;
+startSession: (dayId, adaptation = null) => {
+// On part TOUJOURS de la séance du programme, jamais d'une éventuelle
+// séance déjà adaptée encore en place : sinon relancer une séance
+// appliquerait l'adaptation par-dessus une adaptation.
+const base = getBaseWorkout(dayId);
+if (!base) return;
+const workout = applyAdaptation(base, adaptation);
+setSessionWorkoutOverride(adaptation ? workout : null);
 try {
 if (notifSupported && Notification.permission === 'default') Notification.requestPermission();
 } catch (_) {}
@@ -410,6 +439,7 @@ currentExerciseIndex: 0, currentSetIndex: 0, isComplete: false,
 // Jour 1 du cycle (Pull A) = redémarrage d'un nouveau cycle glissant
 // → on regrise toutes les séances de l'accueil.
 cycleDoneIds: workout.dayNumber === 1 ? [] : get().cycleDoneIds,
+sessionAdaptation: adaptation,
 });
 if (get().wakeLockEnabled) requestWakeLock();
 },
@@ -599,12 +629,16 @@ bestWeekStreak: Math.max(bestWeekStreak, currentStreak),
 if (hapticsEnabled) successVibrate();
 cancelRestNotification();
 releaseWakeLock();
+// La séance adaptée ne doit plus masquer celle du programme une fois
+// terminée (historique, aperçu de la prochaine séance...).
+setSessionWorkoutOverride(null);
 },
 
 abandonSession: () => {
-set({ session: null, timer: { isRunning: false, endTimestamp: null, totalSeconds: 0 } });
+set({ session: null, sessionAdaptation: null, timer: { isRunning: false, endTimestamp: null, totalSeconds: 0 } });
 cancelRestNotification();
 releaseWakeLock();
+setSessionWorkoutOverride(null);
 },
 
 startTimer: (seconds) => {
@@ -801,6 +835,18 @@ setNavBarTabPinned: (key, pinned) => {
 set((state) => ({ navBarPinned: { ...state.navBarPinned, [key]: pinned } }));
 },
 
+setGymProfile: (patch) => {
+set((state) => {
+const next = { ...state.gymProfile, ...patch };
+// Les disques sont triés du plus lourd au plus léger et dédoublonnés :
+// tout le calcul de combinaison suppose cet ordre.
+next.plates = [...new Set(next.plates.filter((v) => v > 0))].sort((a, b) => b - a);
+return { gymProfile: next };
+});
+},
+
+setShakeToValidateEnabled: (enabled) => set({ shakeToValidateEnabled: enabled }),
+
 addBodyWeightEntry: (weightKg) => {
 const entry: BodyWeightEntry = { id: `bw-${Date.now()}`, date: Date.now(), weightKg };
 set((state) => ({ bodyWeightHistory: [entry, ...state.bodyWeightHistory].slice(0, 200) }));
@@ -880,6 +926,9 @@ homeSectionColors: state.homeSectionColors,
 navBarEnabled: state.navBarEnabled,
 navBarTabsEnabled: state.navBarTabsEnabled,
 navBarPinned: state.navBarPinned,
+gymProfile: state.gymProfile,
+shakeToValidateEnabled: state.shakeToValidateEnabled,
+sessionAdaptation: state.sessionAdaptation,
 bodyWeightHistory: state.bodyWeightHistory,
 activeProgramId: state.activeProgramId,
 customPrograms: state.customPrograms,
@@ -914,10 +963,27 @@ merged.homeSectionOrder = [...savedOrder, ...missingKeys];
 merged.navBarTabsEnabled = { ...DEFAULT_NAV_TABS_ENABLED, ...(p.navBarTabsEnabled ?? {}) };
 merged.navBarPinned = { ...DEFAULT_NAV_TABS_PINNED, ...(p.navBarPinned ?? {}) };
 merged.activeProgramId = p.activeProgramId ?? 'strict-v10';
+// Profil de salle : mergé clé par clé pour qu'un réglage ajouté plus tard
+// arrive avec sa valeur par défaut au lieu de rester undefined.
+merged.gymProfile = { ...DEFAULT_GYM_PROFILE, ...(p.gymProfile ?? {}) };
+merged.shakeToValidateEnabled = p.shakeToValidateEnabled ?? false;
+merged.sessionAdaptation = p.sessionAdaptation ?? null;
 merged.customPrograms = p.customPrograms ?? [];
 // Remplit tout de suite le registre des séances importées, pour que
 // getWorkout() les retrouve dès le premier rendu après le chargement.
 syncCustomWorkoutsRegistry(merged.customPrograms);
+
+// Une séance adaptée doit rester adaptée après un rechargement de
+// l'appli (fermeture de l'onglet, PWA relancée en pleine séance) :
+// on réinstalle la surcouche tout de suite, avant le premier rendu.
+// Placé APRÈS syncCustomWorkoutsRegistry pour que les séances issues
+// d'un programme importé soient déjà retrouvables.
+if (merged.session && !merged.session.isComplete && merged.sessionAdaptation) {
+const base = getBaseWorkout(merged.session.dayId);
+setSessionWorkoutOverride(base ? applyAdaptation(base, merged.sessionAdaptation) : null);
+} else {
+setSessionWorkoutOverride(null);
+}
 
 // Badges — compteurs vie entière introduits après coup. Pour ne pas
 // pénaliser les utilisateurs qui ont déjà de l'historique, on les
