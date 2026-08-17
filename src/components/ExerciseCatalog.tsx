@@ -39,14 +39,31 @@ const imgUrl = (ex: CatalogExercise) => (ex.img ? `${EXERCISE_IMG_BASE}/${ex.img
 
 /**
  * Retrouve l'exercice du catalogue correspondant à une ligne de programme.
- * Les programmes bâtis sur le catalogue utilisent des identifiants `cat-<slug>`,
- * donc la correspondance est directe. Pour les programmes plus anciens (Strict
- * V11, séances importées), on retombe sur une comparaison par nom, sans accents
- * ni ponctuation — approximatif mais suffisant pour retrouver la photo.
+ *
+ * Trois niveaux, du plus sûr au plus permissif :
+ *  1. identifiant `cat-<slug>` — les programmes bâtis sur le catalogue ;
+ *  2. nom identique (accents et ponctuation ignorés) ;
+ *  3. rapprochement par mots-clés — indispensable pour les programmes écrits à
+ *     la main, où les noms sont personnalisés : « Curl poulie basse à la corde »
+ *     doit retrouver « Curl à la poulie basse ».
+ *
+ * Le niveau 3 exige au moins 2 mots significatifs communs ET que le candidat
+ * couvre plus de la moitié des mots du nom cherché : sans ce garde-fou, on
+ * associerait n'importe quel curl à n'importe quel autre curl.
  */
+const STOP_WORDS = new Set([
+  'a', 'la', 'le', 'les', 'de', 'du', 'des', 'en', 'au', 'aux', 'avec', 'sur',
+  'un', 'une', 'et', 'ou', 'pour', 'par', 'l', 'd',
+]);
+
+const tokenize = (s: string): string[] =>
+  normalize(s).split(/[^a-z0-9]+/).filter((w) => w.length > 1 && !STOP_WORDS.has(w));
+
 const byNormalizedName = new Map(
   EXERCISE_CATALOG.map((ex) => [normalize(ex.name), ex] as const)
 );
+
+const catalogTokens = EXERCISE_CATALOG.map((ex) => ({ ex, tokens: new Set(tokenize(ex.name)) }));
 
 export const findCatalogExercise = (
   exerciseId: string,
@@ -57,7 +74,28 @@ export const findCatalogExercise = (
     const hit = EXERCISE_CATALOG.find((ex) => ex.id === slug);
     if (hit) return hit;
   }
-  return byNormalizedName.get(normalize(exerciseName)) ?? null;
+
+  const exact = byNormalizedName.get(normalize(exerciseName));
+  if (exact) return exact;
+
+  const wanted = tokenize(exerciseName);
+  if (wanted.length === 0) return null;
+
+  let best: CatalogExercise | null = null;
+  let bestScore = 0;
+  for (const { ex, tokens } of catalogTokens) {
+    let common = 0;
+    for (const w of wanted) if (tokens.has(w)) common++;
+    if (common < 2) continue;
+    // On favorise les candidats qui couvrent le nom cherché sans être trop
+    // bavards eux-mêmes (un nom du catalogue très long qui contient les mots
+    // par hasard ne doit pas gagner).
+    const score = common / wanted.length + common / tokens.size;
+    if (score > bestScore) { bestScore = score; best = ex; }
+  }
+  // 1.0 = la moitié des mots de chaque côté en commun. En dessous, on préfère
+  // ne rien afficher plutôt que d'illustrer un exercice avec la mauvaise photo.
+  return bestScore >= 1.0 ? best : null;
 };
 
 type TypeFilter = 'Tous' | 'Polyarticulaire' | 'Isolation';
