@@ -1,6 +1,8 @@
 import { EXERCISE_CATALOG, type CatalogExercise, type Equipment } from '../data/exercisesCatalog';
 import type { Exercise, WorkoutDay } from '../data/types';
 import type { Program } from '../data/programs';
+import { useWorkoutStore } from '../store/workoutStore';
+import { setCustomWorkouts } from '../data/workouts';
 
 /**
  * Générateur de programme : construit un programme complet (plusieurs séances)
@@ -447,4 +449,20 @@ export const weeklySetsByGroup = (program: Program): { group: string; sets: numb
   return Object.entries(totals)
     .map(([group, sets]) => ({ group, sets }))
     .sort((a, b) => b.sets - a.sets);
+};
+
+/**
+ * Remplace un programme importé et resynchronise le registre des séances.
+ *
+ * Vit ici plutôt que dans un composant : le catalogue d'exercices comme le
+ * panneau des programmes en ont besoin, et les faire s'importer l'un l'autre
+ * créerait un cycle de modules.
+ */
+export const replaceCustomProgram = (updated: Program) => {
+  const { customPrograms } = useWorkoutStore.getState();
+  const next = customPrograms.map((p) => (p.id === updated.id ? updated : p));
+  useWorkoutStore.setState({ customPrograms: next });
+  // Indispensable : c'est ce registre que getWorkout() interroge pour retrouver
+  // une séance importée. Sans ça, la séance modifiée resterait introuvable.
+  setCustomWorkouts(next.flatMap((p) => p.workouts));
 };
