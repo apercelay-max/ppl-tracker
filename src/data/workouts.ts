@@ -574,5 +574,23 @@ export const setCustomWorkouts = (days: WorkoutDay[]) => {
 // intégré ou importé (pas seulement Strict V11) — utilisé partout dans
 // l'appli (session, historique, dashboard...) donc reste valable même
 // après un changement de programme actif.
-export const getWorkout = (id: string): WorkoutDay | undefined =>
+// Séance de la SESSION EN COURS quand elle a été adaptée avant de démarrer
+// (« j'ai 35 minutes », « pas en forme », « salle inconnue » — voir
+// utils/gymAdapt.ts). C'est une surcouche volontairement placée ici plutôt
+// que dans chaque écran : getWorkout() est appelé depuis une quinzaine
+// d'endroits (séance, stats, image de partage, historique...) et ils doivent
+// TOUS voir la séance réellement faite, pas celle du programme. Vidée dès que
+// la séance est terminée ou abandonnée (workoutStore.ts).
+let SESSION_WORKOUT_OVERRIDE: WorkoutDay | null = null;
+export const setSessionWorkoutOverride = (workout: WorkoutDay | null) => {
+  SESSION_WORKOUT_OVERRIDE = workout;
+};
+export const getSessionWorkoutOverride = (): WorkoutDay | null => SESSION_WORKOUT_OVERRIDE;
+
+/** Séance telle qu'elle est écrite dans le programme, sans adaptation. */
+export const getBaseWorkout = (id: string): WorkoutDay | undefined =>
   ALL_KNOWN_WORKOUTS.find((w) => w.id === id) ?? CUSTOM_WORKOUTS.find((w) => w.id === id);
+
+export const getWorkout = (id: string): WorkoutDay | undefined =>
+  (SESSION_WORKOUT_OVERRIDE && SESSION_WORKOUT_OVERRIDE.id === id ? SESSION_WORKOUT_OVERRIDE : undefined)
+  ?? getBaseWorkout(id);
