@@ -7,6 +7,7 @@ import { useWorkoutStore } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
 import { getLastExerciseSets, getMaxWeightEver } from '../utils/training';
 import { formatWeightForDisplay, weightUnitLabel } from '../utils/weight';
+import { usesBarbell } from '../utils/gymAdapt';
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -23,6 +24,9 @@ interface ExerciseCardProps {
   onWeightStart?: (setIndex: number) => void;
   restBar?: React.ReactNode;
   restBarIndex?: number;
+  // Incrémenté quand une secousse du téléphone doit valider la série en cours
+  // (transmis à la SetRow active) — voir useShakeToValidate.
+  validateSignal?: number;
 }
 
 const formatRest = (seconds: number): string => {
@@ -46,6 +50,7 @@ const bestCompletedSet = (sets: SetEntry[] | null | undefined): { weight: number
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   exercise, setEntries, currentSetIndex, isActive, currentWeek, onSetComplete,
   onEditSet, onSkipSet, onSkipExercise, onAddSet, onSwitchTo, onWeightStart, restBar, restBarIndex,
+  validateSignal,
 }) => {
   const [notesOpen, setNotesOpen] = useState(false);
   const iconSize = useWorkoutStore((s) => s.iconSize);
@@ -77,6 +82,12 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   const completedCount = setEntries.filter((s) => s.completed).length;
   const totalSets = setEntries.length;
   const allDone = completedCount === totalSets && totalSets > 0;
+
+  // Barre utilisée par cet exercice (null sinon) : conditionne l'aide au
+  // chargement des disques affichée sous la série en cours.
+  const barType = usesBarbell(exercise);
+  const gymProfile = useWorkoutStore((s) => s.gymProfile);
+  const barKg = barType === 'Barre' ? gymProfile.barKg : barType === 'Barre EZ' ? gymProfile.ezBarKg : null;
 
   const effectiveRest = customRestSeconds[exercise.id] ?? exercise.restSeconds;
   const restLabel =
@@ -189,6 +200,8 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 onWeightStart={onWeightStart ? () => onWeightStart(idx) : undefined}
                 lastTime={lastTimeSets?.[idx]}
                 previousMaxWeight={previousMaxWeight}
+                barKg={barKg}
+                validateSignal={isActive && idx === currentSetIndex ? validateSignal : undefined}
               />
             </React.Fragment>
           ))}

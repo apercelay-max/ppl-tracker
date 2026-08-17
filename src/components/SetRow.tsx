@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { SetEntry } from '../data/types';
 import { useWorkoutStore } from '../store/workoutStore';
 import { formatWeightForDisplay, parseWeightInputToKg, weightUnitLabel } from '../utils/weight';
+import { solvePlates, nearestAchievable, describePlates, formatKg } from '../utils/plates';
 
 interface SetRowProps {
   setNumber: number;
@@ -20,6 +21,12 @@ interface SetRowProps {
   // active, pour démarrer le repos dès la saisie plutôt que d'attendre
   // la validation (✓) — voir SessionScreen.handleWeightEntered.
   onWeightStart?: () => void;
+  // Poids de la barre (kg) quand l'exercice se charge sur une barre : active
+  // l'aide au chargement des disques sous la série en cours.
+  barKg?: number | null;
+  // Incrémenté par SessionScreen quand une secousse du téléphone doit valider
+  // la série en cours (mains prises) — voir useShakeToValidate.
+  validateSignal?: number;
 }
 
 const parseTargetRange = (targetReps: string): [number, number] | null => {
@@ -37,6 +44,7 @@ const isRepOutOfRange = (reps: string, targetReps: string): boolean => {
 
 export const SetRow: React.FC<SetRowProps> = ({
   setNumber, targetReps, defaultWeight, entry, isCurrent, onComplete, onEdit, lastTime, previousMaxWeight, onWeightStart,
+  barKg, validateSignal,
 }) => {
   const weightUnit = useWorkoutStore((s) => s.weightUnit);
   const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
@@ -82,6 +90,51 @@ export const SetRow: React.FC<SetRowProps> = ({
   };
 
   const handleValidate = () => { if (!reps) return; onComplete({ weight: parseWeightInputToKg(weight, weightUnit), reps, completed: true }); };
+
+  // ── Validation « mains libres » (secousse du téléphone) ────────────────
+  // Le champ reps peut être vide : dans ce cas on prend le bas de la
+  // fourchette cible, sinon la fonctionnalité serait inutilisable sans
+  // toucher l'écran (ce qui est justement le but).
+  const firstSignalRef = useRef(validateSignal);
+  useEffect(() => {
+    if (validateSignal === undefined || validateSignal === firstSignalRef.current) return;
+    firstSignalRef.current = validateSignal;
+    if (!isCurrent || entry.completed) return;
+    const range = parseTargetRange(targetReps);
+    const effectiveReps = reps || (range ? String(range[0]) : '');
+    if (!effectiveReps) return;
+    onComplete({ weight: parseWeightInputToKg(weight, weightUnit), reps: effectiveReps, completed: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [validateSignal]);
+
+  // ── Aide au chargement de la barre ────────────────────────────────────
+  // Calculée à partir du matériel réellement présent dans la salle : sans
+  // ça, « 42,5 kg » peut être infaisable et on s'en aperçoit devant le rack.
+  const gymProfile = useWorkoutStore((s) => s.gymProfile);
+  let plateHint: { text: string; warn: boolean } | null = null;
+  if (barKg && gymProfile.plateHelperEnabled && isCurrent && !entry.completed) {
+    const kg = parseFloat(parseWeightInputToKg(weight, weightUnit));
+    if (!isNaN(kg) && kg >= barKg) {
+      const solved = solvePlates(kg, barKg, gymProfile.plates);
+      if (solved && solved.exact) {
+        plateHint = {
+          text: solved.perSide.length === 0
+            ? `Barre à vide (${formatKg(barKg)} kg)`
+            : `Par côté : ${describePlates(solved)}`,
+          warn: false,
+        };
+      } else {
+        const { below, above } = nearestAchievable(kg, barKg, gymProfile.plates);
+        const options = [below, above].filter((v): v is number => v !== null).map((v) => `${formatKg(v)} kg`);
+        plateHint = {
+          text: options.length > 0
+            ? `${formatKg(kg)} kg impossible ici → ${options.join(' ou ')}`
+            : `${formatKg(kg)} kg impossible avec tes disques`,
+          warn: true,
+        };
+      }
+    }
+  }
 
   // ── Pulsation "record en vue" sur le bouton valider ─────────────────────
   // Compare en direct (avant validation) le poids en cours de saisie au
@@ -191,6 +244,11 @@ export const SetRow: React.FC<SetRowProps> = ({
           boxShadow: isLivePR ? undefined : (reps ? '0 4px 14px rgba(var(--brand-1-rgb),0.35)' : 'none'),
         }} onClick={handleValidate} disabled={!reps} title={isLivePR ? 'Nouveau record en vue !' : undefined}>✓</button>
       </div>
+      {plateHint && (
+        <p style={{ ...plateHintText, color: plateHint.warn ? '#f5a623' : 'var(--text-dim)' }}>
+          {plateHint.warn ? '⚠ ' : '⚖ '}{plateHint.text}
+        </p>
+      )}
       {lastTimeHint && <p style={{ ...lastTimeText, marginLeft: 8, marginTop: 4 }}>{lastTimeHint}</p>}
     </div>
   );
@@ -198,6 +256,7 @@ export const SetRow: React.FC<SetRowProps> = ({
 
 const rowWrap: React.CSSProperties = { borderBottom: '1px solid var(--border-subtle)', paddingBottom: 4, marginBottom: 2 };
 const lastTimeText: React.CSSProperties = { color: 'var(--text-micro)', fontSize: 10, marginTop: 2, marginBottom: 2 };
+const plateHintText: React.CSSProperties = { fontSize: 11, fontWeight: 600, marginLeft: 8, marginTop: 5 };
 const rowDone: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, padding: '9px 6px 2px' };
 const doneNumBadge: React.CSSProperties = { width: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, flexShrink: 0 };
 const donePillWeight: React.CSSProperties = { flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', borderRadius: 10, padding: '5px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 };
