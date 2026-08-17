@@ -12,6 +12,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import type { SyncStatus } from '../hooks/useCloudSync';
 import { CARDIO_TYPE_LABELS } from '../store/workoutStore';
+import { motionSensorSupported, requestMotionPermission } from '../hooks/useShakeToValidate';
 import type { CardioActivityType, NavTabKey } from '../data/types';
 import { IconHome, IconTarget, IconCalendar, IconActivity, IconDumbbell, IconScale, IconBarChart, IconUser, IconMonitor, IconSun, IconMoon, IconPalette, IconSave, IconSearch, IconRotateCcw, IconSparkles, IconPartyPopper, IconFireworks, IconBounce, IconArrowRight, IconRefreshCw, IconDownload, IconUpload } from '../components/Icons';
 
@@ -237,6 +238,11 @@ const setNavBarEnabled = useWorkoutStore((s) => s.setNavBarEnabled);
 const navBarTabsEnabled = useWorkoutStore((s) => s.navBarTabsEnabled);
 const setNavBarTabEnabled = useWorkoutStore((s) => s.setNavBarTabEnabled);
 const navBarPinned = useWorkoutStore((s) => s.navBarPinned);
+const gymProfile = useWorkoutStore((s) => s.gymProfile);
+const setGymProfile = useWorkoutStore((s) => s.setGymProfile);
+const shakeToValidateEnabled = useWorkoutStore((s) => s.shakeToValidateEnabled);
+const setShakeToValidateEnabled = useWorkoutStore((s) => s.setShakeToValidateEnabled);
+const [shakeError, setShakeError] = useState<string | null>(null);
 const setNavBarTabPinned = useWorkoutStore((s) => s.setNavBarTabPinned);
 const activeProgramId = useWorkoutStore((s) => s.activeProgramId);
 const setActiveProgram = useWorkoutStore((s) => s.setActiveProgram);
@@ -781,6 +787,127 @@ justifyContent: bodyDiagramEnabled ? 'flex-end' : 'flex-start',
 <span style={switchThumb} />
 </button>
 </div>
+
+{/* Matériel de la salle : sert au calcul des disques pendant la séance
+et au mode « salle inconnue » de l'écran d'adaptation. */}
+<p style={subLabel}>MATÉRIEL DE MA SALLE</p>
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+Sert à te dire quels disques mettre de chaque côté pendant la séance, et à prévenir quand une charge est impossible avec ce que tu as.
+</p>
+<div style={{ ...toggleRow, marginBottom: 10 }}>
+<div style={{ flex: 1 }}>
+<p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Aide au chargement</p>
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+Affiche « par côté : 20 + 10 » sous la série en cours, sur les exercices à la barre.
+</p>
+</div>
+<button
+onClick={() => setGymProfile({ plateHelperEnabled: !gymProfile.plateHelperEnabled })}
+style={{
+...switchTrack,
+background: gymProfile.plateHelperEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
+justifyContent: gymProfile.plateHelperEnabled ? 'flex-end' : 'flex-start',
+}}
+>
+<span style={switchThumb} />
+</button>
+</div>
+
+<div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+{([['barKg', 'Barre olympique'], ['ezBarKg', 'Barre EZ']] as const).map(([key, label]) => (
+<div key={key} style={{ flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 14, padding: '10px 12px' }}>
+<p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 0.6, marginBottom: 6 }}>{label}</p>
+<div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+<input
+type="text"
+inputMode="decimal"
+value={String(gymProfile[key])}
+onChange={(e) => {
+const v = parseFloat(e.target.value.replace(',', '.'));
+if (!isNaN(v) && v > 0) setGymProfile({ [key]: v } as Partial<typeof gymProfile>);
+}}
+style={{ flex: 1, minWidth: 0, background: 'var(--bg-base)', border: '1px solid var(--border-strong)', borderRadius: 8, padding: '7px 9px', color: 'var(--text-primary)', fontSize: 14, fontWeight: 700 }}
+/>
+<span style={{ color: 'var(--text-dim)', fontSize: 11, fontWeight: 700 }}>kg</span>
+</div>
+</div>
+))}
+</div>
+
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 8 }}>Disques disponibles (par paire)</p>
+<div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+{[25, 20, 15, 10, 5, 2.5, 1.25, 0.5].map((plate) => {
+const on = gymProfile.plates.includes(plate);
+return (
+<button
+key={plate}
+onClick={() => setGymProfile({
+plates: on ? gymProfile.plates.filter((v) => v !== plate) : [...gymProfile.plates, plate],
+})}
+style={{
+...restBtn,
+flex: '0 0 auto',
+padding: '8px 12px',
+background: on ? 'rgba(var(--brand-1-rgb),0.16)' : 'var(--bg-elevated)',
+borderColor: on ? 'rgba(var(--brand-1-rgb),0.45)' : 'var(--border-strong)',
+color: on ? 'var(--brand-1)' : 'var(--text-muted)',
+}}
+>
+{String(plate).replace('.', ',')} kg
+</button>
+);
+})}
+</div>
+
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 8 }}>Plus petit écart ailleurs (haltères, machines)</p>
+<div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+{[1, 1.25, 2, 2.5, 5].map((inc) => (
+<button
+key={inc}
+onClick={() => setGymProfile({ otherIncrementKg: inc })}
+style={{
+...restBtn,
+background: gymProfile.otherIncrementKg === inc ? 'rgba(var(--brand-1-rgb),0.16)' : 'var(--bg-elevated)',
+borderColor: gymProfile.otherIncrementKg === inc ? 'rgba(var(--brand-1-rgb),0.45)' : 'var(--border-strong)',
+color: gymProfile.otherIncrementKg === inc ? 'var(--brand-1)' : 'var(--text-muted)',
+}}
+>
+{String(inc).replace('.', ',')} kg
+</button>
+))}
+</div>
+
+{/* Validation sans les mains */}
+<p style={subLabel}>VALIDER EN SECOUANT</p>
+<div style={{ ...toggleRow, marginBottom: 8 }}>
+<div style={{ flex: 1 }}>
+<p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Secousse = série validée</p>
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+Deux secousses franches du téléphone valident la série en cours, sans toucher l'écran. Coupé pendant le repos. Si les reps ne sont pas saisies, le bas de la fourchette cible est enregistré.
+</p>
+</div>
+<button
+onClick={async () => {
+if (shakeToValidateEnabled) { setShakeToValidateEnabled(false); setShakeError(null); return; }
+if (!motionSensorSupported()) { setShakeError("Cet appareil n'a pas de capteur de mouvement accessible au navigateur."); return; }
+const ok = await requestMotionPermission();
+if (!ok) { setShakeError("Autorisation refusée. Sur iPhone : Réglages → Safari → Mouvement et orientation, puis réessaie."); return; }
+setShakeError(null);
+setShakeToValidateEnabled(true);
+}}
+style={{
+...switchTrack,
+background: shakeToValidateEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
+justifyContent: shakeToValidateEnabled ? 'flex-end' : 'flex-start',
+}}
+>
+<span style={switchThumb} />
+</button>
+</div>
+{shakeError && (
+<p style={{ color: '#f5a623', fontSize: 11, marginBottom: 16, lineHeight: '15px' }}>{shakeError}</p>
+)}
+<div style={{ marginBottom: 20 }} />
 
 {/* Temps de repos par exercice */}
 <p style={subLabel}>TEMPS DE REPOS PAR EXERCICE</p>

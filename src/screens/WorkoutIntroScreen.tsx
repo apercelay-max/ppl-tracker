@@ -4,11 +4,15 @@ import { Exercise, SetEntry } from '../data/types';
 import { getMuscleRecoveryStatus } from '../utils/training';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ExerciseCard } from '../components/ExerciseCard';
+import { SessionAdaptSheet } from '../components/SessionAdaptSheet';
+import type { SessionAdaptation } from '../utils/gymAdapt';
 
 interface WorkoutIntroScreenProps {
 dayId: string;
 onBack: () => void;
-onStart: () => void;
+// Reçoit le plan d'adaptation choisi dans la fiche « Adapter la séance »,
+// ou null quand on démarre la séance du programme telle quelle.
+onStart: (adaptation?: SessionAdaptation | null) => void;
 }
 
 // Couleurs/labels d'accent par séance, tous programmes confondus (Strict V11
@@ -56,6 +60,7 @@ const [detailExercise, setDetailExercise] = useState<Exercise | null>(null);
 const [previewEntries, setPreviewEntries] = useState<SetEntry[]>([]);
 const [previewIndex, setPreviewIndex] = useState(0);
 const [sheetVisible, setSheetVisible] = useState(false);
+const [adaptOpen, setAdaptOpen] = useState(false);
 const [isDragging, setIsDragging] = useState(false);
 const [dragY, setDragY] = useState(0);
 const dragStartY = useRef(0);
@@ -265,10 +270,26 @@ onAddSet={handleAddSet}
 )}
 
 <div style={startBar}>
-<button onClick={onStart} style={{ ...startBtn, background: `linear-gradient(135deg, ${accent}, var(--brand-2))` }}>
+<div style={startRow}>
+{/* Adapter avant de démarrer : temps dispo, forme du jour, matériel
+disponible. Volontairement à côté de « Démarrer » et pas caché dans
+les réglages — c'est une décision qui se prend au moment d'attaquer. */}
+<button onClick={() => setAdaptOpen(true)} style={adaptBtn} title="Adapter la séance">
+Adapter
+</button>
+<button onClick={() => onStart(null)} style={{ ...startBtn, background: `linear-gradient(135deg, ${accent}, var(--brand-2))` }}>
 Démarrer
 </button>
 </div>
+</div>
+
+{adaptOpen && (
+<SessionAdaptSheet
+workout={workout}
+onClose={() => setAdaptOpen(false)}
+onStart={(adaptation) => { setAdaptOpen(false); onStart(adaptation); }}
+/>
+)}
 </div>
 );
 };
@@ -317,10 +338,18 @@ position: 'fixed', bottom: 0, left: 0, right: 0,
 padding: '14px 16px max(14px, env(safe-area-inset-bottom))',
 background: 'linear-gradient(to top, var(--bg-base) 60%, transparent)',
 };
+const startRow: React.CSSProperties = {
+display: 'flex', gap: 10, maxWidth: 480, margin: '0 auto',
+};
 const startBtn: React.CSSProperties = {
-width: '100%', maxWidth: 480, margin: '0 auto', display: 'block',
+flex: 1,
 padding: '16px', borderRadius: 18, color: '#fff', fontSize: 16, fontWeight: 800,
 cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+};
+const adaptBtn: React.CSSProperties = {
+padding: '16px 18px', borderRadius: 18, flexShrink: 0,
+background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700, cursor: 'pointer',
 };
 const sheetBackdrop: React.CSSProperties = {
 position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',

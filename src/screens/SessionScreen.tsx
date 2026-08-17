@@ -14,6 +14,7 @@ import { buildSessionRecapImage, shareOrDownloadRecapImage } from '../utils/shar
 import { weightUnitLabel, kgToLbs } from '../utils/weight';
 import { IconTrophy, IconSettings, IconMoon, IconSun, IconBell, IconVibrate, IconLightbulb, IconActivity, IconWind, IconScale, IconThumbsUp, IconTarget, IconClock, IconFlame, IconDumbbell, IconPlate, IconTrendingUp, IconUtensils, IconShare } from '../components/Icons';
 import { useRestTimer } from '../hooks/useRestTimer';
+import { useShakeToValidate } from '../hooks/useShakeToValidate';
 import { computeTonnage, computeTrainingLoad, compareSessionToHistory, getWorkoutBodyIntensity, getMaxWeightEver } from '../utils/training';
 import { SetEntry, Exercise, ExerciseProgress, HistoryEntry } from '../data/types';
 
@@ -77,8 +78,20 @@ const setBeepEnabled = useWorkoutStore((s) => s.setBeepEnabled);
 const hapticsEnabled = useWorkoutStore((s) => s.hapticsEnabled);
 const setHapticsEnabled = useWorkoutStore((s) => s.setHapticsEnabled);
 const wakeLockEnabled = useWorkoutStore((s) => s.wakeLockEnabled);
+const shakeToValidateEnabled = useWorkoutStore((s) => s.shakeToValidateEnabled);
+const sessionAdaptation = useWorkoutStore((s) => s.sessionAdaptation);
 const setWakeLockEnabled = useWorkoutStore((s) => s.setWakeLockEnabled);
 const [isWide, setIsWide] = useState(() => window.innerWidth >= 700);
+// Secousse du téléphone = valider la série en cours (mains prises). On
+// n'appelle pas directement completeSet ici : le poids et les reps en cours
+// de saisie vivent dans la SetRow active, c'est elle qui sait quoi valider.
+// Ce compteur lui sert de signal.
+const [shakeSignal, setShakeSignal] = useState(0);
+const [shakeToast, setShakeToast] = useState(false);
+const shakeToastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+useEffect(() => () => { if (shakeToastRef.current) clearTimeout(shakeToastRef.current); }, []);
+// Bandeau "séance adaptée" repliable, ouvert au démarrage de la séance.
+const [adaptBannerOpen, setAdaptBannerOpen] = useState(false);
   const [sessionTab, setSessionTab] = useState<'exercise' | 'stats' | 'programme' | 'repos'>('exercise');
 
 // ── Détection de record personnel (PR) ───────────────────────────────────
@@ -259,6 +272,19 @@ if (sessionTab === 'repos' && !timerIsRunning) {
 setSessionTab('exercise');
 }
 }, [timerIsRunning, sessionTab]);
+
+// Pendant le repos, la « série en cours » est déjà la suivante : une secousse
+// la validerait alors qu'elle n'est pas faite. On coupe donc le capteur tant
+// que le minuteur tourne.
+useShakeToValidate({
+enabled: shakeToValidateEnabled && !timerIsRunning,
+onShake: useCallback(() => {
+setShakeSignal((n) => n + 1);
+setShakeToast(true);
+if (shakeToastRef.current) clearTimeout(shakeToastRef.current);
+shakeToastRef.current = setTimeout(() => setShakeToast(false), 1800);
+}, []),
+});
 
 const handleSkipRest = useCallback(() => {
 if (timerExerciseRef.current && timer.totalSeconds) {
@@ -644,6 +670,30 @@ style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
 
 <div style={scrollArea}>
 <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 16px 80px' }}>
+{/* Séance adaptée : on rappelle en permanence qu'on ne fait pas la
+séance du programme, avec le détail des modifications au tap. Sans ce
+rappel, un « tiens, il manque un exercice » deux semaines plus tard
+devient incompréhensible. */}
+{sessionAdaptation && sessionAdaptation.summary.length > 0 && (
+<div style={adaptBanner}>
+<button onClick={() => setAdaptBannerOpen((v) => !v)} style={adaptBannerHead}>
+<span style={{ flex: 1, textAlign: 'left' }}>
+<span style={adaptBannerTitle}>Séance adaptée</span>
+<span style={adaptBannerSub}>
+{sessionAdaptation.baseMin} min → {sessionAdaptation.estimatedMin} min · {sessionAdaptation.summary.length} modification{sessionAdaptation.summary.length > 1 ? 's' : ''}
+</span>
+</span>
+<span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{adaptBannerOpen ? '▾' : '▸'}</span>
+</button>
+{adaptBannerOpen && (
+<ul style={{ listStyle: 'none', margin: '8px 0 0', padding: 0 }}>
+{sessionAdaptation.summary.map((line, i) => (
+<li key={i} style={adaptBannerLine}>· {line}</li>
+))}
+</ul>
+)}
+</div>
+)}
 {lastSessionNote && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
 <div style={lastNoteBanner}>
 <p style={lastNoteLabel}>Note de la derniere fois</p>
@@ -712,6 +762,7 @@ onWeightStart={(setIndex) => handleWeightEntered(exercise.id, setIndex)}
 onSwitchTo={() => switchToExercise(exercise.id)}
 restBar={isRestTarget ? restBarNode : null}
 restBarIndex={isRestTarget ? restBarTargetIndex : undefined}
+validateSignal={exIdx === currentExIdx ? shakeSignal : undefined}
 />
 );
 })}
@@ -740,6 +791,7 @@ onWeightStart={(setIndex) => handleWeightEntered(exercise.id, setIndex)}
 onSwitchTo={() => switchToExercise(exercise.id)}
 restBar={isRestTarget ? restBarNode : null}
 restBarIndex={isRestTarget ? restBarTargetIndex : undefined}
+validateSignal={exIdx === currentExIdx ? shakeSignal : undefined}
 />
 );
 })}
@@ -786,6 +838,9 @@ restBarIndex={isRestTarget ? restBarTargetIndex : undefined}
             isPaused={isPaused}
             onTogglePause={handleToggleRestPause}
           />
+        )}
+        {shakeToast && (
+          <div className="fade-in" style={shakeToastStyle}>Série validée — secousse détectée</div>
         )}
         <SessionTabBar active={sessionTab} onChange={setSessionTab} restActive={timerIsRunning} />
 </div>
@@ -1157,6 +1212,33 @@ boxShadow: '0 8px 24px rgba(232,160,32,0.4)', maxWidth: '90%',
 };
 const container: React.CSSProperties = { height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg-base)' };
 const mainArea: React.CSSProperties = { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' };
+const adaptBanner: React.CSSProperties = {
+background: 'rgba(var(--brand-1-rgb),0.09)',
+border: '1px solid rgba(var(--brand-1-rgb),0.28)',
+borderRadius: 14, padding: '10px 12px', marginBottom: 12,
+};
+const adaptBannerHead: React.CSSProperties = {
+display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
+};
+const adaptBannerTitle: React.CSSProperties = {
+display: 'block', color: 'var(--brand-1)', fontSize: 12.5, fontWeight: 800, letterSpacing: 0.2,
+};
+const adaptBannerSub: React.CSSProperties = {
+display: 'block', color: 'var(--text-muted)', fontSize: 11, marginTop: 2,
+};
+const adaptBannerLine: React.CSSProperties = {
+color: 'var(--text-secondary)', fontSize: 11.5, lineHeight: '17px', marginTop: 2,
+};
+const shakeToastStyle: React.CSSProperties = {
+position: 'fixed', left: '50%', transform: 'translateX(-50%)',
+bottom: 'calc(max(10px, env(safe-area-inset-bottom)) + 86px)', zIndex: 60,
+background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+borderRadius: 12, padding: '9px 14px', color: 'var(--text-primary)',
+fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap',
+boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+};
+
 const headerBar: React.CSSProperties = {
 display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
 background: 'var(--bg-base)', borderBottom: '1px solid var(--border-subtle)',
