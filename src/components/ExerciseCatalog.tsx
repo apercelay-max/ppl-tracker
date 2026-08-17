@@ -63,7 +63,24 @@ const byNormalizedName = new Map(
   EXERCISE_CATALOG.map((ex) => [normalize(ex.name), ex] as const)
 );
 
-const catalogTokens = EXERCISE_CATALOG.map((ex) => ({ ex, tokens: new Set(tokenize(ex.name)) }));
+/**
+ * Poids de chaque mot (IDF) : « curl », « halteres » ou « poulie » reviennent
+ * partout et ne distinguent presque rien, alors que « marteau », « incline » ou
+ * « pullover » identifient un exercice précis. Sans cette pondération, « Curl
+ * marteau haltères » se faisait illustrer par un curl classique.
+ */
+const DOC_FREQ = new Map<string, number>();
+for (const ex of EXERCISE_CATALOG) {
+  for (const w of new Set(tokenize(ex.name))) DOC_FREQ.set(w, (DOC_FREQ.get(w) ?? 0) + 1);
+}
+const idf = (w: string) => Math.log(EXERCISE_CATALOG.length / (1 + (DOC_FREQ.get(w) ?? 0))) + 1;
+
+const catalogTokens = EXERCISE_CATALOG.map((ex) => {
+  const tokens = new Set(tokenize(ex.name));
+  let norm = 0;
+  for (const w of tokens) norm += idf(w) ** 2;
+  return { ex, tokens, norm: Math.sqrt(norm) };
+});
 
 export const findCatalogExercise = (
   exerciseId: string,
@@ -78,24 +95,26 @@ export const findCatalogExercise = (
   const exact = byNormalizedName.get(normalize(exerciseName));
   if (exact) return exact;
 
-  const wanted = tokenize(exerciseName);
+  const wanted = [...new Set(tokenize(exerciseName))];
   if (wanted.length === 0) return null;
+  let wantedNorm = 0;
+  for (const w of wanted) wantedNorm += idf(w) ** 2;
+  wantedNorm = Math.sqrt(wantedNorm);
+  if (wantedNorm === 0) return null;
 
+  // Similarité cosinus sur les mots pondérés.
   let best: CatalogExercise | null = null;
   let bestScore = 0;
-  for (const { ex, tokens } of catalogTokens) {
+  for (const { ex, tokens, norm } of catalogTokens) {
+    let dot = 0;
     let common = 0;
-    for (const w of wanted) if (tokens.has(w)) common++;
-    if (common < 2) continue;
-    // On favorise les candidats qui couvrent le nom cherché sans être trop
-    // bavards eux-mêmes (un nom du catalogue très long qui contient les mots
-    // par hasard ne doit pas gagner).
-    const score = common / wanted.length + common / tokens.size;
+    for (const w of wanted) if (tokens.has(w)) { dot += idf(w) ** 2; common++; }
+    if (common < 2 || norm === 0) continue;
+    const score = dot / (wantedNorm * norm);
     if (score > bestScore) { bestScore = score; best = ex; }
   }
-  // 1.0 = la moitié des mots de chaque côté en commun. En dessous, on préfère
-  // ne rien afficher plutôt que d'illustrer un exercice avec la mauvaise photo.
-  return bestScore >= 1.0 ? best : null;
+  // Seuil volontairement haut : mieux vaut pas de photo qu'une photo trompeuse.
+  return bestScore >= 0.62 ? best : null;
 };
 
 type TypeFilter = 'Tous' | 'Polyarticulaire' | 'Isolation';
