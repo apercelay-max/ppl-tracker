@@ -468,3 +468,31 @@ button { cursor: pointer; }
     max-width: min(1200px, 94vw) !important;
   }
 }
+
+/* ─── Menu "Plus" de la barre de navigation ─────────────────────────────── */
+/* Ouverture du panneau : monte légèrement en s'agrandissant, comme un menu
+   contextuel iOS. Le panneau est centré par un conteneur flex (et non par un
+   translateX), donc transform reste libre pour cette animation. */
+@keyframes navDrawerIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.nav-drawer-in {
+  animation: navDrawerIn 0.24s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+  transform-origin: bottom center;
+}
+
+/* Chaque ligne arrive avec un léger décalage (voir animationDelay en ligne
+   dans NavBar.tsx) — effet "cascade" court, pas une animation lente. */
+@keyframes navRowIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.nav-drawer-row {
+  animation: navRowIn 0.22s ease-out both;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.nav-drawer-row:active { transform: scale(0.975); }
+@media (hover: hover) {
+  .nav-drawer-row:hover { background: var(--glass-highlight) !important; }
+}

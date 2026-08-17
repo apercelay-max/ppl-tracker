@@ -4,6 +4,7 @@ import { SessionScreen } from './screens/SessionScreen';
 import { DashboardScreen } from './screens/DashboardScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { WorkoutIntroScreen } from './screens/WorkoutIntroScreen';
+import type { SessionAdaptation } from './utils/gymAdapt';
 import { ObjectivesScreen } from './screens/ObjectivesScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { CardioScreen } from './screens/CardioScreen';
@@ -130,9 +131,12 @@ setView('intro');
 }
 };
 
-const handleStartWorkout = () => {
+// L'écran d'aperçu peut renvoyer un plan d'adaptation (temps dispo, forme
+// du jour, matériel dispo) : il est transmis tel quel au store, qui bâtit
+// la séance réellement faite à partir de là.
+const handleStartWorkout = (adaptation: SessionAdaptation | null = null) => {
 if (!selectedDayId) return;
-useWorkoutStore.getState().startSession(selectedDayId);
+useWorkoutStore.getState().startSession(selectedDayId, adaptation);
 setView('session');
 };
 
