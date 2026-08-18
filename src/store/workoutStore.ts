@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { WorkoutSession, ExerciseProgress, SetEntry, HistoryEntry, TimerState, CardioActivityType, CardioEntry, BodyWeightEntry, NavTabKey } from '../data/types';
 import { getWorkout, getBaseWorkout, setCustomWorkouts, setSessionWorkoutOverride } from '../data/workouts';
-import { applyAdaptation, type GymProfile, type SessionAdaptation } from '../utils/gymAdapt';
+import { applyAdaptation, type Gym, type GymProfile, type SessionAdaptation } from '../utils/gymAdapt';
 import { Program } from '../data/programs';
 import { bucketByWeek } from '../utils/training';
 
@@ -195,8 +195,22 @@ const DEFAULT_GYM_PROFILE: GymProfile = {
   plates: [25, 20, 15, 10, 5, 2.5, 1.25],
   otherIncrementKg: 2.5,
   availableEquipment: ['Barre', 'Barre EZ', 'Haltères', 'Machine', 'Poulie', 'Poids du corps'],
-  plateHelperEnabled: true,
+  machines: [],
+  machinesListComplete: false,
 };
+
+/**
+ * Salle créée d'office : tant que Léo n'en a qu'une, rien ne lui est demandé
+ * au démarrage d'une séance. Identifiant fixe pour la toute première, pour
+ * qu'une sauvegarde d'avant les salles multiples y retombe naturellement.
+ */
+const INITIAL_GYM: Gym = { ...DEFAULT_GYM_PROFILE, id: 'gym-principale', name: 'Ma salle' };
+
+const makeDefaultGym = (name = 'Ma salle'): Gym => ({
+  ...DEFAULT_GYM_PROFILE,
+  id: `gym-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  name,
+});
 
 interface WorkoutStore {
 session: WorkoutSession | null;
@@ -238,6 +252,15 @@ homeSectionColors: Partial<Record<HomeSectionKey, string>>;
 navBarEnabled: boolean;
 navBarTabsEnabled: Record<NavTabKey, boolean>;
 navBarPinned: Record<NavTabKey, boolean>;
+// Salles enregistrées (Réglages → Mes salles). Il y en a toujours au moins
+// une ; la question « tu es dans quelle salle ? » n'apparaît au démarrage
+// d'une séance qu'à partir de deux.
+gyms: Gym[];
+activeGymId: string;
+// Affichage de l'aide au chargement des disques : c'est une préférence
+// d'affichage, elle vaut pour toutes les salles.
+plateHelperEnabled: boolean;
+// Ancien réglage unique, conservé le temps de la migration des sauvegardes.
 gymProfile: GymProfile;
 // Valider une série en secouant le téléphone (mains prises/pleines de magnésie).
 shakeToValidateEnabled: boolean;
@@ -272,7 +295,7 @@ hasCompletedOnboarding: boolean;
 // depuis Réglages → Apparence → "Réglages avancés", pas figé après le choix
 // initial.
 simplicityMode: boolean;
-startSession: (dayId: string, adaptation?: SessionAdaptation | null) => void;
+startSession: (dayId: string, adaptation?: SessionAdaptation | null, gymId?: string) => void;
 completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
 editSet: (exerciseId: string, setIndex: number) => void;
 restoreSessionPosition: (exerciseIndex: number, setIndex: number) => void;
@@ -326,6 +349,12 @@ setNavBarEnabled: (enabled: boolean) => void;
 setNavBarTabEnabled: (key: NavTabKey, enabled: boolean) => void;
 setNavBarTabPinned: (key: NavTabKey, pinned: boolean) => void;
 setGymProfile: (patch: Partial<GymProfile>) => void;
+setPlateHelperEnabled: (enabled: boolean) => void;
+addGym: (name: string) => string;
+updateGym: (id: string, patch: Partial<Gym>) => void;
+removeGym: (id: string) => void;
+duplicateGym: (id: string) => string;
+setActiveGym: (id: string) => void;
 setShakeToValidateEnabled: (enabled: boolean) => void;
 addBodyWeightEntry: (weightKg: number) => void;
 deleteBodyWeightEntry: (id: string) => void;
@@ -360,6 +389,14 @@ else break;
 }
 return streak;
 };
+
+/**
+ * Salle active, c'est-à-dire celle dont on lit les disques et le matériel.
+ * Il y a toujours au moins une salle, mais on retombe sur la première si
+ * l'identifiant actif pointe dans le vide (sauvegarde bricolée à la main).
+ */
+export const useActiveGym = (): Gym =>
+  useWorkoutStore((s) => s.gyms.find((g) => g.id === s.activeGymId) ?? s.gyms[0]);
 
 export const useWorkoutStore = create<WorkoutStore>()(
 persist(
@@ -397,6 +434,9 @@ homeSectionColors: {},
 navBarEnabled: false,
 navBarTabsEnabled: { ...DEFAULT_NAV_TABS_ENABLED },
 navBarPinned: { ...DEFAULT_NAV_TABS_PINNED },
+gyms: [{ ...INITIAL_GYM }],
+activeGymId: INITIAL_GYM.id,
+plateHelperEnabled: true,
 gymProfile: { ...DEFAULT_GYM_PROFILE },
 shakeToValidateEnabled: false,
 sessionAdaptation: null,
@@ -414,7 +454,7 @@ ultraTransitionStyle: 'bounce',
 hasCompletedOnboarding: false,
 simplicityMode: false,
 
-startSession: (dayId, adaptation = null) => {
+startSession: (dayId, adaptation = null, gymId) => {
 // On part TOUJOURS de la séance du programme, jamais d'une éventuelle
 // séance déjà adaptée encore en place : sinon relancer une séance
 // appliquerait l'adaptation par-dessus une adaptation.
@@ -435,6 +475,7 @@ set({
 session: {
 dayId, startTime: Date.now(), exerciseProgress,
 currentExerciseIndex: 0, currentSetIndex: 0, isComplete: false,
+gymId: gymId ?? get().activeGymId,
 },
 // Jour 1 du cycle (Pull A) = redémarrage d'un nouveau cycle glissant
 // → on regrise toutes les séances de l'accueil.
@@ -611,6 +652,7 @@ id: `${session.dayId}-${session.startTime}`,
 dayId: session.dayId, date: session.startTime,
 exerciseProgress: session.exerciseProgress,
 durationMs: Date.now() - session.startTime,
+gymId: session.gymId,
 };
 const updatedHistory = [entry, ...history].slice(0, 50);
 const currentStreak = computeCurrentWeekStreak(updatedHistory, weeklySessionGoal);
@@ -847,6 +889,58 @@ return { gymProfile: next };
 
 setShakeToValidateEnabled: (enabled) => set({ shakeToValidateEnabled: enabled }),
 
+setPlateHelperEnabled: (enabled) => set({ plateHelperEnabled: enabled }),
+
+addGym: (name) => {
+const gym = makeDefaultGym(name.trim() || 'Nouvelle salle');
+set((state) => ({ gyms: [...state.gyms, gym] }));
+return gym.id;
+},
+
+updateGym: (id, patch) => {
+set((state) => ({
+gyms: state.gyms.map((g) => {
+if (g.id !== id) return g;
+const next = { ...g, ...patch };
+// Même règle que pour l'ancien profil : disques triés du plus lourd au
+// plus léger et dédoublonnés, tout le calcul en dépend.
+if (patch.plates) next.plates = [...new Set(patch.plates.filter((v) => v > 0))].sort((a, b) => b - a);
+return next;
+}),
+}));
+},
+
+removeGym: (id) => {
+set((state) => {
+// On ne supprime jamais la dernière salle : l'appli a besoin d'un
+// profil de matériel pour le calcul des disques.
+if (state.gyms.length <= 1) return {};
+const gyms = state.gyms.filter((g) => g.id !== id);
+const activeGymId = state.activeGymId === id ? gyms[0].id : state.activeGymId;
+return { gyms, activeGymId };
+});
+},
+
+duplicateGym: (id) => {
+const source = get().gyms.find((g) => g.id === id);
+if (!source) return '';
+const copie: Gym = {
+...source,
+plates: [...source.plates],
+availableEquipment: [...source.availableEquipment],
+machines: [...(source.machines ?? [])],
+id: `gym-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+name: `${source.name} (copie)`,
+};
+set((state) => ({ gyms: [...state.gyms, copie] }));
+return copie.id;
+},
+
+setActiveGym: (id) => {
+if (!get().gyms.some((g) => g.id === id)) return;
+set({ activeGymId: id });
+},
+
 addBodyWeightEntry: (weightKg) => {
 const entry: BodyWeightEntry = { id: `bw-${Date.now()}`, date: Date.now(), weightKg };
 set((state) => ({ bodyWeightHistory: [entry, ...state.bodyWeightHistory].slice(0, 200) }));
@@ -926,6 +1020,9 @@ homeSectionColors: state.homeSectionColors,
 navBarEnabled: state.navBarEnabled,
 navBarTabsEnabled: state.navBarTabsEnabled,
 navBarPinned: state.navBarPinned,
+gyms: state.gyms,
+activeGymId: state.activeGymId,
+plateHelperEnabled: state.plateHelperEnabled,
 gymProfile: state.gymProfile,
 shakeToValidateEnabled: state.shakeToValidateEnabled,
 sessionAdaptation: state.sessionAdaptation,
@@ -966,6 +1063,19 @@ merged.activeProgramId = p.activeProgramId ?? 'strict-v10';
 // Profil de salle : mergé clé par clé pour qu'un réglage ajouté plus tard
 // arrive avec sa valeur par défaut au lieu de rester undefined.
 merged.gymProfile = { ...DEFAULT_GYM_PROFILE, ...(p.gymProfile ?? {}) };
+// Migration vers les salles multiples : la sauvegarde d'avant n'avait qu'un
+// seul profil de matériel, il devient la première salle sans rien perdre.
+// L'aide au chargement était rangée dans l'ancien profil unique.
+merged.plateHelperEnabled = p.plateHelperEnabled
+  ?? (p.gymProfile as (GymProfile & { plateHelperEnabled?: boolean }) | undefined)?.plateHelperEnabled
+  ?? true;
+const salles = (p.gyms ?? []).map((g) => ({ ...DEFAULT_GYM_PROFILE, ...g }));
+merged.gyms = salles.length > 0
+? salles
+: [{ ...merged.gymProfile, id: INITIAL_GYM.id, name: INITIAL_GYM.name }];
+merged.activeGymId = merged.gyms.some((g) => g.id === p.activeGymId)
+? (p.activeGymId as string)
+: merged.gyms[0].id;
 merged.shakeToValidateEnabled = p.shakeToValidateEnabled ?? false;
 merged.sessionAdaptation = p.sessionAdaptation ?? null;
 merged.customPrograms = p.customPrograms ?? [];
