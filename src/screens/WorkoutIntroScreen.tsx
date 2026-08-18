@@ -5,6 +5,7 @@ import { getMuscleRecoveryStatus } from '../utils/training';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ExerciseCard } from '../components/ExerciseCard';
 import { SessionAdaptSheet } from '../components/SessionAdaptSheet';
+import { GymPickerSheet } from '../components/GymPickerSheet';
 import type { SessionAdaptation } from '../utils/gymAdapt';
 
 interface WorkoutIntroScreenProps {
@@ -12,7 +13,7 @@ dayId: string;
 onBack: () => void;
 // Reçoit le plan d'adaptation choisi dans la fiche « Adapter la séance »,
 // ou null quand on démarre la séance du programme telle quelle.
-onStart: (adaptation?: SessionAdaptation | null) => void;
+onStart: (adaptation?: SessionAdaptation | null, gymId?: string) => void;
 }
 
 // Couleurs/labels d'accent par séance, tous programmes confondus (Strict V11
@@ -61,6 +62,21 @@ const [previewEntries, setPreviewEntries] = useState<SetEntry[]>([]);
 const [previewIndex, setPreviewIndex] = useState(0);
 const [sheetVisible, setSheetVisible] = useState(false);
 const [adaptOpen, setAdaptOpen] = useState(false);
+const [gymPickerOpen, setGymPickerOpen] = useState(false);
+const gyms = useWorkoutStore((s) => s.gyms);
+const activeGymId = useWorkoutStore((s) => s.activeGymId);
+const setActiveGym = useWorkoutStore((s) => s.setActiveGym);
+
+// La question « tu es dans quelle salle ? » n'a de sens qu'à partir de deux
+// salles enregistrées — sinon on démarre directement.
+const demarrer = (adaptation: SessionAdaptation | null, gymId: string) => {
+setActiveGym(gymId);
+onStart(adaptation, gymId);
+};
+const handleStartClick = () => {
+if (gyms.length > 1) { setGymPickerOpen(true); return; }
+onStart(null, activeGymId);
+};
 const [isDragging, setIsDragging] = useState(false);
 const [dragY, setDragY] = useState(0);
 const dragStartY = useRef(0);
@@ -277,7 +293,7 @@ les réglages — c'est une décision qui se prend au moment d'attaquer. */}
 <button onClick={() => setAdaptOpen(true)} style={adaptBtn} title="Adapter la séance">
 Adapter
 </button>
-<button onClick={() => onStart(null)} style={{ ...startBtn, background: `linear-gradient(135deg, ${accent}, var(--brand-2))` }}>
+<button onClick={handleStartClick} style={{ ...startBtn, background: `linear-gradient(135deg, ${accent}, var(--brand-2))` }}>
 Démarrer
 </button>
 </div>
@@ -287,7 +303,15 @@ Démarrer
 <SessionAdaptSheet
 workout={workout}
 onClose={() => setAdaptOpen(false)}
-onStart={(adaptation) => { setAdaptOpen(false); onStart(adaptation); }}
+onStart={(adaptation, gymId) => { setAdaptOpen(false); demarrer(adaptation, gymId); }}
+/>
+)}
+
+{gymPickerOpen && (
+<GymPickerSheet
+workout={workout}
+onClose={() => setGymPickerOpen(false)}
+onStart={(adaptation, gymId) => { setGymPickerOpen(false); demarrer(adaptation, gymId); }}
 />
 )}
 </div>
