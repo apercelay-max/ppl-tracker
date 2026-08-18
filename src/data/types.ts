@@ -62,6 +62,8 @@ export interface WorkoutSession {
     isComplete: boolean;
     exerciseNameOverrides?: { [exerciseId: string]: string };
     disabledSupersetGroupIds?: string[];
+    /** Salle où la séance est faite (voir Réglages → Mes salles). */
+    gymId?: string;
 }
 
 // ─── History ──────────────────────────────────────────────────────────────
@@ -76,6 +78,7 @@ export interface HistoryEntry {
   tonnage?: number;              // Total kg soulevés (poids × reps sommés)
   trainingLoad?: number;         // Charge d'entraînement : RPE × durée en minutes
   note?: string;                 // Ressenti libre noté par l'utilisateur à la fin
+  gymId?: string;                // Salle où la séance a été faite
 }
 
 // ─── Timer ────────────────────────────────────────────────────────────────
