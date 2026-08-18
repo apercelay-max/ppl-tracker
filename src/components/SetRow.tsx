@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SetEntry } from '../data/types';
-import { useWorkoutStore } from '../store/workoutStore';
+import { useWorkoutStore, useActiveGym } from '../store/workoutStore';
 import { formatWeightForDisplay, parseWeightInputToKg, weightUnitLabel } from '../utils/weight';
 import { solvePlates, nearestAchievable, describePlates, formatKg } from '../utils/plates';
 
@@ -110,12 +110,13 @@ export const SetRow: React.FC<SetRowProps> = ({
   // ── Aide au chargement de la barre ────────────────────────────────────
   // Calculée à partir du matériel réellement présent dans la salle : sans
   // ça, « 42,5 kg » peut être infaisable et on s'en aperçoit devant le rack.
-  const gymProfile = useWorkoutStore((s) => s.gymProfile);
+  const gym = useActiveGym();
+  const plateHelperEnabled = useWorkoutStore((s) => s.plateHelperEnabled);
   let plateHint: { text: string; warn: boolean } | null = null;
-  if (barKg && gymProfile.plateHelperEnabled && isCurrent && !entry.completed) {
+  if (barKg && plateHelperEnabled && isCurrent && !entry.completed) {
     const kg = parseFloat(parseWeightInputToKg(weight, weightUnit));
     if (!isNaN(kg) && kg >= barKg) {
-      const solved = solvePlates(kg, barKg, gymProfile.plates);
+      const solved = solvePlates(kg, barKg, gym.plates);
       if (solved && solved.exact) {
         plateHint = {
           text: solved.perSide.length === 0
@@ -124,7 +125,7 @@ export const SetRow: React.FC<SetRowProps> = ({
           warn: false,
         };
       } else {
-        const { below, above } = nearestAchievable(kg, barKg, gymProfile.plates);
+        const { below, above } = nearestAchievable(kg, barKg, gym.plates);
         const options = [below, above].filter((v): v is number => v !== null).map((v) => `${formatKg(v)} kg`);
         plateHint = {
           text: options.length > 0

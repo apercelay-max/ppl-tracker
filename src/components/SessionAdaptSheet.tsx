@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import type { WorkoutDay } from '../data/types';
-import { useWorkoutStore } from '../store/workoutStore';
+import { useWorkoutStore, useActiveGym } from '../store/workoutStore';
 import {
   buildAdaptation, applyAdaptation, isAdaptationActive, estimateWorkoutMinutes,
   ZONE_LABELS, EMPTY_OPTIONS,
   type AdaptOptions, type SessionAdaptation, type SoreZone,
 } from '../utils/gymAdapt';
-import { CATALOG_EQUIPMENT, type Equipment } from '../data/exercisesCatalog';
+
 
 // ─── « Adapter la séance » ─────────────────────────────────────────────────
 // Fiche ouverte depuis l'aperçu d'une séance, avant de démarrer. Trois
@@ -17,7 +17,7 @@ import { CATALOG_EQUIPMENT, type Equipment } from '../data/exercisesCatalog';
 interface Props {
   workout: WorkoutDay;
   onClose: () => void;
-  onStart: (adaptation: SessionAdaptation | null) => void;
+  onStart: (adaptation: SessionAdaptation | null, gymId: string) => void;
 }
 
 const TIME_CHOICES: (number | null)[] = [null, 30, 40, 50, 60];
@@ -25,9 +25,14 @@ const ZONES: SoreZone[] = ['epaule', 'coude-poignet', 'lombaires', 'genou'];
 
 export const SessionAdaptSheet: React.FC<Props> = ({ workout, onClose, onStart }) => {
   const history = useWorkoutStore((s) => s.history);
-  const gymProfile = useWorkoutStore((s) => s.gymProfile);
-  const setGymProfile = useWorkoutStore((s) => s.setGymProfile);
-  const [options, setOptions] = useState<AdaptOptions>(EMPTY_OPTIONS);
+  const gyms = useWorkoutStore((s) => s.gyms);
+  const activeGym = useActiveGym();
+  // La salle détermine le matériel disponible : les remplacements liés au
+  // matériel sont donc toujours calculés (pour la salle habituelle bien
+  // équipée, ça ne change simplement rien).
+  const [gymId, setGymId] = useState(activeGym.id);
+  const gym = gyms.find((g) => g.id === gymId) ?? activeGym;
+  const [options, setOptions] = useState<AdaptOptions>({ ...EMPTY_OPTIONS, awayGym: true });
 
   const patch = (p: Partial<AdaptOptions>) => setOptions((o) => ({ ...o, ...p }));
   const toggleZone = (z: SoreZone) =>
@@ -36,19 +41,10 @@ export const SessionAdaptSheet: React.FC<Props> = ({ workout, onClose, onStart }
       soreZones: o.soreZones.includes(z) ? o.soreZones.filter((v) => v !== z) : [...o.soreZones, z],
     }));
 
-  const toggleEquipment = (eq: Equipment) => {
-    const has = gymProfile.availableEquipment.includes(eq);
-    setGymProfile({
-      availableEquipment: has
-        ? gymProfile.availableEquipment.filter((e) => e !== eq)
-        : [...gymProfile.availableEquipment, eq],
-    });
-  };
-
   // Recalculé à chaque changement d'option : c'est l'aperçu affiché en bas.
   const adaptation = useMemo(
-    () => buildAdaptation(workout, options, history, gymProfile),
-    [workout, options, history, gymProfile]
+    () => buildAdaptation(workout, options, history, gym),
+    [workout, options, history, gym]
   );
   const active = isAdaptationActive(adaptation);
   const adapted = applyAdaptation(workout, adaptation);
@@ -60,7 +56,7 @@ export const SessionAdaptSheet: React.FC<Props> = ({ workout, onClose, onStart }
         <div style={handle} />
         <h2 style={title}>Adapter la séance</h2>
         <p style={subtitle}>
-          {workout.name} · {workout.exercises.length} exercices · ≈ {baseMin} min à l'origine
+          {workout.name} · {workout.exercises.length} exercices · ≈ {baseMin} min · {gym.name}
         </p>
 
         <div style={scroll}>
@@ -97,27 +93,18 @@ export const SessionAdaptSheet: React.FC<Props> = ({ workout, onClose, onStart }
             ))}
           </div>
 
-          {/* ── Salle inconnue ───────────────────────────────────────────── */}
-          <p style={{ ...sectionLabel, marginTop: 14 }}>JE NE SUIS PAS DANS MA SALLE</p>
-          <button onClick={() => patch({ awayGym: !options.awayGym })} style={toggleRow(options.awayGym)}>
-            <span style={{ flex: 1, textAlign: 'left' }}>
-              <span style={toggleTitle}>Limiter au matériel dispo</span>
-              <span style={toggleHint}>Remplace ce qui n'est pas faisable ici</span>
-            </span>
-            <Switch on={options.awayGym} />
-          </button>
-          {options.awayGym && (
-            <div style={{ ...chipRow, marginTop: 8 }}>
-              {CATALOG_EQUIPMENT.filter((eq) => eq !== 'Autre').map((eq) => (
-                <button
-                  key={eq}
-                  onClick={() => toggleEquipment(eq)}
-                  style={chip(gymProfile.availableEquipment.includes(eq))}
-                >
-                  {eq}
-                </button>
-              ))}
-            </div>
+          {/* ── Salle ───────────────────────────────────────────────────── */}
+          {gyms.length > 1 && (
+            <>
+              <p style={{ ...sectionLabel, marginTop: 14 }}>DANS QUELLE SALLE ?</p>
+              <div style={chipRow}>
+                {gyms.map((g) => (
+                  <button key={g.id} onClick={() => setGymId(g.id)} style={chip(g.id === gymId)}>
+                    {g.name}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
 
           {/* ── Aperçu ───────────────────────────────────────────────────── */}
@@ -150,7 +137,7 @@ export const SessionAdaptSheet: React.FC<Props> = ({ workout, onClose, onStart }
 
         <div style={actions}>
           <button onClick={onClose} style={ghostBtn}>Annuler</button>
-          <button onClick={() => onStart(active ? adaptation : null)} style={primaryBtn}>
+          <button onClick={() => onStart(active ? adaptation : null, gym.id)} style={primaryBtn}>
             {active ? 'Démarrer adaptée' : 'Démarrer'}
           </button>
         </div>

@@ -3,7 +3,7 @@ import { Exercise, SetEntry } from '../data/types';
 import { PROGRESSION_WEEKS } from '../data/workouts';
 import { SetRow } from './SetRow';
 import { ExerciseAnimation } from './ExerciseAnimation';
-import { useWorkoutStore } from '../store/workoutStore';
+import { useWorkoutStore, useActiveGym } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
 import { getLastExerciseSets, getMaxWeightEver } from '../utils/training';
 import { formatWeightForDisplay, weightUnitLabel } from '../utils/weight';
@@ -86,8 +86,8 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   // Barre utilisée par cet exercice (null sinon) : conditionne l'aide au
   // chargement des disques affichée sous la série en cours.
   const barType = usesBarbell(exercise);
-  const gymProfile = useWorkoutStore((s) => s.gymProfile);
-  const barKg = barType === 'Barre' ? gymProfile.barKg : barType === 'Barre EZ' ? gymProfile.ezBarKg : null;
+  const gym = useActiveGym();
+  const barKg = barType === 'Barre' ? gym.barKg : barType === 'Barre EZ' ? gym.ezBarKg : null;
 
   const effectiveRest = customRestSeconds[exercise.id] ?? exercise.restSeconds;
   const restLabel =
