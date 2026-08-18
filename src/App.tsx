@@ -134,9 +134,9 @@ setView('intro');
 // L'écran d'aperçu peut renvoyer un plan d'adaptation (temps dispo, forme
 // du jour, matériel dispo) : il est transmis tel quel au store, qui bâtit
 // la séance réellement faite à partir de là.
-const handleStartWorkout = (adaptation: SessionAdaptation | null = null) => {
+const handleStartWorkout = (adaptation: SessionAdaptation | null = null, gymId?: string) => {
 if (!selectedDayId) return;
-useWorkoutStore.getState().startSession(selectedDayId, adaptation);
+useWorkoutStore.getState().startSession(selectedDayId, adaptation, gymId);
 setView('session');
 };
 
