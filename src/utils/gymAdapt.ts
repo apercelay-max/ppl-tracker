@@ -34,9 +34,22 @@ export interface GymProfile {
   plates: number[];
   /** Incrément le plus fin ailleurs (haltères, machines à goupille). */
   otherIncrementKg: number;
-  /** Matériel disponible — sert au mode « salle inconnue ». */
+  /** Matériel disponible dans cette salle. */
   availableEquipment: Equipment[];
-  plateHelperEnabled: boolean;
+  /** Machines présentes, en toutes lettres (« presse à cuisses », « pec-deck »). */
+  machines?: string[];
+  /**
+   * Vrai quand la liste ci-dessus est exhaustive. Tant que c'est faux, la
+   * liste est purement indicative : on ne va pas déclarer un exercice
+   * infaisable juste parce que Léo n'a pas fini de saisir ses machines.
+   */
+  machinesListComplete?: boolean;
+}
+
+/** Une salle enregistrée (voir Réglages → Mes salles). */
+export interface Gym extends GymProfile {
+  id: string;
+  name: string;
 }
 
 export interface AdaptOptions {
@@ -148,6 +161,30 @@ export const inferEquipment = (ex: Exercise): Equipment => {
   return 'Autre';
 };
 
+/**
+ * La salle a-t-elle la machine que demande cet exercice ? Comparaison par mots
+ * significatifs (« Presse à cuisses 45° » couvre « presse à cuisses »), et on
+ * répond toujours oui tant que la liste n'est pas déclarée complète.
+ */
+export const gymHasMachineFor = (exerciseName: string, gym: GymProfile): boolean => {
+  if (!gym.machinesListComplete) return true;
+  const machines = gym.machines ?? [];
+  if (machines.length === 0) return false;
+  const words = (s: string) =>
+    new Set(normalize(s).split(/[^a-z0-9]+/).filter((w) => w.length > 3));
+  const wanted = words(exerciseName);
+  if (wanted.size === 0) return true;
+  return machines.some((m) => {
+    const mots = words(m);
+    if (mots.size === 0) return false;
+    let commun = 0;
+    for (const w of mots) if (wanted.has(w)) commun++;
+    // Au moins un mot fort en commun, et il doit couvrir la moitié du nom
+    // de la machine — « poulie » seul ne doit pas valider « pec-deck ».
+    return commun > 0 && commun >= Math.min(2, mots.size);
+  });
+};
+
 /** Vrai si l'exercice se charge sur une barre (donc calcul de disques utile). */
 export const usesBarbell = (ex: Exercise): 'Barre' | 'Barre EZ' | null => {
   const eq = inferEquipment(ex);
@@ -195,6 +232,11 @@ interface SubstituteQuery {
   /** Regex des mouvements à éviter (articulation sensible). */
   avoid?: RegExp;
   preferEquipment?: Equipment[];
+  /**
+   * Salle où l'exercice sera fait : sert à ne pas proposer une machine qui
+   * n'y est pas non plus (quand la liste des machines est déclarée complète).
+   */
+  gym?: GymProfile;
 }
 
 /**
@@ -204,7 +246,7 @@ interface SubstituteQuery {
  * l'exercice que proposer n'importe quoi.
  */
 export const findSubstitute = ({
-  exercise, allowedEquipment, avoid, preferEquipment,
+  exercise, allowedEquipment, avoid, preferEquipment, gym,
 }: SubstituteQuery): CatalogExercise | null => {
   const original = findCatalogExercise(exercise.id, exercise.name);
   const group = original?.group ?? exercise.muscleGroup;
@@ -215,6 +257,7 @@ export const findSubstitute = ({
     if (normalize(c.name) === originalName) return false;
     if (allowedEquipment && !allowedEquipment.includes(c.equipment)) return false;
     if (avoid && avoid.test(c.name)) return false;
+    if (c.equipment === 'Machine' && gym && !gymHasMachineFor(c.name, gym)) return false;
     return true;
   });
   if (candidates.length === 0) return null;
@@ -298,16 +341,21 @@ export const buildAdaptation = (
   if (options.awayGym && gym.availableEquipment.length > 0) {
     for (const ex of working) {
       const needed = inferEquipment(ex);
-      if (needed === 'Autre' || gym.availableEquipment.includes(needed)) continue;
-      const sub = findSubstitute({ exercise: ex, allowedEquipment: gym.availableEquipment });
+      const equipementOk = needed === 'Autre' || gym.availableEquipment.includes(needed);
+      // Une machine peut être « disponible » en catégorie mais absente de
+      // cette salle en particulier (liste des machines déclarée complète).
+      const machineOk = needed !== 'Machine' || gymHasMachineFor(ex.name, gym);
+      if (equipementOk && machineOk) continue;
+      const raison = !equipementOk ? `${needed} indisponible` : 'machine absente de cette salle';
+      const sub = findSubstitute({ exercise: ex, allowedEquipment: gym.availableEquipment, gym });
       if (sub) {
         const before = ex.name;
         ex.name = sub.name;
         setOverride(ex.id, { name: sub.name });
-        summary.push(`${before} → ${sub.name} (${needed} indisponible)`);
+        summary.push(`${before} → ${sub.name} (${raison})`);
       } else {
         removedIds.push(ex.id);
-        summary.push(`${ex.name} retiré : ${needed} indisponible et aucun équivalent`);
+        summary.push(`${ex.name} retiré : ${raison}, aucun équivalent`);
       }
     }
     working = working.filter((ex) => !removedIds.includes(ex.id));
@@ -324,6 +372,7 @@ export const buildAdaptation = (
         allowedEquipment: options.awayGym ? gym.availableEquipment : null,
         avoid: rule.risky,
         preferEquipment: rule.prefer,
+        gym: options.awayGym ? gym : undefined,
       });
       if (sub) {
         const before = ex.name;
