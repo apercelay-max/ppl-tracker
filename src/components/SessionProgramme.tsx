@@ -153,12 +153,14 @@ style={modalInput}
 <button onClick={saveDraft} style={modalPrimaryBtn}>Enregistrer</button>
 </div>
 
-{modalExercise.isSuperset && modalExercise.supersetOrder === 1 && modalExercise.supersetGroupId && (
+{modalExercise.isSuperset && modalExercise.supersetGroupId && (
 <button
 onClick={() => onToggleSupersetRest(modalExercise.supersetGroupId as string, !modalGroupDisabled)}
 style={{ ...modalToggleBtn, color: modalGroupDisabled ? '#FF9800' : 'var(--text-muted)' }}
 >
-{modalGroupDisabled ? 'Repos ajoute - remettre le superset' : 'Machine occupee - ajouter du repos'}
+{modalGroupDisabled
+? 'Repos ajoute - remettre l\'enchainement'
+: 'Machine occupee - ajouter du repos'}
 </button>
 )}
 

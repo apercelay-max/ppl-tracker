@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Exercise, SetEntry } from '../data/types';
-import { PROGRESSION_WEEKS } from '../data/workouts';
+import { getProgressionWeek } from '../data/workouts';
 import { SetRow } from './SetRow';
 import { ExerciseAnimation } from './ExerciseAnimation';
 import { useWorkoutStore, useActiveGym } from '../store/workoutStore';
@@ -77,8 +77,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
     exerciseDeltaLabel = 'Derniere fois : ' + lastDisplay + ' ' + weightUnitLabel(weightUnit) + ' x ' + lastBestSet.reps;
   }
 
-  const weekIdx = currentWeek <= 2 ? 0 : currentWeek <= 4 ? 1 : currentWeek <= 6 ? 2 : currentWeek === 7 ? 3 : 4;
-  const weekData = PROGRESSION_WEEKS[weekIdx];
+  const weekData = getProgressionWeek(currentWeek);
   const completedCount = setEntries.filter((s) => s.completed).length;
   const totalSets = setEntries.length;
   const allDone = completedCount === totalSets && totalSets > 0;
@@ -119,7 +118,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
             {exercise.muscleGroup}
           </span>
           {exercise.isSuperset && (
-            <span style={{ background: 'rgba(224,48,48,0.12)', borderRadius: 6, padding: '2px 7px', border: '1px solid rgba(224,48,48,0.2)', color: '#e03030', fontSize: 10, fontWeight: 700 }}>⟳ SS</span>
+            <span style={{ background: 'rgba(224,48,48,0.12)', borderRadius: 6, padding: '2px 7px', border: '1px solid rgba(224,48,48,0.2)', color: '#e03030', fontSize: 10, fontWeight: 700 }}>⟳ {exercise.supersetGroupId?.startsWith('ts-') ? 'TS' : 'SS'}</span>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
