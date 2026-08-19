@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { WorkoutSession, ExerciseProgress, SetEntry, HistoryEntry, TimerState, CardioActivityType, CardioEntry, BodyWeightEntry, NavTabKey } from '../data/types';
-import { getWorkout, getBaseWorkout, setCustomWorkouts, setSessionWorkoutOverride } from '../data/workouts';
+import { getWorkout, getBaseWorkout, setCustomWorkouts, setSessionWorkoutOverride, MESOCYCLE_WEEKS } from '../data/workouts';
 import { applyAdaptation, type Gym, type GymProfile, type SessionAdaptation } from '../utils/gymAdapt';
 import { Program } from '../data/programs';
 import { bucketByWeek } from '../utils/training';
+import { getNextStep } from '../utils/supersets';
 
 const notifSupported = typeof Notification !== 'undefined';
 let notifTimeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -633,15 +634,18 @@ const workout = getWorkout(session.dayId);
 if (!workout) return;
 const currentEx = workout.exercises[session.currentExerciseIndex];
 if (!currentEx) return;
-const totalSets = session.exerciseProgress[currentEx.id]?.length ?? currentEx.sets;
-const isLastSet = session.currentSetIndex === totalSets - 1;
-if (isLastSet) {
-const nextIdx = session.currentExerciseIndex + 1;
-if (nextIdx >= workout.exercises.length) { get().finishSession(); }
-else { set({ session: { ...session, currentExerciseIndex: nextIdx, currentSetIndex: 0 } }); }
-} else {
-set({ session: { ...session, currentSetIndex: session.currentSetIndex + 1 } });
-}
+// Position suivante calculee par getNextStep : gere la rotation A->B->C
+// des supersets/tri-sets (voir utils/supersets.ts) autant que le simple
+// enchainement serie -> serie -> exercice suivant.
+const step = getNextStep(
+workout.exercises,
+session.currentExerciseIndex,
+session.currentSetIndex,
+(ex) => session.exerciseProgress[ex.id]?.length ?? ex.sets,
+session.disabledSupersetGroupIds ?? [],
+);
+if (step.exerciseIndex === null) { get().finishSession(); return; }
+set({ session: { ...session, currentExerciseIndex: step.exerciseIndex, currentSetIndex: step.setIndex } });
 },
 
 finishSession: () => {
@@ -744,7 +748,7 @@ set({ timer: { ...timer, isPaused: false, pausedRemainingSeconds: null, endTimes
 scheduleRestNotification(seconds);
 },
 
-setCurrentWeek: (week) => set({ currentWeek: Math.min(8, Math.max(1, week)) }),
+setCurrentWeek: (week) => set({ currentWeek: Math.min(MESOCYCLE_WEEKS, Math.max(1, week)) }),
 setTheme: (t) => set({ theme: t }),
 // 'system' résout tout de suite le thème actuel du téléphone — le
 // suivi des changements ultérieurs (ex: passage auto en sombre le
