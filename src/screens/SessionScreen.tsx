@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
-import { getWorkout, PROGRESSION_WEEKS } from '../data/workouts';
+import { getWorkout, getProgressionWeek } from '../data/workouts';
+import { getNextStep } from '../utils/supersets';
 import { ExerciseCard } from '../components/ExerciseCard';
 import { InlineRestBar } from '../components/InlineRestBar';
 import { StatsPanel } from '../components/StatsPanel';
@@ -322,10 +323,20 @@ pauseTimer();
 // remplacer le repos final, inutile juste avant la fin, par le deload.
 const isFinalSetOfSession = useCallback((exerciseId: string, setIndex: number): boolean => {
 if (!workout) return false;
-const lastExercise = workout.exercises[workout.exercises.length - 1];
-if (!lastExercise || lastExercise.id !== exerciseId) return false;
-const totalSets = useWorkoutStore.getState().session?.exerciseProgress[exerciseId]?.length ?? lastExercise.sets;
-return setIndex === totalSets - 1;
+const exIdx = workout.exercises.findIndex((e) => e.id === exerciseId);
+if (exIdx < 0) return false;
+const st = useWorkoutStore.getState().session;
+// La derniere serie de la seance n'est plus forcement la derniere serie du
+// dernier exercice : dans un tri-set on tourne A->B->C, donc c'est
+// getNextStep qui dit s'il reste quelque chose apres.
+const step = getNextStep(
+workout.exercises,
+exIdx,
+setIndex,
+(ex) => st?.exerciseProgress[ex.id]?.length ?? ex.sets,
+st?.disabledSupersetGroupIds ?? [],
+);
+return step.exerciseIndex === null;
 }, [workout]);
 
 // Rouvre une série déjà validée pour la corriger (bouton crayon) : on
@@ -373,8 +384,19 @@ editRestoreRef.current = null;
 restoreSessionPosition(restore.exerciseIndex, restore.setIndex);
 return;
 }
-// Superset order 1 → pas de timer, on enchaîne
-if (exercise.restMode === 'superset' && exercise.supersetOrder === 1 && !(session?.disabledSupersetGroupIds ?? []).includes(exercise.supersetGroupId ?? '')) {
+// Ou va-t-on apres cette serie ? getNextStep gere la rotation A->B->C des
+// supersets et tri-sets (voir utils/supersets.ts).
+const workoutExercises = workout?.exercises ?? [];
+const exIdxNow = workoutExercises.findIndex((e) => e.id === exerciseId);
+const step = getNextStep(
+workoutExercises,
+exIdxNow,
+setIndex,
+(ex) => useWorkoutStore.getState().session?.exerciseProgress[ex.id]?.length ?? ex.sets,
+session?.disabledSupersetGroupIds ?? [],
+);
+// Milieu d'un tour de superset/tri-set → aucun repos, on enchaine.
+if (!step.rest) {
 advanceSession();
 return;
 }
@@ -393,9 +415,8 @@ return;
 // précédent. Le repos continue de tourner et de s'afficher normalement ;
 // on empêche juste sa fin de faire avancer la séance une 2e fois (voir
 // handleTimerComplete).
-const exTotalSets = session?.exerciseProgress[exerciseId]?.length ?? exercise.sets;
 skipTimerAdvanceRef.current = false;
-if (setIndex === exTotalSets - 1) {
+if (step.exerciseIndex !== exIdxNow) {
 timerAlreadyElapsedRef.current = false;
 skipTimerAdvanceRef.current = true;
 advanceSession();
@@ -436,7 +457,15 @@ startTimer(restSecs);
 const handleWeightEntered = useCallback((exerciseId: string, setIndex: number) => {
 const exercise = workout?.exercises.find((e) => e.id === exerciseId);
 if (!exercise) return;
-if (exercise.restMode === 'superset' && exercise.supersetOrder === 1 && !(session?.disabledSupersetGroupIds ?? []).includes(exercise.supersetGroupId ?? '')) return;
+// Pas de repos anticipe au milieu d'un tour de superset/tri-set : on enchaine.
+const wIdx = workout?.exercises.findIndex((e) => e.id === exerciseId) ?? -1;
+if (wIdx >= 0 && workout && !getNextStep(
+workout.exercises,
+wIdx,
+setIndex,
+(ex) => useWorkoutStore.getState().session?.exerciseProgress[ex.id]?.length ?? ex.sets,
+session?.disabledSupersetGroupIds ?? [],
+).rest) return;
 // Toute dernière série de la séance : pas de repos anticipé non plus,
 // le deload prendra le relais une fois la série validée.
 if (isFinalSetOfSession(exerciseId, setIndex)) return;
@@ -476,8 +505,7 @@ onFinish={handleDeloadFinish}
 
 const exercises = workout.exercises;
 const bodyIntensity = getWorkoutBodyIntensity(workout);
-const weekIdx = currentWeek <= 2 ? 0 : currentWeek <= 4 ? 1 : currentWeek <= 6 ? 2 : currentWeek === 7 ? 3 : 4;
-const weekData = PROGRESSION_WEEKS[weekIdx];
+const weekData = getProgressionWeek(currentWeek);
 const currentExIdx = session.currentExerciseIndex;
 const currentSetIdx = session.currentSetIndex;
 const currentEx = exercises[currentExIdx];
@@ -494,13 +522,16 @@ const restRefEx = restRefExIdx >= 0 ? exercises[restRefExIdx] : currentEx;
 const restRefSetIdx = pendingRestKey ? pendingRestKey.setIndex : currentSetIdx;
 
 const getNextInfo = (): { exercise?: Exercise; setNumber?: number } => {
-if (!restRefEx) return {};
-const totalSets = session.exerciseProgress[restRefEx.id]?.length ?? restRefEx.sets;
-const setsLeft = totalSets - (restRefSetIdx + 1);
-if (setsLeft > 0) return { exercise: restRefEx, setNumber: restRefSetIdx + 2 };
-const nextEx = exercises[restRefExIdx + 1];
-if (nextEx) return { exercise: nextEx, setNumber: 1 };
-return {};
+if (!restRefEx || restRefExIdx < 0) return {};
+const step = getNextStep(
+exercises,
+restRefExIdx,
+restRefSetIdx,
+(ex) => session.exerciseProgress[ex.id]?.length ?? ex.sets,
+session.disabledSupersetGroupIds ?? [],
+);
+if (step.exerciseIndex === null) return {};
+return { exercise: exercises[step.exerciseIndex], setNumber: step.setIndex + 1 };
 };
 const nextInfo = getNextInfo();
 
@@ -740,7 +771,7 @@ if (Array.isArray(item)) {
 // Groupe superset → encadré rouge foncé
 return (
 <div key={item[0].supersetGroupId} style={ssGroup}>
-<div style={ssLabel}><span style={{ fontSize: 10 }}>⟳</span> SUPERSET</div>
+<div style={ssLabel}><span style={{ fontSize: 10 }}>⟳</span> {item.length >= 3 ? 'TRI-SET' : 'SUPERSET'}</div>
 {item.map((exercise, idx) => {
 const exIdx = exercises.indexOf(exercise);
 const isRestTarget = exercise.id === restBarTargetExerciseId;

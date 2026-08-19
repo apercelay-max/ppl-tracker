@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { PROGRESSION_WEEKS, getWorkout } from '../data/workouts';
+import { MESOCYCLE_WEEKS, getProgressionWeek, getWorkout } from '../data/workouts';
 import { getProgram } from '../data/programs';
 import { useWorkoutStore, CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import type { HomeSectionKey } from '../store/workoutStore';
@@ -75,12 +75,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     setCardioRpe(null);
   };
 
-  const weekIdx = currentWeek <= 2 ? 0 : currentWeek <= 4 ? 1 : currentWeek <= 6 ? 2 : currentWeek === 7 ? 3 : 4;
-  const weekData = PROGRESSION_WEEKS[weekIdx];
+  const weekData = getProgressionWeek(currentWeek);
   const resumeWorkout = session && !session.isComplete
     ? getWorkout(session.dayId)
     : null;
-  const cycleProgress = ((currentWeek - 1) / 7) * 100;
+  const cycleProgress = ((currentWeek - 1) / (MESOCYCLE_WEEKS - 1)) * 100;
 
   const wakeLockSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator;
 
@@ -114,8 +113,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const handleTitlePointerLeave = () => setHoloPos({ x: 50, y: 50 });
 
   const cycleColor = blockColor('cycle', 'var(--brand-1)');
-  // Le suivi "semaine / RIR / objectif" (progression 8 semaines) est propre
-  // à Strict V10 — les autres programmes n'ont pas cette notion, donc le
+  // Le suivi "semaine / RIR / objectif" (mésocycle 11 semaines) est propre
+  // à Strict V2.2 — les autres programmes n'ont pas cette notion, donc le
   // bloc ne s'affiche que pour celui-ci, même si le réglage est activé.
   const cycleSection = homeSections.cycle && activeProgramId === 'strict-v10' && (
     <div key="cycle" style={{ ...weekCard, ...(homeSectionColors.cycle ? { borderLeft: `3px solid ${cycleColor}` } : {}) }}>
@@ -130,7 +129,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
             <span style={{ color: 'var(--text-muted)', fontSize: 9, fontWeight: 700, letterSpacing: 1 }}>SEM.</span>
             <span style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 18, lineHeight: '1' }}>{currentWeek}</span>
           </div>
-          <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek + 1)} disabled={currentWeek >= 8}>›</button>
+          <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek + 1)} disabled={currentWeek >= MESOCYCLE_WEEKS}>›</button>
         </div>
       </div>
 
@@ -150,7 +149,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
       </div>
 
       <div style={{ display: 'flex', gap: 5, alignItems: 'center', marginBottom: 6 }}>
-        {Array.from({ length: 8 }, (_, i) => (
+        {Array.from({ length: MESOCYCLE_WEEKS }, (_, i) => (
           <div key={i} style={{
             flex: 1, height: i + 1 === currentWeek ? 6 : 4, borderRadius: 3,
             background: i + 1 < currentWeek ? cycleColor : i + 1 === currentWeek ? '#ffffff' : 'var(--border-strong)',
@@ -159,7 +158,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
           }} />
         ))}
       </div>
-      <p style={{ color: 'var(--text-micro)', fontSize: 10 }}>Semaine {currentWeek} / 8 · {Math.round(cycleProgress)}% du cycle</p>
+      <p style={{ color: 'var(--text-micro)', fontSize: 10 }}>Semaine {currentWeek} / {MESOCYCLE_WEEKS} · {Math.round(cycleProgress)}% du cycle</p>
     </div>
   );
 
