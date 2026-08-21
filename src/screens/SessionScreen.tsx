@@ -769,6 +769,13 @@ devient incompréhensible. */}
 {groupedExercises.map((item) => {
 if (Array.isArray(item)) {
 // Groupe superset → encadré rouge foncé
+// Vrai dès qu'UN membre du groupe est l'exercice actif : sert à garder
+// TOUS les membres du groupe dépliés (séries + barre de repos) pendant
+// tout le tour, pas seulement celui dont c'est littéralement le tour —
+// sinon un membre déjà entamé (allDone=false) mais pas actif à cet
+// instant précis repasse en carte repliée, et sa propre barre de repos
+// (rattachée à lui) disparaît de l'écran. Voir ExerciseCard.groupActive.
+const groupIsInPlay = item.some((e) => exercises.indexOf(e) === currentExIdx);
 return (
 <div key={item[0].supersetGroupId} style={ssGroup}>
 <div style={ssLabel}><span style={{ fontSize: 10 }}>⟳</span> {item.length >= 3 ? 'TRI-SET' : 'SUPERSET'}</div>
@@ -783,6 +790,7 @@ exercise={displayExercise}
 setEntries={session.exerciseProgress[exercise.id] ?? []}
 currentSetIndex={exIdx === currentExIdx ? currentSetIdx : 0}
 isActive={exIdx === currentExIdx}
+groupActive={groupIsInPlay}
 currentWeek={currentWeek}
 onSetComplete={(setIndex, entry) => handleSetComplete(exercise.id, setIndex, entry)}
 onEditSet={(setIndex) => handleEditSet(exercise.id, setIndex)}
