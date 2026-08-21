@@ -24,6 +24,14 @@ interface ExerciseCardProps {
   onWeightStart?: (setIndex: number) => void;
   restBar?: React.ReactNode;
   restBarIndex?: number;
+  // Vrai si cet exercice fait partie d'un superset/tri-set dont un AUTRE
+  // membre est actuellement l'exercice actif (isActive=false ici). Sans ça,
+  // un membre qui a déjà fait sa série du tour mais n'a pas encore fini
+  // toutes ses séries (donc allDone=false) repasse en carte repliée dès que
+  // la main passe au membre suivant — masquant au passage sa propre barre
+  // de repos (voir SessionScreen : le repos réel du tour est rattaché au
+  // dernier membre du groupe). Voir SessionScreen.groupedExercises.
+  groupActive?: boolean;
   // Incrémenté quand une secousse du téléphone doit valider la série en cours
   // (transmis à la SetRow active) — voir useShakeToValidate.
   validateSignal?: number;
@@ -50,7 +58,7 @@ const bestCompletedSet = (sets: SetEntry[] | null | undefined): { weight: number
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   exercise, setEntries, currentSetIndex, isActive, currentWeek, onSetComplete,
   onEditSet, onSkipSet, onSkipExercise, onAddSet, onSwitchTo, onWeightStart, restBar, restBarIndex,
-  validateSignal,
+  validateSignal, groupActive,
 }) => {
   const [notesOpen, setNotesOpen] = useState(false);
   const iconSize = useWorkoutStore((s) => s.iconSize);
@@ -183,7 +191,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       )}
 
       {/* Séries */}
-      {(isActive || allDone) ? (
+      {(isActive || allDone || groupActive) ? (
         <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 12 }}>
           {setEntries.map((entry, idx) => (
             <React.Fragment key={idx}>
