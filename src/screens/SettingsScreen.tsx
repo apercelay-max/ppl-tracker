@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ACCENT_PRESETS, GYM_PRESETS } from '../data/accents';
-import type { HomeSectionKey } from '../store/workoutStore';
+import { HOME_SECTION_META } from '../data/homeSectionMeta';
 import { ICON_SHAPE_RADIUS, ICON_SHAPE_LABEL, ICON_SIZE_LABEL } from '../data/iconPrefs';
 import type { IconShape, IconSize } from '../data/iconPrefs';
 import { WORKOUTS } from '../data/workouts';
@@ -102,16 +102,10 @@ const BEEP_TONES: { id: 'doux' | 'classique' | 'urgent' | 'melodique' | 'cloche'
 { id: 'cloche', label: 'Cloche' },
 ];
 
-const SECTION_META: Record<HomeSectionKey, { label: string; desc: string; toggleable: boolean }> = {
-cycle: { label: 'Cycle en cours', desc: 'La carte semaine / RIR / objectif.', toggleable: true },
-seances: { label: 'Liste des séances', desc: 'Les séances du programme actif — toujours visible.', toggleable: false },
-nutrition: { label: 'Conseil nutrition', desc: 'Le rappel protéines/glucides après la séance.', toggleable: true },
-supersetRule: { label: 'Règle superset', desc: 'Le rappel sur le fonctionnement des supersets.', toggleable: true },
-muscleAlert: { label: 'Groupes musculaires', desc: 'Alerte les groupes pas travaillés depuis un moment.', toggleable: true },
-cardio: { label: 'Cardio', desc: 'Ajouter et suivre tes séances de vélo, marche, course...', toggleable: true },
-weeklyGoal: { label: 'Objectif hebdo', desc: "L'anneau de progression du nombre de séances cette semaine.", toggleable: true },
-nextSession: { label: 'Prochaine séance', desc: 'Le bandeau qui indique la prochaine séance du cycle.', toggleable: true },
-};
+// Déplacé dans data/homeSectionMeta.ts pour être partagé avec l'accueil
+// (mode édition + sélecteur "+ Ajouter un widget"), qui a besoin des mêmes
+// libellés sans dupliquer cette liste à deux endroits.
+const SECTION_META = HOME_SECTION_META;
 
 // Catégories de la page Réglages — volontairement peu nombreuses et
 // regroupées par usage plutôt que par type technique (avant : 9 catégories
