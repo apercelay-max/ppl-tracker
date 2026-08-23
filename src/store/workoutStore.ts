@@ -141,13 +141,20 @@ muscleAlert: boolean;
 cardio: boolean;
 weeklyGoal: boolean;
 nextSession: boolean;
+lastSession: boolean;
+weeklyStats: boolean;
+bodyWeight: boolean;
+personalRecord: boolean;
+exerciseProgress: boolean;
 }
 
 export type HomeSectionKey =
-| 'cycle' | 'seances' | 'nutrition' | 'supersetRule' | 'muscleAlert' | 'cardio' | 'weeklyGoal' | 'nextSession';
+| 'cycle' | 'seances' | 'nutrition' | 'supersetRule' | 'muscleAlert' | 'cardio' | 'weeklyGoal' | 'nextSession'
+| 'lastSession' | 'weeklyStats' | 'bodyWeight' | 'personalRecord' | 'exerciseProgress';
 
 const DEFAULT_HOME_ORDER: HomeSectionKey[] = [
-'nextSession', 'cycle', 'weeklyGoal', 'seances', 'muscleAlert', 'cardio', 'nutrition', 'supersetRule',
+'nextSession', 'lastSession', 'weeklyStats', 'cycle', 'weeklyGoal', 'seances', 'muscleAlert', 'cardio', 'nutrition', 'supersetRule',
+'bodyWeight', 'personalRecord', 'exerciseProgress',
 ];
 
 // kcal/h par défaut pour chaque type d'activité cardio (utilisées pour
@@ -327,6 +334,7 @@ setAccentTheme: (id: string) => void;
 setFontScale: (s: 'sm' | 'md' | 'lg') => void;
 setHomeSectionVisible: (key: keyof HomeSectionsVisible, visible: boolean) => void;
 moveHomeSection: (key: HomeSectionKey, direction: 'up' | 'down') => void;
+setHomeSectionOrder: (order: HomeSectionKey[]) => void;
 setIconShape: (shape: 'square' | 'rounded' | 'circle') => void;
 setIconSize: (size: 'sm' | 'md' | 'lg') => void;
 setDefaultRestSeconds: (seconds: number) => void;
@@ -414,7 +422,14 @@ accentTheme: 'red',
 customAccentColor: '#e03030',
 amoledMode: false,
 fontScale: 'md',
-homeSections: { cycle: true, nutrition: true, supersetRule: true, muscleAlert: true, cardio: true, weeklyGoal: true, nextSession: true },
+homeSections: {
+cycle: true, nutrition: true, supersetRule: true, muscleAlert: true, cardio: true, weeklyGoal: true, nextSession: true,
+// Les 2 widgets demandés en priorité (séance précédente, stats de la
+// semaine) sont visibles par défaut. Les 3 autres (poids du corps,
+// dernier record, progression) démarrent masqués — à ajouter via le
+// bouton "+ Ajouter un widget" de l'accueil pour qui les veut.
+lastSession: true, weeklyStats: true, bodyWeight: false, personalRecord: false, exerciseProgress: false,
+},
 homeSectionOrder: DEFAULT_HOME_ORDER,
 iconShape: 'rounded',
 iconSize: 'md',
@@ -824,6 +839,12 @@ if (swapWith < 0 || swapWith >= order.length) return state;
 return { homeSectionOrder: order };
 });
 },
+
+// Remplace l'ordre complet en un coup — utilisé par l'accueil pour
+// réordonner un widget par rapport à ses voisins VISIBLES seulement (voir
+// HomeScreen.tsx), ce que moveHomeSection ne permet pas (il échange avec le
+// voisin immédiat dans l'ordre complet, même masqué).
+setHomeSectionOrder: (order) => set({ homeSectionOrder: order }),
 
 setIconShape: (shape) => set({ iconShape: shape }),
 setIconSize: (size) => set({ iconSize: size }),
