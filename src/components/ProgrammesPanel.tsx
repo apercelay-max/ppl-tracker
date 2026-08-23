@@ -1,10 +1,17 @@
 import React, { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ExerciseSheet, findCatalogExercise, readFavs, writeFavs } from './ExerciseCatalog';
 import { EXERCISE_IMG_BASE } from '../data/exercisesCatalog';
 import type { Exercise } from '../data/types';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getAllPrograms, type Program } from '../data/programs';
 import { CATALOG_GROUPS, CATALOG_EQUIPMENT, type Equipment } from '../data/exercisesCatalog';
+import { normalize } from '../utils/catalogMatch';
+import { getProgramBodyIntensity } from '../utils/training';
+import { BodyDiagram } from './BodyDiagram';
+import {
+  IconSearch, IconHome, IconDumbbell, IconFlame, IconZap, IconTarget, IconTrophy, IconActivity,
+} from './Icons';
 import {
   generateProgram, weeklySetsByGroup, DEFAULT_PREFS,
   type GeneratorPrefs, type Goal, type SplitKind, type Level,
@@ -32,8 +39,18 @@ export const ProgrammesPanel: React.FC = () => {
   const [mode, setMode] = useState<Mode>('liste');
   const [openId, setOpenId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   const programs = useMemo(() => getAllPrograms(customPrograms), [customPrograms]);
+
+  const q = normalize(query.trim());
+  const filteredPrograms = useMemo(() => programs.filter((p) => {
+    if (q === '') return true;
+    const haystack = normalize([p.name, p.focusLabel, p.shortDescription].join(' '));
+    return haystack.includes(q);
+  }), [programs, q]);
+
+  const openProgram = programs.find((p) => p.id === openId) ?? null;
 
   const flash = (msg: string) => {
     setToast(msg);
@@ -64,51 +81,142 @@ export const ProgrammesPanel: React.FC = () => {
       {mode === 'generateur' ? (
         <GeneratorForm onSave={handleSave} onCancel={() => setMode('liste')} />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {programs.map((p) => (
-            <ProgramCard
-              key={p.id}
-              program={p}
-              isActive={p.id === activeProgramId}
-              isOpen={openId === p.id}
-              onToggle={() => setOpenId(openId === p.id ? null : p.id)}
-              onActivate={() => { setActiveProgram(p.id); flash(`« ${p.name} » est maintenant ton programme actif.`); }}
-              onDelete={p.isCustom ? () => { removeCustomProgram(p.id); flash(`« ${p.name} » supprimé.`); } : undefined}
+        <div>
+          <div style={searchWrap}>
+            <IconSearch size={15} color="var(--text-dim)" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Chercher un programme..."
+              style={searchInput}
             />
-          ))}
+            {query !== '' && (
+              <button onClick={() => setQuery('')} style={clearBtn} aria-label="Effacer">✕</button>
+            )}
+          </div>
+
+          {filteredPrograms.length === 0 && (
+            <p style={emptyText}>Aucun programme ne correspond à ta recherche.</p>
+          )}
+
+          <div style={grid}>
+            {filteredPrograms.map((p) => (
+              <ProgramTile
+                key={p.id}
+                program={p}
+                isActive={p.id === activeProgramId}
+                onOpen={() => setOpenId(p.id)}
+              />
+            ))}
+          </div>
         </div>
+      )}
+
+      {openProgram && (
+        <ProgramSheet
+          program={openProgram}
+          isActive={openProgram.id === activeProgramId}
+          onClose={() => setOpenId(null)}
+          onActivate={() => {
+            setActiveProgram(openProgram.id);
+            flash(`« ${openProgram.name} » est maintenant ton programme actif.`);
+          }}
+          onDelete={openProgram.isCustom ? () => {
+            removeCustomProgram(openProgram.id);
+            setOpenId(null);
+            flash(`« ${openProgram.name} » supprimé.`);
+          } : undefined}
+        />
       )}
     </div>
   );
 };
 
-// ─── Carte programme ─────────────────────────────────────────────────────────
+// ─── Représentation visuelle d'un programme (icône + dégradé) ───────────────
+//
+// Il n'existe pas de banque de photos par programme (ce sont des trames
+// générées, pas des produits éditoriaux avec shooting dédié) : la "vignette"
+// est donc une icône + un dégradé tirés des couleurs déjà attribuées aux
+// séances du programme (dayAccents), pour rester reconnaissable et cohérent
+// avec le reste de l'appli sans dépendre d'un assets externe.
+const programIcon = (p: Program): React.FC<{ size?: number; color?: string }> => {
+  const id = p.id;
+  const name = p.name.toLowerCase();
+  if (id.includes('maison') || id.includes('halteres-maison')) return IconHome;
+  if (id.includes('poignet')) return IconActivity;
+  if (id.includes('perte-de-poids')) return IconFlame;
+  if (id.includes('bro-split')) return IconTrophy;
+  if (id.includes('force') || name.includes('force')) return IconZap;
+  if (id.includes('debutant')) return IconTarget;
+  return IconDumbbell;
+};
 
-const ProgramCard: React.FC<{
-  program: Program; isActive: boolean; isOpen: boolean;
-  onToggle: () => void; onActivate: () => void; onDelete?: () => void;
-}> = ({ program, isActive, isOpen, onToggle, onActivate, onDelete }) => {
+const programGradient = (p: Program): string => {
+  const colors = Array.from(new Set(Object.values(p.dayAccents))).filter(Boolean);
+  const a = colors[0] ?? '#7c6fcd';
+  const b = colors[colors.length - 1] ?? a;
+  return `linear-gradient(135deg, ${a} 0%, ${b} 100%)`;
+};
+
+// ─── Vignette carrée du catalogue ────────────────────────────────────────────
+
+const ProgramTile: React.FC<{ program: Program; isActive: boolean; onOpen: () => void }> = ({ program, isActive, onOpen }) => {
+  const Icon = programIcon(program);
+  return (
+    <button onClick={onOpen} style={{ ...tile, ...(isActive ? tileActive : {}) }}>
+      <div style={{ ...tileThumb, background: programGradient(program) }}>
+        <Icon size={30} color="rgba(255,255,255,0.95)" />
+        {isActive && <span style={tileActiveBadge}>ACTIF</span>}
+      </div>
+      <div style={tileBody}>
+        <p style={tileTitle}>{program.name}</p>
+        <p style={tileSub}>
+          {program.workouts.length} séance{program.workouts.length > 1 ? 's' : ''}
+        </p>
+      </div>
+    </button>
+  );
+};
+
+// ─── Fiche détaillée (feuille plein écran, même pattern que ExerciseSheet) ──
+
+const ProgramSheet: React.FC<{
+  program: Program; isActive: boolean;
+  onClose: () => void; onActivate: () => void; onDelete?: () => void;
+}> = ({ program, isActive, onClose, onActivate, onDelete }) => {
   const volume = useMemo(() => weeklySetsByGroup(program), [program]);
   const totalExercises = program.workouts.reduce((n, w) => n + w.exercises.length, 0);
+  const intensity = useMemo(() => getProgramBodyIntensity(program.workouts), [program]);
+  const Icon = programIcon(program);
 
-  return (
-    <div style={{ ...card, ...(isActive ? cardActive : {}) }}>
-      <button onClick={onToggle} style={cardHead}>
-        <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
-          <p style={cardTitle}>
-            {program.name}
-            {isActive && <span style={activeBadge}>ACTIF</span>}
-          </p>
-          <p style={cardSub}>
-            {program.workouts.length} séance{program.workouts.length > 1 ? 's' : ''} · {totalExercises} exercices
-          </p>
+  return createPortal(
+    <div style={sheetOverlay} onClick={onClose}>
+      <div style={sheet} onClick={(e) => e.stopPropagation()}>
+        <div style={sheetHeader}>
+          <button onClick={onClose} style={backBtn} aria-label="Fermer">←</button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+              {program.name}
+              {isActive && <span style={activeBadge}>ACTIF</span>}
+            </p>
+            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>
+              {program.workouts.length} séance{program.workouts.length > 1 ? 's' : ''} · {totalExercises} exercices
+            </p>
+          </div>
         </div>
-        <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{isOpen ? '▴' : '▾'}</span>
-      </button>
 
-      {isOpen && (
-        <div style={{ padding: '0 14px 14px' }}>
-          <p style={{ ...bodyText, marginBottom: 12 }}>{program.shortDescription}</p>
+        <div style={sheetBody}>
+          <div style={{ ...heroThumb, background: programGradient(program) }}>
+            <Icon size={44} color="rgba(255,255,255,0.95)" />
+          </div>
+
+          <p style={{ ...bodyText, marginBottom: 16 }}>{program.shortDescription}</p>
+
+          <p style={sectionLabel}>Muscles sollicités</p>
+          <div style={diagramBox}>
+            <BodyDiagram intensity={intensity} />
+          </div>
 
           <p style={sectionLabel}>Volume hebdomadaire (séries)</p>
           <div style={{ marginBottom: 14 }}>
@@ -138,17 +246,18 @@ const ProgramCard: React.FC<{
 
           <p style={sourceNote}>{program.source}</p>
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
             {!isActive && (
-              <button onClick={onActivate} style={{ ...actionBtn, ...actionPrimary }}>Activer ce programme</button>
+              <button onClick={onActivate} style={{ ...actionBtn, ...actionPrimary, flex: 1 }}>Activer ce programme</button>
             )}
             {onDelete && (
               <button onClick={onDelete} style={{ ...actionBtn, color: '#e05252' }}>Supprimer</button>
             )}
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    </div>,
+    document.body
   );
 };
 
@@ -310,21 +419,77 @@ const chip: React.CSSProperties = {
   background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-mid)',
 };
 const chipActive: React.CSSProperties = { background: 'var(--brand-1)', color: '#fff', border: '1px solid transparent' };
-const card: React.CSSProperties = {
-  background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border-mid)', overflow: 'hidden',
-};
-const cardActive: React.CSSProperties = { border: '1px solid var(--brand-1)' };
-const cardHead: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', width: '100%', padding: '12px 14px',
-  cursor: 'pointer', background: 'none', border: 'none',
-};
-const cardTitle: React.CSSProperties = {
-  color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8,
-};
-const cardSub: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 11, marginTop: 2 };
 const activeBadge: React.CSSProperties = {
   fontSize: 9, fontWeight: 800, letterSpacing: 1, padding: '2px 6px',
   borderRadius: 6, background: 'var(--brand-1)', color: '#fff',
+};
+
+// ─── Recherche ────────────────────────────────────────────────────────────
+const searchWrap: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)',
+  border: '1px solid var(--border-mid)', borderRadius: 12, padding: '10px 14px', marginBottom: 12,
+};
+const searchInput: React.CSSProperties = {
+  flex: 1, background: 'transparent', border: 'none', outline: 'none',
+  color: 'var(--text-primary)', fontSize: 14, minWidth: 0,
+};
+const clearBtn: React.CSSProperties = {
+  color: 'var(--text-dim)', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+};
+const emptyText: React.CSSProperties = {
+  color: 'var(--text-dim)', fontSize: 13, textAlign: 'center', marginTop: 24, lineHeight: '19px',
+};
+
+// ─── Grille de vignettes ────────────────────────────────────────────────────
+const grid: React.CSSProperties = {
+  display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
+};
+const tile: React.CSSProperties = {
+  display: 'flex', flexDirection: 'column', textAlign: 'left', padding: 0,
+  background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border-mid)',
+  overflow: 'hidden', cursor: 'pointer',
+};
+const tileActive: React.CSSProperties = { border: '1px solid var(--brand-1)' };
+const tileThumb: React.CSSProperties = {
+  position: 'relative', height: 84, display: 'flex', alignItems: 'center', justifyContent: 'center',
+};
+const tileActiveBadge: React.CSSProperties = {
+  position: 'absolute', top: 8, right: 8, fontSize: 8.5, fontWeight: 800, letterSpacing: 0.8,
+  padding: '3px 6px', borderRadius: 6, background: 'rgba(0,0,0,0.35)', color: '#fff',
+  backdropFilter: 'blur(2px)',
+};
+const tileBody: React.CSSProperties = { padding: '9px 10px 11px' };
+const tileTitle: React.CSSProperties = {
+  color: 'var(--text-secondary)', fontSize: 12.5, fontWeight: 700, lineHeight: '16px',
+};
+const tileSub: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 10.5, marginTop: 3 };
+
+// ─── Feuille détaillée ───────────────────────────────────────────────────────
+const sheetOverlay: React.CSSProperties = {
+  position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 200,
+  display: 'flex', justifyContent: 'center',
+};
+const sheet: React.CSSProperties = {
+  width: '100%', maxWidth: 480, background: 'var(--bg-base)',
+  display: 'flex', flexDirection: 'column', height: '100dvh',
+};
+const sheetHeader: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px 12px',
+  paddingTop: 'max(20px, env(safe-area-inset-top))',
+  borderBottom: '1px solid var(--border-subtle)', flexShrink: 0,
+};
+const sheetBody: React.CSSProperties = { flex: 1, overflowY: 'auto', padding: '16px 16px 120px' };
+const backBtn: React.CSSProperties = {
+  width: 36, height: 36, borderRadius: 12, background: 'var(--bg-elevated)',
+  border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 17, flexShrink: 0, cursor: 'pointer',
+};
+const heroThumb: React.CSSProperties = {
+  height: 110, borderRadius: 14, marginBottom: 16, border: '1px solid var(--border-mid)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+};
+const diagramBox: React.CSSProperties = {
+  background: 'var(--bg-card)', border: '1px solid var(--border-mid)',
+  borderRadius: 14, padding: '14px 10px', marginBottom: 16,
 };
 const sectionLabel: React.CSSProperties = {
   color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 8,
