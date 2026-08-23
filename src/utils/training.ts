@@ -491,6 +491,29 @@ export const getWorkoutBodyIntensity = (workout: WorkoutDay): Partial<Record<Bod
 };
 
 /**
+ * Même principe que getWorkoutBodyIntensity, mais agrégé sur TOUTES les
+ * séances d'un programme (plutôt qu'une seule) — utilisé par le catalogue de
+ * programmes pour montrer d'un coup d'œil quels muscles un programme entier
+ * fait travailler sur une rotation complète.
+ */
+export const getProgramBodyIntensity = (workouts: WorkoutDay[]): Partial<Record<BodyRegionKey, number>> => {
+  const setsByGroup: Record<string, number> = {};
+  for (const w of workouts) {
+    for (const ex of w.exercises) {
+      setsByGroup[ex.muscleGroup] = (setsByGroup[ex.muscleGroup] ?? 0) + ex.sets;
+    }
+  }
+  const maxSets = Math.max(1, ...Object.values(setsByGroup));
+  const result: Partial<Record<BodyRegionKey, number>> = {};
+  for (const [group, sets] of Object.entries(setsByGroup)) {
+    const regions = MUSCLE_GROUP_TO_REGIONS[group] ?? [];
+    const t = sets / maxSets;
+    for (const r of regions) result[r] = Math.max(result[r] ?? 0, t);
+  }
+  return result;
+};
+
+/**
  * Même principe que getWorkoutBodyIntensity, mais basé sur l'historique réel
  * des `days` derniers jours plutôt que sur une séance planifiée — pour
  * l'écran "Corps" qui montre ce qui a vraiment été travaillé récemment.
