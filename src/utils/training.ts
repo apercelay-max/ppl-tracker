@@ -268,6 +268,97 @@ export const getMaxE1RMEver = (history: HistoryEntry[], exerciseId: string): num
   return Math.round(max * 10) / 10;
 };
 
+export interface PersonalRecordEvent {
+  exerciseId: string;
+  exerciseName: string;
+  weight: number;       // nouveau poids max (numérique) atteint
+  previousMax: number;  // poids max d'avant ce record
+  date: number;
+}
+
+/**
+ * Retrouve le dernier record personnel (PR) chiffré battu, tous exercices
+ * confondus — même définition que la détection en direct pendant une
+ * séance (voir handleSetComplete dans SessionScreen.tsx) : un nouveau poids
+ * qui dépasse le max précédent, à condition qu'il y ait bien un max
+ * précédent à battre (sinon la toute première fois qu'un exercice est fait
+ * compterait à tort comme un "record"). Parcourt l'historique du plus
+ * ancien au plus récent en gardant le max courant par exercice, et retient
+ * le dernier dépassement rencontré. Renvoie null si aucun record trouvé.
+ */
+export const getMostRecentPersonalRecord = (history: HistoryEntry[]): PersonalRecordEvent | null => {
+  const chronological = [...history].reverse(); // plus ancien → plus récent
+  const runningMax: Record<string, number> = {};
+  let lastPR: PersonalRecordEvent | null = null;
+
+  for (const entry of chronological) {
+    for (const [exerciseId, sets] of Object.entries(entry.exerciseProgress)) {
+      let entryMax = 0;
+      for (const s of sets) {
+        if (!s.completed) continue;
+        const w = parseFloat(s.weight);
+        if (!isNaN(w) && w > entryMax) entryMax = w;
+      }
+      if (entryMax <= 0) continue;
+
+      const previousMax = runningMax[exerciseId] ?? 0;
+      if (previousMax > 0 && entryMax > previousMax) {
+        const exerciseName = ALL_EXERCISES.find((e) => e.id === exerciseId)?.name ?? exerciseId;
+        lastPR = { exerciseId, exerciseName, weight: entryMax, previousMax, date: entry.date };
+      }
+      if (entryMax > previousMax) runningMax[exerciseId] = entryMax;
+    }
+  }
+
+  return lastPR;
+};
+
+export interface FeaturedExerciseProgress {
+  exerciseId: string;
+  exerciseName: string;
+  e1rmHistory: E1RMPoint[]; // fenêtre des `weeks` dernières semaines uniquement
+  currentE1RM: number;
+  deltaKg: number; // progression sur la fenêtre (toujours > 0)
+  weeksSpan: number;
+}
+
+/**
+ * Choisit automatiquement l'exercice à mettre en avant dans le widget
+ * "Progression sur un exercice" de l'accueil : celui dont le 1RM estimé a
+ * le plus progressé sur les `weeks` dernières semaines, parmi les
+ * exercices encore pratiqués récemment (dernier passage dans les
+ * `recentDays` derniers jours) — pour ne pas mettre en avant un exercice
+ * abandonné qui progressait il y a longtemps. Renvoie null si aucun
+ * exercice n'a une vraie progression récente à montrer, plutôt que
+ * d'inventer un exercice au hasard.
+ */
+export const getFeaturedExerciseProgress = (
+  history: HistoryEntry[],
+  weeks = 8,
+  recentDays = 21
+): FeaturedExerciseProgress | null => {
+  const cutoff = Date.now() - weeks * WEEK_MS;
+  const recentCutoff = Date.now() - recentDays * 86400000;
+  let best: FeaturedExerciseProgress | null = null;
+
+  for (const ex of ALL_EXERCISES) {
+    const windowed = getExerciseE1RMHistory(history, ex.id).filter((p) => p.date >= cutoff);
+    if (windowed.length < 2) continue;
+    const last = windowed[windowed.length - 1];
+    if (last.date < recentCutoff) continue; // pas fait récemment, on ne le met pas en avant
+
+    const first = windowed[0];
+    const deltaKg = Math.round((last.e1rm - first.e1rm) * 10) / 10;
+    if (deltaKg <= 0) continue; // on ne met en avant qu'une vraie progression
+
+    if (!best || deltaKg > best.deltaKg) {
+      best = { exerciseId: ex.id, exerciseName: ex.name, e1rmHistory: windowed, currentE1RM: last.e1rm, deltaKg, weeksSpan: weeks };
+    }
+  }
+
+  return best;
+};
+
 // ─── Groupes musculaires pas travaillés récemment ───────────────────────────
 
 // Table exerciceId → groupe musculaire (construite une fois depuis workouts.ts).
