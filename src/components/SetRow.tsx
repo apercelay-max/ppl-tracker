@@ -53,6 +53,10 @@ export const SetRow: React.FC<SetRowProps> = ({
   // Ne déclenche onWeightStart qu'une fois par série active (reset dès
   // qu'on quitte la série active, ex. après validation ou passage suivant).
   const weightStartFiredRef = useRef(false);
+  // Pas d'incrément rapide (boutons − / +) : 2,5 kg est le plus petit
+  // saut courant en salle (1,25 kg par côté) ; 5 lbs est l'équivalent
+  // usuel côté lbs plutôt qu'une conversion exacte de 2,5 kg.
+  const weightStep = weightUnit === 'kg' ? 2.5 : 5;
 
   useEffect(() => {
     if (!entry.completed) {
@@ -81,12 +85,28 @@ export const SetRow: React.FC<SetRowProps> = ({
     if (!isCurrent) weightStartFiredRef.current = false;
   }, [isCurrent]);
 
-  const handleWeightChange = (value: string) => {
-    setWeight(value);
-    if (isCurrent && value.trim() !== '' && !weightStartFiredRef.current) {
+  const maybeFireWeightStart = () => {
+    if (isCurrent && !weightStartFiredRef.current) {
       weightStartFiredRef.current = true;
       onWeightStart?.();
     }
+  };
+
+  const handleWeightChange = (value: string) => {
+    setWeight(value);
+    if (value.trim() !== '') maybeFireWeightStart();
+  };
+
+  // Boutons − / + à côté du champ poids : évite d'ouvrir le clavier pour un
+  // ajustement de charge classique pendant une série (mains prises/moites).
+  // Part de la valeur actuellement affichée (déjà pré-remplie avec le poids
+  // cible), donc marche aussi bien pour affiner que pour partir de zéro.
+  const handleWeightStep = (delta: number) => {
+    const current = parseFloat((weight || '0').replace(',', '.'));
+    const base = isNaN(current) ? 0 : current;
+    const next = Math.max(0, Math.round((base + delta) * 10) / 10);
+    setWeight(Number.isInteger(next) ? String(next) : next.toFixed(1));
+    maybeFireWeightStart();
   };
 
   const handleValidate = () => { if (!reps) return; onComplete({ weight: parseWeightInputToKg(weight, weightUnit), reps, completed: true }); };
@@ -151,6 +171,27 @@ export const SetRow: React.FC<SetRowProps> = ({
   const lastTimeHint = lastTime && lastTime.completed && lastTime.reps !== '—'
     ? `Dernière fois : ${lastTime.weight ? formatWeightForDisplay(lastTime.weight, weightUnit) : 'PDC'} ${weightUnitLabel(weightUnit)} × ${lastTime.reps}`
     : null;
+
+  // Badge delta "en direct" vs la dernière fois (comparaison "ghost set") :
+  // se met à jour pendant la saisie, avant même de valider la série.
+  // Priorité au poids (le signal le plus lu au moment de charger la barre),
+  // sinon on retombe sur les reps si le poids est identique.
+  let liveDeltaBadge: { text: string; positive: boolean } | null = null;
+  if (isCurrent && !entry.completed && reps && lastTime && lastTime.completed && lastTime.reps !== '—' && lastTime.weight) {
+    const lastKg = parseFloat(lastTime.weight);
+    if (!isNaN(lastKg) && !isNaN(currentWeightKg) && Math.abs(currentWeightKg - lastKg) >= 0.01) {
+      const diffKg = currentWeightKg - lastKg;
+      const diffDisplay = formatWeightForDisplay(Math.abs(diffKg).toFixed(2), weightUnit);
+      liveDeltaBadge = { text: `${diffKg > 0 ? '+' : '−'}${diffDisplay} ${weightUnitLabel(weightUnit)}`, positive: diffKg > 0 };
+    } else {
+      const lastReps = parseInt(lastTime.reps);
+      const curReps = parseInt(reps);
+      if (!isNaN(lastReps) && !isNaN(curReps) && curReps !== lastReps) {
+        const diffReps = curReps - lastReps;
+        liveDeltaBadge = { text: `${diffReps > 0 ? '+' : '−'}${Math.abs(diffReps)} rep${Math.abs(diffReps) > 1 ? 's' : ''}`, positive: diffReps > 0 };
+      }
+    }
+  }
 
   // ── Série sautée ──────────────────────────────────────────────────────
   if (entry.completed && entry.reps === '—') {
@@ -224,11 +265,15 @@ export const SetRow: React.FC<SetRowProps> = ({
         <div style={activeNumBadge}>
           <span style={{ color: 'var(--brand-1)', fontSize: 14, fontWeight: 800 }}>{setNumber}</span>
         </div>
+        <button type="button" onClick={() => handleWeightStep(-weightStep)} style={weightStepBtn}
+          title={`− ${weightStep} ${weightUnitLabel(weightUnit)}`}>−</button>
         <div className="input-field" style={inputWrapper}>
           <input style={inputField} type="text" inputMode="decimal" value={weight}
             onChange={(e) => handleWeightChange(e.target.value)} placeholder={weightUnitLabel(weightUnit)} onFocus={(e) => e.target.select()} />
           <button type="button" onClick={handleToggleWeightUnit} style={inputUnitBtn} title="Changer l'unité">{weightUnitLabel(weightUnit)}</button>
         </div>
+        <button type="button" onClick={() => handleWeightStep(weightStep)} style={weightStepBtn}
+          title={`+ ${weightStep} ${weightUnitLabel(weightUnit)}`}>+</button>
         <div className="input-field" style={inputWrapper}>
           <input style={inputField} type="text" inputMode="numeric" value={reps}
             onChange={(e) => setReps(e.target.value)} placeholder="Reps" onFocus={(e) => e.target.select()}
@@ -250,7 +295,19 @@ export const SetRow: React.FC<SetRowProps> = ({
           {plateHint.warn ? '⚠ ' : '⚖ '}{plateHint.text}
         </p>
       )}
-      {lastTimeHint && <p style={{ ...lastTimeText, marginLeft: 8, marginTop: 4 }}>{lastTimeHint}</p>}
+      {(lastTimeHint || liveDeltaBadge) && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginLeft: 8, marginTop: 4 }}>
+          {lastTimeHint && <p style={{ ...lastTimeText, margin: 0 }}>{lastTimeHint}</p>}
+          {liveDeltaBadge && (
+            <span style={{
+              fontSize: 10, fontWeight: 800, borderRadius: 6, padding: '2px 6px', flexShrink: 0,
+              color: liveDeltaBadge.positive ? '#4CAF50' : '#f5a623',
+              background: liveDeltaBadge.positive ? 'rgba(76,175,80,0.12)' : 'rgba(245,166,35,0.12)',
+              border: '1px solid ' + (liveDeltaBadge.positive ? 'rgba(76,175,80,0.25)' : 'rgba(245,166,35,0.25)'),
+            }}>{liveDeltaBadge.text}</span>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -265,9 +322,14 @@ const donePillReps: React.CSSProperties = { flex: 1, borderRadius: 10, padding: 
 const editBtn: React.CSSProperties = { width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', color: 'var(--text-dim)', fontSize: 19, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' };
 const rowPending: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, padding: '7px 6px 2px' };
 const activeNumBadge: React.CSSProperties = { width: 28, height: 28, borderRadius: 8, background: 'rgba(var(--brand-1-rgb),0.12)', border: '1px solid rgba(var(--brand-1-rgb),0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
-const rowActive: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, padding: '10px 8px', background: 'var(--bg-red-tint)', borderRadius: 12, border: '1px solid #3a1818' };
+const rowActive: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, padding: '10px 8px', background: 'var(--bg-red-tint)', borderRadius: 12, border: '1px solid #3a1818' };
 const inputWrapper: React.CSSProperties = { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', background: 'var(--bg-red-input)', borderRadius: 10, padding: '8px 10px', border: '1px solid rgba(var(--brand-1-rgb),0.2)', transition: 'border-color 0.15s, box-shadow 0.15s', overflow: 'hidden' };
 const inputField: React.CSSProperties = { flex: 1, background: 'none', color: 'var(--text-primary)', fontSize: 16, fontWeight: 600, width: 0 };
 const inputUnit: React.CSSProperties = { color: 'rgba(var(--brand-1-rgb),0.5)', fontSize: 11, marginLeft: 4, flexShrink: 0, display: 'inline-block', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
 const inputUnitBtn: React.CSSProperties = { color: 'rgba(var(--brand-1-rgb),0.85)', fontSize: 10, fontWeight: 800, letterSpacing: 0.4, marginLeft: 4, flexShrink: 0, background: 'rgba(var(--brand-1-rgb),0.14)', border: '1px solid rgba(var(--brand-1-rgb),0.35)', borderRadius: 6, padding: '4px 7px', textTransform: 'uppercase' };
-const validateBtn: React.CSSProperties = { width: 42, height: 42, borderRadius: 12, color: '#fff', fontSize: 16, fontWeight: 800, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s, box-shadow 0.2s, transform 0.1s' };
+// Boutons − / + rapides pour le poids : zone d'action groupée avec le
+// bouton valider côté droit de la carte (Léo tient son téléphone de la
+// main droite pendant une série).
+const weightStepBtn: React.CSSProperties = { width: 22, height: 22, borderRadius: 7, flexShrink: 0, background: 'rgba(var(--brand-1-rgb),0.14)', border: '1px solid rgba(var(--brand-1-rgb),0.32)', color: 'var(--brand-1)', fontSize: 14, fontWeight: 800, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 };
+// Agrandi (42→44) pour une cible tactile plus fiable à une main en fin de série.
+const validateBtn: React.CSSProperties = { width: 44, height: 44, borderRadius: 12, color: '#fff', fontSize: 17, fontWeight: 800, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s, box-shadow 0.2s, transform 0.1s' };
