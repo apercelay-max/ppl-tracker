@@ -11,7 +11,7 @@ import {
 } from '../utils/training';
 import type { CardioActivityType } from '../data/types';
 import {
-  IconZap, IconSettings, IconBarChart, IconSun, IconMoon, IconBattery, IconTarget, IconUtensils, IconActivity,
+  IconPMark, IconSettings, IconBarChart, IconSun, IconMoon, IconBattery, IconTarget, IconUtensils, IconActivity,
   IconClock, IconTrendingUp, IconTrophy, IconScale,
 } from '../components/Icons';
 
@@ -639,7 +639,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
         {/* Header */}
         <div style={headerSection}>
           <div style={logoRow}>
-            <div style={{ ...logoBadge, width: iconSizes.logo, height: iconSizes.logo }}><span style={{ display: 'inline-flex', lineHeight: 1 }}><IconZap size={iconSizes.logo * 0.5} /></span></div>
+            <div style={{ ...logoBadge, width: iconSizes.logo, height: iconSizes.logo }}><span style={{ display: 'inline-flex', lineHeight: 1 }}><IconPMark size={iconSizes.logo * 0.6} color="#ffffff" /></span></div>
             <div>
               <div
                 ref={titleWrapRef}

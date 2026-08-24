@@ -16,6 +16,13 @@ export const IconZap: React.FC<IconProps> = ({ size = 18, color = 'currentColor'
   </svg>
 );
 
+// Monogramme "P" — logo de l'app (badge accueil + écran de démarrage).
+export const IconPMark: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24">
+    <text x="12" y="18.5" textAnchor="middle" fontFamily="Georgia, 'Times New Roman', serif" fontWeight={900} fontSize={20} fill={color}>P</text>
+  </svg>
+);
+
 export const IconSettings: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
     <circle cx="12" cy="12" r="3" />

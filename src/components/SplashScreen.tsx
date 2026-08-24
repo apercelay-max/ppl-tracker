@@ -1,4 +1,5 @@
 import React from 'react';
+import { IconPMark } from './Icons';
 
 interface SplashScreenProps {
   fadingOut: boolean;
@@ -12,7 +13,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ fadingOut }) => {
   return (
     <div className={`splash-screen${fadingOut ? ' splash-fade' : ''}`} style={wrapper}>
       <div className="splash-badge" style={badge}>
-        <span style={{ fontSize: 34 }}>⚡</span>
+        <IconPMark size={38} color="#ffffff" />
       </div>
       <div style={lettersRow}>
         {['P', 'P', 'L'].map((letter, i) => (
