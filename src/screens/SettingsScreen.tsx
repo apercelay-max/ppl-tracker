@@ -426,6 +426,10 @@ setImportMsg(`"${result.program.name}" ajouté (${result.daysDetected} jour(s), 
 // honnêtes plutôt que d'inventer des données.
 const handleImportFile = (file: File) => {
 const lower = file.name.toLowerCase();
+if (lower.endsWith('.pdf') || file.type === 'application/pdf') {
+setImportMsg('Les fichiers PDF ne sont pas pris en charge — exporte ton programme en CSV, Excel ou JSON puis réessaie.');
+return;
+}
 if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
 setImportMsg('Lecture du fichier Excel...');
 parseExcelWorkbook(file)
