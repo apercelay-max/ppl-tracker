@@ -3,6 +3,8 @@ import { useWorkoutStore } from '../store/workoutStore';
 import { getMuscleGroupsStatus, getMuscleRecoveryStatus, getRecoveryRegionStatus, getMaxWeightEver, ALL_EXERCISES, getBodyIntensityFromHistory } from '../utils/training';
 import type { BodyRegionKey } from '../utils/training';
 import { BodyDiagram } from '../components/BodyDiagram';
+import { EmptyState } from '../components/EmptyState';
+import { IconDumbbell, IconActivity, IconTrophy } from '../components/Icons';
 
 interface ObjectivesScreenProps { onBack: () => void; }
 
@@ -94,9 +96,10 @@ export const ObjectivesScreen: React.FC<ObjectivesScreenProps> = ({ onBack }) =>
         <p style={sectionLabel}>GROUPES MUSCULAIRES</p>
         <div style={card}>
           {muscleStatuses.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: '18px' }}>
-              Pas encore de séance enregistrée — reviens ici après ta première séance.
-            </p>
+            <EmptyState
+              icon={<IconDumbbell size={22} />}
+              text="Pas encore de séance enregistrée — reviens ici après ta première séance."
+            />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {muscleStatuses.map((s) => {
@@ -173,9 +176,10 @@ export const ObjectivesScreen: React.FC<ObjectivesScreenProps> = ({ onBack }) =>
               </div>
             </div>
           ) : (
-            <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: '18px' }}>
-              Pas encore de séance récente — fais une séance et reviens voir quels muscles s'allument ici.
-            </p>
+            <EmptyState
+              icon={<IconActivity size={22} />}
+              text="Pas encore de séance récente — fais une séance et reviens voir quels muscles s'allument ici."
+            />
           )}
         </div>
 
@@ -183,9 +187,10 @@ export const ObjectivesScreen: React.FC<ObjectivesScreenProps> = ({ onBack }) =>
         <p style={sectionLabel}>RECORDS PERSONNELS</p>
         <div style={card}>
           {records.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: '18px' }}>
-              Aucun record pour l'instant — les charges chiffrées de tes séances apparaîtront ici.
-            </p>
+            <EmptyState
+              icon={<IconTrophy size={22} />}
+              text="Aucun record pour l'instant — les charges chiffrées de tes séances apparaîtront ici."
+            />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {records.map((rec, i) => (

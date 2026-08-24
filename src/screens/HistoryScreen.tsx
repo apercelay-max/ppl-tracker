@@ -4,6 +4,8 @@ import { getWorkout } from '../data/workouts';
 import { computeTonnage } from '../utils/training';
 import { formatWeightForDisplay, weightUnitLabel } from '../utils/weight';
 import type { HistoryEntry } from '../data/types';
+import { EmptyState } from '../components/EmptyState';
+import { IconCalendar } from '../components/Icons';
 
 interface HistoryScreenProps { onBack: () => void; }
 
@@ -117,9 +119,10 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
 
         {history.length === 0 ? (
           <div style={card}>
-            <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: '18px', textAlign: 'center' }}>
-              Pas encore de séance terminée. Ton journal d'entraînement apparaîtra ici au fil du temps.
-            </p>
+            <EmptyState
+              icon={<IconCalendar size={22} />}
+              text="Pas encore de séance terminée. Ton journal d'entraînement apparaîtra ici au fil du temps."
+            />
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
