@@ -55,9 +55,21 @@ export const getProgressionWeek = (week: number): ProgressionWeek => {
   return PROGRESSION_WEEKS[WEEK_TO_PHASE_INDEX[w - 1]];
 };
 
-// ─── Les 4 séances PPL Strict V2.2 ──────────────────────────────────────────
+// ─── Les 4 séances PPL Strict V2.5 ──────────────────────────────────────────
 // Programme actif de l'appli. Remplace Strict V11 (6 séances) le 19/08/2026,
-// à partir du fichier « programme_hypertrophie_PPL_Strict_Phase1_V2.2.xlsx ».
+// à partir du fichier « programme_hypertrophie_PPL_Strict_Phase1_V2.2.xlsx »,
+// puis mis à jour en V2.5 le 24/08/2026 (fichier
+// « programme_hypertrophie_PPL_Strict_Phase1_V2.5.xlsx »). Structure et
+// exercices inchangés depuis la V2.2 — la V2.5 corrige uniquement le repos
+// réel sur trois exercices unilatéraux (formule affichée + entre-côtés mal
+// calculée dans les versions précédentes) et les durées de séance estimées.
+// Les charges de départ restent celles déjà en place : le fichier source
+// pré-remplit des projections « Sem 5 » pour Pull A/Push A/Pull B qui
+// dépendent de séances pas forcément faites (Léo ne suit pas lui-même ce
+// programme et ne pouvait pas confirmer lesquelles), donc on ne les
+// applique pas à l'aveugle — seule la correction du développé couché
+// Push B (exercice identique à Push A, Sem 4 confirmée « FAIT » dans le
+// fichier) est reportée.
 //
 // CE QUI CHANGE PAR RAPPORT À V11 :
 //  · 6 séances → 4. Les deux journées Legs sont DISSOUTES : chaque séance du
@@ -93,7 +105,7 @@ export const WORKOUTS: WorkoutDay[] = [
     name: 'Pull A',
     focus: 'Épaules (deltoïde postérieur + latéral) prioritaires à froid, puis dos et biceps — jambes en tri-set de fin de séance',
     muscleGroups: 'Deltoïdes / Dos / Biceps + Jambes ⟳',
-    estimatedDuration: '≈ 69 min',
+    estimatedDuration: '≈ 74 min',
     exercises: [
       {
         id: 'pull-a-1',
@@ -113,11 +125,11 @@ export const WORKOUTS: WorkoutDay[] = [
         muscleGroup: 'DELTOÏDE LATÉRAL',
         sets: 3,
         targetReps: '12-15',
-        restSeconds: 120,
+        restSeconds: 90,
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '7',
-        notes: 'Ajout V1.4 — prend la place du curl poulie à la corde. Le deltoïde latéral passe de 6 à 12 séries par semaine. Câble passé derrière le dos, main libre en appui, buste immobile : le câble maintient la tension en position basse, là où l\'haltère est à zéro. Départ 7 kg par bras (recalé après ta séance Push B). Tempo 2-0-1, RIR 2-3.',
+        notes: 'Ajout V1.4 — prend la place du curl poulie à la corde. Le deltoïde latéral passe de 6 à 12 séries par semaine. Câble passé derrière le dos, main libre en appui, buste immobile : le câble maintient la tension en position basse, là où l\'haltère est à zéro. Départ 7 kg par bras (recalé après ta séance Push B). Tempo 2-0-1, RIR 2-3. ⚠ V2.5 : repos corrigé à 90 s — fais le côté droit puis immédiatement le gauche, PUIS le repos affiché (repos réel ≈125 s, même valeur sur Push B).',
       },
       {
         id: 'pull-a-3',
@@ -149,11 +161,11 @@ export const WORKOUTS: WorkoutDay[] = [
         muscleGroup: 'DOS',
         sets: 3,
         targetReps: '10-12',
-        restSeconds: 120,
+        restSeconds: 60,
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '28',
-        notes: 'Charge désormais en KG RÉELS d\'haltère (les 85 étaient un repère machine). Départ 28 kg à calibrer — tu as jusqu\'à 40 kg. SANGLES OBLIGATOIRES : le biceps est déjà fatigué, les sangles remettent le grand dorsal en facteur limitant. Un genou et une main sur le banc, dos à plat, coude qui longe le flanc. Tempo 2-1-1, RIR 2-3. ⚠ Chute S1→S3 de -25 % dans l\'historique : à surveiller en priorité.',
+        notes: 'Charge désormais en KG RÉELS d\'haltère (les 85 étaient un repère machine). Départ 28 kg à calibrer — tu as jusqu\'à 40 kg. SANGLES OBLIGATOIRES : le biceps est déjà fatigué, les sangles remettent le grand dorsal en facteur limitant. Un genou et une main sur le banc, dos à plat, coude qui longe le flanc. Tempo 2-1-1, RIR 2-3. ⚠ Chute S1→S3 de -25 % dans l\'historique : à surveiller en priorité. ⚠ V2.5 : repos corrigé à 60 s — repos affiché pris ENTRE CHAQUE côté (pas après la paire), donc repos réel ≈155 s par côté, déjà au-dessus du plancher de 150 s.',
       },
       {
         id: 'pull-a-6',
@@ -206,7 +218,7 @@ export const WORKOUTS: WorkoutDay[] = [
     name: 'Push A',
     focus: 'Deltoïdes à froid, puis pecs et triceps en superset — jambes en tri-set de fin de séance. Zéro développé vertical',
     muscleGroups: 'Deltoïdes / Pecs / Triceps + Jambes ⟳',
-    estimatedDuration: '≈ 61 min',
+    estimatedDuration: '≈ 65 min',
     exercises: [
       {
         id: 'push-a-1',
@@ -323,7 +335,7 @@ export const WORKOUTS: WorkoutDay[] = [
     name: 'Pull B',
     focus: 'Deux vecteurs de deltoïde postérieur à froid, biceps en position étirée puis dos — jambes en tri-set de fin de séance',
     muscleGroups: 'Deltoïdes / Biceps / Dos + Jambes ⟳',
-    estimatedDuration: '≈ 66 min',
+    estimatedDuration: '≈ 74 min',
     exercises: [
       {
         id: 'pull-b-1',
@@ -379,11 +391,11 @@ export const WORKOUTS: WorkoutDay[] = [
         muscleGroup: 'AVANT-BRAS / BRACHIAL',
         sets: 3,
         targetReps: '12-15',
-        restSeconds: 90,
+        restSeconds: 120,
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '12',
-        notes: '10 kg → 15/15/13 en Sem 3, haut de fourchette : charge montée à 12 kg. V2.1 — CHARGE = DISQUES AJOUTÉS, barre non comptée (convention alignée sur le triceps EZ du Jour 4, à ta demande). Placé après les tractions : la prise est un facteur limitant, on ne la fatigue pas avant. Pronation, poignets verrouillés en légère extension. Tempo 2-0-1, RIR 2-3.',
+        notes: '10 kg → 15/15/13 en Sem 3, haut de fourchette : charge montée à 12 kg. V2.1 — CHARGE = DISQUES AJOUTÉS, barre non comptée (convention alignée sur le triceps EZ du Jour 4, à ta demande). Placé après les tractions : la prise est un facteur limitant, on ne la fatigue pas avant. Pronation, poignets verrouillés en légère extension. Tempo 2-0-1, RIR 2-3. ⚠ V2.5 : repos corrigé à 120 s — isolation bilatérale hors superset, 90 s était sous le plancher de repos réel.',
       },
       {
         id: 'pull-b-6',
@@ -436,7 +448,7 @@ export const WORKOUTS: WorkoutDay[] = [
     name: 'Push B',
     focus: 'Six séries de deltoïde latéral à froid, pecs, puis dips isolés en fin — jambes en tri-set de fin de séance',
     muscleGroups: 'Deltoïdes / Pecs / Triceps + Jambes ⟳',
-    estimatedDuration: '≈ 69 min',
+    estimatedDuration: '≈ 73 min',
     exercises: [
       {
         id: 'push-b-1',
@@ -444,11 +456,11 @@ export const WORKOUTS: WorkoutDay[] = [
         muscleGroup: 'DELTOÏDE LATÉRAL',
         sets: 3,
         targetReps: '12-15',
-        restSeconds: 120,
+        restSeconds: 90,
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '7',
-        notes: '★ PRIORITÉ 1, à froid. Unilatéral imposé par le stack unique — et c\'est la meilleure version : le câble maintient la tension en position basse, là où l\'haltère est à zéro. Câble qui passe derrière le dos, main libre en appui. Sem 4 à 5 kg → 18/18/15, au-dessus de la fourchette : charge Sem 5 montée à 7 kg. Repos 120 s : à 75 s tu perdais 40 % de tes reps. Tempo 2-0-1, RIR 1-2 en Sem 5.',
+        notes: '★ PRIORITÉ 1, à froid. Unilatéral imposé par le stack unique — et c\'est la meilleure version : le câble maintient la tension en position basse, là où l\'haltère est à zéro. Câble qui passe derrière le dos, main libre en appui. Sem 4 à 5 kg → 18/18/15, au-dessus de la fourchette : charge Sem 5 montée à 7 kg. Tempo 2-0-1, RIR 1-2 en Sem 5. ⚠ V2.5 : repos corrigé à 90 s — fais le côté droit puis immédiatement le gauche, PUIS le repos affiché (repos réel ≈125 s, même valeur sur Pull A).',
       },
       {
         id: 'push-b-2',
@@ -471,8 +483,8 @@ export const WORKOUTS: WorkoutDay[] = [
         restSeconds: 180,
         restMode: 'normal',
         isSuperset: false,
-        defaultWeight: '62',
-        notes: '⚠ V2.2 : Sem 4 tenue à 59 kg en 14/11/10 — la série 1 sortait de la fourchette par le haut, donc l\'écart mesurait la CHARGE et pas la fatigue. Bonne action : charger. Sem 5 à 62 kg (+5 %), série 1 attendue à 11-12 au RIR 1-2. Omoplates rétractées, léger étirement en bas, pieds au sol. Option si l\'épaule antérieure tire : prise neutre (marteau), même charge. Tempo 3-0-1.',
+        defaultWeight: '64',
+        notes: '⚠ V2.2 : Sem 4 tenue à 59 kg en 14/11/10 — la série 1 sortait de la fourchette par le haut, donc l\'écart mesurait la CHARGE et pas la fatigue. Bonne action : charger. Omoplates rétractées, léger étirement en bas, pieds au sol. Option si l\'épaule antérieure tire : prise neutre (marteau), même charge. Tempo 3-0-1. ⚠ V2.5 : charge recalée à 64 kg (+5 % sur 59, pas 62) — même exercice, même charge que le développé couché de Push A, série 1 attendue à 11-12 au RIR 1-2.',
       },
       {
         id: 'push-b-4',

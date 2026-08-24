@@ -4,10 +4,13 @@ import { PPL_DEBUTANT_WORKOUTS, FULL_BODY_WORKOUTS, FORCE_5X5_WORKOUTS, WRIST_CO
 import { CATALOG_PROGRAMS } from './catalogPrograms';
 
 // ─── Programmes sélectionnables (Réglages → Programme d'entraînement) ─────
-// "Strict V2.2" est le programme historique de l'appli (ex-V10, ex-V11),
+// "Strict V2.5" est le programme historique de l'appli (ex-V10, ex-V11),
 // toujours présent en premier — c'est le programme réellement suivi par Léo,
 // mis à jour au fil des versions envoyées (V10 → V11 le 19/07/2026, puis
-// V11 → V2.2 « Phase 1 Sèche » le 19/08/2026). Son id reste 'strict-v10'
+// V11 → V2.2 « Phase 1 Sèche » le 19/08/2026, puis V2.2 → V2.5 le
+// 24/08/2026 — corrections de repos réel sur trois exercices unilatéraux
+// et durées de séance recalculées, structure/exercices inchangés). Son id
+// reste 'strict-v10'
 // pour ne pas casser les réglages déjà enregistrés sur l'appareil. Les autres
 // sont des trames additionnelles, proposées en plus — changer de programme
 // actif ne supprime jamais les autres, ni l'historique déjà enregistré
@@ -27,10 +30,10 @@ export interface Program {
 
 export const STRICT_V10_PROGRAM: Program = {
   id: 'strict-v10',
-  name: 'Strict V2.2',
-  focusLabel: 'Strict V2.2 · Phase 1 Sèche',
+  name: 'Strict V2.5',
+  focusLabel: 'Strict V2.5 · Phase 1 Sèche',
   shortDescription: '4 séances (Pull/Push A et B), jambes dissoutes en tri-set de fin de séance. Home gym, Phase 1 — Sèche jusqu\'au 16/10.',
-  source: 'Le programme de Léo, mis à jour de V11 vers V2.2 le 19/08/2026 (fichier « programme_hypertrophie_PPL_Strict_Phase1_V2.2.xlsx »).',
+  source: 'Le programme de Léo, mis à jour de V2.2 vers V2.5 le 24/08/2026 (fichier « programme_hypertrophie_PPL_Strict_Phase1_V2.5.xlsx »).',
   workouts: WORKOUTS,
   // Les clés 'legs-a'/'legs-b' n'existent plus dans le programme depuis la
   // V2.2 : on les garde pour que l'historique d'avant le 19/08/2026 reste
