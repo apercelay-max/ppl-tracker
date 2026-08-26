@@ -80,6 +80,10 @@ interface HomeScreenProps { onSelectDay: (dayId: string) => void; onOpenDashboar
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashboard, onOpenSettings }) => {
   const currentWeek = useWorkoutStore((s) => s.currentWeek);
   const setCurrentWeek = useWorkoutStore((s) => s.setCurrentWeek);
+  // Semaine mémorisée à l'ouverture de cet écran, pour pouvoir y revenir
+  // d'un coup après avoir navigué avec ‹/› (currentWeek est la VRAIE semaine
+  // du programme, pas juste un aperçu — la naviguer la change réellement).
+  const [homeWeekBaseline] = useState(currentWeek);
   const session = useWorkoutStore((s) => s.session);
   const theme = useWorkoutStore((s) => s.theme);
   const setThemeMode = useWorkoutStore((s) => s.setThemeMode);
@@ -176,13 +180,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
           <p style={sectionLabel}>CYCLE EN COURS</p>
           <p style={{ color: 'var(--text-secondary)', fontSize: 15, fontWeight: 700, marginTop: 2 }}>{weekData.phase}</p>
         </div>
-        <div style={weekSelectorRow}>
-          <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek - 1)} disabled={currentWeek <= 1}>‹</button>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, minWidth: 28 }}>
-            <span style={{ color: 'var(--text-muted)', fontSize: 9, fontWeight: 700, letterSpacing: 1 }}>SEM.</span>
-            <span style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 18, lineHeight: '1' }}>{currentWeek}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {currentWeek !== homeWeekBaseline && (
+            <button
+              className="week-btn"
+              style={{ ...weekBtn, width: 'auto', padding: '0 8px', fontSize: 11, fontWeight: 700 }}
+              onClick={() => setCurrentWeek(homeWeekBaseline)}
+              title="Revenir à la semaine en cours"
+            >
+              ↺ Sem. {homeWeekBaseline}
+            </button>
+          )}
+          <div style={weekSelectorRow}>
+            <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek - 1)} disabled={currentWeek <= 1}>‹</button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, minWidth: 28 }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: 9, fontWeight: 700, letterSpacing: 1 }}>SEM.</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 18, lineHeight: '1' }}>{currentWeek}</span>
+            </div>
+            <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek + 1)} disabled={currentWeek >= MESOCYCLE_WEEKS}>›</button>
           </div>
-          <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek + 1)} disabled={currentWeek >= MESOCYCLE_WEEKS}>›</button>
         </div>
       </div>
 

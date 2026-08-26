@@ -309,6 +309,7 @@ editSet: (exerciseId: string, setIndex: number) => void;
 restoreSessionPosition: (exerciseIndex: number, setIndex: number) => void;
 skipSet: () => void;
 skipExercise: () => void;
+shortenSession: () => void;
 switchToExercise: (exerciseId: string) => void;
 setExerciseNameOverride: (exerciseId: string, name: string | null) => void;
 toggleSupersetRest: (groupId: string, disabled: boolean) => void;
@@ -582,6 +583,50 @@ get().finishSession();
 set({ session: { ...session, exerciseProgress: updated, currentExerciseIndex: nextIdx, currentSetIndex: 0 } });
 }
 get().skipTimer();
+},
+
+// Raccourcir la séance en retard : coupe tous les exercices non essentiels
+// (voir Exercise.essential) qui n'ont pas encore été entamés — un exercice
+// déjà commencé (au moins une série faite) n'est jamais coupé, même non
+// essentiel, pour ne pas revenir en arrière sur ce que Léo est en train de
+// faire. La position courante est recalculée sur le premier exercice qui
+// reste réellement à faire, plutôt que de s'appuyer sur getNextStep (pensé
+// pour n'avancer que d'une série à la fois, pas pour sauter plusieurs
+// exercices coupés d'un coup).
+shortenSession: () => {
+const { session } = get();
+if (!session) return;
+const workout = getWorkout(session.dayId);
+if (!workout) return;
+const updated = { ...session.exerciseProgress };
+for (const ex of workout.exercises) {
+if (ex.essential === true) continue;
+const entries = updated[ex.id] ?? [];
+const alreadyStarted = entries.some((e) => e.completed);
+if (alreadyStarted) continue;
+updated[ex.id] = entries.map(() => ({ weight: '', reps: '—', completed: true }));
+}
+const firstUnfinished = workout.exercises.findIndex((ex) => {
+const entries = updated[ex.id] ?? [];
+const total = Math.max(ex.sets, entries.length);
+return entries.filter((e) => e.completed).length < total;
+});
+// Au sein de cet exercice, la 1ère série pas encore faite (ex: si c'est
+// l'exercice en cours, il peut déjà avoir des séries validées) — sinon
+// currentSetIndex retomberait sur une série déjà faite et plus aucune
+// série active ne s'afficherait nulle part (voir SetRow : une entrée
+// completed passe toujours en rendu "faite", jamais en actif).
+const firstUnfinishedSetIndex = firstUnfinished === -1 ? 0
+: Math.max(0, (updated[workout.exercises[firstUnfinished].id] ?? []).findIndex((e) => !e.completed));
+set({
+session: {
+...session,
+exerciseProgress: updated,
+...(firstUnfinished === -1 ? {} : { currentExerciseIndex: firstUnfinished, currentSetIndex: firstUnfinishedSetIndex }),
+},
+});
+get().skipTimer();
+if (firstUnfinished === -1) get().finishSession();
 },
 
 // Basculer sur un autre exercice que celui en cours (ex: machine occupée

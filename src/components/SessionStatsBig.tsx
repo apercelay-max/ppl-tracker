@@ -7,6 +7,7 @@ import { IconTrophy, IconTrendingUp } from './Icons';
 import { computeTonnage, BodyRegionKey } from '../utils/training';
 import { kgToLbs, weightUnitLabel } from '../utils/weight';
 import { WorkoutSession, WorkoutDay, HistoryEntry } from '../data/types';
+import { SessionTimingCard } from './SessionTimingCard';
 
 interface SessionStatsBigProps {
   session: WorkoutSession;
@@ -54,6 +55,8 @@ export const SessionStatsBig: React.FC<SessionStatsBigProps> = ({
     <div style={scrollArea}>
       <div style={inner}>
         <p style={screenTitle}>{workout.name} - Stats de la seance</p>
+
+        <SessionTimingCard workout={workout} session={session} />
 
         <div style={card}>
           <p style={label}>DUREE</p>

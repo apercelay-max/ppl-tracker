@@ -22,6 +22,13 @@ export interface Exercise {
   supersetOrder?: 1 | 2;     // 1 = pas de repos après, 2 = repos après
   defaultWeight?: string;    // Suggestion de départ (ex: "PDC", "45", "20")
   notes: string;
+  /**
+   * Exercice à garder en priorité si la séance est raccourcie (bouton
+   * "Raccourcir la séance" quand on est en retard). Un exercice déjà
+   * entamé (au moins une série faite) n'est jamais coupé, essentiel ou
+   * pas — voir workoutStore.shortenSession.
+   */
+  essential?: boolean;
 }
 
 export interface WorkoutDay {

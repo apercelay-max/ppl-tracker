@@ -117,6 +117,7 @@ export const WORKOUTS: WorkoutDay[] = [
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '12',
+        essential: true,
         notes: '★ PRIORITÉ 1, exercice n°1 à froid. REMPLACE l\'oiseau câble bas croisé (impossible : un seul stack). Poitrine calée sur le dossier incliné à 30° → contrainte lombaire nulle et zéro élan, le deltoïde postérieur devient le seul moteur. Pouces vers le bas, coudes hauts, trajectoire horizontale pure, pause 1 s en contraction. Tempo 2-1-1, RIR 2-3.',
       },
       {
@@ -129,6 +130,7 @@ export const WORKOUTS: WorkoutDay[] = [
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '7',
+        essential: false,
         notes: 'Ajout V1.4 — prend la place du curl poulie à la corde. Le deltoïde latéral passe de 6 à 12 séries par semaine. Câble passé derrière le dos, main libre en appui, buste immobile : le câble maintient la tension en position basse, là où l\'haltère est à zéro. Départ 7 kg par bras (recalé après ta séance Push B). Tempo 2-0-1, RIR 2-3. ⚠ V2.5 : repos corrigé à 90 s — fais le côté droit puis immédiatement le gauche, PUIS le repos affiché (repos réel ≈125 s, même valeur sur Push B).',
       },
       {
@@ -141,6 +143,7 @@ export const WORKOUTS: WorkoutDay[] = [
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: 'PDC+5',
+        essential: true,
         notes: 'Retour à la VRAIE traction : les repères 130 / 75 / 120 étaient des plaques de machine guidée, aucun rapport avec des kg. Référence au poids du corps : 11/9/7. Départ Sem 4 = PDC + gilet 5 kg. Prise large, descente COMPLÈTE bras tendus, poitrine vers la barre. Tempo 3-0-1, RIR 2-3.',
       },
       {
@@ -153,6 +156,7 @@ export const WORKOUTS: WorkoutDay[] = [
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '32',
+        essential: true,
         notes: '★ PRIORITÉ 2. SEUL exercice du programme dont le référentiel est intact (haltères en kg réels). Charge maintenue à 32 kg total (16/haltère). Superset supprimé : exercice isolé, repos plein. Coudes fixes, pas de balancier. Tempo 2-0-1, RIR 2-3.',
       },
       {
@@ -165,6 +169,7 @@ export const WORKOUTS: WorkoutDay[] = [
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '28',
+        essential: false,
         notes: 'Charge désormais en KG RÉELS d\'haltère (les 85 étaient un repère machine). Départ 28 kg à calibrer — tu as jusqu\'à 40 kg. SANGLES OBLIGATOIRES : le biceps est déjà fatigué, les sangles remettent le grand dorsal en facteur limitant. Un genou et une main sur le banc, dos à plat, coude qui longe le flanc. Tempo 2-1-1, RIR 2-3. ⚠ Chute S1→S3 de -25 % dans l\'historique : à surveiller en priorité. ⚠ V2.5 : repos corrigé à 60 s — repos affiché pris ENTRE CHAQUE côté (pas après la paire), donc repos réel ≈155 s par côté, déjà au-dessus du plancher de 150 s.',
       },
       {
@@ -179,6 +184,7 @@ export const WORKOUTS: WorkoutDay[] = [
         supersetGroupId: 'ts-pull-a',
         supersetOrder: 1,
         defaultWeight: '5',
+        essential: false,
         notes: '⟳ 1ᵉʳ des trois — on enchaîne sans repos. Moyen fessier, le muscle de la largeur de hanche et le contrôleur du valgus, donc le premier à récupérer après un genou. Poulie basse + sangle de cheville. Buste stable, aucune rotation du bassin. Alternative sans câble : élastique ancré bas. Tempo 2-1-1.',
       },
       {
@@ -193,6 +199,7 @@ export const WORKOUTS: WorkoutDay[] = [
         supersetGroupId: 'ts-pull-a',
         supersetOrder: 1,
         defaultWeight: 'PDC',
+        essential: false,
         notes: '⟳ 2ᵉ des trois. Pied arrière sur le banc, torse légèrement penché en avant pour la dominante fessier et pour décharger le genou. Descente contrôlée 3 s, genou avant aligné sur le 2ᵉ orteil. Surcharge par haltères ou gilet UNIQUEMENT si le genou est totalement muet. Tempo 3-0-1.',
       },
       {
@@ -207,6 +214,7 @@ export const WORKOUTS: WorkoutDay[] = [
         supersetGroupId: 'ts-pull-a',
         supersetOrder: 2,
         defaultWeight: '15',
+        essential: false,
         notes: '⟳ 3ᵉ et dernier des trois : c\'est ici que tu prends les 60 s avant le tour suivant. Poulie haute + corde. Enrouler la colonne vertèbre par vertèbre, hanches FIXES — si tu plies à la hanche c\'est le psoas qui travaille. Repos RÉEL par muscle = 60 s + les deux autres exercices, largement au-dessus du plancher de 120 s.',
       },
     ],
@@ -230,6 +238,7 @@ export const WORKOUTS: WorkoutDay[] = [
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '20',
+        essential: true,
         notes: '★ PRIORITÉ 1, à froid. 16 kg → 21/17/15 en Sem 3, nettement au-dessus de la fourchette : charge montée à 20 kg total (10/haltère). Buste légèrement penché, pas d\'élan, coude légèrement plus haut que le poignet. Repos 120 s : sous ce seuil la resynthèse de la phosphocréatine est incomplète. Tempo 2-0-1, RIR 2-3.',
       },
       {
@@ -242,6 +251,7 @@ export const WORKOUTS: WorkoutDay[] = [
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '20',
+        essential: false,
         notes: '16 kg → 15/16/15 en Sem 3, au-dessus de la fourchette : charge montée à 20 kg. Hauteur d\'yeux, dos plaqué, gainage abdominal actif — c\'est le verrou lombaire de cet exercice. Tempo 2-0-1, RIR 2-3.',
       },
       {
@@ -254,6 +264,7 @@ export const WORKOUTS: WorkoutDay[] = [
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '59',
+        essential: true,
         notes: 'Charge en KG RÉELS d\'haltères (50/77/80 = plaques de machine guidée). ⚠ V2.2 : recalé de 40 à 59 kg — tu as tenu 59 kg en 14/11/10 au Jour 4, la charge de 40 kg était largement sous-évaluée. Omoplates rétractées, léger étirement en bas sans forcer l\'épaule, pieds au sol, aucune cambrure lombaire recherchée. Tempo 3-0-1, RIR 2-3.',
       },
       {
@@ -268,6 +279,7 @@ export const WORKOUTS: WorkoutDay[] = [
         supersetGroupId: 'ss-push-a',
         supersetOrder: 1,
         defaultWeight: '24',
+        essential: false,
         notes: '⟳ 1ᵉʳ du superset — enchaîner avec le triceps. REMPLACE les écartés poulie vis-à-vis (un seul stack). Banc à 30° : reprend ton intention du « bas vers haut » pour le faisceau claviculaire. L\'haltère charge le pec au maximum en position ÉTIRÉE. Coudes semi-fléchis verrouillés, descente lente, pas de développé déguisé. Tempo 2-1-1, RIR 2-3.',
       },
       {
@@ -282,6 +294,7 @@ export const WORKOUTS: WorkoutDay[] = [
         supersetGroupId: 'ss-push-a',
         supersetOrder: 2,
         defaultWeight: '20',
+        essential: false,
         notes: '⟳ 2ᵉ du superset : repos réel 125 s (90 s affichées + la série des écartés). 15 kg → 15/15 en Sem 3, au-dessus de la fourchette : charge montée à 20 kg. Coudes collés au buste, écarter la corde en fin de course. Tempo 2-0-1, RIR 2-3.',
       },
       {
@@ -296,6 +309,7 @@ export const WORKOUTS: WorkoutDay[] = [
         supersetGroupId: 'ts-push-a',
         supersetOrder: 1,
         defaultWeight: '12',
+        essential: true,
         notes: '⟳ 1ᵉʳ des trois. ★ Priorité 1 du bas du corps : le grand fessier ouvre le tri-set des deux séances PUSH. Haut du dos sur le banc, haltère sur le pli de la hanche, menton rentré. Poussée dans le TALON, rétroversion du bassin et pause 1 s en haut. Tempo 2-1-1.',
       },
       {
@@ -310,6 +324,7 @@ export const WORKOUTS: WorkoutDay[] = [
         supersetGroupId: 'ts-push-a',
         supersetOrder: 1,
         defaultWeight: 'PDC+10',
+        essential: false,
         notes: '⟳ 2ᵉ des trois. Gastrocnémiens, genou TENDU. Avant-pied sur une marche ou un disque, pause 1 s en étirement bas — l\'amplitude complète en position allongée est ce qui différencie cet exercice. Haltère dans la main du côté travaillé, ou gilet lesté. Tempo 2-2-1.',
       },
       {
@@ -324,6 +339,7 @@ export const WORKOUTS: WorkoutDay[] = [
         supersetGroupId: 'ts-push-a',
         supersetOrder: 2,
         defaultWeight: 'PDC',
+        essential: false,
         notes: '⟳ 3ᵉ et dernier des trois : les 60 s se prennent ici avant le tour suivant. Enrouler le bassin vers le sternum, sans élan des jambes. Tempo 2-1-1.',
       },
     ],
@@ -347,6 +363,7 @@ export const WORKOUTS: WorkoutDay[] = [
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '16',
+        essential: true,
         notes: '★ PRIORITÉ 1, à froid. 14 kg → 17/16/14 en Sem 3, au-dessus de la fourchette : charge montée à 16 kg. Buste ~45°, pouces vers le bas, coudes hauts. Version debout ici, version poitrine appuyée au Jour 1 : tu as les deux profils dans la semaine. Gainage lombaire actif pendant toute la série. Tempo 2-1-1, RIR 2-3.',
       },
       {
@@ -359,6 +376,7 @@ export const WORKOUTS: WorkoutDay[] = [
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '15',
+        essential: false,
         notes: 'Ajout V1.4 — prend la place du pullover. Corde à hauteur de visage, tirer vers le front en écartant, coudes HAUTS, rotation externe en fin de course. Deuxième vecteur sur le deltoïde postérieur : l\'oiseau travaille l\'abduction horizontale pure, le face pull y ajoute la rotation externe et les trapèzes moyens. Meilleur contrepoids aux 12 séries de poussée hebdo et à la gêne d\'épaule signalée sur le Reverse Peck Deck. Charge légère, jamais d\'à-coups. Tempo 2-1-1, RIR 2-3.',
       },
       {
@@ -371,6 +389,7 @@ export const WORKOUTS: WorkoutDay[] = [
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '20',
+        essential: true,
         notes: '★ PRIORITÉ 2. Placé AVANT les tractions : c\'est l\'exercice à position étirée maximale du chef long, son rendement dépend d\'un biceps frais. Bras ballants derrière le plan du corps = étirement max. ⚠ V2.2 : charge à 20 kg pour départager charge et décrochage de série 3 (le verdict de fatigue précédent était faussé, la série 1 sortait de la fourchette). Tempo 3-0-1, RIR 2-3.',
       },
       {
@@ -383,6 +402,7 @@ export const WORKOUTS: WorkoutDay[] = [
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: 'PDC+10',
+        essential: true,
         notes: 'Ta Sem 3 était déjà au poids du corps chez toi : 12/11/8, AU-DESSUS de la fourchette 6-10 → il faut lester. Départ Sem 4 = PDC + gilet 10 kg (le maximum de ton gilet). Poitrine vers la barre, descente complète. En supination le biceps brachial travaille dur juste après le curl incliné : surveille le coude. Tempo 3-0-1, RIR 2-3.',
       },
       {
@@ -395,6 +415,7 @@ export const WORKOUTS: WorkoutDay[] = [
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '12',
+        essential: false,
         notes: '10 kg → 15/15/13 en Sem 3, haut de fourchette : charge montée à 12 kg. V2.1 — CHARGE = DISQUES AJOUTÉS, barre non comptée (convention alignée sur le triceps EZ du Jour 4, à ta demande). Placé après les tractions : la prise est un facteur limitant, on ne la fatigue pas avant. Pronation, poignets verrouillés en légère extension. Tempo 2-0-1, RIR 2-3. ⚠ V2.5 : repos corrigé à 120 s — isolation bilatérale hors superset, 90 s était sous le plancher de repos réel.',
       },
       {
@@ -409,6 +430,7 @@ export const WORKOUTS: WorkoutDay[] = [
         supersetGroupId: 'ts-pull-b',
         supersetOrder: 1,
         defaultWeight: '12',
+        essential: true,
         notes: '⟳ 1ᵉʳ des trois. Deuxième dose de grand fessier de la rotation. Même exécution qu\'au Jour 2 : talon, rétroversion, pause 1 s. 3 séries ici contre 4 au Jour 2, ce qui porte le total fessiers à 10 séries par rotation. Tempo 2-1-1.',
       },
       {
@@ -423,6 +445,7 @@ export const WORKOUTS: WorkoutDay[] = [
         supersetGroupId: 'ts-pull-b',
         supersetOrder: 1,
         defaultWeight: '20',
+        essential: false,
         notes: '⟳ 2ᵉ des trois. Soléaire, genou FLÉCHI à 90° — l\'autre moitié du mollet, celle que la version debout ne touche pas. Haltère posé verticalement sur le genou, avant-pied sur un disque. Plafond à 40 kg : au-delà, intensifier par la pause de 3 s en étirement bas plutôt que par la charge. Tempo 2-2-1.',
       },
       {
@@ -437,6 +460,7 @@ export const WORKOUTS: WorkoutDay[] = [
         supersetGroupId: 'ts-pull-b',
         supersetOrder: 2,
         defaultWeight: 'PDC',
+        essential: false,
         notes: '⟳ 3ᵉ et dernier des trois : les 60 s se prennent ici. Anti-inclinaison : obliques et carré des lombes, le troisième pilier de la protection lombaire avec l\'anti-extension (hollow) et l\'anti-rotation (Pallof). Bassin haut, alignement épaule-hanche-cheville. +5 s dès que le temps cible est tenu proprement.',
       },
     ],
@@ -460,6 +484,7 @@ export const WORKOUTS: WorkoutDay[] = [
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '7',
+        essential: true,
         notes: '★ PRIORITÉ 1, à froid. Unilatéral imposé par le stack unique — et c\'est la meilleure version : le câble maintient la tension en position basse, là où l\'haltère est à zéro. Câble qui passe derrière le dos, main libre en appui. Sem 4 à 5 kg → 18/18/15, au-dessus de la fourchette : charge Sem 5 montée à 7 kg. Tempo 2-0-1, RIR 1-2 en Sem 5. ⚠ V2.5 : repos corrigé à 90 s — fais le côté droit puis immédiatement le gauche, PUIS le repos affiché (repos réel ≈125 s, même valeur sur Pull A).',
       },
       {
@@ -472,6 +497,7 @@ export const WORKOUTS: WorkoutDay[] = [
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '16',
+        essential: false,
         notes: 'REMPLACE les élévations frontales. Banc à 90°, dos plaqué : plus de jambes, plus de balancier, plus de compensation lombaire — le deltoïde latéral devient le seul moteur. Troisième profil de résistance du latéral dans la semaine, après le câble (tension en bas) et l\'haltère debout (pic à l\'horizontale). Sem 4 à 14 kg → 15/15/15 : charge Sem 5 montée à 16 kg. Tempo 2-0-1.',
       },
       {
@@ -484,6 +510,7 @@ export const WORKOUTS: WorkoutDay[] = [
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '64',
+        essential: true,
         notes: '⚠ V2.2 : Sem 4 tenue à 59 kg en 14/11/10 — la série 1 sortait de la fourchette par le haut, donc l\'écart mesurait la CHARGE et pas la fatigue. Bonne action : charger. Omoplates rétractées, léger étirement en bas, pieds au sol. Option si l\'épaule antérieure tire : prise neutre (marteau), même charge. Tempo 3-0-1. ⚠ V2.5 : charge recalée à 64 kg (+5 % sur 59, pas 62) — même exercice, même charge que le développé couché de Push A, série 1 attendue à 11-12 au RIR 1-2.',
       },
       {
@@ -498,6 +525,7 @@ export const WORKOUTS: WorkoutDay[] = [
         supersetGroupId: 'ss-push-b',
         supersetOrder: 1,
         defaultWeight: '26',
+        essential: false,
         notes: '⟳ 1ᵉʳ du superset — enchaîner avec l\'extension triceps EZ. Banc À PLAT ici, contre 30° au Jour 2 : c\'est cette différence d\'angle qui porte la variation haut / milieu de pec entre les deux séances Push. Coudes semi-fléchis verrouillés, descente lente jusqu\'à l\'étirement, remontée sans verrouiller. Sem 4 : 26 kg → 13/14/12, calibrage propre, on garde. Tempo 2-1-1.',
       },
       {
@@ -512,6 +540,7 @@ export const WORKOUTS: WorkoutDay[] = [
         supersetGroupId: 'ss-push-b',
         supersetOrder: 2,
         defaultWeight: '10',
+        essential: false,
         notes: '⟳ 2ᵉ du superset. V2.1 — fourchette passée à 15-20 reps sur ta demande : tes 17/16/17 tombent en plein dedans. Allongé sur le banc à plat, barre EZ descendue DERRIÈRE la tête et non sur le front : c\'est ce qui met le chef long en étirement maximal. Coudes pointés vers le haut, ils ne s\'écartent pas. CHARGE = DISQUES AJOUTÉS, barre non comptée (ta convention). Tempo 3-0-1.',
       },
       {
@@ -524,6 +553,7 @@ export const WORKOUTS: WorkoutDay[] = [
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: 'PDC',
+        essential: true,
         notes: 'V2.1 — SORTIS DU SUPERSET et déplacés en toute fin de haut du corps, avec 150 s de repos plein : ils n\'arrivent plus juste après le développé couché. Sem 4 : 12/10/11 contre 20/17/15 en Sem 2, c\'était un défaut de programmation, pas de forme. Buste vertical et coudes serrés pour la dominante triceps ; buste penché en avant pour basculer sur le bas du pec. ⚠ PAS DE LEST tant que la série 1 n\'est pas revenue à 15 reps. Objectif Sem 5 : 15/13/13 au poids du corps.',
       },
       {
@@ -538,6 +568,7 @@ export const WORKOUTS: WorkoutDay[] = [
         supersetGroupId: 'ts-push-b',
         supersetOrder: 1,
         defaultWeight: '13',
+        essential: false,
         notes: '⟳ 1ᵉʳ des trois. REMPLACE le soulevé de terre roumain unilatéral, à ta demande. Jambe d\'appui quasi TENDUE : l\'étirement des ischio-jambiers est plus profond, et c\'est là que se joue l\'essentiel du stimulus. Jambe libre en prolongement exact du tronc, hanche qui recule, dos NEUTRE gainé du début à la fin. Charge de contrôle, on ne cherche pas lourd. ⚠ La série se termine dès que le bas du dos s\'arrondit, pas quand les ischios lâchent. Tempo 3-1-1.',
       },
       {
@@ -552,6 +583,7 @@ export const WORKOUTS: WorkoutDay[] = [
         supersetGroupId: 'ts-push-b',
         supersetOrder: 1,
         defaultWeight: 'PDC',
+        essential: false,
         notes: '⟳ 2ᵉ des trois. Grand pas = dominante fessier, genou avant qui ne dépasse pas la pointe de pied, donc contrainte fémoro-patellaire minimale. Antagoniste du stiff leg qui précède : les deux s\'enchaînent sans se gêner. Surcharge au gilet lesté d\'abord (charge axiale centrée), haltères ensuite. Tempo 3-0-1.',
       },
       {
@@ -566,6 +598,7 @@ export const WORKOUTS: WorkoutDay[] = [
         supersetGroupId: 'ts-push-b',
         supersetOrder: 2,
         defaultWeight: 'PDC',
+        essential: false,
         notes: '⟳ 3ᵉ et dernier des trois : les 60 s se prennent ici. Anti-extension : c\'est l\'exercice qui protège directement ton bas du dos sous charge, et le complément logique du stiff leg qui ouvre ce tri-set. Bas du dos PLAQUÉ au sol, obligatoire — dès qu\'il décolle, la série est terminée. +5 s si le temps cible est tenu proprement.',
       },
     ],

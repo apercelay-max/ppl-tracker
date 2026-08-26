@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { WorkoutDay, WorkoutSession } from '../data/types';
 import { EXERCISE_CATALOG, EXERCISE_IMG_BASE, type CatalogExercise } from '../data/exercisesCatalog';
+import { SessionTimingCard } from './SessionTimingCard';
 
 interface SessionProgrammeProps {
 workout: WorkoutDay;
@@ -74,6 +75,7 @@ return (
 <div style={scrollArea}>
 <div style={inner}>
 <p style={screenTitle}>{workout.name} - Programme de la seance</p>
+<SessionTimingCard workout={workout} session={session} />
 {workout.exercises.map((ex, idx) => {
 const entries = session.exerciseProgress[ex.id] ?? [];
 const doneCount = entries.filter((e) => e.completed).length;
