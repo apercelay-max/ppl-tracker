@@ -116,6 +116,16 @@ export const SetRow: React.FC<SetRowProps> = ({
   // fourchette cible, sinon la fonctionnalité serait inutilisable sans
   // toucher l'écran (ce qui est justement le but).
   const firstSignalRef = useRef(validateSignal);
+  // Une série pas encore active reçoit validateSignal=undefined ; quand elle
+  // le devient (ex. juste après la fin du repos précédent), la prop passe
+  // d'un coup à un vrai nombre. Sans ce recalage, l'effet ci-dessous prenait
+  // cette simple activation pour une secousse et validait la série toute
+  // seule (poids reporté de la précédente) — ce qui relançait aussitôt un
+  // nouveau repos en cascade. On réarme donc la référence à chaque passage
+  // à l'état actif, avant que l'effet de secousse ne compare.
+  useEffect(() => {
+    if (isCurrent) firstSignalRef.current = validateSignal;
+  }, [isCurrent]);
   useEffect(() => {
     if (validateSignal === undefined || validateSignal === firstSignalRef.current) return;
     firstSignalRef.current = validateSignal;
