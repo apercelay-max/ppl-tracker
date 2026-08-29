@@ -5,7 +5,7 @@ import { computeTonnage } from '../utils/training';
 import { formatWeightForDisplay, weightUnitLabel } from '../utils/weight';
 import type { HistoryEntry } from '../data/types';
 import { EmptyState } from '../components/EmptyState';
-import { IconCalendar } from '../components/Icons';
+import { IconCalendar, IconSearch } from '../components/Icons';
 
 interface HistoryScreenProps { onBack: () => void; }
 
@@ -27,6 +27,17 @@ const formatDate = (ts: number): string => {
 };
 
 const WEEKDAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
+type DayTypeFilter = 'all' | 'pull' | 'push' | 'legs';
+const DAY_TYPE_FILTERS: { id: DayTypeFilter; label: string }[] = [
+  { id: 'all', label: 'Tous' },
+  { id: 'pull', label: 'Pull' },
+  { id: 'push', label: 'Push' },
+  { id: 'legs', label: 'Legs' },
+];
+
+const normalize = (s: string): string =>
+  s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 // Calendrier mensuel des séances — vivait avant dans le Dashboard, déplacé
 // ici pour que tout ce qui touche à "quand j'ai fait quoi" soit regroupé
@@ -102,6 +113,27 @@ const MonthCalendar: React.FC<{ history: HistoryEntry[] }> = ({ history }) => {
 export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
   const history = useWorkoutStore((s) => s.history);
   const weightUnit = useWorkoutStore((s) => s.weightUnit);
+  const [query, setQuery] = useState('');
+  const [dayFilter, setDayFilter] = useState<DayTypeFilter>('all');
+
+  // Recherche par exercice (nom résolu via le programme du jour, avec repli
+  // sur l'id brut pour les programmes importés/custom absents de la liste
+  // statique) + filtre rapide par type de séance (Pull/Push/Legs), déduit
+  // du dayId ("pull-a", "push-b"...) — fonctionne aussi sur les programmes
+  // custom puisque leurs jours sont slugifiés à partir du nom (voir
+  // importParser.ts).
+  const isFiltering = query.trim() !== '' || dayFilter !== 'all';
+  const filteredHistory = history.filter((entry) => {
+    if (dayFilter !== 'all' && !entry.dayId.toLowerCase().includes(dayFilter)) return false;
+    const q = normalize(query.trim());
+    if (!q) return true;
+    const workout = getWorkout(entry.dayId);
+    if (workout && normalize(workout.name).includes(q)) return true;
+    return Object.keys(entry.exerciseProgress).some((exId) => {
+      const exName = workout?.exercises.find((e) => e.id === exId)?.name ?? exId;
+      return normalize(exName).includes(q);
+    });
+  });
 
   return (
     <div style={container}>
@@ -117,6 +149,38 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
 
         <MonthCalendar history={history} />
 
+        {history.length > 0 && (
+          <>
+            <div style={searchWrap}>
+              <IconSearch size={14} color="var(--text-dim)" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Rechercher un exercice ou une séance..."
+                style={searchInput}
+              />
+              {query !== '' && (
+                <button onClick={() => setQuery('')} style={searchClear}>✕</button>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              {DAY_TYPE_FILTERS.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setDayFilter(f.id)}
+                  style={{
+                    ...filterChip,
+                    background: dayFilter === f.id ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                    color: dayFilter === f.id ? '#fff' : 'var(--text-muted)',
+                  }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
         {history.length === 0 ? (
           <div style={card}>
             <EmptyState
@@ -124,9 +188,21 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
               text="Pas encore de séance terminée. Ton journal d'entraînement apparaîtra ici au fil du temps."
             />
           </div>
+        ) : filteredHistory.length === 0 ? (
+          <div style={card}>
+            <EmptyState
+              icon={<IconSearch size={22} />}
+              text="Aucune séance ne correspond à cette recherche."
+            />
+          </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {history.map((entry) => {
+            {isFiltering && (
+              <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: -4 }}>
+                {filteredHistory.length} résultat{filteredHistory.length > 1 ? 's' : ''}
+              </p>
+            )}
+            {filteredHistory.map((entry) => {
               const workout = getWorkout(entry.dayId);
               const accent = DAY_ACCENT[entry.dayId] ?? 'var(--brand-1)';
               const tonnage = entry.tonnage ?? computeTonnage(entry.exerciseProgress);
@@ -187,6 +263,25 @@ const statChip: React.CSSProperties = {
 const chartCard: React.CSSProperties = {
   background: 'var(--bg-card)', borderRadius: 16, padding: 14, marginBottom: 16,
   border: '1px solid var(--border-mid)',
+};
+const searchWrap: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 8,
+  background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+  borderRadius: 14, padding: '10px 14px', marginBottom: 10,
+};
+const searchInput: React.CSSProperties = {
+  flex: 1, background: 'transparent', border: 'none', outline: 'none',
+  color: 'var(--text-primary)', fontSize: 14,
+};
+const searchClear: React.CSSProperties = {
+  width: 22, height: 22, borderRadius: 11, flexShrink: 0,
+  background: 'var(--bg-higher)', border: '1px solid var(--border-strong)',
+  color: 'var(--text-dim)', fontSize: 11, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+};
+const filterChip: React.CSSProperties = {
+  flex: 1, padding: '8px 0', borderRadius: 10, border: '1px solid var(--border-strong)',
+  fontSize: 12.5, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
 };
 const calNavBtn: React.CSSProperties = {
   width: 28, height: 28, borderRadius: 8, background: 'var(--bg-elevated)',
