@@ -184,7 +184,7 @@ const unrecoveredGroups = getMuscleRecoveryStatus(history).filter(
 );
 
 return (
-<div style={container}>
+<div className="screen-ambient" style={container}>
 <div style={scroll}>
 <div style={headerRow}>
 <button onClick={onBack} style={backBtn}>←</button>
@@ -318,7 +318,7 @@ onStart={(adaptation, gymId) => { setGymPickerOpen(false); demarrer(adaptation, 
 );
 };
 
-const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto', background: 'var(--bg-base)', position: 'relative' };
+const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto', position: 'relative' };
 const scroll: React.CSSProperties = { maxWidth: 480, margin: '0 auto', padding: '0 16px' };
 const headerRow: React.CSSProperties = {
 display: 'flex', alignItems: 'center', gap: 14,

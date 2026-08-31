@@ -192,7 +192,7 @@ const ProgramSheet: React.FC<{
 
   return createPortal(
     <div style={sheetOverlay} onClick={onClose}>
-      <div style={sheet} onClick={(e) => e.stopPropagation()}>
+      <div className="solid-surfaces" style={sheet} onClick={(e) => e.stopPropagation()}>
         <div style={sheetHeader}>
           <button onClick={onClose} style={backBtn} aria-label="Fermer">←</button>
           <div style={{ flex: 1, minWidth: 0 }}>

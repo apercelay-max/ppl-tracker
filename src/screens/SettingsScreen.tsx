@@ -463,7 +463,7 @@ return (
 };
 
 return (
-<div style={container}>
+<div className="screen-ambient" style={container}>
 <div style={isLandscape ? landscapeRow : undefined}>
 {isLandscape && (
 <div style={landscapeSidebar}>
@@ -1516,7 +1516,7 @@ Se connecter / créer un compte
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
-const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto', background: 'var(--bg-base)' };
+const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto' };
 const scroll: React.CSSProperties = { maxWidth: 480, margin: '0 auto', padding: '0 16px 40px' };
 // Écran large/paysage (tablette, fenêtre navigateur large) : sidebar fixe à
 // gauche + contenu scrollable à droite, plutôt que tout empiler en colonne.

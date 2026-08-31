@@ -103,7 +103,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack }) => {
   };
 
   return (
-    <div style={container}>
+    <div className="screen-ambient" style={container}>
       <div style={scroll}>
         <div style={headerRow}>
           <button onClick={onBack} style={backBtn} aria-label="Retour">←</button>
@@ -213,7 +213,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack }) => {
   );
 };
 
-const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto', background: 'var(--bg-base)' };
+const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto' };
 const scroll: React.CSSProperties = { maxWidth: 480, margin: '0 auto', padding: '0 16px 40px' };
 const headerRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14,

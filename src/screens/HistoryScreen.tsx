@@ -136,7 +136,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
   });
 
   return (
-    <div style={container}>
+    <div className="screen-ambient" style={container}>
       <div style={scroll}>
 
         <div style={headerRow}>
@@ -237,7 +237,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
   );
 };
 
-const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto', background: 'var(--bg-base)' };
+const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto' };
 const scroll: React.CSSProperties = { maxWidth: 480, margin: '0 auto', padding: '0 16px 112px' };
 const headerRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14,

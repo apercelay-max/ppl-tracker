@@ -16,6 +16,9 @@
   --bg-base: #131318;
   --bg-surface: #1d1d26;
   --bg-card: #25252f;
+  /* Versions opaques, gardées de côté : le mode contraste élevé y revient. */
+  --bg-surface-solid: #1d1d26;
+  --bg-card-solid: #25252f;
   --bg-elevated: #313140;
   --bg-higher: #383848;
   --border-subtle: #2c2c39;
@@ -53,6 +56,8 @@
   --bg-base: #f2f2f7;
   --bg-surface: #ffffff;
   --bg-card: #f6f6fb;
+  --bg-surface-solid: #ffffff;
+  --bg-card-solid: #f6f6fb;
   --bg-elevated: #ebebf2;
   --bg-higher: #e4e4ec;
   --border-subtle: #e8e8f0;
@@ -114,6 +119,8 @@
   --bg-base: #000000;
   --bg-surface: #060606;
   --bg-card: #0b0b0b;
+  --bg-surface-solid: #060606;
+  --bg-card-solid: #0b0b0b;
   --bg-elevated: #141414;
   --bg-higher: #1c1c1c;
   --border-subtle: #161616;
@@ -414,6 +421,34 @@ button { cursor: pointer; }
     var(--bg-base);
 }
 [data-contrast="high"] .screen-ambient { background: var(--bg-base); }
+
+/* ─── Le verre partout ──────────────────────────────────────────────────── */
+/* Chaque écran pose .screen-ambient. Redéfinir --bg-card / --bg-surface ICI
+   plutôt qu'à la racine suffit à faire passer TOUTES les cartes de TOUS les
+   écrans en translucide d'un coup, sans toucher un seul fichier .tsx : ces
+   deux variables sont exactement ce que les écrans mettent en `background`.
+   Les modales et la barre de navigation vivent hors de .screen-ambient et
+   gardent donc leur propre habillage (--glass-bg). */
+.screen-ambient {
+  --bg-card: rgba(6,6,12,0.34);
+  --bg-surface: rgba(10,10,16,0.30);
+}
+[data-theme="light"] .screen-ambient {
+  --bg-card: rgba(255,255,255,0.62);
+  --bg-surface: rgba(255,255,255,0.56);
+}
+/* Les panneaux plein écran (catalogue d'exercices, liste des programmes) ont
+   leur propre fond opaque : à l'intérieur, une carte translucide se
+   confondrait avec ce fond. On y remet donc les fonds pleins. */
+.solid-surfaces {
+  --bg-card: var(--bg-card-solid);
+  --bg-surface: var(--bg-surface-solid);
+}
+/* Contraste élevé : retour aux fonds pleins, comme pour .glass-card. */
+[data-contrast="high"] .screen-ambient {
+  --bg-card: var(--bg-card-solid);
+  --bg-surface: var(--bg-surface-solid);
+}
 
 /* ─── Barre de navigation : capsule façon iOS 26 ─────────────────────────── */
 /* Le fond et les ombres sont ici (et plus en inline dans NavBar.tsx) pour

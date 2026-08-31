@@ -952,7 +952,7 @@ onFinish: () => void;
 }> = ({ seconds, running, onToggleRunning, onFinish }) => {
 const isDone = seconds === 0;
 return (
-<div style={completeScreen}>
+<div className="screen-ambient" style={completeScreen}>
 <div style={{ maxWidth: 380, width: '100%', textAlign: 'center' }}>
 <div style={deloadBadge}><span style={{ display: 'inline-flex' }}><IconWind size={40} color="#4CAF50" /></span></div>
 <h2 style={{ color: 'var(--text-primary)', fontSize: 22, fontWeight: 800, marginBottom: 6, letterSpacing: -0.5 }}>
@@ -1104,7 +1104,7 @@ setSharing(false);
 };
 
 return (
-<div style={completeScreen}>
+<div className="screen-ambient" style={completeScreen}>
 {showConfetti && <ConfettiBurst count={40} style={ultraAnimationStyle} />}
 <div style={{ maxWidth: 400, width: '100%' }}>
 <div style={{ textAlign: 'center', marginBottom: 28 }}>
@@ -1316,7 +1316,7 @@ flexShrink: 0, border: '1px solid var(--border-strong)', transition: 'opacity 0.
 };
 const scrollArea: React.CSSProperties = { flex: 1, overflowY: 'auto' };
 const completeScreen: React.CSSProperties = {
-height: '100dvh', background: 'var(--bg-base)',
+height: '100dvh',
 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
 padding: '24px 20px', overflowY: 'auto',
 };

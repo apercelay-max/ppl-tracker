@@ -244,7 +244,7 @@ export const ExerciseSheet: React.FC<{
   // que soit son z-index.
   return createPortal(
     <div style={sheetOverlay} onClick={onClose}>
-      <div style={sheet} onClick={(e) => e.stopPropagation()}>
+      <div className="solid-surfaces" style={sheet} onClick={(e) => e.stopPropagation()}>
         <div style={sheetHeader}>
           <button onClick={onClose} style={backBtn} aria-label="Fermer">←</button>
           <p style={{ flex: 1, color: 'var(--text-primary)', fontSize: 16, fontWeight: 800 }}>{ex.name}</p>

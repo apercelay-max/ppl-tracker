@@ -245,7 +245,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onBack }) => {
   const totalMinutes = Math.round(history.reduce((sum, e) => sum + e.durationMs, 0) / 60000);
 
   return (
-    <div style={container}>
+    <div className="screen-ambient" style={container}>
       <div style={{ ...scroll, paddingBottom: navBarEnabled ? 112 : 40 }}>
         <div style={headerRow}>
           <button onClick={onBack} style={backBtn}>←</button>
@@ -386,7 +386,7 @@ const unitToggleTrack: React.CSSProperties = {
 const unitToggleBtn: React.CSSProperties = {
   padding: '4px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: 'pointer', transition: 'background 0.15s',
 };
-const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto', background: 'var(--bg-base)' };
+const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto' };
 const scroll: React.CSSProperties = { maxWidth: 480, margin: '0 auto', padding: '0 16px 40px' };
 const headerRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14,
