@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { WorkoutDay, WorkoutSession } from '../data/types';
+import { protectedSupersetGroupIds, isCuttable } from '../utils/supersets';
 
 // Mêmes constantes que utils/workoutGenerator.ts (estimation "≈ X min" des
 // séances) : le temps de travail réel par série n'est pas mesurable à
@@ -39,6 +40,7 @@ export const useSessionTiming = (
   let plannedUpToNowSeconds = WARMUP_SECONDS;
   let totalPlannedSeconds = WARMUP_SECONDS;
   let hasDroppableExercises = false;
+  const protectedGroupIds = protectedSupersetGroupIds(workout.exercises);
 
   for (const ex of workout.exercises) {
     const entries = session.exerciseProgress[ex.id] ?? [];
@@ -47,7 +49,7 @@ export const useSessionTiming = (
     const perSetSeconds = SECONDS_PER_SET + (customRestSeconds[ex.id] ?? ex.restSeconds);
     plannedUpToNowSeconds += doneCount * perSetSeconds;
     totalPlannedSeconds += totalSets * perSetSeconds;
-    if (ex.essential !== true && doneCount === 0) hasDroppableExercises = true;
+    if (isCuttable(ex, protectedGroupIds) && doneCount === 0) hasDroppableExercises = true;
   }
 
   const elapsedSeconds = (now - session.startTime) / 1000;
