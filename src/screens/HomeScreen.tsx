@@ -325,7 +325,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
 
   const supersetSection = homeSections.supersetRule && activeProgramId === 'strict-v10' && (
     <div key="supersetRule" className="glass-card glass-green" style={{
-      borderRadius: 20, padding: 16, marginTop: 10, marginBottom: 12,
+      borderRadius: 26, padding: 16, marginTop: 10, marginBottom: 12,
       ...(homeSectionColors.supersetRule ? { borderLeft: `3px solid ${homeSectionColors.supersetRule}` } : {}),
     }}>
       <p style={{ color: 'var(--text-ss-label)', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>⟳ Règle Superset</p>
@@ -911,21 +911,21 @@ const themeToggle: React.CSSProperties = {
 };
 const sectionLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 2 };
 const weekCard: React.CSSProperties = {
-  borderRadius: 20, padding: 20, marginBottom: 18,
+  borderRadius: 26, padding: 20, marginBottom: 18,
 };
 const weekSelectorRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 4,
-  borderRadius: 14, padding: '5px 9px',
+  borderRadius: 18, padding: '5px 9px',
 };
 const weekBtn: React.CSSProperties = { color: 'var(--text-muted)', fontSize: 20, fontWeight: 300, padding: '0 4px', borderRadius: 6 };
 const weekMetric: React.CSSProperties = {
   flex: 1,
-  borderRadius: 13, padding: '9px 6px',
+  borderRadius: 17, padding: '9px 6px',
   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
 };
 const weekMetricLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 9, fontWeight: 700, letterSpacing: 1 };
 const recoveryCard: React.CSSProperties = {
-  borderRadius: 20, padding: 18,
+  borderRadius: 26, padding: 18,
   marginTop: 4, marginBottom: 20,
 };
 const recoveryBarTrack: React.CSSProperties = {
@@ -936,7 +936,7 @@ const recoveryBarFill: React.CSSProperties = {
 };
 const resumeCard: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14,
-  borderRadius: 20, padding: '16px 18px',
+  borderRadius: 26, padding: '16px 18px',
   marginBottom: 22, marginTop: 4,
   width: '100%', cursor: 'pointer',
 };
@@ -947,22 +947,22 @@ const resumeIcon: React.CSSProperties = {
 };
 const workoutCard: React.CSSProperties = {
   display: 'flex', alignItems: 'center',
-  borderRadius: 20, marginBottom: 11,
+  borderRadius: 26, marginBottom: 11,
   overflow: 'hidden', width: '100%', cursor: 'pointer',
 };
 const nutritionCard: React.CSSProperties = {
-  borderRadius: 20, padding: 16, marginTop: 12,
+  borderRadius: 26, padding: 16, marginTop: 12,
 };
 const muscleAlertCard: React.CSSProperties = {
-  borderRadius: 20, padding: 16, marginTop: 12, marginBottom: 12,
+  borderRadius: 26, padding: 16, marginTop: 12, marginBottom: 12,
 };
 const weeklyGoalCard: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14,
-  borderRadius: 20, padding: 16, marginTop: 12, marginBottom: 12,
+  borderRadius: 26, padding: 16, marginTop: 12, marginBottom: 12,
 };
 const nextSessionBanner: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14,
-  borderRadius: 20, padding: '16px 18px',
+  borderRadius: 26, padding: '16px 18px',
   marginBottom: 18, width: '100%', cursor: 'pointer',
 };
 const nextSessionIcon: React.CSSProperties = {
@@ -970,7 +970,7 @@ const nextSessionIcon: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
 };
 const cardioCard: React.CSSProperties = {
-  borderRadius: 20, padding: 16, marginTop: 12, marginBottom: 12,
+  borderRadius: 26, padding: 16, marginTop: 12, marginBottom: 12,
 };
 const cardioAddBtn: React.CSSProperties = {
   background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
@@ -1010,7 +1010,7 @@ const cardioDeleteBtn: React.CSSProperties = {
 // ─── Widgets d'accueil (mode édition + sélecteur d'ajout) ────────────────────
 
 const statTile: React.CSSProperties = {
-  flex: 1, borderRadius: 13, padding: '9px 4px',
+  flex: 1, borderRadius: 17, padding: '9px 4px',
   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
 };
 const statTileLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 9, fontWeight: 700, letterSpacing: 1 };
@@ -1018,7 +1018,7 @@ const statTileValue: React.CSSProperties = { color: 'var(--text-secondary)', fon
 
 const personalRecordCard: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14,
-  borderRadius: 20, padding: '16px 18px',
+  borderRadius: 26, padding: '16px 18px',
   marginTop: 12, marginBottom: 12,
 };
 const personalRecordIcon: React.CSSProperties = {

@@ -320,23 +320,33 @@ button { cursor: pointer; }
    noires, le halo de .screen-ambient placé derrière ne fait que transparaître
    sur les bords. */
 .glass-card {
-  background: rgba(6,6,10,0.62);
-  border: 1px solid rgba(255,255,255,0.07);
-  backdrop-filter: blur(22px) saturate(150%);
-  -webkit-backdrop-filter: blur(22px) saturate(150%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 26px rgba(0,0,0,0.36);
+  /* Verre « ultra net » (n°8 du labo) : très peu de flou mais beaucoup de
+     saturation, donc on voit vraiment le halo à travers la carte. C'est le
+     plus visible des huit — et celui qui demande le plus d'attention au
+     contraste des petits textes. */
+  background: rgba(6,6,12,0.34);
+  border: 1px solid rgba(255,255,255,0.14);
+  backdrop-filter: blur(7px) saturate(210%) brightness(1.06);
+  -webkit-backdrop-filter: blur(7px) saturate(210%) brightness(1.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.20),
+    0 10px 30px rgba(0,0,0,0.34);
 }
 [data-theme="light"] .glass-card {
-  background: rgba(255,255,255,0.58);
-  border-color: rgba(255,255,255,0.85);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 6px 18px rgba(60,60,110,0.08);
+  /* Plus opaque qu'en sombre : le halo est pâle en thème clair, un verre à
+     30 % délavait complètement les petits textes gris. */
+  background: rgba(255,255,255,0.46);
+  border-color: rgba(255,255,255,0.90);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.85),
+    0 10px 28px rgba(60,60,110,0.12);
 }
 
 /* Variantes teintées (nutrition, record perso, séance en cours, superset) :
    même verre, juste une pointe de couleur au lieu des aplats pleins. */
-.glass-card.glass-gold  { background: rgba(26,19,4,0.68); border-color: rgba(224,168,48,0.16); }
-.glass-card.glass-green { background: rgba(8,22,10,0.68); border-color: rgba(76,175,80,0.16); }
-.glass-card.glass-red   { background: rgba(26,8,8,0.68);  border-color: rgba(var(--brand-1-rgb),0.22); }
+.glass-card.glass-gold  { background: rgba(30,22,5,0.36); border-color: rgba(224,168,48,0.32); }
+.glass-card.glass-green { background: rgba(8,24,10,0.36); border-color: rgba(76,175,80,0.32); }
+.glass-card.glass-red   { background: rgba(28,8,8,0.36);  border-color: rgba(var(--brand-1-rgb),0.38); }
 /* Les textes or/vert avaient été calés sur les anciens fonds teintés clairs
    (--bg-gold-tint, --bg-green-tint). Sur une carte quasi noire ils devenaient
    illisibles : on les éclaircit, mais seulement dans ce contexte. */
@@ -356,12 +366,16 @@ button { cursor: pointer; }
 /* Tuiles à l'intérieur d'une carte (RIR / repos / objectif, durée / tonnage /
    séries…) — un cran plus sombres que la carte qui les contient. */
 .glass-tile {
-  background: rgba(0,0,0,0.34);
-  border: 1px solid rgba(255,255,255,0.05);
+  background: rgba(0,0,0,0.28);
+  border: 1px solid rgba(255,255,255,0.09);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.09);
 }
 [data-theme="light"] .glass-tile {
-  background: rgba(255,255,255,0.70);
-  border-color: rgba(255,255,255,0.90);
+  /* Une tuile blanche sur une carte blanche ne se voit pas : c'est la bordure
+     qui la détache, pas le fond. */
+  background: rgba(255,255,255,0.62);
+  border-color: rgba(96,96,145,0.16);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.95);
 }
 
 /* Contraste élevé (Réglages → Accessibilité) : retour à des cartes pleines et
@@ -382,19 +396,56 @@ button { cursor: pointer; }
    (Réglages → Couleur d'accent), donc le halo change avec le thème. */
 .screen-ambient {
   background:
-    radial-gradient(115% 55% at 12% -6%,  rgba(var(--brand-1-rgb),0.24), transparent 62%),
-    radial-gradient(95%  45% at 104% 12%, rgba(var(--brand-2-rgb),0.21), transparent 60%),
-    radial-gradient(90%  45% at 50% 108%, rgba(61,90,214,0.17),          transparent 62%),
+    radial-gradient(130% 65% at 10% -8%,  rgba(var(--brand-1-rgb),0.46), transparent 64%),
+    radial-gradient(110% 55% at 106% 10%, rgba(var(--brand-2-rgb),0.40), transparent 62%),
+    radial-gradient(105% 55% at 45% 110%, rgba(61,90,214,0.32),          transparent 64%),
     var(--bg-base);
 }
 [data-theme="light"] .screen-ambient {
   background:
-    radial-gradient(115% 55% at 12% -6%,  rgba(var(--brand-1-rgb),0.14), transparent 62%),
-    radial-gradient(95%  45% at 104% 12%, rgba(var(--brand-2-rgb),0.12), transparent 60%),
-    radial-gradient(90%  45% at 50% 108%, rgba(61,90,214,0.10),          transparent 62%),
+    radial-gradient(130% 65% at 10% -8%,  rgba(var(--brand-1-rgb),0.26), transparent 64%),
+    radial-gradient(110% 55% at 106% 10%, rgba(var(--brand-2-rgb),0.22), transparent 62%),
+    radial-gradient(105% 55% at 45% 110%, rgba(61,90,214,0.18),          transparent 64%),
     var(--bg-base);
 }
 [data-contrast="high"] .screen-ambient { background: var(--bg-base); }
+
+/* ─── Barre de navigation : capsule façon iOS 26 ─────────────────────────── */
+/* Le fond et les ombres sont ici (et plus en inline dans NavBar.tsx) pour
+   pouvoir changer entre thème clair et sombre. Le dégradé interne + les deux
+   traits de lumière donnent l'épaisseur ; c'est la même recette que
+   .glass-card mais plus marquée, la barre étant petite. */
+.nav-capsule {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.02) 45%, rgba(0,0,0,0.14)),
+    var(--glass-bg);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,0.30),
+    inset 0 -1.5px 0 rgba(255,255,255,0.10),
+    0 14px 34px rgba(0,0,0,0.44);
+}
+[data-theme="light"] .nav-capsule {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.70), rgba(255,255,255,0.38) 45%, rgba(255,255,255,0.55)),
+    var(--glass-bg);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,0.95),
+    inset 0 -1.5px 0 rgba(255,255,255,0.70),
+    0 14px 30px rgba(40,40,80,0.18);
+}
+/* Pastille de verre derrière l'onglet ouvert. */
+.nav-tab-active {
+  background: rgba(255,255,255,0.16);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.24);
+}
+[data-theme="light"] .nav-tab-active {
+  background: rgba(255,255,255,0.75);
+  box-shadow: inset 0 1px 0 #ffffff;
+}
+[data-contrast="high"] .nav-capsule {
+  background: var(--bg-elevated);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.4);
+}
 
 /* ─── Écran de démarrage (splash "PPL") ─────────────────────────────────── */
 @keyframes splashBadgePop {

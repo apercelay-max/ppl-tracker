@@ -43,6 +43,10 @@ export type NavView = NavTabKey;
 interface NavBarProps {
 active: NavView;
 onNavigate: (view: NavView) => void;
+// Bouton rouge à droite de la capsule : reprend la séance en cours, ou
+// ouvre la prochaine du cycle. Optionnel — sans lui, le bouton n'apparaît pas.
+onStartSession?: () => void;
+hasSessionInProgress?: boolean;
 }
 
 const TABS: { id: NavView; label: string }[] = [
@@ -144,7 +148,7 @@ encodeURIComponent(
 // l'onglet actif), et la barre se surveille elle-même : quand il y a trop
 // d'onglets épinglés pour la largeur de l'écran, un bandeau propose de
 // ranger les onglets en trop dans le "+" en un seul appui.
-export const NavBar: React.FC<NavBarProps> = ({ active, onNavigate }) => {
+export const NavBar: React.FC<NavBarProps> = ({ active, onNavigate, onStartSession, hasSessionInProgress }) => {
 const [refraction, setRefraction] = useState(false);
 useEffect(() => { setRefraction(supportsLiquidRefraction()); }, []);
 const navBarTabsEnabled = useWorkoutStore((s) => s.navBarTabsEnabled);
@@ -326,13 +330,14 @@ Ranger dans le +
 </div>
 )}
 
+<div style={barRow}>
 <div
 ref={glassRef}
 onPointerMove={handlePointerMove}
 onPointerDown={() => setPressed(true)}
 onPointerUp={() => setPressed(false)}
 onPointerLeave={() => setPressed(false)}
-className={`navbar-glass${refraction ? ' navbar-glass-refract' : ''}`}
+className={`navbar-glass nav-capsule${refraction ? ' navbar-glass-refract' : ''}`}
 style={{
 ...glass,
 transform: pressed ? 'scale(0.98)' : 'scale(1)',
@@ -354,8 +359,10 @@ return (
 <button
 key={tab.id}
 onClick={() => handleNavigate(tab.id)}
+className={isActive ? 'nav-tab-active' : undefined}
 style={tabBtn}
 aria-label={tab.label}
+aria-current={isActive ? 'page' : undefined}
 >
 {/* Présentation façon Apple (tab bar iOS / SF Symbols) : pas de
 pastille colorée, pas d'agrandissement — juste l'icône qui passe
@@ -368,6 +375,7 @@ Réglages, Musique ou l'App Store sur iPhone. */}
 <span style={{ ...tabLabel, color: isActive ? 'var(--brand-1)' : 'var(--text-muted)', fontWeight: isActive ? 700 : 500 }}>
 {tab.label}
 </span>
+<span style={{ ...tabDot, background: isActive ? 'var(--brand-1)' : 'transparent' }} aria-hidden="true" />
 </button>
 );
 })}
@@ -380,6 +388,21 @@ Réglages, Musique ou l'App Store sur iPhone. */}
 <span style={{ ...tabLabel, color: (moreOpen || isOverflowActive) ? 'var(--brand-1)' : 'var(--text-muted)', fontWeight: (moreOpen || isOverflowActive) ? 700 : 500 }}>
 Plus
 </span>
+<span style={{ ...tabDot, background: isOverflowActive ? 'var(--brand-1)' : 'transparent' }} aria-hidden="true" />
+</button>
+)}
+</div>
+
+{onStartSession && (
+<button
+onClick={onStartSession}
+style={startBtn}
+aria-label={hasSessionInProgress ? 'Reprendre la séance' : 'Commencer la séance'}
+title={hasSessionInProgress ? 'Reprendre la séance' : 'Commencer la séance'}
+>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+<path d="M8 5.6c0-.9 1-1.5 1.8-1L18 11.1a1.1 1.1 0 0 1 0 1.8L9.8 19.4c-.8.5-1.8-.1-1.8-1V5.6Z" />
+</svg>
 </button>
 )}
 </div>
@@ -411,21 +434,54 @@ zIndex: 50,
 pointerEvents: 'none',
 };
 
+// Rangée qui tient la capsule + le bouton de séance. C'est elle qui porte
+// désormais la largeur max (la capsule prend juste la place qui reste).
+const barRow: React.CSSProperties = {
+display: 'flex',
+alignItems: 'stretch',
+gap: 10,
+maxWidth: 460,
+width: 'calc(100% - 24px)',
+pointerEvents: 'none',
+};
+
+// Le fond et les ombres viennent de .nav-capsule (index.css) : ils doivent
+// changer entre thème clair et sombre, ce qu'un style inline ne sait pas faire.
 const glass: React.CSSProperties = {
 position: 'relative',
 overflow: 'hidden',
 pointerEvents: 'auto',
 zIndex: 2,
+flex: 1,
+minWidth: 0,
 display: 'flex',
 alignItems: 'center',
 gap: 3,
 padding: '6px 6px',
-borderRadius: 22,
-maxWidth: 460,
-width: 'calc(100% - 24px)',
-background: 'var(--glass-bg)',
+borderRadius: 999,
 border: '1px solid var(--glass-border)',
-boxShadow: '0 -1px 0 var(--glass-highlight) inset, 0 6px 24px rgba(0,0,0,0.35)',
+};
+
+// Bouton rouge « lancer la séance », détaché de la capsule.
+const startBtn: React.CSSProperties = {
+pointerEvents: 'auto',
+flex: '0 0 auto',
+width: 54,
+borderRadius: 999,
+display: 'flex',
+alignItems: 'center',
+justifyContent: 'center',
+color: '#fff',
+cursor: 'pointer',
+background: 'linear-gradient(150deg, var(--brand-1), var(--brand-2))',
+boxShadow: '0 10px 26px rgba(var(--brand-1-rgb),0.45), inset 0 1px 0 rgba(255,255,255,0.3)',
+transition: 'transform 0.18s cubic-bezier(0.34,1.5,0.64,1)',
+};
+
+// Point sous l'onglet ouvert (variante « dock » du labo).
+const tabDot: React.CSSProperties = {
+width: 4, height: 4, borderRadius: '50%', marginTop: 1,
+transition: 'background 0.15s ease',
 };
 
 // Reflet du dessus : bande lumineuse fine collée au bord haut du verre, comme
@@ -469,7 +525,8 @@ display: 'flex',
 flexDirection: 'column',
 alignItems: 'center',
 gap: 2,
-padding: '3px 2px',
+padding: '5px 2px 4px',
+borderRadius: 999,
 background: 'transparent',
 border: 'none',
 cursor: 'pointer',

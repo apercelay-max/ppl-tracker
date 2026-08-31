@@ -21,6 +21,7 @@ import { OnboardingModal } from './components/OnboardingModal';
 import { useWorkoutStore } from './store/workoutStore';
 import { useCloudSync } from './hooks/useCloudSync';
 import { getAccent, hexToRgbTriplet } from './data/accents';
+import { getProgram } from './data/programs';
 import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 
 type View =
@@ -40,6 +41,8 @@ const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
 // jamais toucher à une séance en cours (voir handleOpenSettings).
 const [settingsReturnView, setSettingsReturnView] = useState<View>('home');
 const theme = useWorkoutStore((s) => s.theme);
+// Pour l'étiquette du bouton rouge de la barre (« Commencer » vs « Reprendre »).
+const session = useWorkoutStore((s) => s.session);
 const themeMode = useWorkoutStore((s) => s.themeMode);
 const setThemeMode = useWorkoutStore((s) => s.setThemeMode);
 const accentTheme = useWorkoutStore((s) => s.accentTheme);
@@ -147,6 +150,20 @@ const handleBack = () => {
 setView('home');
 };
 
+// Bouton rouge de la barre du bas : reprend la séance en cours s'il y en a
+// une, sinon ouvre la prochaine séance non faite du cycle (même règle que le
+// bloc "Prochaine séance" de l'accueil).
+const handleStartFromNav = () => {
+const state = useWorkoutStore.getState();
+if (state.session && !state.session.isComplete) {
+handleSelectDay(state.session.dayId);
+return;
+}
+const program = getProgram(state.activeProgramId, state.customPrograms);
+const next = program.workouts.find((w) => !state.cycleDoneIds.includes(w.id)) ?? program.workouts[0];
+if (next) handleSelectDay(next.id);
+};
+
 const handleOpenDashboard = () => {
 setView('dashboard');
 };
@@ -239,7 +256,14 @@ return (
 <div key={view} className={transitionClass} style={{ height: '100%' }}>
 {screen}
 </div>
-{showNavBar && <NavBar active={activeNavTab} onNavigate={handleNavigate} />}
+{showNavBar && (
+<NavBar
+active={activeNavTab}
+onNavigate={handleNavigate}
+onStartSession={handleStartFromNav}
+hasSessionInProgress={!!session && !session.isComplete}
+/>
+)}
 {splashVisible && <SplashScreen fadingOut={splashFading} />}
 {!hasCompletedOnboarding && (
 <OnboardingModal onChoose={(choice) => completeOnboarding(choice)} />
