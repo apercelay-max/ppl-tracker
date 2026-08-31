@@ -12,6 +12,11 @@ interface SessionTabBarProps {
   active: SessionTabId;
   onChange: (tab: SessionTabId) => void;
   restActive: boolean;
+  // Contrôles de séance, à droite de la capsule : vert = pause / reprise,
+  // rouge = arrêter. Ils remplacent l'ancienne flèche retour de l'en-tête.
+  isPaused: boolean;
+  onTogglePause: () => void;
+  onStop: () => void;
 }
 
 const BASE_TABS: { id: SessionTabId; label: string; Icon: React.FC<{ size?: number; filled?: boolean }> }[] = [
@@ -28,7 +33,7 @@ const supportsLiquidRefraction = (): boolean => {
   return isBlink && !isIOS;
 };
 
-export const SessionTabBar: React.FC<SessionTabBarProps> = ({ active, onChange, restActive }) => {
+export const SessionTabBar: React.FC<SessionTabBarProps> = ({ active, onChange, restActive, isPaused, onTogglePause, onStop }) => {
   const [refraction, setRefraction] = useState(false);
   useEffect(() => { setRefraction(supportsLiquidRefraction()); }, []);
   const glassRef = useRef<HTMLDivElement>(null);
@@ -47,13 +52,14 @@ export const SessionTabBar: React.FC<SessionTabBarProps> = ({ active, onChange, 
 
   return (
     <div style={wrapper}>
+      <div style={barRow}>
       <div
         ref={glassRef}
         onPointerMove={handlePointerMove}
         onPointerDown={() => setPressed(true)}
         onPointerUp={() => setPressed(false)}
         onPointerLeave={() => setPressed(false)}
-        className={'navbar-glass' + (refraction ? ' navbar-glass-refract' : '')}
+        className={'navbar-glass nav-capsule' + (refraction ? ' navbar-glass-refract' : '')}
         style={{
           ...glass,
           transform: pressed ? 'scale(0.98)' : 'scale(1)',
@@ -70,8 +76,10 @@ export const SessionTabBar: React.FC<SessionTabBarProps> = ({ active, onChange, 
             <button
               key={tab.id}
               onClick={() => onChange(tab.id)}
+              className={isActive ? 'nav-tab-active' : undefined}
               style={tabBtn}
               aria-label={tab.label}
+              aria-current={isActive ? 'page' : undefined}
             >
               <span style={{ ...iconWrap, color: isActive ? 'var(--brand-1)' : 'var(--text-muted)' }}>
                 <Icon size={22} filled={isActive} />
@@ -79,9 +87,35 @@ export const SessionTabBar: React.FC<SessionTabBarProps> = ({ active, onChange, 
               <span style={{ ...tabLabel, fontWeight: isActive ? 700 : 500, color: isActive ? 'var(--brand-1)' : 'var(--text-muted)' }}>
                 {tab.label}
               </span>
+              <span style={{ ...tabDot, background: isActive ? 'var(--brand-1)' : 'transparent' }} aria-hidden="true" />
             </button>
           );
         })}
+      </div>
+
+      <button
+        onClick={onTogglePause}
+        style={pauseBtn}
+        aria-label={isPaused ? 'Reprendre la séance' : 'Mettre la séance en pause'}
+        title={isPaused ? 'Reprendre la séance' : 'Mettre la séance en pause'}
+      >
+        {isPaused ? (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M8 5.6c0-.9 1-1.5 1.8-1L18 11.1a1.1 1.1 0 0 1 0 1.8L9.8 19.4c-.8.5-1.8-.1-1.8-1V5.6Z" />
+          </svg>
+        ) : (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <rect x="6.5" y="5" width="4" height="14" rx="1.4" />
+            <rect x="13.5" y="5" width="4" height="14" rx="1.4" />
+          </svg>
+        )}
+      </button>
+
+      <button onClick={onStop} style={stopBtn} aria-label="Arrêter la séance" title="Arrêter la séance">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <rect x="5" y="5" width="14" height="14" rx="2.4" />
+        </svg>
+      </button>
       </div>
     </div>
   );
@@ -97,19 +131,62 @@ const wrapper: React.CSSProperties = {
   pointerEvents: 'none',
 };
 
+// Même rangée que la NavBar de l'accueil : la capsule prend la place qui
+// reste, les deux boutons de séance sont posés à côté.
+const barRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'stretch',
+  gap: 8,
+  maxWidth: 460,
+  width: 'calc(100% - 24px)',
+  pointerEvents: 'none',
+};
+
+// Fond et ombres dans .nav-capsule (index.css), comme pour la NavBar.
 const glass: React.CSSProperties = {
   position: 'relative',
   overflow: 'hidden',
   pointerEvents: 'auto',
   zIndex: 2,
+  flex: 1,
+  minWidth: 0,
   display: 'flex',
   alignItems: 'center',
+  justifyContent: 'space-around',
   gap: 3,
   padding: '6px 8px',
-  borderRadius: 22,
-  background: 'var(--glass-bg)',
+  borderRadius: 999,
   border: '1px solid var(--glass-border)',
-  boxShadow: '0 -1px 0 var(--glass-highlight) inset, 0 6px 24px rgba(0,0,0,0.35)',
+};
+
+// Vert = pause / reprise. Rond, comme le bouton de lancement de l'accueil.
+const pauseBtn: React.CSSProperties = {
+  pointerEvents: 'auto',
+  flex: '0 0 auto',
+  width: 52,
+  borderRadius: 999,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  color: '#fff', cursor: 'pointer',
+  background: 'linear-gradient(150deg, #34c06a, #1e8f4a)',
+  boxShadow: '0 10px 24px rgba(40,180,100,0.42), inset 0 1px 0 rgba(255,255,255,0.3)',
+};
+
+// Rouge = arrêter. Carré (arrondi) pour qu'on ne le confonde jamais avec le
+// bouton vert au toucher, même sans regarder.
+const stopBtn: React.CSSProperties = {
+  pointerEvents: 'auto',
+  flex: '0 0 auto',
+  width: 52,
+  borderRadius: 18,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  color: '#fff', cursor: 'pointer',
+  background: 'linear-gradient(150deg, #e0453a, #b8231d)',
+  boxShadow: '0 10px 24px rgba(224,69,58,0.42), inset 0 1px 0 rgba(255,255,255,0.3)',
+};
+
+const tabDot: React.CSSProperties = {
+  width: 4, height: 4, borderRadius: '50%', marginTop: 1,
+  transition: 'background 0.15s ease',
 };
 
 const sheen: React.CSSProperties = {
@@ -136,7 +213,8 @@ const tabBtn: React.CSSProperties = {
   flexDirection: 'column',
   alignItems: 'center',
   gap: 2,
-  padding: '3px 16px',
+  padding: '5px 14px 4px',
+  borderRadius: 999,
   background: 'transparent',
   border: 'none',
   cursor: 'pointer',

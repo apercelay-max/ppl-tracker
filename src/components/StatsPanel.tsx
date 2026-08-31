@@ -17,7 +17,8 @@ const clock = (): string => {
 };
 
 export const StatsPanel: React.FC<Props> = ({ startTime, compact }) => {
-  const { elapsed, formatted: chrono } = useSessionChrono(startTime);
+  const sessionPausedAt = useWorkoutStore((s) => s.sessionPausedAt);
+  const { elapsed, formatted: chrono } = useSessionChrono(startTime, sessionPausedAt);
   const { hr, status, connect, disconnect, isSupported, error } = useHeartRate();
   const caloriesPerHour = useWorkoutStore((s) => s.caloriesPerHour);
   const [time, setTime] = useState(clock);

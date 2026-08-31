@@ -275,6 +275,8 @@ shakeToValidateEnabled: boolean;
 // Adaptation appliquée à la séance en cours (temps dispo, forme du jour,
 // matériel dispo) — null quand la séance est celle du programme.
 sessionAdaptation: SessionAdaptation | null;
+// Horodatage du début de la pause en cours, null si la séance tourne.
+sessionPausedAt: number | null;
 bodyWeightHistory: BodyWeightEntry[];
 activeProgramId: string;
 customPrograms: Program[];
@@ -316,6 +318,12 @@ toggleSupersetRest: (groupId: string, disabled: boolean) => void;
 addSet: (exerciseId: string) => void;
 finishSession: () => void;
 abandonSession: () => void;
+// Pause de la SÉANCE (à ne pas confondre avec pauseTimer, qui ne gèle que le
+// minuteur de repos). Quand on reprend, on décale session.startTime de la
+// durée de la pause : le chrono repart d'où il s'était arrêté sans qu'aucun
+// autre calcul n'ait à connaître l'existence de la pause.
+pauseSession: () => void;
+resumeSession: () => void;
 startTimer: (seconds: number) => void;
 skipTimer: () => void;
 reduceTimer: (secondsToRemove: number) => void;
@@ -457,6 +465,7 @@ plateHelperEnabled: true,
 gymProfile: { ...DEFAULT_GYM_PROFILE },
 shakeToValidateEnabled: false,
 sessionAdaptation: null,
+sessionPausedAt: null,
 bodyWeightHistory: [],
 activeProgramId: 'strict-v10',
 customPrograms: [],
@@ -731,6 +740,8 @@ cycleDoneIds: state.cycleDoneIds.includes(session.dayId)
 // paliers (10/25/50/100/200 séances).
 totalSessionsCompleted: totalSessionsCompleted + 1,
 bestWeekStreak: Math.max(bestWeekStreak, currentStreak),
+// Une séance terminée n'est plus en pause.
+sessionPausedAt: null,
 }));
 if (hapticsEnabled) successVibrate();
 cancelRestNotification();
@@ -740,8 +751,28 @@ releaseWakeLock();
 setSessionWorkoutOverride(null);
 },
 
+pauseSession: () => {
+const { session, sessionPausedAt, timer } = get();
+if (!session || session.isComplete || sessionPausedAt !== null) return;
+// Le repos en cours se met en pause avec la séance — sinon il continuerait
+// de tourner pendant que Léo est parti.
+if (timer.isRunning && !timer.isPaused) get().pauseTimer();
+set({ sessionPausedAt: Date.now() });
+},
+
+resumeSession: () => {
+const { session, sessionPausedAt, timer } = get();
+if (!session || sessionPausedAt === null) return;
+const paused = Date.now() - sessionPausedAt;
+set({
+session: { ...session, startTime: session.startTime + paused },
+sessionPausedAt: null,
+});
+if (timer.isPaused) get().resumeTimer();
+},
+
 abandonSession: () => {
-set({ session: null, sessionAdaptation: null, timer: { isRunning: false, endTimestamp: null, totalSeconds: 0 } });
+set({ session: null, sessionAdaptation: null, sessionPausedAt: null, timer: { isRunning: false, endTimestamp: null, totalSeconds: 0 } });
 cancelRestNotification();
 releaseWakeLock();
 setSessionWorkoutOverride(null);
@@ -1059,6 +1090,7 @@ completeOnboarding: (choice) => set({ hasCompletedOnboarding: true, simplicityMo
 name: 'ppl-tracker-store',
 partialize: (state) => ({
 session: state.session,
+sessionPausedAt: state.sessionPausedAt,
 currentWeek: state.currentWeek,
 history: state.history,
 theme: state.theme,

@@ -56,6 +56,9 @@ const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
 const weightUnitToggleStyle = useWorkoutStore((s) => s.weightUnitToggleStyle);
 const addSet = useWorkoutStore((s) => s.addSet);
 const abandonSession = useWorkoutStore((s) => s.abandonSession);
+const sessionPausedAt = useWorkoutStore((s) => s.sessionPausedAt);
+const pauseSession = useWorkoutStore((s) => s.pauseSession);
+const resumeSession = useWorkoutStore((s) => s.resumeSession);
 const advanceSession = useWorkoutStore((s) => s.advanceSession);
 const startTimer = useWorkoutStore((s) => s.startTimer);
 const skipTimer = useWorkoutStore((s) => s.skipTimer);
@@ -592,7 +595,7 @@ onTogglePause={handleToggleRestPause}
 ) : null;
 
 return (
-<div style={{ ...container, flexDirection: isWide ? 'row' : 'column' }}>
+<div className="screen-ambient" style={{ ...container, flexDirection: isWide ? 'row' : 'column' }}>
 {confettiBurst && <ConfettiBurst style={ultraAnimationStyle} />}
 {prBanner && (
 <div style={prBannerStyle} className={ultraAnimationsEnabled ? 'ultra-pop-glow' : 'fade-in'}>
@@ -606,7 +609,6 @@ return (
 {sessionTab === 'exercise' && (
         <div style={isWide ? mainArea : { display: 'contents' }}>
 <div style={headerBar}>
-<button onClick={handleAbandon} style={backBtn}>←</button>
 <div style={{ flex: 1, minWidth: 0 }}>
 <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800, lineHeight: '20px', letterSpacing: -0.3 }}>{workout.name}</p>
 <p style={{ color: 'var(--text-dim)', fontSize: 12 }}>
@@ -726,13 +728,13 @@ devient incompréhensible. */}
 </div>
 )}
 {lastSessionNote && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
-<div style={lastNoteBanner}>
+<div className="glass-card" style={lastNoteBanner}>
 <p style={lastNoteLabel}>Note de la derniere fois</p>
 <p style={lastNoteText}>{lastSessionNote}</p>
 </div>
 )}
 {bodyDiagramEnabled && bodyDiagramVisible && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
-<div style={bodyDiagramCard}>
+<div className="glass-card" style={bodyDiagramCard}>
 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
 <p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5 }}>MUSCLES SOLLICITÉS</p>
 <button onClick={() => setBodyDiagramVisible(false)} style={bodyDiagramCloseBtn}>✕</button>
@@ -741,7 +743,7 @@ devient incompréhensible. */}
 </div>
 )}
 {cardioVisible && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
-<div style={cardioCard}>
+<div className="glass-card glass-blue" style={cardioCard}>
 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: cardioRunning ? 10 : 6 }}>
 <span style={{ display: 'inline-flex' }}><IconActivity size={20} color="#5560cc" /></span>
 <div style={{ flex: 1 }}>
@@ -881,7 +883,14 @@ validateSignal={exIdx === currentExIdx ? shakeSignal : undefined}
         {shakeToast && (
           <div className="fade-in" style={shakeToastStyle}>Série validée — secousse détectée</div>
         )}
-        <SessionTabBar active={sessionTab} onChange={setSessionTab} restActive={timerIsRunning} />
+        <SessionTabBar
+active={sessionTab}
+onChange={setSessionTab}
+restActive={timerIsRunning}
+isPaused={sessionPausedAt !== null}
+onTogglePause={() => (sessionPausedAt !== null ? resumeSession() : pauseSession())}
+onStop={handleAbandon}
+/>
 </div>
 );
 };
@@ -889,8 +898,7 @@ validateSignal={exIdx === currentExIdx ? shakeSignal : undefined}
 // ─── Schéma corps humain ──────────────────────────────────────────────────
 
 const bodyDiagramCard: React.CSSProperties = {
-background: 'var(--bg-card)', border: '1px solid var(--border-mid)',
-borderRadius: 18, padding: '14px 14px', marginBottom: 14,
+borderRadius: 26, padding: '16px 16px', marginBottom: 14,
 };
 const bodyDiagramCloseBtn: React.CSSProperties = {
 width: 22, height: 22, borderRadius: 7, background: 'var(--bg-elevated)',
@@ -901,12 +909,10 @@ justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
 // ─── Échauffement cardio ─────────────────────────────────────────────────
 
 const cardioCard: React.CSSProperties = {
-background: 'var(--bg-blue-tint)', border: '1px solid var(--border-blue-tint)',
-borderRadius: 18, padding: '14px 14px', marginBottom: 14,
+borderRadius: 26, padding: '16px 16px', marginBottom: 14,
 };
 const lastNoteBanner: React.CSSProperties = {
-background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)',
-borderRadius: 18, padding: '14px 14px', marginBottom: 14,
+borderRadius: 26, padding: '16px 16px', marginBottom: 14,
 };
 const lastNoteLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 6 };
 const lastNoteText: React.CSSProperties = { color: 'var(--text-primary)', fontSize: 13, lineHeight: '18px', fontStyle: 'italic' };
@@ -1249,7 +1255,8 @@ zIndex: 200, display: 'flex', alignItems: 'center', gap: 10,
 background: 'linear-gradient(135deg, #e8a020, #cc7a10)', borderRadius: 14, padding: '10px 16px',
 boxShadow: '0 8px 24px rgba(232,160,32,0.4)', maxWidth: '90%',
 };
-const container: React.CSSProperties = { height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg-base)' };
+// Fond (halo + var(--bg-base)) via .screen-ambient dans index.css, comme l'accueil.
+const container: React.CSSProperties = { height: '100dvh', display: 'flex', flexDirection: 'column' };
 const mainArea: React.CSSProperties = { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' };
 const adaptBanner: React.CSSProperties = {
 background: 'rgba(var(--brand-1-rgb),0.09)',
@@ -1280,7 +1287,7 @@ boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
 
 const headerBar: React.CSSProperties = {
 display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
-background: 'var(--bg-base)', borderBottom: '1px solid var(--border-subtle)',
+borderBottom: '1px solid var(--border-subtle)',
 flexShrink: 0, paddingTop: 'max(12px, env(safe-area-inset-top))',
 };
 const backBtn: React.CSSProperties = {
@@ -1298,7 +1305,7 @@ flexShrink: 0, border: '1px solid var(--border-strong)',
 // Barre d'actions rapides, juste sous l'en-tête de séance.
 const quickActionsBar: React.CSSProperties = {
 display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px 10px',
-background: 'var(--bg-base)', borderBottom: '1px solid var(--border-subtle)',
+borderBottom: '1px solid var(--border-subtle)',
 flexShrink: 0,
 };
 const quickActionBtn: React.CSSProperties = {

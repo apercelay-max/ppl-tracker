@@ -9,13 +9,18 @@ const format = (ms: number): string => {
   return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 };
 
-export const useSessionChrono = (startTime: number) => {
-  const [elapsed, setElapsed] = useState(() => Date.now() - startTime);
+// `pausedAt` : horodatage du début de la pause en cours (voir pauseSession
+// dans le store). Tant qu'il est renseigné, le chrono affiche la valeur figée
+// à cet instant au lieu de continuer à courir.
+export const useSessionChrono = (startTime: number, pausedAt?: number | null) => {
+  const [elapsed, setElapsed] = useState(() => (pausedAt ?? Date.now()) - startTime);
 
   useEffect(() => {
+    setElapsed((pausedAt ?? Date.now()) - startTime);
+    if (pausedAt != null) return; // en pause : rien à rafraîchir
     const id = setInterval(() => setElapsed(Date.now() - startTime), 1000);
     return () => clearInterval(id);
-  }, [startTime]);
+  }, [startTime, pausedAt]);
 
   return { elapsed, formatted: format(elapsed) };
 };

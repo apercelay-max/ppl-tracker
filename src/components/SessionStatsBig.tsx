@@ -33,7 +33,8 @@ const estCal = (ms: number, hr: number | null, caloriesPerHour: number): number 
 export const SessionStatsBig: React.FC<SessionStatsBigProps> = ({
   session, workout, completedSets, totalSets, progressPct, bodyIntensity, prList, history,
 }) => {
-  const { elapsed, formatted: chrono } = useSessionChrono(session.startTime);
+  const sessionPausedAt = useWorkoutStore((st) => st.sessionPausedAt);
+  const { elapsed, formatted: chrono } = useSessionChrono(session.startTime, sessionPausedAt);
   const { hr, status, connect, disconnect, isSupported, error } = useHeartRate();
   const caloriesPerHour = useWorkoutStore((s) => s.caloriesPerHour);
   const weightUnit = useWorkoutStore((s) => s.weightUnit);

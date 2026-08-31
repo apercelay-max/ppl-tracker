@@ -106,15 +106,17 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
   return (
     <div
-      className={isActive ? 'exercise-active' : ''}
+      className={`glass-card${isActive ? ' exercise-active' : ''}`}
       style={{
-        background: isActive ? 'var(--bg-card)' : 'var(--bg-surface)',
-        borderRadius: 20, padding: '16px 14px', marginBottom: 10,
-        border: isActive
-          ? '1px solid rgba(var(--brand-1-rgb),0.4)'
+        borderRadius: 26, padding: '18px 16px', marginBottom: 12,
+        // Seules les bordures "état" restent en inline : l'exercice en cours
+        // garde son liseré rouge, l'exercice terminé son liseré vert. Le
+        // fond, lui, vient de .glass-card.
+        ...(isActive
+          ? { border: '1px solid rgba(var(--brand-1-rgb),0.4)' }
           : allDone
-          ? '1px solid #1e2a1e'
-          : '1px solid var(--border)',
+          ? { border: '1px solid rgba(76,175,80,0.28)' }
+          : {}),
         opacity: allDone && !isActive ? 0.55 : 1,
         transition: 'border-color 0.3s, opacity 0.3s, background 0.3s',
       }}
