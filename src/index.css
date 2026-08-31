@@ -11,6 +11,7 @@
   --brand-1: #e03030;
   --brand-2: #9b27af;
   --brand-1-rgb: 224,48,48;
+  --brand-2-rgb: 155,39,175;
   --icon-radius: 14px;
   --bg-base: #131318;
   --bg-surface: #1d1d26;
@@ -312,6 +313,88 @@ button { cursor: pointer; }
   backdrop-filter: url(#liquidGlassNav) blur(9px) saturate(180%) brightness(1.05);
   -webkit-backdrop-filter: url(#liquidGlassNav) blur(9px) saturate(180%) brightness(1.05);
 }
+
+/* ─── Liquid glass : cartes en verre fumé ───────────────────────────────── */
+/* Même principe que .navbar-glass ci-dessus, appliqué aux cartes de l'accueil.
+   C'est un NOIR translucide et pas un voile blanc : les cartes restent quasi
+   noires, le halo de .screen-ambient placé derrière ne fait que transparaître
+   sur les bords. */
+.glass-card {
+  background: rgba(6,6,10,0.62);
+  border: 1px solid rgba(255,255,255,0.07);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 26px rgba(0,0,0,0.36);
+}
+[data-theme="light"] .glass-card {
+  background: rgba(255,255,255,0.58);
+  border-color: rgba(255,255,255,0.85);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 6px 18px rgba(60,60,110,0.08);
+}
+
+/* Variantes teintées (nutrition, record perso, séance en cours, superset) :
+   même verre, juste une pointe de couleur au lieu des aplats pleins. */
+.glass-card.glass-gold  { background: rgba(26,19,4,0.68); border-color: rgba(224,168,48,0.16); }
+.glass-card.glass-green { background: rgba(8,22,10,0.68); border-color: rgba(76,175,80,0.16); }
+.glass-card.glass-red   { background: rgba(26,8,8,0.68);  border-color: rgba(var(--brand-1-rgb),0.22); }
+/* Les textes or/vert avaient été calés sur les anciens fonds teintés clairs
+   (--bg-gold-tint, --bg-green-tint). Sur une carte quasi noire ils devenaient
+   illisibles : on les éclaircit, mais seulement dans ce contexte. */
+[data-theme="dark"] .glass-card.glass-gold {
+  --text-gold-label: #d9a842;
+  --text-gold-body: #c09248;
+  --text-gold-footer: #9c7434;
+}
+[data-theme="dark"] .glass-card.glass-green {
+  --text-ss-label: #6cbf6c;
+  --text-ss-body: #8fb98f;
+}
+[data-theme="light"] .glass-card.glass-gold  { background: rgba(255,250,238,0.72); border-color: rgba(224,168,48,0.28); }
+[data-theme="light"] .glass-card.glass-green { background: rgba(240,255,244,0.72); border-color: rgba(76,175,80,0.28); }
+[data-theme="light"] .glass-card.glass-red   { background: rgba(255,240,240,0.75); border-color: rgba(var(--brand-1-rgb),0.25); }
+
+/* Tuiles à l'intérieur d'une carte (RIR / repos / objectif, durée / tonnage /
+   séries…) — un cran plus sombres que la carte qui les contient. */
+.glass-tile {
+  background: rgba(0,0,0,0.34);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+[data-theme="light"] .glass-tile {
+  background: rgba(255,255,255,0.70);
+  border-color: rgba(255,255,255,0.90);
+}
+
+/* Contraste élevé (Réglages → Accessibilité) : retour à des cartes pleines et
+   opaques. Le verre translucide baisse forcément le contraste, c'est
+   exactement ce que ce réglage cherche à éviter. */
+[data-contrast="high"] .glass-card,
+[data-contrast="high"] .glass-tile {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+[data-contrast="high"] .glass-card { background: var(--bg-card); border-color: var(--border-mid); }
+[data-contrast="high"] .glass-tile { background: var(--bg-surface); border-color: var(--border); }
+
+/* ─── Halo d'ambiance derrière le verre ─────────────────────────────────── */
+/* Sans lui, du verre translucide posé sur un gris uni ne se voit pas : il n'a
+   rien à laisser passer. Les deux premières couleurs suivent l'accent choisi
+   (Réglages → Couleur d'accent), donc le halo change avec le thème. */
+.screen-ambient {
+  background:
+    radial-gradient(115% 55% at 12% -6%,  rgba(var(--brand-1-rgb),0.24), transparent 62%),
+    radial-gradient(95%  45% at 104% 12%, rgba(var(--brand-2-rgb),0.21), transparent 60%),
+    radial-gradient(90%  45% at 50% 108%, rgba(61,90,214,0.17),          transparent 62%),
+    var(--bg-base);
+}
+[data-theme="light"] .screen-ambient {
+  background:
+    radial-gradient(115% 55% at 12% -6%,  rgba(var(--brand-1-rgb),0.14), transparent 62%),
+    radial-gradient(95%  45% at 104% 12%, rgba(var(--brand-2-rgb),0.12), transparent 60%),
+    radial-gradient(90%  45% at 50% 108%, rgba(61,90,214,0.10),          transparent 62%),
+    var(--bg-base);
+}
+[data-contrast="high"] .screen-ambient { background: var(--bg-base); }
 
 /* ─── Écran de démarrage (splash "PPL") ─────────────────────────────────── */
 @keyframes splashBadgePop {

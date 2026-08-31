@@ -20,7 +20,7 @@ import { SyncConflictModal } from './components/SyncConflictModal';
 import { OnboardingModal } from './components/OnboardingModal';
 import { useWorkoutStore } from './store/workoutStore';
 import { useCloudSync } from './hooks/useCloudSync';
-import { getAccent } from './data/accents';
+import { getAccent, hexToRgbTriplet } from './data/accents';
 import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 
 type View =
@@ -95,6 +95,9 @@ const root = document.documentElement.style;
 root.setProperty('--brand-1', accent.c1);
 root.setProperty('--brand-2', accent.c2);
 root.setProperty('--brand-1-rgb', accent.rgb1);
+// Utilisé par le halo d'ambiance (.screen-ambient dans index.css), qui a besoin
+// de la 2e couleur du dégradé en rgb pour pouvoir l'utiliser en rgba().
+root.setProperty('--brand-2-rgb', hexToRgbTriplet(accent.c2));
 }, [accentTheme, customAccentColor]);
 
 // Noir pur (AMOLED) — ne s'applique visuellement qu'en thème sombre,

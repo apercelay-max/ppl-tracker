@@ -39,7 +39,7 @@ export const GYM_PRESETS: AccentPreset[] = [
 
 // ── Couleur perso (color picker libre) ──────────────────────────────────────
 
-const hexToRgbTriplet = (hex: string): string => {
+export const hexToRgbTriplet = (hex: string): string => {
   const h = hex.replace('#', '');
   const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
   const num = parseInt(full, 16) || 0;

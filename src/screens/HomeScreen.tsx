@@ -174,7 +174,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   // à Strict V2.2 — les autres programmes n'ont pas cette notion, donc le
   // bloc ne s'affiche que pour celui-ci, même si le réglage est activé.
   const cycleSection = homeSections.cycle && activeProgramId === 'strict-v10' && (
-    <div key="cycle" style={{ ...weekCard, ...(homeSectionColors.cycle ? { borderLeft: `3px solid ${cycleColor}` } : {}) }}>
+    <div key="cycle" className="glass-card" style={{ ...weekCard, ...(homeSectionColors.cycle ? { borderLeft: `3px solid ${cycleColor}` } : {}) }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div>
           <p style={sectionLabel}>CYCLE EN COURS</p>
@@ -191,7 +191,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
               ↺ Sem. {homeWeekBaseline}
             </button>
           )}
-          <div style={weekSelectorRow}>
+          <div className="glass-tile" style={weekSelectorRow}>
             <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek - 1)} disabled={currentWeek <= 1}>‹</button>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, minWidth: 28 }}>
               <span style={{ color: 'var(--text-muted)', fontSize: 9, fontWeight: 700, letterSpacing: 1 }}>SEM.</span>
@@ -203,15 +203,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-        <div style={weekMetric}>
+        <div className="glass-tile" style={weekMetric}>
           <span style={weekMetricLabel}>RIR</span>
           <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5, color: '#4CAF50' }}>{weekData.rir.replace('RIR ', '')}</span>
         </div>
-        <div style={weekMetric}>
+        <div className="glass-tile" style={weekMetric}>
           <span style={weekMetricLabel}>REPOS</span>
           <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5, color: cycleColor }}>3:00</span>
         </div>
-        <div style={{ ...weekMetric, flex: 2 }}>
+        <div className="glass-tile" style={{ ...weekMetric, flex: 2 }}>
           <span style={weekMetricLabel}>OBJECTIF</span>
           <span style={{ color: 'var(--text-muted)', fontSize: 11, lineHeight: '14px' }}>{weekData.objective}</span>
         </div>
@@ -242,7 +242,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
           return (
             <button
               key={workout.id}
-              className="workout-card slide-up"
+              className="workout-card slide-up glass-card"
               style={{ ...workoutCard, animationDelay: `${idx * 0.06}s`, opacity: isDone ? 0.5 : 1 }}
               onClick={() => onSelectDay(workout.id)}
             >
@@ -284,7 +284,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   );
 
   const nutritionSection = homeSections.nutrition && (
-    <div key="nutrition" style={{ ...nutritionCard, ...(homeSectionColors.nutrition ? { borderLeft: `3px solid ${homeSectionColors.nutrition}` } : {}) }}>
+    <div key="nutrition" className="glass-card glass-gold" style={{ ...nutritionCard, ...(homeSectionColors.nutrition ? { borderLeft: `3px solid ${homeSectionColors.nutrition}` } : {}) }}>
       <p style={{ color: 'var(--text-gold-label)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconUtensils size={13} /></span>Nutrition post-training</p>
       <p style={{ color: 'var(--text-gold-body)', fontSize: 12, lineHeight: '18px' }}>
         Dans les <strong style={{ color: '#a07030' }}>30 min</strong> après la séance :
@@ -299,7 +299,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
       .filter((s) => s.daysSince === null || s.daysSince > MUSCLE_ALERT_THRESHOLD_DAYS)
       .sort((a, b) => (b.daysSince ?? 999) - (a.daysSince ?? 999));
     return (
-      <div key="muscleAlert" style={{ ...muscleAlertCard, ...(homeSectionColors.muscleAlert ? { borderLeft: `3px solid ${homeSectionColors.muscleAlert}` } : {}) }}>
+      <div key="muscleAlert" className="glass-card" style={{ ...muscleAlertCard, ...(homeSectionColors.muscleAlert ? { borderLeft: `3px solid ${homeSectionColors.muscleAlert}` } : {}) }}>
         <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: statuses.length ? 8 : 0 }}>
           <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconTarget size={13} /></span>Groupes musculaires
         </p>
@@ -324,9 +324,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   })();
 
   const supersetSection = homeSections.supersetRule && activeProgramId === 'strict-v10' && (
-    <div key="supersetRule" style={{
-      background: 'var(--bg-green-tint)', borderRadius: 14, padding: 14, marginTop: 8, marginBottom: 10,
-      border: '1px solid var(--border-ss-tint)',
+    <div key="supersetRule" className="glass-card glass-green" style={{
+      borderRadius: 20, padding: 16, marginTop: 10, marginBottom: 12,
       ...(homeSectionColors.supersetRule ? { borderLeft: `3px solid ${homeSectionColors.supersetRule}` } : {}),
     }}>
       <p style={{ color: 'var(--text-ss-label)', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>⟳ Règle Superset</p>
@@ -338,7 +337,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
 
   const cardioColor = blockColor('cardio', 'var(--brand-1)');
   const cardioSection = homeSections.cardio && (
-    <div key="cardio" style={{ ...cardioCard, ...(homeSectionColors.cardio ? { borderLeft: `3px solid ${cardioColor}` } : {}) }}>
+    <div key="cardio" className="glass-card" style={{ ...cardioCard, ...(homeSectionColors.cardio ? { borderLeft: `3px solid ${cardioColor}` } : {}) }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: cardioFormOpen || cardioHistory.length ? 10 : 0 }}>
         <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700 }}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconActivity size={13} /></span>Cardio</p>
         {!cardioFormOpen && (
@@ -418,7 +417,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     const goalReached = sessionsThisWeek >= weeklySessionGoal;
     const goalColor = blockColor('weeklyGoal', 'var(--brand-1)');
     return (
-      <div key="weeklyGoal" style={{ ...weeklyGoalCard, ...(homeSectionColors.weeklyGoal ? { borderLeft: `3px solid ${goalColor}` } : {}) }}>
+      <div key="weeklyGoal" className="glass-card" style={{ ...weeklyGoalCard, ...(homeSectionColors.weeklyGoal ? { borderLeft: `3px solid ${goalColor}` } : {}) }}>
         <svg width="64" height="64" viewBox="0 0 64 64" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
           <circle cx="32" cy="32" r={r} fill="none" stroke="var(--bg-elevated)" strokeWidth="7" />
           <circle
@@ -445,7 +444,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const nextWorkout = activeProgram.workouts.find((w) => !cycleDoneIds.includes(w.id)) ?? activeProgram.workouts[0];
   const nextColor = blockColor('nextSession', activeProgram.dayAccents[nextWorkout?.id ?? ''] ?? FALLBACK_ACCENT);
   const nextSessionSection = homeSections.nextSession && !resumeWorkout && nextWorkout && (
-    <button key="nextSession" className="workout-card" style={{ ...nextSessionBanner, ...(homeSectionColors.nextSession ? { borderLeft: `3px solid ${nextColor}` } : {}) }} onClick={() => onSelectDay(nextWorkout.id)}>
+    <button key="nextSession" className="workout-card glass-card" style={{ ...nextSessionBanner, ...(homeSectionColors.nextSession ? { borderLeft: `3px solid ${nextColor}` } : {}) }} onClick={() => onSelectDay(nextWorkout.id)}>
       <div style={{ ...nextSessionIcon, background: `${nextColor}20` }}>
         <span style={{ display: 'inline-flex' }}><IconTarget size={20} color={nextColor} /></span>
       </div>
@@ -467,7 +466,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     const durationMin = Math.round(lastEntry.durationMs / 60000);
     const accent = activeProgram.dayAccents[lastEntry.dayId] ?? FALLBACK_ACCENT;
     return (
-      <div key="lastSession" style={{ ...cardioCard, ...(homeSectionColors.lastSession ? { borderLeft: `3px solid ${homeSectionColors.lastSession}` } : {}) }}>
+      <div key="lastSession" className="glass-card" style={{ ...cardioCard, ...(homeSectionColors.lastSession ? { borderLeft: `3px solid ${homeSectionColors.lastSession}` } : {}) }}>
         <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}>
           <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconClock size={13} /></span>Séance précédente
         </p>
@@ -479,9 +478,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <div style={statTile}><span style={statTileLabel}>DURÉE</span><span style={statTileValue}>{durationMin} min</span></div>
-          <div style={statTile}><span style={statTileLabel}>TONNAGE</span><span style={statTileValue}>{tonnage.toLocaleString('fr-FR')} kg</span></div>
-          <div style={statTile}><span style={statTileLabel}>SÉRIES</span><span style={statTileValue}>{setsCount}</span></div>
+          <div className="glass-tile" style={statTile}><span style={statTileLabel}>DURÉE</span><span style={statTileValue}>{durationMin} min</span></div>
+          <div className="glass-tile" style={statTile}><span style={statTileLabel}>TONNAGE</span><span style={statTileValue}>{tonnage.toLocaleString('fr-FR')} kg</span></div>
+          <div className="glass-tile" style={statTile}><span style={statTileLabel}>SÉRIES</span><span style={statTileValue}>{setsCount}</span></div>
         </div>
       </div>
     );
@@ -495,7 +494,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     const pct = lastWeek.tonnage > 0 ? Math.round(((thisWeek.tonnage - lastWeek.tonnage) / lastWeek.tonnage) * 100) : null;
     const maxTonnage = Math.max(1, ...buckets.map((b) => b.tonnage));
     return (
-      <div key="weeklyStats" style={{ ...cardioCard, ...(homeSectionColors.weeklyStats ? { borderLeft: `3px solid ${homeSectionColors.weeklyStats}` } : {}) }}>
+      <div key="weeklyStats" className="glass-card" style={{ ...cardioCard, ...(homeSectionColors.weeklyStats ? { borderLeft: `3px solid ${homeSectionColors.weeklyStats}` } : {}) }}>
         <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}>
           <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconBarChart size={13} /></span>Stats de la semaine
         </p>
@@ -538,7 +537,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     const deltaKg = previous ? Math.round((last.weightKg - previous.weightKg) * 10) / 10 : null;
     const trend = [...bodyWeightHistory].slice(0, 8).reverse().map((e) => e.weightKg); // plus ancien → plus récent
     return (
-      <div key="bodyWeight" style={{ ...cardioCard, ...(homeSectionColors.bodyWeight ? { borderLeft: `3px solid ${homeSectionColors.bodyWeight}` } : {}) }}>
+      <div key="bodyWeight" className="glass-card" style={{ ...cardioCard, ...(homeSectionColors.bodyWeight ? { borderLeft: `3px solid ${homeSectionColors.bodyWeight}` } : {}) }}>
         <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}>
           <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconScale size={13} /></span>Poids du corps
         </p>
@@ -568,7 +567,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   // ── Dernier record perso ──────────────────────────────────────────────
   const recentPR = getMostRecentPersonalRecord(history);
   const personalRecordSection = homeSections.personalRecord && recentPR && (
-    <div key="personalRecord" style={{ ...personalRecordCard, ...(homeSectionColors.personalRecord ? { borderLeft: `3px solid ${homeSectionColors.personalRecord}` } : {}) }}>
+    <div key="personalRecord" className="glass-card glass-gold" style={{ ...personalRecordCard, ...(homeSectionColors.personalRecord ? { borderLeft: `3px solid ${homeSectionColors.personalRecord}` } : {}) }}>
       <div style={personalRecordIcon}><IconTrophy size={20} color="#f5a623" /></div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ color: '#f5a623', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>NOUVEAU RECORD</p>
@@ -585,7 +584,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const exerciseProgressSection = homeSections.exerciseProgress && featuredProgress && (() => {
     const trend = featuredProgress.e1rmHistory.map((p) => p.e1rm);
     return (
-      <div key="exerciseProgress" style={{ ...cardioCard, ...(homeSectionColors.exerciseProgress ? { borderLeft: `3px solid ${homeSectionColors.exerciseProgress}` } : {}) }}>
+      <div key="exerciseProgress" className="glass-card" style={{ ...cardioCard, ...(homeSectionColors.exerciseProgress ? { borderLeft: `3px solid ${homeSectionColors.exerciseProgress}` } : {}) }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700 }}>
             <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconTrendingUp size={13} /></span>Progression
@@ -649,7 +648,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   };
 
   return (
-    <div style={container}>
+    <div className="screen-ambient" style={container}>
       <div style={{ ...scroll, paddingBottom: navBarEnabled ? 112 : 80 }}>
 
         {/* Header */}
@@ -734,7 +733,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
         </div>
 
         {/* Récupération musculaire — toujours visible en tête d'accueil */}
-        <div style={recoveryCard}>
+        <div className="glass-card" style={recoveryCard}>
           <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconBattery size={13} /></span>Récupération musculaire</p>
           {history.length === 0 ? (
             <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px' }}>
@@ -771,7 +770,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
 
         {/* Alerte pic de charge d'entraînement */}
         {loadStatus && (
-          <div style={{ ...recoveryCard, border: loadStatus.level === 'spike' ? '1px solid rgba(224,48,48,0.35)' : '1px solid var(--border-mid)' }}>
+          <div className="glass-card" style={{ ...recoveryCard, ...(loadStatus.level === 'spike' ? { border: '1px solid rgba(224,48,48,0.35)' } : {}) }}>
             <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 6 }}>{loadStatus.label}</p>
             <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px' }}>{loadStatus.detail}</p>
           </div>
@@ -779,7 +778,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
 
         {/* Reprise */}
         {resumeWorkout && (
-          <button className="resume-btn" style={resumeCard} onClick={() => onSelectDay(resumeWorkout.id)}>
+          <button className="resume-btn glass-card glass-red" style={resumeCard} onClick={() => onSelectDay(resumeWorkout.id)}>
             <div style={{ ...resumeIcon, width: iconSizes.resume, height: iconSizes.resume }}><span style={{ fontSize: iconSizes.resume * 0.4 }}>▶</span></div>
             <div style={{ textAlign: 'left', flex: 1 }}>
               <p style={{ color: 'var(--brand-1)', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>SÉANCE EN COURS</p>
@@ -881,13 +880,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
-const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto', background: 'var(--bg-base)' };
+// Le fond (halo d'ambiance + var(--bg-base)) vient de la classe .screen-ambient
+// dans index.css : c'est lui qui donne quelque chose à filtrer au verre des cartes.
+const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto' };
 const scroll: React.CSSProperties = { maxWidth: 480, margin: '0 auto', padding: '0 16px 80px' };
 const headerSection: React.CSSProperties = {
   paddingTop: 'max(24px, env(safe-area-inset-top))',
   paddingBottom: 18,
   borderBottom: '1px solid var(--border-subtle)',
-  marginBottom: 18,
+  marginBottom: 20,
 };
 const logoRow: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 14 };
 const logoBadge: React.CSSProperties = {
@@ -910,26 +911,22 @@ const themeToggle: React.CSSProperties = {
 };
 const sectionLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 2 };
 const weekCard: React.CSSProperties = {
-  background: 'var(--bg-card)',
-  borderRadius: 20, padding: 18, marginBottom: 16,
-  border: '1px solid var(--border-mid)',
+  borderRadius: 20, padding: 20, marginBottom: 18,
 };
 const weekSelectorRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 4,
-  background: 'var(--bg-higher)', borderRadius: 12, padding: '4px 8px',
-  border: '1px solid var(--border-strong)',
+  borderRadius: 14, padding: '5px 9px',
 };
 const weekBtn: React.CSSProperties = { color: 'var(--text-muted)', fontSize: 20, fontWeight: 300, padding: '0 4px', borderRadius: 6 };
 const weekMetric: React.CSSProperties = {
-  flex: 1, background: 'var(--bg-surface)', border: '1px solid var(--border)',
-  borderRadius: 10, padding: '8px 6px',
+  flex: 1,
+  borderRadius: 13, padding: '9px 6px',
   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
 };
 const weekMetricLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 9, fontWeight: 700, letterSpacing: 1 };
 const recoveryCard: React.CSSProperties = {
-  background: 'var(--bg-card)', borderRadius: 18, padding: 16,
-  marginTop: 4, marginBottom: 18,
-  border: '1px solid var(--border-mid)',
+  borderRadius: 20, padding: 18,
+  marginTop: 4, marginBottom: 20,
 };
 const recoveryBarTrack: React.CSSProperties = {
   width: '100%', height: 6, borderRadius: 3, background: 'var(--bg-elevated)', overflow: 'hidden',
@@ -939,10 +936,8 @@ const recoveryBarFill: React.CSSProperties = {
 };
 const resumeCard: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14,
-  background: 'var(--bg-red-tint)',
-  borderRadius: 18, padding: '14px 16px',
-  marginBottom: 20, marginTop: 4,
-  border: '1px solid rgba(var(--brand-1-rgb),0.2)',
+  borderRadius: 20, padding: '16px 18px',
+  marginBottom: 22, marginTop: 4,
   width: '100%', cursor: 'pointer',
 };
 const resumeIcon: React.CSSProperties = {
@@ -952,36 +947,30 @@ const resumeIcon: React.CSSProperties = {
 };
 const workoutCard: React.CSSProperties = {
   display: 'flex', alignItems: 'center',
-  borderRadius: 18, marginBottom: 8,
-  border: '1px solid var(--border)',
+  borderRadius: 20, marginBottom: 11,
   overflow: 'hidden', width: '100%', cursor: 'pointer',
-  background: 'var(--bg-surface)',
 };
 const nutritionCard: React.CSSProperties = {
-  background: 'var(--bg-gold-tint)', borderRadius: 14, padding: 14, marginTop: 10,
-  border: '1px solid var(--border-gold-tint)',
+  borderRadius: 20, padding: 16, marginTop: 12,
 };
 const muscleAlertCard: React.CSSProperties = {
-  background: 'var(--bg-card)', borderRadius: 14, padding: 14, marginTop: 10, marginBottom: 10,
-  border: '1px solid var(--border-mid)',
+  borderRadius: 20, padding: 16, marginTop: 12, marginBottom: 12,
 };
 const weeklyGoalCard: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14,
-  background: 'var(--bg-card)', borderRadius: 14, padding: 14, marginTop: 10, marginBottom: 10,
-  border: '1px solid var(--border-mid)',
+  borderRadius: 20, padding: 16, marginTop: 12, marginBottom: 12,
 };
 const nextSessionBanner: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14,
-  background: 'var(--bg-card)', borderRadius: 18, padding: '14px 16px',
-  marginBottom: 16, border: '1px solid var(--border-mid)', width: '100%', cursor: 'pointer',
+  borderRadius: 20, padding: '16px 18px',
+  marginBottom: 18, width: '100%', cursor: 'pointer',
 };
 const nextSessionIcon: React.CSSProperties = {
   width: 44, height: 44, borderRadius: 'var(--icon-radius)',
   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
 };
 const cardioCard: React.CSSProperties = {
-  background: 'var(--bg-card)', borderRadius: 14, padding: 14, marginTop: 10, marginBottom: 10,
-  border: '1px solid var(--border-mid)',
+  borderRadius: 20, padding: 16, marginTop: 12, marginBottom: 12,
 };
 const cardioAddBtn: React.CSSProperties = {
   background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
@@ -1021,17 +1010,16 @@ const cardioDeleteBtn: React.CSSProperties = {
 // ─── Widgets d'accueil (mode édition + sélecteur d'ajout) ────────────────────
 
 const statTile: React.CSSProperties = {
-  flex: 1, background: 'var(--bg-higher)', borderRadius: 10, padding: '8px 4px',
+  flex: 1, borderRadius: 13, padding: '9px 4px',
   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-  border: '1px solid var(--border-strong)',
 };
 const statTileLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 9, fontWeight: 700, letterSpacing: 1 };
 const statTileValue: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 };
 
 const personalRecordCard: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14,
-  background: 'var(--bg-gold-tint)', borderRadius: 18, padding: '14px 16px',
-  marginTop: 10, marginBottom: 10, border: '1px solid var(--border-gold-tint)',
+  borderRadius: 20, padding: '16px 18px',
+  marginTop: 12, marginBottom: 12,
 };
 const personalRecordIcon: React.CSSProperties = {
   width: 44, height: 44, borderRadius: 'var(--icon-radius)',
