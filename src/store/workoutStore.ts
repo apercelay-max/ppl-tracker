@@ -5,7 +5,7 @@ import { getWorkout, getBaseWorkout, setCustomWorkouts, setSessionWorkoutOverrid
 import { applyAdaptation, type Gym, type GymProfile, type SessionAdaptation } from '../utils/gymAdapt';
 import { Program } from '../data/programs';
 import { bucketByWeek } from '../utils/training';
-import { getNextStep } from '../utils/supersets';
+import { getNextStep, protectedSupersetGroupIds, isCuttable } from '../utils/supersets';
 
 const notifSupported = typeof Notification !== 'undefined';
 let notifTimeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -602,14 +602,19 @@ get().skipTimer();
 // reste réellement à faire, plutôt que de s'appuyer sur getNextStep (pensé
 // pour n'avancer que d'une série à la fois, pas pour sauter plusieurs
 // exercices coupés d'un coup).
+// Un groupe SS/TS avec un membre essentiel n'est jamais coupé à moitié (voir
+// protectedSupersetGroupIds) : sinon getNextStep, qui ne regarde que le
+// nombre de séries et pas si elles sont déjà faites, ferait quand même
+// tourner l'exercice coupé au tour suivant du groupe.
 shortenSession: () => {
 const { session } = get();
 if (!session) return;
 const workout = getWorkout(session.dayId);
 if (!workout) return;
 const updated = { ...session.exerciseProgress };
+const protectedGroupIds = protectedSupersetGroupIds(workout.exercises);
 for (const ex of workout.exercises) {
-if (ex.essential === true) continue;
+if (!isCuttable(ex, protectedGroupIds)) continue;
 const entries = updated[ex.id] ?? [];
 const alreadyStarted = entries.some((e) => e.completed);
 if (alreadyStarted) continue;

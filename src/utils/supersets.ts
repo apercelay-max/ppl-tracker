@@ -20,6 +20,24 @@ export const supersetMemberIndexes = (exercises: Exercise[], groupId: string): n
 export const isChained = (ex: Exercise | undefined, disabledGroupIds: string[] = []): boolean =>
   !!ex && ex.restMode === 'superset' && !!ex.supersetGroupId && !disabledGroupIds.includes(ex.supersetGroupId);
 
+/**
+ * Groupes SS/TS qu'on ne doit jamais couper à moitié (voir isCuttable) : un
+ * membre essentiel protège tout le groupe, car getNextStep fait tourner les
+ * membres ensemble en ne regardant que leur nombre de séries, pas si elles
+ * sont déjà faites — couper un membre non essentiel tout en gardant le
+ * membre essentiel actif ferait quand même revenir dessus au tour suivant.
+ */
+export const protectedSupersetGroupIds = (exercises: Exercise[]): Set<string> =>
+  new Set(
+    exercises
+      .filter((e) => e.supersetGroupId && e.essential === true)
+      .map((e) => e.supersetGroupId as string),
+  );
+
+/** Vrai si cet exercice peut être coupé (raccourcir la séance) sans casser un groupe SS/TS. */
+export const isCuttable = (ex: Exercise, protectedGroupIds: Set<string>): boolean =>
+  ex.essential !== true && !(ex.supersetGroupId && protectedGroupIds.has(ex.supersetGroupId));
+
 export interface NextStep {
   /** Index de l'exercice suivant, ou null si la séance est terminée. */
   exerciseIndex: number | null;
