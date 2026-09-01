@@ -4,7 +4,7 @@ import { WorkoutSession, ExerciseProgress, SetEntry, HistoryEntry, TimerState, C
 import { getWorkout, getBaseWorkout, setCustomWorkouts, setSessionWorkoutOverride, MESOCYCLE_WEEKS } from '../data/workouts';
 import { applyAdaptation, type Gym, type GymProfile, type SessionAdaptation } from '../utils/gymAdapt';
 import { Program } from '../data/programs';
-import { bucketByWeek } from '../utils/training';
+import { bucketByWeek, computeTonnage } from '../utils/training';
 import { getNextStep } from '../utils/supersets';
 
 const notifSupported = typeof Notification !== 'undefined';
@@ -221,6 +221,15 @@ const makeDefaultGym = (name = 'Ma salle'): Gym => ({
   id: `gym-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
   name,
 });
+
+/**
+ * Nombre de séances gardées dans l'historique local.
+ * C'était 50 — soit environ trois mois à quatre séances par semaine, après
+ * quoi les plus anciennes disparaissaient définitivement, sans prévenir.
+ * 500 couvre plus de deux ans ; à ~2 ko l'entrée, ça reste sous le mégaoctet,
+ * loin de la limite du stockage local.
+ */
+const HISTORY_LIMIT = 500;
 
 interface WorkoutStore {
 session: WorkoutSession | null;
@@ -725,14 +734,21 @@ set({ session: { ...session, currentExerciseIndex: step.exerciseIndex, currentSe
 finishSession: () => {
 const { session, history, weeklySessionGoal, totalSessionsCompleted, bestWeekStreak, hapticsEnabled } = get();
 if (!session) return;
+const durationMs = Date.now() - session.startTime;
 const entry: HistoryEntry = {
 id: `${session.dayId}-${session.startTime}`,
 dayId: session.dayId, date: session.startTime,
 exerciseProgress: session.exerciseProgress,
-durationMs: Date.now() - session.startTime,
+durationMs,
 gymId: session.gymId,
+// Le tonnage est calculé ici, à la fin de la séance, et plus seulement
+// quand un RPE est saisi : une séance sans RPE comptait pour zéro dans
+// les stats alors que les séries, elles, étaient bien enregistrées.
+// (La charge d'entraînement, elle, a vraiment besoin du RPE — c'est sa
+// définition : RPE × durée.)
+tonnage: computeTonnage(session.exerciseProgress),
 };
-const updatedHistory = [entry, ...history].slice(0, 50);
+const updatedHistory = [entry, ...history].slice(0, HISTORY_LIMIT);
 const currentStreak = computeCurrentWeekStreak(updatedHistory, weeklySessionGoal);
 set((state) => ({
 session: { ...session, isComplete: true },
@@ -741,7 +757,7 @@ cycleDoneIds: state.cycleDoneIds.includes(session.dayId)
 ? state.cycleDoneIds
 : [...state.cycleDoneIds, session.dayId],
 // Compteur vie entière — jamais tronqué, contrairement à `history`
-// (limité à 50 entrées) — sert de base honnête aux badges de
+// (plafonnée, voir HISTORY_LIMIT) — sert de base honnête aux badges de
 // paliers (10/25/50/100/200 séances).
 totalSessionsCompleted: totalSessionsCompleted + 1,
 bestWeekStreak: Math.max(bestWeekStreak, currentStreak),
@@ -960,7 +976,7 @@ rpe,
 stats,
 };
 set((state) => ({
-cardioHistory: [entry, ...state.cardioHistory].slice(0, 50),
+cardioHistory: [entry, ...state.cardioHistory].slice(0, HISTORY_LIMIT),
 totalCardioSessions: state.totalCardioSessions + 1,
 }));
 },
@@ -1099,6 +1115,10 @@ name: 'ppl-tracker-store',
 partialize: (state) => ({
 session: state.session,
 sessionPausedAt: state.sessionPausedAt,
+// Le repos en cours : sans ça, verrouiller son téléphone pendant les
+// 3 minutes de repos remettait le minuteur à zéro. `endTimestamp` est une
+// date absolue, il reste donc juste après un rechargement.
+timer: state.timer,
 currentWeek: state.currentWeek,
 history: state.history,
 theme: state.theme,
@@ -1159,6 +1179,12 @@ simplicityMode: state.simplicityMode,
 merge: (persisted, current) => {
 const hadPriorState = persisted != null;
 const p = (persisted ?? {}) as Partial<WorkoutStore>;
+// Un repos dont l'échéance est passée pendant que l'app était fermée n'a
+// plus lieu d'être : on le nettoie plutôt que de rouvrir l'app sur un
+// minuteur à zéro qui sonne dans le vide.
+if (p.timer?.isRunning && p.timer.endTimestamp && p.timer.endTimestamp <= Date.now()) {
+p.timer = { isRunning: false, endTimestamp: null, totalSeconds: 0 };
+}
 const merged = { ...current, ...p };
 merged.homeSections = { ...current.homeSections, ...(p.homeSections ?? {}) };
 const savedOrder = p.homeSectionOrder ?? current.homeSectionOrder;
