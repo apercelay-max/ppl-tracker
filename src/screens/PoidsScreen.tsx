@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { IconArrowLeft, IconClose, IconScale } from '../components/Icons';
+import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore } from '../store/workoutStore';
 import { MiniLineChart } from '../components/MiniLineChart';
 import { MassUnit } from '../data/types';
@@ -75,9 +77,10 @@ export const PoidsScreen: React.FC<PoidsScreenProps> = ({ onBack }) => {
       <div style={scroll}>
 
         <div style={headerRow}>
-          <button onClick={onBack} style={backBtn} aria-label="Retour">←</button>
+          <button onClick={onBack} className="glass-icon" style={backBtn} aria-label="Retour"><IconArrowLeft size={17} /></button>
+          <GlassIcon size={38} accent><IconScale size={19} /></GlassIcon>
           <div>
-            <h1 style={title}>⚖️ Poids</h1>
+            <h1 style={title}>Poids</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Fonctionnalité en essai — dis-moi ce que t'en penses</p>
           </div>
         </div>
@@ -169,7 +172,7 @@ export const PoidsScreen: React.FC<PoidsScreenProps> = ({ onBack }) => {
                   )}
                   <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>{formatDate(entry.date)}</p>
                 </div>
-                <button onClick={() => deleteBodyWeightEntry(entry.id)} style={deleteBtn}>✕</button>
+                <button onClick={() => deleteBodyWeightEntry(entry.id)} style={deleteBtn}><IconClose size={14} /></button>
               </div>
             ))}
           </div>

@@ -1,4 +1,7 @@
 import React from 'react';
+import { DataIcon } from '../components/DataIcon';
+import { IconArrowLeft, IconTrophy, IconUser } from '../components/Icons';
+import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ALL_EXERCISES, getMaxWeightEver, computeTonnage, bucketByWeek } from '../utils/training';
 import { BADGE_CATEGORIES, computeBadgeProgress } from '../data/badges';
@@ -59,9 +62,10 @@ export const ProfilScreen: React.FC<ProfilScreenProps> = ({ onBack }) => {
       <div style={scroll}>
 
         <div style={headerRow}>
-          <button onClick={onBack} style={backBtn} aria-label="Retour">←</button>
+          <button onClick={onBack} className="glass-icon" style={backBtn} aria-label="Retour"><IconArrowLeft size={17} /></button>
+          <GlassIcon size={38} accent><IconUser size={19} /></GlassIcon>
           <div>
-            <h1 style={title}>👤 Profil</h1>
+            <h1 style={title}>Profil</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Ton résumé, basé sur ton historique</p>
           </div>
         </div>
@@ -105,7 +109,7 @@ export const ProfilScreen: React.FC<ProfilScreenProps> = ({ onBack }) => {
             <div style={card}>
               {topRecord ? (
                 <>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: 16, fontWeight: 800 }}>🏆 {topRecord.name}</p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 16, fontWeight: 800 }}><span style={{ display: 'inline-flex', verticalAlign: '-3px', marginRight: 7 }}><IconTrophy size={16} /></span>{topRecord.name}</p>
                   <p style={{ color: 'var(--brand-1)', fontSize: 14, fontWeight: 700, marginTop: 3 }}>{topRecord.max} kg</p>
                 </>
               ) : (
@@ -137,7 +141,7 @@ export const ProfilScreen: React.FC<ProfilScreenProps> = ({ onBack }) => {
                     return (
                       <div key={cat.id} style={badgeCard}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ fontSize: 22, opacity: progress.currentTier ? 1 : 0.35 }}>{cat.emoji}</span>
+                          <span style={{ display: 'inline-flex', opacity: progress.currentTier ? 1 : 0.35, color: progress.currentTier ? 'var(--brand-1)' : 'var(--text-dim)' }}><DataIcon name={cat.icon} size={22} /></span>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 800 }}>
                               {progress.currentTier ? progress.currentTier.label : cat.title}

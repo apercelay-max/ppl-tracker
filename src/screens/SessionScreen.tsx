@@ -13,7 +13,7 @@ import { SessionProgramme } from '../components/SessionProgramme';
 import { SessionRestBig } from '../components/SessionRestBig';
 import { buildSessionRecapImage, shareOrDownloadRecapImage } from '../utils/shareImage';
 import { weightUnitLabel, kgToLbs } from '../utils/weight';
-import { IconTrophy, IconSettings, IconMoon, IconSun, IconBell, IconVibrate, IconLightbulb, IconActivity, IconWind, IconScale, IconThumbsUp, IconTarget, IconClock, IconFlame, IconDumbbell, IconPlate, IconTrendingUp, IconUtensils, IconShare } from '../components/Icons';
+import { IconActivity, IconBell, IconClock, IconClose, IconDumbbell, IconFlame, IconLightbulb, IconMoon, IconPlate, IconScale, IconSettings, IconShare, IconSun, IconTarget, IconThumbsUp, IconTrendingUp, IconTrophy, IconUtensils, IconVibrate, IconWind } from '../components/Icons';
 import { useRestTimer } from '../hooks/useRestTimer';
 import { useShakeToValidate } from '../hooks/useShakeToValidate';
 import { computeTonnage, computeTrainingLoad, compareSessionToHistory, getWorkoutBodyIntensity, getMaxWeightEver } from '../utils/training';
@@ -615,7 +615,7 @@ return (
 {completedSets}/{totalSets} séries · SEM. {currentWeek} · RIR {weekData.rir.replace('RIR ', '')}
 </p>
 </div>
-<button onClick={onOpenSettings} style={settingsBtn} title="Réglages (sans quitter la séance)"><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconSettings size={18} /></span></button>
+<button onClick={onOpenSettings} className="glass-icon" style={settingsBtn} title="Réglages (sans quitter la séance)"><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconSettings size={18} /></span></button>
 <div style={{ width: 52, height: 5, background: 'var(--bg-elevated)', borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
 <div style={{ height: '100%', width: `${progressPct}%`, background: 'linear-gradient(90deg, var(--brand-1), var(--brand-2))', borderRadius: 3, transition: 'width 0.3s', boxShadow: '0 0 8px rgba(var(--brand-1-rgb),0.4)' }} />
 </div>
@@ -628,28 +628,28 @@ ci-dessus reste disponible pour tout le reste des Réglages. */}
 <div style={quickActionsBar}>
 <button
 onClick={() => setThemeMode(theme === 'dark' ? 'light' : 'dark')}
-style={quickActionBtn}
+className="glass-icon" style={quickActionBtn}
 title="Mode clair / sombre"
 >
 {theme === 'dark' ? <IconMoon size={18} /> : <IconSun size={18} />}
 </button>
 <button
 onClick={() => setBeepEnabled(!beepEnabled)}
-style={{ ...quickActionBtn, opacity: beepEnabled ? 1 : 0.4 }}
+className="glass-icon" style={{ ...quickActionBtn, opacity: beepEnabled ? 1 : 0.4 }}
 title={beepEnabled ? 'Bip de fin de repos activé' : 'Bip de fin de repos coupé'}
 >
 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconBell size={18} /></span>
 </button>
 <button
 onClick={() => setHapticsEnabled(!hapticsEnabled)}
-style={{ ...quickActionBtn, opacity: hapticsEnabled ? 1 : 0.4 }}
+className="glass-icon" style={{ ...quickActionBtn, opacity: hapticsEnabled ? 1 : 0.4 }}
 title={hapticsEnabled ? 'Vibrations activées' : 'Vibrations coupées'}
 >
 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconVibrate size={18} /></span>
 </button>
 <button
 onClick={() => setWakeLockEnabled(!wakeLockEnabled)}
-style={{ ...quickActionBtn, opacity: wakeLockEnabled ? 1 : 0.4 }}
+className="glass-icon" style={{ ...quickActionBtn, opacity: wakeLockEnabled ? 1 : 0.4 }}
 title={wakeLockEnabled ? "Écran maintenu allumé" : "Écran peut s'éteindre"}
 >
 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconLightbulb size={18} /></span>
@@ -667,7 +667,7 @@ setUnitToast(next === 'kg' ? 'Unité : Kilogrammes sélectionné' : 'Unité : Li
 unitToastTimeoutRef.current = setTimeout(() => setUnitToast(null), 1400);
 }
 }}
-style={quickActionBtn}
+className="glass-icon" style={quickActionBtn}
 title={weightUnit === 'kg' ? "Unité : kilogrammes — toucher pour passer en livres" : "Unité : livres — toucher pour passer en kilogrammes"}
 >
 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconScale size={18} /></span>
@@ -737,7 +737,7 @@ devient incompréhensible. */}
 <div className="glass-card" style={bodyDiagramCard}>
 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
 <p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5 }}>MUSCLES SOLLICITÉS</p>
-<button onClick={() => setBodyDiagramVisible(false)} style={bodyDiagramCloseBtn}>✕</button>
+<button onClick={() => setBodyDiagramVisible(false)} style={bodyDiagramCloseBtn}><IconClose size={14} /></button>
 </div>
 <BodyDiagram intensity={bodyIntensity} />
 </div>
@@ -1291,16 +1291,11 @@ borderBottom: '1px solid var(--border-subtle)',
 flexShrink: 0, paddingTop: 'max(12px, env(safe-area-inset-top))',
 };
 const backBtn: React.CSSProperties = {
-width: 36, height: 36, background: 'var(--bg-elevated)', borderRadius: 'var(--icon-radius)',
-color: 'var(--text-muted)', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-display: 'flex', alignItems: 'center', justifyContent: 'center',
-flexShrink: 0, border: '1px solid var(--border-strong)',
+width: 36, height: 36, color: 'var(--text-muted)', cursor: 'pointer',
+flexShrink: 0,
 };
 const settingsBtn: React.CSSProperties = {
-width: 32, height: 32, background: 'var(--bg-elevated)', borderRadius: 'var(--icon-radius)',
-fontSize: 14, cursor: 'pointer',
-display: 'flex', alignItems: 'center', justifyContent: 'center',
-flexShrink: 0, border: '1px solid var(--border-strong)',
+width: 36, height: 36, color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0,
 };
 // Barre d'actions rapides, juste sous l'en-tête de séance.
 const quickActionsBar: React.CSSProperties = {
@@ -1308,11 +1303,11 @@ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px 10px',
 borderBottom: '1px solid var(--border-subtle)',
 flexShrink: 0,
 };
+// Habillage dans .glass-icon (index.css) — même verre que les boutons de
+// l'accueil, et il doit suivre le thème.
 const quickActionBtn: React.CSSProperties = {
-width: 32, height: 32, background: 'var(--bg-elevated)', borderRadius: 'var(--icon-radius)',
-fontSize: 15, cursor: 'pointer',
-display: 'flex', alignItems: 'center', justifyContent: 'center',
-flexShrink: 0, border: '1px solid var(--border-strong)', transition: 'opacity 0.15s',
+width: 32, height: 32, cursor: 'pointer', flexShrink: 0,
+color: 'var(--text-muted)',
 };
 const scrollArea: React.CSSProperties = { flex: 1, overflowY: 'auto' };
 const completeScreen: React.CSSProperties = {

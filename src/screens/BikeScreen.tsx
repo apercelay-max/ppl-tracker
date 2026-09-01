@@ -3,6 +3,8 @@ import { useWorkoutStore } from '../store/workoutStore';
 import { useBikeSensor } from '../hooks/useBikeSensor';
 import { useHeartRate } from '../hooks/useHeartRate';
 import type { CardioStats } from '../data/types';
+import { IconArrowLeft, IconBike, IconCheck } from '../components/Icons';
+import { GlassIcon } from '../components/GlassIcon';
 
 interface BikeScreenProps { onBack: () => void; }
 
@@ -136,7 +138,8 @@ export const BikeScreen: React.FC<BikeScreenProps> = ({ onBack }) => {
       <div style={scroll}>
 
         <div style={headerRow}>
-          <button onClick={onBack} style={backBtn} aria-label="Retour">←</button>
+          <button onClick={onBack} className="glass-icon" style={backBtn} aria-label="Retour"><IconArrowLeft size={17} /></button>
+          <GlassIcon size={38} accent><IconBike size={19} /></GlassIcon>
           <div>
             <h1 style={title}>Mode vélo</h1>
             <p style={subtitle}>
@@ -173,7 +176,7 @@ export const BikeScreen: React.FC<BikeScreenProps> = ({ onBack }) => {
                 opacity: heart.isSupported ? 1 : 0.5,
               }}
             >
-              {heart.status === 'connected' ? 'Ceinture ✓' : 'Ceinture'}
+              {heart.status === 'connected' ? (<><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 4 }}><IconCheck size={12} /></span>Ceinture</>) : 'Ceinture'}
             </button>
           </div>
 
@@ -269,10 +272,10 @@ const headerRow: React.CSSProperties = {
   paddingTop: 'max(24px, env(safe-area-inset-top))', paddingBottom: 18, marginBottom: 4,
 };
 const backBtn: React.CSSProperties = {
-  width: 36, height: 36, background: 'var(--bg-elevated)', borderRadius: 'var(--icon-radius)',
-  color: 'var(--text-muted)', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  flexShrink: 0, border: '1px solid var(--border-strong)',
+  // Fond et bordure viennent de .glass-icon (index.css) : ils changent selon
+  // le thème, ce qu'un style inline ne sait pas faire.
+  width: 36, height: 36, color: 'var(--text-muted)', cursor: 'pointer',
+  flexShrink: 0,
 };
 const title: React.CSSProperties = { fontSize: 22, fontWeight: 800, letterSpacing: -0.4 };
 const subtitle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: 12, marginTop: 2 };

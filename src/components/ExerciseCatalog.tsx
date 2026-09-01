@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { IconClose, IconDumbbell, IconHeart, IconSearch } from './Icons';
 import { createPortal } from 'react-dom';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getAllPrograms, type Program } from '../data/programs';
@@ -92,7 +93,7 @@ export const ExerciseCatalog: React.FC = () => {
   return (
     <div>
       <div style={searchWrap}>
-        <span style={{ fontSize: 14, opacity: 0.7 }}>🔍</span>
+        <span style={{ display: 'inline-flex', opacity: 0.7 }}><IconSearch size={14} /></span>
         <input
           type="text"
           value={query}
@@ -101,7 +102,7 @@ export const ExerciseCatalog: React.FC = () => {
           style={searchInput}
         />
         {query !== '' && (
-          <button onClick={() => setQuery('')} style={clearBtn} aria-label="Effacer">✕</button>
+          <button onClick={() => setQuery('')} style={clearBtn} aria-label="Effacer"><IconClose size={14} /></button>
         )}
       </div>
 
@@ -122,7 +123,7 @@ export const ExerciseCatalog: React.FC = () => {
           onClick={() => setFavsOnly((v) => !v)}
           style={{ ...pill, ...(favsOnly ? pillActive : {}) }}
         >
-          ♥ {favs.length}
+          <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 5 }}><IconHeart size={13} filled /></span>{favs.length}
         </button>
       </div>
 
@@ -207,7 +208,7 @@ const ExerciseRow: React.FC<{
         <div style={thumb}>
           {url
             ? <img src={url} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : <span style={{ fontSize: 18, opacity: 0.4 }}>🏋️</span>}
+            : <span style={{ display: 'inline-flex', opacity: 0.4 }}><IconDumbbell size={18} /></span>}
         </div>
         <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
           <p style={rowTitle}>
@@ -224,7 +225,7 @@ const ExerciseRow: React.FC<{
         style={{ ...favBtn, color: isFav ? 'var(--brand-1)' : 'var(--text-dim)' }}
         aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
       >
-        {isFav ? '♥' : '♡'}
+        <IconHeart size={15} filled={isFav} />
       </button>
     </div>
   );
@@ -253,7 +254,7 @@ export const ExerciseSheet: React.FC<{
             style={{ ...favBtn, fontSize: 20, color: isFav ? 'var(--brand-1)' : 'var(--text-dim)' }}
             aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
           >
-            {isFav ? '♥' : '♡'}
+            <IconHeart size={15} filled={isFav} />
           </button>
         </div>
 

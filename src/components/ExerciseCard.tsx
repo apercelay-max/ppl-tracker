@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { IconCheck } from './Icons';
 import { Exercise, SetEntry } from '../data/types';
 import { getProgressionWeek } from '../data/workouts';
 import { SetRow } from './SetRow';
@@ -132,7 +133,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {allDone && <span style={{ color: '#4CAF50', fontSize: 14 }} className="check-pop">✓</span>}
+          {allDone && <span style={{ color: '#4CAF50', fontSize: 14 }} className="check-pop"><IconCheck size={14} /></span>}
           <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>{restLabel}</span>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { DataIcon } from '../components/DataIcon';
 import { MESOCYCLE_WEEKS, getProgressionWeek, getWorkout } from '../data/workouts';
 import { getProgram } from '../data/programs';
 import { useWorkoutStore, CARDIO_TYPE_LABELS } from '../store/workoutStore';
@@ -10,10 +11,7 @@ import {
   computeTonnage, getMostRecentPersonalRecord, getFeaturedExerciseProgress,
 } from '../utils/training';
 import type { CardioActivityType } from '../data/types';
-import {
-  IconPMark, IconSettings, IconBarChart, IconSun, IconMoon, IconBattery, IconTarget, IconUtensils, IconActivity,
-  IconClock, IconTrendingUp, IconTrophy, IconScale,
-} from '../components/Icons';
+import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconMoon, IconPMark, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -358,7 +356,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
                   color: cardioType === t ? '#fff' : 'var(--text-muted)',
                 }}
               >
-                <span style={{ fontSize: 15 }}>{CARDIO_TYPE_LABELS[t].emoji}</span>
+                <span style={{ display: 'inline-flex' }}><DataIcon name={CARDIO_TYPE_LABELS[t].icon} size={15} /></span>
                 <span style={{ fontSize: 9, fontWeight: 700 }}>{CARDIO_TYPE_LABELS[t].label}</span>
               </button>
             ))}
@@ -395,14 +393,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
 
       {cardioHistory.slice(0, 3).map((entry) => (
         <div key={entry.id} style={cardioRow}>
-          <span style={{ fontSize: 16 }}>{CARDIO_TYPE_LABELS[entry.type].emoji}</span>
+          <span style={{ display: 'inline-flex', color: 'var(--text-muted)' }}><DataIcon name={CARDIO_TYPE_LABELS[entry.type].icon} size={16} /></span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>{CARDIO_TYPE_LABELS[entry.type].label}</p>
             <p style={{ color: 'var(--text-dim)', fontSize: 11 }}>
               {formatRelativeDate(entry.date)} · {entry.durationMin} min · {entry.calories} kcal{entry.rpe ? ` · RPE ${entry.rpe}` : ''}
             </p>
           </div>
-          <button onClick={() => deleteCardioEntry(entry.id)} style={cardioDeleteBtn}>✕</button>
+          <button onClick={() => deleteCardioEntry(entry.id)} style={cardioDeleteBtn}><IconClose size={14} /></button>
         </div>
       ))}
     </div>
@@ -692,7 +690,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
               ) : (
                 <button
                   onClick={() => setHomeEditMode(true)}
-                  style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
+                  className="glass-icon" style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
                   title="Personnaliser l'accueil"
                 >
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
@@ -700,14 +698,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
               )}
               <button
                 onClick={onOpenSettings}
-                style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
+                className="glass-icon" style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
                 title="Réglages"
               >
                 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconSettings size={18} /></span>
               </button>
               <button
                 onClick={onOpenDashboard}
-                style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
+                className="glass-icon" style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
                 title="Dashboard"
               >
                 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconBarChart size={18} /></span>
@@ -715,7 +713,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
               {wakeLockSupported && (
                 <button
                   onClick={() => setWakeLockEnabled(!wakeLockEnabled)}
-                  style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header, background: wakeLockEnabled ? 'rgba(76,175,80,0.12)' : 'var(--bg-elevated)', borderColor: wakeLockEnabled ? 'rgba(76,175,80,0.3)' : 'var(--border)' }}
+                  className="glass-icon" style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header, background: wakeLockEnabled ? 'rgba(76,175,80,0.12)' : 'var(--bg-elevated)', borderColor: wakeLockEnabled ? 'rgba(76,175,80,0.3)' : 'var(--border)' }}
                   title={wakeLockEnabled ? 'Écran toujours allumé (actif)' : 'Écran toujours allumé (inactif)'}
                 >
                   {wakeLockEnabled ? <IconSun size={18} filled /> : <IconSun size={18} />}
@@ -723,7 +721,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
               )}
               <button
                 onClick={() => setThemeMode(theme === 'dark' ? 'light' : 'dark')}
-                style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
+                className="glass-icon" style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
                 title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
               >
                 {theme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
@@ -901,13 +899,12 @@ const logoBadge: React.CSSProperties = {
 const titleStyle: React.CSSProperties = {
   fontSize: 24, fontWeight: 800, letterSpacing: -0.5,
 };
+// Fond, bordure et arrondi viennent de .glass-icon (index.css) : ce sont les
+// cinq boutons de l'en-tête de l'accueil, ils doivent être en verre comme le
+// reste et suivre le thème.
 const themeToggle: React.CSSProperties = {
-  width: 36, height: 36,
-  background: 'var(--bg-elevated)', borderRadius: 'var(--icon-radius)',
-  border: '1px solid var(--border)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  fontSize: 16, cursor: 'pointer', flexShrink: 0,
-  transition: 'width 0.2s, height 0.2s, border-radius 0.2s',
+  width: 36, height: 36, fontSize: 16, cursor: 'pointer', flexShrink: 0,
+  transition: 'width 0.2s, height 0.2s',
 };
 const sectionLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 2 };
 const weekCard: React.CSSProperties = {

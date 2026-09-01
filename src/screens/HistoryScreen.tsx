@@ -5,7 +5,8 @@ import { computeTonnage } from '../utils/training';
 import { formatWeightForDisplay, weightUnitLabel } from '../utils/weight';
 import type { HistoryEntry } from '../data/types';
 import { EmptyState } from '../components/EmptyState';
-import { IconCalendar, IconSearch } from '../components/Icons';
+import { IconArrowLeft, IconCalendar, IconClose, IconDumbbell, IconSearch, IconZap } from '../components/Icons';
+import { GlassIcon } from '../components/GlassIcon';
 
 interface HistoryScreenProps { onBack: () => void; }
 
@@ -140,9 +141,10 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
       <div style={scroll}>
 
         <div style={headerRow}>
-          <button onClick={onBack} style={backBtn} aria-label="Retour">←</button>
+          <button onClick={onBack} className="glass-icon" style={backBtn} aria-label="Retour"><IconArrowLeft size={17} /></button>
+          <GlassIcon size={38} accent><IconCalendar size={19} /></GlassIcon>
           <div>
-            <h1 style={title}>🗓️ Historique</h1>
+            <h1 style={title}>Historique</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>{history.length} séance{history.length > 1 ? 's' : ''} enregistrée{history.length > 1 ? 's' : ''}</p>
           </div>
         </div>
@@ -160,7 +162,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
                 style={searchInput}
               />
               {query !== '' && (
-                <button onClick={() => setQuery('')} style={searchClear}>✕</button>
+                <button onClick={() => setQuery('')} style={searchClear}><IconClose size={14} /></button>
               )}
             </div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
@@ -218,8 +220,8 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
                   </div>
                   <div style={{ display: 'flex', gap: 14, marginTop: 8, flexWrap: 'wrap' }}>
                     <span style={statChip}>⏱ {minutes} min</span>
-                    <span style={statChip}>🏋️ {formatWeightForDisplay(String(Math.round(tonnage)), weightUnit)} {weightUnitLabel(weightUnit)}</span>
-                    {entry.rpe && <span style={statChip}>💥 RPE {entry.rpe}</span>}
+                    <span style={statChip}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 5 }}><IconDumbbell size={12} /></span>{formatWeightForDisplay(String(Math.round(tonnage)), weightUnit)} {weightUnitLabel(weightUnit)}</span>
+                    {entry.rpe && <span style={statChip}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 5 }}><IconZap size={12} /></span>RPE {entry.rpe}</span>}
                   </div>
                   {entry.note && (
                     <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 8, lineHeight: '17px', fontStyle: 'italic' }}>

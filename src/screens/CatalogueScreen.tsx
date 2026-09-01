@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { IconArrowLeft, IconBook } from '../components/Icons';
+import { GlassIcon } from '../components/GlassIcon';
 import { ExerciseCatalog } from '../components/ExerciseCatalog';
 import { ProgrammesPanel } from '../components/ProgrammesPanel';
 
@@ -21,7 +23,8 @@ export const CatalogueScreen: React.FC<CatalogueScreenProps> = ({ onBack }) => {
     <div className="screen-ambient" style={container}>
       <div style={scroll}>
         <div style={headerRow}>
-          <button onClick={onBack} style={backBtn} aria-label="Retour">←</button>
+          <button onClick={onBack} className="glass-icon" style={backBtn} aria-label="Retour"><IconArrowLeft size={17} /></button>
+          <GlassIcon size={38} accent><IconBook size={19} /></GlassIcon>
           <div>
             <h1 style={title}>Catalogue</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>

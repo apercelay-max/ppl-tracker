@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { IconArrowLeft, IconClose, IconDumbbell, IconSearch } from '../components/Icons';
+import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ALL_EXERCISES, ALL_MUSCLE_GROUPS, getExerciseWeightHistory, getMaxWeightEver, getExerciseE1RMHistory, getMaxE1RMEver } from '../utils/training';
 import { MiniLineChart } from '../components/MiniLineChart';
@@ -45,15 +47,16 @@ export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
       <div style={scroll}>
 
         <div style={headerRow}>
-          <button onClick={onBack} style={backBtn} aria-label="Retour">←</button>
+          <button onClick={onBack} className="glass-icon" style={backBtn} aria-label="Retour"><IconArrowLeft size={17} /></button>
+          <GlassIcon size={38} accent><IconDumbbell size={19} /></GlassIcon>
           <div>
-            <h1 style={title}>🏋️ Exercices</h1>
+            <h1 style={title}>Exercices</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Ta progression, exercice par exercice</p>
           </div>
         </div>
 
             <div style={searchWrap}>
-              <span style={searchIcon}>🔍</span>
+              <span style={searchIcon}><IconSearch size={14} /></span>
               <input
                 type="text"
                 value={query}
@@ -62,7 +65,7 @@ export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
                 style={searchInput}
               />
               {query !== '' && (
-                <button onClick={() => setQuery('')} style={searchClearBtn} aria-label="Effacer">✕</button>
+                <button onClick={() => setQuery('')} style={searchClearBtn} aria-label="Effacer"><IconClose size={14} /></button>
               )}
             </div>
 

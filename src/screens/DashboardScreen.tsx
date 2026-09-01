@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { IconArrowLeft, IconBarChart } from '../components/Icons';
+import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getWorkout } from '../data/workouts';
 import { HistoryEntry } from '../data/types';
@@ -248,7 +250,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onBack }) => {
     <div className="screen-ambient" style={container}>
       <div style={{ ...scroll, paddingBottom: navBarEnabled ? 112 : 40 }}>
         <div style={headerRow}>
-          <button onClick={onBack} style={backBtn}>←</button>
+          <button onClick={onBack} className="glass-icon" style={backBtn}><IconArrowLeft size={17} /></button>
+          <GlassIcon size={38} accent><IconBarChart size={19} /></GlassIcon>
           <div>
             <h1 style={titleStyle}>Dashboard</h1>
             <p style={subtitleStyle}>Historique & charge d'entraînement</p>
@@ -257,7 +260,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onBack }) => {
 
         {totalSessions === 0 ? (
           <div style={emptyCard}>
-            <span style={{ fontSize: 32 }}>📊</span>
+            <span style={{ display: 'inline-flex', color: 'var(--text-dim)' }}><IconBarChart size={32} /></span>
             <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 10, lineHeight: '18px' }}>
               Pas encore de séance terminée. Reviens ici après ton premier entraînement !
             </p>
@@ -394,10 +397,10 @@ const headerRow: React.CSSProperties = {
   borderBottom: '1px solid var(--border-subtle)', marginBottom: 18,
 };
 const backBtn: React.CSSProperties = {
-  width: 36, height: 36, background: 'var(--bg-elevated)', borderRadius: 'var(--icon-radius)',
-  color: 'var(--text-muted)', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  flexShrink: 0, border: '1px solid var(--border-strong)',
+  // Fond et bordure viennent de .glass-icon (index.css) : ils changent selon
+  // le thème, ce qu'un style inline ne sait pas faire.
+  width: 36, height: 36, color: 'var(--text-muted)', cursor: 'pointer',
+  flexShrink: 0,
 };
 const titleStyle: React.CSSProperties = { fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: -0.3 };
 const subtitleStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: 12, marginTop: 2 };

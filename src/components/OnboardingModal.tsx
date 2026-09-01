@@ -1,4 +1,5 @@
 import React from 'react';
+import { IconHandWave, IconPalette, IconSparkles } from './Icons';
 
 // Écran affiché une seule fois, au tout premier lancement (voir App.tsx et
 // store/workoutStore.ts → hasCompletedOnboarding/simplicityMode). Demande à
@@ -15,7 +16,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onChoose }) =>
 return (
 <div style={overlay}>
 <div style={card} className="fade-in">
-<div style={badge}><span style={{ fontSize: 34 }}>👋</span></div>
+<div style={badge}><span style={{ display: 'inline-flex', color: 'var(--brand-1)' }}><IconHandWave size={32} /></span></div>
 <h2 style={title}>Une dernière question</h2>
 <p style={subtitle}>
 Tu es plutôt du genre à aimer personnaliser un maximum de trucs (couleurs, icônes, animations...),
@@ -23,14 +24,14 @@ ou à préférer que ce soit simple direct, sans réglages en trop ?
 </p>
 <div style={choiceCol}>
 <button onClick={() => onChoose('perso')} style={choiceBtnPerso}>
-<span style={{ fontSize: 22 }}>🎨</span>
+<span style={{ display: 'inline-flex' }}><IconPalette size={22} /></span>
 <span style={{ flex: 1, textAlign: 'left' }}>
 <span style={choiceLabelLight}>J'aime personnaliser</span>
 <span style={choiceDescLight}>Tous les réglages restent visibles, comme aujourd'hui.</span>
 </span>
 </button>
 <button onClick={() => onChoose('simple')} style={choiceBtnSimple}>
-<span style={{ fontSize: 22 }}>✨</span>
+<span style={{ display: 'inline-flex' }}><IconSparkles size={22} /></span>
 <span style={{ flex: 1, textAlign: 'left' }}>
 <span style={choiceLabelDark}>Je préfère simple</span>
 <span style={choiceDescDark}>Seuls les réglages essentiels sont affichés.</span>

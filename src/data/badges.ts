@@ -12,7 +12,8 @@ export interface BadgeTierDef {
 
 export interface BadgeCategoryDef {
   id: string;
-  emoji: string;
+  /** Clé d'icône, traduite en SVG par components/DataIcon.tsx. */
+  icon: string;
   title: string;
   unitLabel: (n: number) => string;
   tiers: BadgeTierDef[];
@@ -21,7 +22,7 @@ export interface BadgeCategoryDef {
 export const BADGE_CATEGORIES: BadgeCategoryDef[] = [
   {
     id: 'sessions',
-    emoji: '💪',
+    icon: 'biceps',
     title: 'Séances complétées',
     unitLabel: (n) => `${n} séance${n > 1 ? 's' : ''}`,
     tiers: [
@@ -34,7 +35,7 @@ export const BADGE_CATEGORIES: BadgeCategoryDef[] = [
   },
   {
     id: 'streak',
-    emoji: '🔥',
+    icon: 'flame',
     title: 'Régularité (semaines d\'affilée)',
     unitLabel: (n) => `${n} semaine${n > 1 ? 's' : ''} d'affilée`,
     tiers: [
@@ -46,7 +47,7 @@ export const BADGE_CATEGORIES: BadgeCategoryDef[] = [
   },
   {
     id: 'cardio',
-    emoji: '🏃',
+    icon: 'run',
     title: 'Séances cardio',
     unitLabel: (n) => `${n} séance${n > 1 ? 's' : ''} cardio`,
     tiers: [
@@ -57,7 +58,7 @@ export const BADGE_CATEGORIES: BadgeCategoryDef[] = [
   },
   {
     id: 'bodyweight',
-    emoji: '⚖️',
+    icon: 'scale',
     title: 'Suivi du poids',
     unitLabel: (n) => `${n} pesée${n > 1 ? 's' : ''} enregistrée${n > 1 ? 's' : ''}`,
     tiers: [
@@ -67,7 +68,7 @@ export const BADGE_CATEGORIES: BadgeCategoryDef[] = [
   },
   {
     id: 'records',
-    emoji: '🏆',
+    icon: 'trophy',
     title: 'Records personnels',
     unitLabel: (n) => (n > 0 ? 'Au moins un record chiffré' : 'Aucun record chiffré pour l\'instant'),
     tiers: [

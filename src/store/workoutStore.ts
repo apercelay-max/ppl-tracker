@@ -166,11 +166,13 @@ course: 600,
 autre: 350,
 };
 
-export const CARDIO_TYPE_LABELS: Record<CardioActivityType, { label: string; emoji: string }> = {
-velo: { label: 'Vélo', emoji: '🚴' },
-marche: { label: 'Marche', emoji: '🚶' },
-course: { label: 'Course à pied', emoji: '🏃' },
-autre: { label: 'Autre', emoji: '⚡' },
+// `icon` est une clé traduite en SVG par components/DataIcon.tsx (ce fichier
+// ne peut pas contenir de JSX).
+export const CARDIO_TYPE_LABELS: Record<CardioActivityType, { label: string; icon: string }> = {
+velo: { label: 'Vélo', icon: 'bike' },
+marche: { label: 'Marche', icon: 'walk' },
+course: { label: 'Course à pied', icon: 'run' },
+autre: { label: 'Autre', icon: 'other' },
 };
 
 // Tous les onglets possibles de la barre de navigation, activables/désactivables

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { IconClose } from '../components/Icons';
 import { getWorkout } from '../data/workouts';
 import { Exercise, SetEntry } from '../data/types';
 import { getMuscleRecoveryStatus } from '../utils/training';
@@ -187,7 +188,7 @@ return (
 <div className="screen-ambient" style={container}>
 <div style={scroll}>
 <div style={headerRow}>
-<button onClick={onBack} style={backBtn}>←</button>
+<button onClick={onBack} className="glass-icon" style={backBtn}>←</button>
 <span style={{ ...typeBadge, background: `${accent}20`, color: accent }}>{typeLabel} · J{workout.dayNumber}</span>
 </div>
 
@@ -267,7 +268,7 @@ onPointerDown={onHandlePointerDown}
 onTouchStart={onHandleTouchStart}
 >
 <div style={sheetHandle} />
-<button onClick={closeSheet} style={closeBtn}>✕</button>
+<button onClick={closeSheet} style={closeBtn}><IconClose size={14} /></button>
 </div>
 
 <ExerciseCard
@@ -325,10 +326,8 @@ display: 'flex', alignItems: 'center', gap: 14,
 paddingTop: 'max(24px, env(safe-area-inset-top))', paddingBottom: 16,
 };
 const backBtn: React.CSSProperties = {
-width: 36, height: 36, background: 'var(--bg-elevated)', borderRadius: 'var(--icon-radius)',
-color: 'var(--text-muted)', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-display: 'flex', alignItems: 'center', justifyContent: 'center',
-flexShrink: 0, border: '1px solid var(--border-strong)',
+width: 36, height: 36, color: 'var(--text-muted)', cursor: 'pointer',
+flexShrink: 0,
 };
 const typeBadge: React.CSSProperties = {
 fontSize: 11, fontWeight: 800, letterSpacing: 1, padding: '6px 12px', borderRadius: 20,

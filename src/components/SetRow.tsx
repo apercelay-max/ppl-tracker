@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { IconCheck } from './Icons';
 import { SetEntry } from '../data/types';
 import { useWorkoutStore, useActiveGym } from '../store/workoutStore';
 import { formatWeightForDisplay, parseWeightInputToKg, weightUnitLabel } from '../utils/weight';
@@ -298,7 +299,7 @@ export const SetRow: React.FC<SetRowProps> = ({
           backgroundSize: isLivePR ? '300% 300%' : undefined,
           cursor: reps ? 'pointer' : 'not-allowed',
           boxShadow: isLivePR ? undefined : (reps ? '0 4px 14px rgba(var(--brand-1-rgb),0.35)' : 'none'),
-        }} onClick={handleValidate} disabled={!reps} title={isLivePR ? 'Nouveau record en vue !' : undefined}>✓</button>
+        }} onClick={handleValidate} disabled={!reps} title={isLivePR ? 'Nouveau record en vue !' : undefined}><IconCheck size={14} /></button>
       </div>
       {plateHint && (
         <p style={{ ...plateHintText, color: plateHint.warn ? '#f5a623' : 'var(--text-dim)' }}>

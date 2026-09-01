@@ -1,4 +1,6 @@
 import React from 'react';
+import { IconArrowLeft, IconUser } from '../components/Icons';
+import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore } from '../store/workoutStore';
 import { BodyDiagram } from '../components/BodyDiagram';
 import { getBodyIntensityFromHistory } from '../utils/training';
@@ -20,9 +22,10 @@ export const BodyScreen: React.FC<BodyScreenProps> = ({ onBack }) => {
       <div style={scroll}>
 
         <div style={headerRow}>
-          <button onClick={onBack} style={backBtn} aria-label="Retour">←</button>
+          <button onClick={onBack} className="glass-icon" style={backBtn} aria-label="Retour"><IconArrowLeft size={17} /></button>
+          <GlassIcon size={38} accent><IconUser size={19} /></GlassIcon>
           <div>
-            <h1 style={title}>🧍 Corps</h1>
+            <h1 style={title}>Corps</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Muscles travaillés ces {LOOKBACK_DAYS} derniers jours</p>
           </div>
         </div>

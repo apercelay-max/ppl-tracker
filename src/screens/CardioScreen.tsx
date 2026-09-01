@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { DataIcon } from '../components/DataIcon';
+import { IconActivity, IconArrowLeft, IconBike } from '../components/Icons';
+import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore, CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import type { CardioActivityType } from '../data/types';
 
@@ -41,9 +44,10 @@ export const CardioScreen: React.FC<CardioScreenProps> = ({ onBack, onOpenBike }
       <div style={scroll}>
 
         <div style={headerRow}>
-          <button onClick={onBack} style={backBtn} aria-label="Retour">←</button>
+          <button onClick={onBack} className="glass-icon" style={backBtn} aria-label="Retour"><IconArrowLeft size={17} /></button>
+          <GlassIcon size={38} accent><IconActivity size={19} /></GlassIcon>
           <div>
-            <h1 style={title}>🏃 Cardio</h1>
+            <h1 style={title}>Cardio</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Vélo, marche, course...</p>
           </div>
         </div>
@@ -52,7 +56,7 @@ export const CardioScreen: React.FC<CardioScreenProps> = ({ onBack, onOpenBike }
             capteur Bluetooth est disponible. */}
         {onOpenBike && (
           <button onClick={onOpenBike} className="glass-card" style={bikeCta}>
-            <span style={{ fontSize: 22, lineHeight: 1 }} aria-hidden="true">🚴</span>
+            <GlassIcon size={40} accent><IconBike size={20} /></GlassIcon>
             <span style={{ flex: 1, textAlign: 'left' }}>
               <span style={{ display: 'block', color: 'var(--text-primary)', fontSize: 15, fontWeight: 800 }}>Mode vélo</span>
               <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: 11.5, marginTop: 2 }}>
@@ -94,7 +98,7 @@ export const CardioScreen: React.FC<CardioScreenProps> = ({ onBack, onOpenBike }
                     color: type === t ? '#fff' : 'var(--text-muted)',
                   }}
                 >
-                  <span style={{ fontSize: 16 }}>{CARDIO_TYPE_LABELS[t].emoji}</span>
+                  <span style={{ display: 'inline-flex' }}><DataIcon name={CARDIO_TYPE_LABELS[t].icon} size={16} /></span>
                   <span style={{ fontSize: 9, fontWeight: 700 }}>{CARDIO_TYPE_LABELS[t].label}</span>
                 </button>
               ))}
@@ -140,7 +144,7 @@ export const CardioScreen: React.FC<CardioScreenProps> = ({ onBack, onOpenBike }
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {cardioHistory.map((entry) => (
               <div key={entry.id} style={row}>
-                <span style={{ fontSize: 18 }}>{CARDIO_TYPE_LABELS[entry.type].emoji}</span>
+                <span style={{ display: 'inline-flex', color: 'var(--text-muted)' }}><DataIcon name={CARDIO_TYPE_LABELS[entry.type].icon} size={18} /></span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>{CARDIO_TYPE_LABELS[entry.type].label}</p>
                   <p style={{ color: 'var(--text-dim)', fontSize: 11 }}>

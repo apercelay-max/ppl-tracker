@@ -4,7 +4,8 @@ import { getMuscleGroupsStatus, getMuscleRecoveryStatus, getRecoveryRegionStatus
 import type { BodyRegionKey } from '../utils/training';
 import { BodyDiagram } from '../components/BodyDiagram';
 import { EmptyState } from '../components/EmptyState';
-import { IconDumbbell, IconActivity, IconTrophy } from '../components/Icons';
+import { IconActivity, IconArrowLeft, IconDumbbell, IconMedal, IconTarget, IconTrophy } from '../components/Icons';
+import { GlassIcon } from '../components/GlassIcon';
 
 interface ObjectivesScreenProps { onBack: () => void; }
 
@@ -61,9 +62,10 @@ export const ObjectivesScreen: React.FC<ObjectivesScreenProps> = ({ onBack }) =>
       <div style={scroll}>
 
         <div style={headerRow}>
-          <button onClick={onBack} style={backBtn} aria-label="Retour">←</button>
+          <button onClick={onBack} className="glass-icon" style={backBtn} aria-label="Retour"><IconArrowLeft size={17} /></button>
+          <GlassIcon size={38} accent><IconTarget size={19} /></GlassIcon>
           <div>
-            <h1 style={title}>🎯 Objectifs</h1>
+            <h1 style={title}>Objectifs</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Ce que tu vises, où t'en es</p>
           </div>
         </div>
@@ -195,7 +197,9 @@ export const ObjectivesScreen: React.FC<ObjectivesScreenProps> = ({ onBack }) =>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {records.map((rec, i) => (
                 <div key={rec.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 15, width: 20, textAlign: 'center' }}>{i === 0 ? '🏆' : i === 1 ? '🥈' : i === 2 ? '🥉' : '💪'}</span>
+                  <span style={{ display: 'inline-flex', width: 20, justifyContent: 'center', color: i === 0 ? '#e8a020' : i < 3 ? 'var(--text-muted)' : 'var(--text-dim)' }}>
+                    {i === 0 ? <IconTrophy size={15} /> : i < 3 ? <IconMedal size={15} /> : <IconDumbbell size={14} />}
+                  </span>
                   <span style={{ color: 'var(--text-secondary)', fontSize: 13, flex: 1 }}>{rec.name}</span>
                   <span style={{ color: 'var(--brand-1)', fontSize: 14, fontWeight: 800 }}>{rec.max} kg</span>
                 </div>

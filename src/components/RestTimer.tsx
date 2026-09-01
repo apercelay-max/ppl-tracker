@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect } from 'react';
+import { IconArrowRight, IconClock, IconPartyPopper } from './Icons';
 import { useWorkoutStore } from '../store/workoutStore';
 import { useRestTimer } from '../hooks/useRestTimer';
 import { Exercise } from '../data/types';
@@ -74,7 +75,12 @@ export const RestTimer: React.FC<RestTimerProps> = ({ nextExercise, nextSetNumbe
   return (
     <div style={overlay}>
       <div className={`fade-in${finished ? ' timer-blink' : ''}`} style={card}>
-        <p style={label}>{finished ? '🎉 C\'EST PARTI !' : '⏸ RÉCUPÉRATION'}</p>
+        <p style={label}>
+          <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}>
+            {finished ? <IconPartyPopper size={13} /> : <IconClock size={13} />}
+          </span>
+          {finished ? "C'EST PARTI !" : 'RÉCUPÉRATION'}
+        </p>
         <div style={{ position: 'relative', width: CIRCLE_SIZE, height: CIRCLE_SIZE, margin: '0 auto 20px' }}>
           <svg width={CIRCLE_SIZE} height={CIRCLE_SIZE} style={{ position: 'absolute', inset: 0 }}>
             <circle cx={CIRCLE_SIZE/2} cy={CIRCLE_SIZE/2} r={RADIUS} fill="none" style={{ stroke: 'var(--bg-elevated)' }} strokeWidth={10} />
@@ -100,7 +106,9 @@ export const RestTimer: React.FC<RestTimerProps> = ({ nextExercise, nextSetNumbe
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="timer-btn" style={btnAdjust} onClick={handleReduce}>-30s</button>
           <button className="timer-btn" style={{ ...btnSkip, ...(finished ? btnSkipReady : {}) }} onClick={handleSkip}>
-            {finished ? 'Allons-y ! 💪' : 'Passer ⏭'}
+            {finished ? 'Allons-y !' : (
+              <>Passer<span style={{ display: 'inline-flex', verticalAlign: '-2px', marginLeft: 5 }}><IconArrowRight size={13} /></span></>
+            )}
           </button>
           <button className="timer-btn" style={btnAdjust} onClick={handleAdd}>+30s</button>
         </div>

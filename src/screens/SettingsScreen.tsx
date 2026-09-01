@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { DataIcon } from '../components/DataIcon';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ACCENT_PRESETS, GYM_PRESETS } from '../data/accents';
 import { HOME_SECTION_META } from '../data/homeSectionMeta';
@@ -15,7 +16,7 @@ import { CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import { motionSensorSupported, requestMotionPermission } from '../hooks/useShakeToValidate';
 import { GymsSettings } from '../components/GymsSettings';
 import type { CardioActivityType, NavTabKey } from '../data/types';
-import { IconHome, IconTarget, IconCalendar, IconActivity, IconDumbbell, IconScale, IconBarChart, IconUser, IconMonitor, IconSun, IconMoon, IconPalette, IconSave, IconSearch, IconRotateCcw, IconSparkles, IconPartyPopper, IconFireworks, IconBounce, IconArrowRight, IconRefreshCw, IconDownload, IconUpload } from '../components/Icons';
+import { IconActivity, IconArrowRight, IconBarChart, IconBounce, IconCalendar, IconCheck, IconClose, IconDownload, IconDumbbell, IconFireworks, IconHome, IconMonitor, IconMoon, IconPalette, IconPartyPopper, IconRefreshCw, IconRotateCcw, IconSave, IconScale, IconSearch, IconSparkles, IconSun, IconTarget, IconUpload, IconUser } from '../components/Icons';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -488,7 +489,7 @@ background: !collapsedCategories[id] ? 'var(--bg-elevated)' : 'transparent',
 : { ...scroll, paddingBottom: navBarEnabled ? 112 : 40 }}
 >
 <div style={headerRow}>
-<button onClick={onBack} style={backBtn}>←</button>
+<button onClick={onBack} className="glass-icon" style={backBtn}>←</button>
 <div>
 <h1 style={titleStyle}>Réglages</h1>
 <p style={subtitleStyle}>Personnalise l'appli</p>
@@ -547,7 +548,7 @@ placeholder="Rechercher un réglage (ex: repos, couleur, export...)"
 style={settingsSearchInput}
 />
 {settingsQuery !== '' && (
-<button onClick={() => setSettingsQuery('')} style={settingsSearchClear}>✕</button>
+<button onClick={() => setSettingsQuery('')} style={settingsSearchClear}><IconClose size={14} /></button>
 )}
 </div>
 
@@ -605,7 +606,7 @@ background: isActive ? 'var(--bg-elevated)' : 'var(--bg-surface)',
 >
 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
 <p style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 800 }}>{program.name}</p>
-{isActive && <span style={{ color: 'var(--brand-1)', fontSize: 10, fontWeight: 700 }}>✓ ACTIF</span>}
+{isActive && <span style={{ color: 'var(--brand-1)', fontSize: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}><IconCheck size={11} />ACTIF</span>}
 </div>
 <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 3, lineHeight: '15px' }}>{program.shortDescription}</p>
 <p style={{ color: 'var(--text-micro)', fontSize: 10, marginTop: 4, fontStyle: 'italic' }}>{program.source}</p>
@@ -618,7 +619,7 @@ if (ok) removeCustomProgram(program.id);
 }}
 style={programDeleteBtn}
 title="Supprimer ce programme importé"
->✕</button>
+><IconClose size={14} /></button>
 )}
 </div>
 );
@@ -1329,7 +1330,7 @@ style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: '
 onClick={() => setHomeSectionColor(key, null)}
 style={colorResetBtn}
 title="Revenir à la couleur par défaut"
->✕</button>
+><IconClose size={14} /></button>
 )}
 </div>
 )}
@@ -1421,7 +1422,7 @@ Réglage des kcal/h utilisées pour estimer les calories brûlées lors d'une ac
 <div key={t} style={{ ...toggleRow, marginBottom: 6 }}>
 <div style={{ flex: 1 }}>
 <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>
-{CARDIO_TYPE_LABELS[t].emoji} {CARDIO_TYPE_LABELS[t].label}
+<span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><DataIcon name={CARDIO_TYPE_LABELS[t].icon} size={13} /></span>{CARDIO_TYPE_LABELS[t].label}
 </p>
 </div>
 <span style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700, width: 66, textAlign: 'center' }}>
@@ -1546,10 +1547,8 @@ paddingTop: 'max(24px, env(safe-area-inset-top))', paddingBottom: 18,
 borderBottom: '1px solid var(--border-subtle)', marginBottom: 20,
 };
 const backBtn: React.CSSProperties = {
-width: 36, height: 36, background: 'var(--bg-elevated)', borderRadius: 'var(--icon-radius)',
-color: 'var(--text-muted)', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-display: 'flex', alignItems: 'center', justifyContent: 'center',
-flexShrink: 0, border: '1px solid var(--border-strong)',
+width: 36, height: 36, color: 'var(--text-muted)', cursor: 'pointer',
+flexShrink: 0,
 };
 const titleStyle: React.CSSProperties = { fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: -0.3 };
 const subtitleStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: 12, marginTop: 2 };

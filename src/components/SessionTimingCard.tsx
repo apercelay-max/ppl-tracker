@@ -1,4 +1,5 @@
 import React from 'react';
+import { IconScissors } from './Icons';
 import { WorkoutDay, WorkoutSession } from '../data/types';
 import { useWorkoutStore } from '../store/workoutStore';
 import { useSessionTiming } from '../hooks/useSessionTiming';
@@ -61,7 +62,7 @@ export const SessionTimingCard: React.FC<Props> = ({ workout, session }) => {
       </div>
       {showShorten && (
         <button onClick={handleShorten} style={shortenBtn}>
-          ✂ Raccourcir la séance — garder les essentiels
+          <span style={{ display: 'inline-flex', verticalAlign: '-3px', marginRight: 6 }}><IconScissors size={14} /></span>Raccourcir la séance — garder les essentiels
         </button>
       )}
     </div>

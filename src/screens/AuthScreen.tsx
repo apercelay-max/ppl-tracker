@@ -106,7 +106,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack }) => {
     <div className="screen-ambient" style={container}>
       <div style={scroll}>
         <div style={headerRow}>
-          <button onClick={onBack} style={backBtn} aria-label="Retour">←</button>
+          <button onClick={onBack} className="glass-icon" style={backBtn} aria-label="Retour">←</button>
           <div>
             <h1 style={title}>Compte</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>

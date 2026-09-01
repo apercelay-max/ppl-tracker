@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { IconAlert, IconClock, IconFlame, IconHeart } from './Icons';
 import { useSessionChrono } from '../hooks/useSessionChrono';
 import { useHeartRate } from '../hooks/useHeartRate';
 import { useWorkoutStore } from '../store/workoutStore';
@@ -36,21 +37,21 @@ export const StatsPanel: React.FC<Props> = ({ startTime, compact }) => {
   if (compact) {
     return (
       <div style={bar}>
-        <MiniStat icon="⏱" value={chrono} color="#4CAF50" />
+        <MiniStat icon={<IconClock size={14} />} value={chrono} color="#4CAF50" />
         <div style={sep} />
-        <MiniStat icon="🕐" value={time} />
+        <MiniStat icon={<IconClock size={14} />} value={time} />
         <div style={sep} />
         <div
           style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: isSupported ? 'pointer' : 'default' }}
           onClick={isSupported ? (connected ? disconnect : connect) : undefined}
         >
-          <span style={{ fontSize: 14, lineHeight: 1, opacity: isSupported ? 1 : 0.3 }}>❤️</span>
+          <span style={{ display: 'inline-flex', color: connected ? hrColor : 'currentColor', opacity: isSupported ? 1 : 0.3 }}><IconHeart size={14} filled={connected} /></span>
           <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: connected ? hrColor : isSupported ? 'var(--text-muted)' : 'var(--text-dim)' }}>
             {connecting ? '…' : hr ? `${hr}` : isSupported ? '–' : '—'}
           </span>
         </div>
         <div style={sep} />
-        <MiniStat icon="🔥" value={`${cal}`} />
+        <MiniStat icon={<IconFlame size={14} />} value={`${cal}`} />
       </div>
     );
   }
@@ -88,7 +89,11 @@ export const StatsPanel: React.FC<Props> = ({ startTime, compact }) => {
               onClick={isSupported ? connect : undefined}
               disabled={connecting || !isSupported}
             >
-              {!isSupported ? '⚠ iOS non supporté' : connecting ? 'Connexion…' : '❤️ Connecter HRM'}
+              {!isSupported ? (
+                <><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 5 }}><IconAlert size={12} /></span>iOS non supporté</>
+              ) : connecting ? 'Connexion…' : (
+                <><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 5 }}><IconHeart size={12} /></span>Connecter la ceinture</>
+              )}
             </button>
             {error && <p style={{ color: '#f66', fontSize: 11, marginTop: 6 }}>{error}</p>}
           </>
@@ -107,9 +112,9 @@ export const StatsPanel: React.FC<Props> = ({ startTime, compact }) => {
   );
 };
 
-const MiniStat = ({ icon, value, color = 'var(--text-secondary)' }: { icon: string; value: string; color?: string }) => (
+const MiniStat = ({ icon, value, color = 'var(--text-secondary)' }: { icon: React.ReactNode; value: string; color?: string }) => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-    <span style={{ fontSize: 14, lineHeight: 1 }}>{icon}</span>
+    <span style={{ display: 'inline-flex', lineHeight: 1, color: 'var(--text-muted)' }}>{icon}</span>
     <span style={{ fontSize: 13, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
   </div>
 );

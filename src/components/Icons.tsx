@@ -321,3 +321,108 @@ export const IconShare: React.FC<IconProps> = ({ size = 18, color = 'currentColo
     <line x1='15.41' y1='6.51' x2='8.59' y2='10.49' />
   </svg>
 );
+
+// ─── Icônes ajoutées pour remplacer les emojis ──────────────────────────────
+// Même trait que les autres (2 px, bouts arrondis, viewBox 24) : mélangées aux
+// précédentes dans une même barre, elles doivent être indiscernables.
+
+export const IconArrowLeft: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
+    <path d="M19 12H5" /><path d="M12 19l-7-7 7-7" />
+  </svg>
+);
+
+export const IconClose: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
+    <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+  </svg>
+);
+
+export const IconCheck: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color} strokeWidth={2.4}>
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+
+export const IconBike: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
+    <circle cx="5.5" cy="17.5" r="3.5" /><circle cx="18.5" cy="17.5" r="3.5" />
+    <path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" fill={color} stroke="none" />
+    <path d="M12 17.5 9 11l3-2 2.5 3H18" />
+  </svg>
+);
+
+export const IconWalk: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
+    <circle cx="13" cy="4" r="1.6" />
+    <path d="m11 21 1.5-6-2.5-2.5V9l3-1.5 2.5 3H19" /><path d="m9 21 1.5-4.5" />
+  </svg>
+);
+
+export const IconRun: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
+    <circle cx="15" cy="4" r="1.6" />
+    <path d="m9.5 21 2-5.5-3-2.5 1.5-4 3.5 3H17" /><path d="M6.5 12.5 9 10" /><path d="m13 15.5 2.5 5.5" />
+  </svg>
+);
+
+export const IconBook: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
+    <path d="M3 5.6A1.6 1.6 0 0 1 4.6 4H9a3 3 0 0 1 3 3v12a2.6 2.6 0 0 0-2.6-2.6H4.6A1.6 1.6 0 0 1 3 14.8Z" />
+    <path d="M21 5.6A1.6 1.6 0 0 0 19.4 4H15a3 3 0 0 0-3 3v12a2.6 2.6 0 0 1 2.6-2.6h4.8A1.6 1.6 0 0 0 21 14.8Z" />
+  </svg>
+);
+
+export const IconStar: React.FC<IconProps & { filled?: boolean }> = ({ size = 18, color = 'currentColor', filled }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color} fill={filled ? color : 'none'}>
+    <path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8 6.2 20.9l1.1-6.5L2.6 9.8l6.5-.9Z" />
+  </svg>
+);
+
+export const IconHeart: React.FC<IconProps & { filled?: boolean }> = ({ size = 18, color = 'currentColor', filled }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color} fill={filled ? color : 'none'}>
+    <path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 1 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1Z" />
+  </svg>
+);
+
+export const IconAlert: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
+    <path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+    <path d="M12 9v4" /><path d="M12 17h.01" />
+  </svg>
+);
+
+export const IconScissors: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
+    <circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" />
+    <path d="M20 4 8.1 15.9" /><path d="m8.1 8.1 11.9 11.9" />
+  </svg>
+);
+
+export const IconMedal: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
+    <path d="m7.2 2 3 5.4" /><path d="m13.8 2 3 5.4" /><path d="M6 2h12" />
+    <circle cx="12" cy="15" r="6" /><path d="M12 12.5 13 15h2.2l-1.8 1.4.7 2.3-2.1-1.4-2.1 1.4.7-2.3L8.8 15H11Z" />
+  </svg>
+);
+
+export const IconHandWave: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
+    <path d="M11 11V4.5a1.5 1.5 0 0 1 3 0V11" /><path d="M14 10.5V3.8a1.5 1.5 0 0 1 3 0V12" />
+    <path d="M17 11.5V6.5a1.5 1.5 0 0 1 3 0v7a8 8 0 0 1-8 8h-1a7 7 0 0 1-5-2l-3.4-3.6a1.6 1.6 0 0 1 2.3-2.3L8 16.5" />
+    <path d="M8 16.5V6a1.5 1.5 0 0 1 3 0v6.5" />
+  </svg>
+);
+
+export const IconBiceps: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
+    <path d="M4 6h7a5 5 0 0 1 4.6 3l.9 2.1A6 6 0 0 1 17 13v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4Z" />
+    <path d="M4 11c2.2-1.2 4.6-1.2 6.5.4" />
+  </svg>
+);
+
+export const IconGauge: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
+    <path d="M3.5 17a9 9 0 1 1 17 0" /><path d="m12 13 4-3.5" /><circle cx="12" cy="14" r="1.4" />
+  </svg>
+);

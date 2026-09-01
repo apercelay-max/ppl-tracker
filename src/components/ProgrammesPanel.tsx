@@ -9,9 +9,7 @@ import { CATALOG_GROUPS, CATALOG_EQUIPMENT, type Equipment } from '../data/exerc
 import { normalize } from '../utils/catalogMatch';
 import { getProgramBodyIntensity } from '../utils/training';
 import { BodyDiagram } from './BodyDiagram';
-import {
-  IconSearch, IconHome, IconDumbbell, IconFlame, IconZap, IconTarget, IconTrophy, IconActivity,
-} from './Icons';
+import { IconActivity, IconClose, IconDumbbell, IconFlame, IconHome, IconSearch, IconTarget, IconTrophy, IconZap } from './Icons';
 import {
   generateProgram, weeklySetsByGroup, DEFAULT_PREFS,
   type GeneratorPrefs, type Goal, type SplitKind, type Level,
@@ -92,7 +90,7 @@ export const ProgrammesPanel: React.FC = () => {
               style={searchInput}
             />
             {query !== '' && (
-              <button onClick={() => setQuery('')} style={clearBtn} aria-label="Effacer">✕</button>
+              <button onClick={() => setQuery('')} style={clearBtn} aria-label="Effacer"><IconClose size={14} /></button>
             )}
           </div>
 
@@ -571,7 +569,7 @@ const ProgramExerciseLine: React.FC<{ ex: Exercise }> = ({ ex }) => {
           {cat?.img
             ? <img src={`${EXERCISE_IMG_BASE}/${cat.img}`} alt="" loading="lazy"
                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : <span style={{ fontSize: 13, opacity: 0.4 }}>🏋️</span>}
+            : <span style={{ display: 'inline-flex', opacity: 0.4 }}><IconDumbbell size={13} /></span>}
         </span>
         <span style={exRowText}>
           <span style={{ color: 'var(--text-dim)' }}>{ex.sets}×{ex.targetReps}</span> {ex.name}
