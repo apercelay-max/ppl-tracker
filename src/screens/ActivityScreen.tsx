@@ -2,11 +2,34 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { useBikeSensor } from '../hooks/useBikeSensor';
 import { useHeartRate } from '../hooks/useHeartRate';
-import type { CardioStats } from '../data/types';
-import { IconArrowLeft, IconBike, IconCheck } from '../components/Icons';
+import { useGpsTrack } from '../hooks/useGpsTrack';
+import type { CardioActivityType, CardioStats } from '../data/types';
+import { IconArrowLeft, IconBike, IconCheck, IconWalk, IconRun } from '../components/Icons';
 import { GlassIcon } from '../components/GlassIcon';
 
-interface BikeScreenProps { onBack: () => void; }
+/**
+ * Écran d'activité cardio en direct. Même squelette pour les trois modes
+ * (chrono, pause, mesures, enregistrement) ; seule la source des mesures
+ * change :
+ *  - vélo : Bluetooth, absent de Safari iPhone ;
+ *  - marche et course : GPS, qui lui fonctionne sur iPhone.
+ */
+interface ActivityScreenProps { mode: CardioActivityType; onBack: () => void; }
+
+const MODES: Record<string, { title: string; Icon: React.FC<{ size?: number }>; sub: string }> = {
+  velo: { title: 'Mode vélo', Icon: IconBike, sub: 'Puissance et cadence du vélo' },
+  marche: { title: 'Mode marche', Icon: IconWalk, sub: 'Distance et allure au GPS' },
+  course: { title: 'Mode course', Icon: IconRun, sub: 'Distance et allure au GPS' },
+  autre: { title: 'Séance cardio', Icon: IconRun, sub: 'Chrono simple' },
+};
+
+/** Allure course : 312 s/km → « 5:12 /km ». */
+const fmtPace = (secPerKm: number | null): string => {
+  if (!secPerKm || !isFinite(secPerKm)) return '—';
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.round(secPerKm % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+};
 
 const fmtChrono = (ms: number): string => {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -24,12 +47,15 @@ const push = (a: Acc, v: number): Acc => ({ sum: a.sum + v, n: a.n + 1, max: Mat
 const avg = (a: Acc): number | undefined => (a.n ? Math.round(a.sum / a.n) : undefined);
 const EMPTY_ACC: Acc = { sum: 0, n: 0, max: 0 };
 
-export const BikeScreen: React.FC<BikeScreenProps> = ({ onBack }) => {
+export const ActivityScreen: React.FC<ActivityScreenProps> = ({ mode, onBack }) => {
+  const meta = MODES[mode] ?? MODES.autre;
+  const usesGps = mode === 'marche' || mode === 'course';
   const addCardioEntry = useWorkoutStore((s) => s.addCardioEntry);
-  const kcalPerHour = useWorkoutStore((s) => s.cardioKcalPerHour.velo);
+  const kcalPerHour = useWorkoutStore((s) => s.cardioKcalPerHour[mode]);
   const hapticsEnabled = useWorkoutStore((s) => s.hapticsEnabled);
 
   const bike = useBikeSensor();
+  const gps = useGpsTrack();
   const heart = useHeartRate();
 
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -58,7 +84,11 @@ export const BikeScreen: React.FC<BikeScreenProps> = ({ onBack }) => {
 
   // Accumulation des relevés, uniquement quand ça tourne : une pause ne doit
   // pas faire chuter la puissance moyenne avec une série de zéros.
-  const r = bike.reading;
+  // En marche/course, distance et vitesse viennent du GPS ; la puissance et la
+  // cadence n'existent pas, leurs tuiles restent donc vides.
+  const r = usesGps
+    ? { ...bike.reading, speed: gps.reading.speedKmh, distanceKm: gps.reading.distanceKm || null }
+    : bike.reading;
   useEffect(() => {
     if (!running) return;
     const a = acc.current;
@@ -85,6 +115,7 @@ export const BikeScreen: React.FC<BikeScreenProps> = ({ onBack }) => {
     acc.current = { power: EMPTY_ACC, cadence: EMPTY_ACC, speed: EMPTY_ACC, hr: EMPTY_ACC };
     distanceRef.current = null;
     bikeCaloriesRef.current = null;
+    if (usesGps) { gps.reset(); gps.start(); }
     if (hapticsEnabled && navigator.vibrate) navigator.vibrate(20);
   };
 
@@ -95,8 +126,10 @@ export const BikeScreen: React.FC<BikeScreenProps> = ({ onBack }) => {
       // de la pause, le chrono repart donc d'où il s'était arrêté.
       setStartedAt(startedAt + (Date.now() - pausedAt));
       setPausedAt(null);
+      if (usesGps) gps.setPaused(false);
     } else {
       setPausedAt(Date.now());
+      if (usesGps) gps.setPaused(true);
     }
   };
 
@@ -113,15 +146,17 @@ export const BikeScreen: React.FC<BikeScreenProps> = ({ onBack }) => {
       avgCadence: avg(a.cadence),
       maxCadence: a.cadence.max || undefined,
       avgSpeed: avg(a.speed),
-      distanceKm: distanceRef.current ?? undefined,
+      distanceKm: usesGps ? (gps.reading.distanceKm || undefined) : (distanceRef.current ?? undefined),
       avgHr: avg(a.hr),
       maxHr: a.hr.max || undefined,
-      source: bike.status === 'connected' ? 'bluetooth' : 'manuel',
-      deviceName: bike.deviceName ?? undefined,
+      source: usesGps ? (gps.status === 'tracking' ? 'gps' : 'manuel')
+        : bike.status === 'connected' ? 'bluetooth' : 'manuel',
+      deviceName: usesGps ? undefined : (bike.deviceName ?? undefined),
     };
-    addCardioEntry('velo', durationMin, undefined, stats, bikeCaloriesRef.current ?? undefined);
+    addCardioEntry(mode, durationMin, undefined, stats, bikeCaloriesRef.current ?? undefined);
     setSaved(true);
     bike.disconnect();
+    gps.stop();
     heart.disconnect();
     onBack();
   };
@@ -139,9 +174,9 @@ export const BikeScreen: React.FC<BikeScreenProps> = ({ onBack }) => {
 
         <div style={headerRow}>
           <button onClick={onBack} className="glass-icon" style={backBtn} aria-label="Retour"><IconArrowLeft size={17} /></button>
-          <GlassIcon size={38} accent><IconBike size={19} /></GlassIcon>
+          <GlassIcon size={38} accent><meta.Icon size={19} /></GlassIcon>
           <div>
-            <h1 style={title}>Mode vélo</h1>
+            <h1 style={title}>{meta.title}</h1>
             <p style={subtitle}>
               {startedAt === null ? 'Prêt à partir' : running ? 'En cours' : 'En pause'}
             </p>
@@ -152,6 +187,23 @@ export const BikeScreen: React.FC<BikeScreenProps> = ({ onBack }) => {
         <div className="glass-card" style={card}>
           <p style={cardLabel}>Capteurs</p>
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            {usesGps ? (
+              <span
+                style={{
+                  ...connectBtn,
+                  textAlign: 'center',
+                  borderColor: gps.status === 'tracking' ? 'rgba(63,178,122,0.5)' : 'var(--border-strong)',
+                  color: gps.status === 'tracking' ? '#3fb27a' : 'var(--text-secondary)',
+                }}
+              >
+                {gps.status === 'tracking'
+                  ? `GPS actif${gps.reading.accuracyM != null ? ` · ±${gps.reading.accuracyM} m` : ''}`
+                  : gps.status === 'requesting' ? 'Recherche du signal…'
+                  : gps.status === 'denied' ? 'Position refusée'
+                  : gps.status === 'unsupported' ? 'GPS indisponible'
+                  : 'GPS au départ'}
+              </span>
+            ) : (
             <button
               onClick={bike.status === 'connected' ? bike.disconnect : bike.connect}
               disabled={bike.status === 'unsupported' || bike.status === 'connecting'}
@@ -164,6 +216,7 @@ export const BikeScreen: React.FC<BikeScreenProps> = ({ onBack }) => {
             >
               {connectLabel}
             </button>
+            )}
             <button
               onClick={heart.status === 'connected' ? heart.disconnect : heart.connect}
               disabled={!heart.isSupported || heart.status === 'connecting'}
@@ -180,7 +233,14 @@ export const BikeScreen: React.FC<BikeScreenProps> = ({ onBack }) => {
             </button>
           </div>
 
-          {bike.status === 'unsupported' && (
+          {usesGps && gps.status === 'idle' && (
+            <p style={note}>
+              La position s'active au départ, pas avant : inutile de faire tourner le GPS pendant que
+              tu lis cet écran. Contrairement au Bluetooth, elle fonctionne sur iPhone.
+            </p>
+          )}
+          {usesGps && gps.error && <p style={{ ...note, color: '#e08a30' }}>{gps.error}</p>}
+          {!usesGps && bike.status === 'unsupported' && (
             <p style={note}>
               Safari sur iPhone ne donne pas accès au Bluetooth aux sites web. Le chrono et
               l'enregistrement fonctionnent quand même — seules les mesures du vélo manquent.
@@ -202,12 +262,26 @@ export const BikeScreen: React.FC<BikeScreenProps> = ({ onBack }) => {
 
         {/* ── Les chiffres ── */}
         <div style={statsGrid}>
-          <Stat label="Puissance" value={r.power} unit="W" />
-          <Stat label="Cadence" value={r.cadence} unit="rpm" />
-          <Stat label="Vitesse" value={r.speed} unit="km/h" decimals={1} />
-          <Stat label="Distance" value={r.distanceKm} unit="km" decimals={2} />
+          {usesGps ? (
+            <>
+              <Stat label="Distance" value={r.distanceKm} unit="km" decimals={2} />
+              <div className="glass-card" style={statTile}>
+                <span style={statLabel}>Allure</span>
+                <span style={statValue} className="tabular">{fmtPace(gps.reading.paceSecPerKm)}</span>
+                <span style={statUnit}>/ km</span>
+              </div>
+              <Stat label="Vitesse" value={r.speed} unit="km/h" decimals={1} />
+            </>
+          ) : (
+            <>
+              <Stat label="Puissance" value={r.power} unit="W" />
+              <Stat label="Cadence" value={r.cadence} unit="rpm" />
+              <Stat label="Vitesse" value={r.speed} unit="km/h" decimals={1} />
+              <Stat label="Distance" value={r.distanceKm} unit="km" decimals={2} />
+            </>
+          )}
           <Stat label="Fréq. cardiaque" value={hr} unit="bpm" accent />
-          <Stat label="Résistance" value={r.resistance} unit="" />
+          {!usesGps && <Stat label="Résistance" value={r.resistance} unit="" />}
         </div>
 
         {startedAt !== null && (
@@ -224,7 +298,7 @@ export const BikeScreen: React.FC<BikeScreenProps> = ({ onBack }) => {
         {/* ── Commandes ── */}
         <div style={{ display: 'flex', gap: 10, marginTop: 4, marginBottom: 24 }}>
           {startedAt === null ? (
-            <button onClick={start} style={primaryBtn}>Commencer la sortie</button>
+            <button onClick={start} style={primaryBtn}>Commencer</button>
           ) : (
             <>
               <button onClick={togglePause} style={{ ...primaryBtn, background: running ? 'linear-gradient(150deg,#34c06a,#1e8f4a)' : 'linear-gradient(150deg, var(--brand-1), var(--brand-2))' }}>

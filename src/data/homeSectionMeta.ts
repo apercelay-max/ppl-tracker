@@ -24,4 +24,5 @@ export const HOME_SECTION_META: Record<HomeSectionKey, HomeSectionMetaEntry> = {
   bodyWeight: { label: 'Poids du corps', desc: 'Dernière pesée et tendance, basé sur ton suivi du poids.', toggleable: true },
   personalRecord: { label: 'Dernier record perso', desc: 'Le dernier PR chiffré que tu as battu.', toggleable: true },
   exerciseProgress: { label: 'Progression sur un exercice', desc: "Courbe de 1RM estimé sur l'exercice qui progresse le plus en ce moment.", toggleable: true },
+  plateau: { label: 'Plateaux', desc: "Exercices dont le 1RM estimé ne bouge plus depuis plusieurs semaines.", toggleable: true },
 };

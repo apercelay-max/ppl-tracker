@@ -42,7 +42,7 @@ const NAV_TAB_META: { id: NavTabKey; label: string; Icon: React.FC<{ size?: numb
 { id: 'historique', label: 'Historique', Icon: IconCalendar },
 { id: 'cardio', label: 'Cardio', Icon: IconActivity },
 { id: 'exercices', label: 'Exercices', Icon: IconDumbbell },
-{ id: 'poids', label: 'Poids (essai)', Icon: IconScale },
+{ id: 'poids', label: 'Poids', Icon: IconScale },
 { id: 'dashboard', label: 'Stats', Icon: IconBarChart },
 { id: 'profil', label: 'Profil', Icon: IconUser },
 ];

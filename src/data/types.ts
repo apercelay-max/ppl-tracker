@@ -86,6 +86,10 @@ export interface HistoryEntry {
   trainingLoad?: number;         // Charge d'entraînement : RPE × durée en minutes
   note?: string;                 // Ressenti libre noté par l'utilisateur à la fin
   gymId?: string;                // Salle où la séance a été faite
+  // Exercices remplacés pendant la séance, par id d'origine. Sans cette
+  // trace, une série faite sur un AUTRE mouvement venait grossir la courbe et
+  // les records de l'exercice prévu au programme.
+  exerciseNameOverrides?: { [exerciseId: string]: string };
 }
 
 // ─── Timer ────────────────────────────────────────────────────────────────
@@ -126,7 +130,7 @@ export interface CardioStats {
   avgHr?: number;
   maxHr?: number;
   /** D'où viennent les chiffres : utile pour ne pas comparer des pommes et des poires. */
-  source?: 'bluetooth' | 'manuel';
+  source?: 'bluetooth' | 'gps' | 'manuel';
   deviceName?: string;
 }
 

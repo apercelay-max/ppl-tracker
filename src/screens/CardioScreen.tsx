@@ -1,13 +1,21 @@
 import React, { useState } from 'react';
 import { DataIcon } from '../components/DataIcon';
-import { IconActivity, IconArrowLeft, IconBike } from '../components/Icons';
+import { IconActivity, IconArrowLeft, IconBike, IconClose } from '../components/Icons';
 import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore, CARDIO_TYPE_LABELS } from '../store/workoutStore';
-import type { CardioActivityType } from '../data/types';
+import type { CardioActivityType, CardioStats } from '../data/types';
 
-interface CardioScreenProps { onBack: () => void; onOpenBike?: () => void; }
+interface CardioScreenProps { onBack: () => void; onStartActivity?: (mode: CardioActivityType) => void; }
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
+
+// Les trois activités qui ont un écran en direct. « Autre » n'en a pas : sans
+// capteur ni GPS, ce serait un chrono sans rien autour.
+const LIVE_MODES: { mode: CardioActivityType; label: string; hint: string }[] = [
+  { mode: 'velo', label: 'Mode vélo', hint: 'Chrono, puissance, cadence — en direct' },
+  { mode: 'course', label: 'Mode course', hint: 'Distance et allure au GPS' },
+  { mode: 'marche', label: 'Mode marche', hint: 'Distance et allure au GPS' },
+];
 
 const formatCardioDate = (ts: number): string => {
   const diffDays = Math.floor((Date.now() - ts) / 86400000);
@@ -17,7 +25,7 @@ const formatCardioDate = (ts: number): string => {
   return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 };
 
-export const CardioScreen: React.FC<CardioScreenProps> = ({ onBack, onOpenBike }) => {
+export const CardioScreen: React.FC<CardioScreenProps> = ({ onBack, onStartActivity }) => {
   const cardioHistory = useWorkoutStore((s) => s.cardioHistory);
   const addCardioEntry = useWorkoutStore((s) => s.addCardioEntry);
   const deleteCardioEntry = useWorkoutStore((s) => s.deleteCardioEntry);
@@ -54,17 +62,21 @@ export const CardioScreen: React.FC<CardioScreenProps> = ({ onBack, onOpenBike }
 
         {/* Mode vélo — séance en direct, avec les mesures du vélo si un
             capteur Bluetooth est disponible. */}
-        {onOpenBike && (
-          <button onClick={onOpenBike} className="glass-card" style={bikeCta}>
-            <GlassIcon size={40} accent><IconBike size={20} /></GlassIcon>
-            <span style={{ flex: 1, textAlign: 'left' }}>
-              <span style={{ display: 'block', color: 'var(--text-primary)', fontSize: 15, fontWeight: 800 }}>Mode vélo</span>
-              <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: 11.5, marginTop: 2 }}>
-                Chrono, puissance, cadence — en direct
-              </span>
-            </span>
-            <span style={{ color: 'var(--text-dim)', fontSize: 17 }}>›</span>
-          </button>
+        {/* Séances en direct : chrono + mesures. Le vélo lit le Bluetooth,
+            la marche et la course le GPS (qui, lui, marche sur iPhone). */}
+        {onStartActivity && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+            {LIVE_MODES.map((m) => (
+              <button key={m.mode} onClick={() => onStartActivity(m.mode)} className="glass-card" style={liveCta}>
+                <GlassIcon size={40} accent><DataIcon name={CARDIO_TYPE_LABELS[m.mode].icon} size={20} /></GlassIcon>
+                <span style={{ flex: 1, textAlign: 'left' }}>
+                  <span style={{ display: 'block', color: 'var(--text-primary)', fontSize: 15, fontWeight: 800 }}>{m.label}</span>
+                  <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: 11.5, marginTop: 2 }}>{m.hint}</span>
+                </span>
+                <span style={{ color: 'var(--text-dim)', fontSize: 17 }}>›</span>
+              </button>
+            ))}
+          </div>
         )}
 
         {/* Résumé de la semaine */}
@@ -143,7 +155,7 @@ export const CardioScreen: React.FC<CardioScreenProps> = ({ onBack, onOpenBike }
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {cardioHistory.map((entry) => (
-              <div key={entry.id} style={row}>
+              <div key={entry.id} style={{ ...row, flexWrap: 'wrap' }}>
                 <span style={{ display: 'inline-flex', color: 'var(--text-muted)' }}><DataIcon name={CARDIO_TYPE_LABELS[entry.type].icon} size={18} /></span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>{CARDIO_TYPE_LABELS[entry.type].label}</p>
@@ -151,7 +163,21 @@ export const CardioScreen: React.FC<CardioScreenProps> = ({ onBack, onOpenBike }
                     {formatCardioDate(entry.date)} · {entry.durationMin} min · {entry.calories} kcal{entry.rpe ? ` · RPE ${entry.rpe}` : ''}
                   </p>
                 </div>
-                <button onClick={() => deleteCardioEntry(entry.id)} style={deleteBtn}>✕</button>
+                <button onClick={() => deleteCardioEntry(entry.id)} style={deleteBtn} aria-label="Supprimer"><IconClose size={13} /></button>
+
+                {/* Ce que les capteurs ont mesuré. Jusqu'ici c'était enregistré
+                    mais affiché nulle part. Chaque tuile n'apparaît que si la
+                    donnée existe : une sortie saisie à la main n'en a aucune. */}
+                {entry.stats && hasMeasures(entry.stats) && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', width: '100%', marginTop: 6 }}>
+                    <Measure label="Puiss. moy." value={entry.stats.avgPower} unit="W" />
+                    <Measure label="Puiss. max" value={entry.stats.maxPower} unit="W" />
+                    <Measure label="Cadence" value={entry.stats.avgCadence} unit="rpm" />
+                    <Measure label="Distance" value={entry.stats.distanceKm} unit="km" decimals={2} />
+                    <Measure label="FC moy." value={entry.stats.avgHr} unit="bpm" />
+                    <Measure label="FC max" value={entry.stats.maxHr} unit="bpm" />
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -221,7 +247,29 @@ const deleteBtn: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
 
-const bikeCta: React.CSSProperties = {
+const liveCta: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14, width: '100%', cursor: 'pointer',
-  borderRadius: 26, padding: '16px 18px', marginBottom: 16,
+  borderRadius: 26, padding: '14px 18px',
+};
+
+/** Vrai dès qu'au moins une mesure chiffrée existe. */
+const hasMeasures = (st: CardioStats): boolean =>
+  [st.avgPower, st.maxPower, st.avgCadence, st.maxCadence, st.avgSpeed, st.distanceKm, st.avgHr, st.maxHr]
+    .some((v) => v != null && v > 0);
+
+const Measure: React.FC<{ label: string; value?: number; unit: string; decimals?: number }> = ({ label, value, unit, decimals = 0 }) => {
+  if (value == null || value <= 0) return null;
+  return (
+    <span className="glass-tile" style={measureTile}>
+      <span style={{ color: 'var(--text-dim)', fontSize: 9, fontWeight: 700, letterSpacing: 0.5 }}>{label}</span>
+      <span style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 800 }} className="tabular">
+        {value.toFixed(decimals)} {unit}
+      </span>
+    </span>
+  );
+};
+
+const measureTile: React.CSSProperties = {
+  display: 'flex', flexDirection: 'column', gap: 1,
+  borderRadius: 13, padding: '6px 10px',
 };

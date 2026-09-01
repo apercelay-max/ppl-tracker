@@ -9,9 +9,10 @@ import { HOME_SECTION_META } from '../data/homeSectionMeta';
 import {
   getMuscleGroupsStatus, getMuscleRecoverySummary, bucketByWeek, computeLoadStatus,
   computeTonnage, getMostRecentPersonalRecord, getFeaturedExerciseProgress,
+  detectPlateaus as getPlateaus,
 } from '../utils/training';
 import type { CardioActivityType } from '../data/types';
-import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconMoon, IconPMark, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
+import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconGauge, IconMoon, IconPMark, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -71,6 +72,7 @@ const WIDGET_PICKER_ICONS: Record<HomeSectionKey, React.ReactNode> = {
   bodyWeight: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="12" cy="12" r="4" /><line x1="12" y1="7.5" x2="13.4" y2="11" /></svg>,
   personalRecord: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 21h8" /><path d="M12 17v4" /><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" /><path d="M7 5H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4" /><path d="M17 5h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4" /></svg>,
   exerciseProgress: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="6" r="2.5" /><path d="M4 20 L9 13 L13 16 L18 8.5" /></svg>,
+  plateau: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3.5 17a9 9 0 1 1 17 0" /><path d="m12 13 4-3.5" /><circle cx="12" cy="14" r="1.4" /></svg>,
 };
 
 interface HomeScreenProps { onSelectDay: (dayId: string) => void; onOpenDashboard: () => void; onOpenSettings: () => void; }
@@ -607,6 +609,35 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     );
   })();
 
+  // ── Plateaux ──────────────────────────────────────────────────────────
+  // Ne s'affiche que s'il y a vraiment quelque chose à signaler : pas de carte
+  // « aucun plateau », qui prendrait de la place pour dire qu'il n'y a rien.
+  const plateaus = getPlateaus(history);
+  const plateauSection = homeSections.plateau && plateaus.length > 0 && (
+    <div key="plateau" className="glass-card" style={{ ...cardioCard, ...(homeSectionColors.plateau ? { borderLeft: `3px solid ${homeSectionColors.plateau}` } : {}) }}>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}>
+        <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconGauge size={13} /></span>
+        {plateaus.length === 1 ? 'Un exercice stagne' : `${plateaus.length} exercices stagnent`}
+      </p>
+      {plateaus.slice(0, 3).map((pl) => (
+        <div key={pl.exerciseId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderTop: '1px solid var(--border-subtle)' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl.exerciseName}</p>
+            <p style={{ color: 'var(--text-dim)', fontSize: 10.5, marginTop: 1 }}>
+              {pl.bestE1RM} kg estimés, inchangé depuis {pl.weeksStuck} semaine{pl.weeksStuck > 1 ? 's' : ''}
+            </p>
+          </div>
+          <span style={{ fontSize: 10, fontWeight: 800, borderRadius: 8, padding: '3px 8px', color: '#e0a030', background: 'rgba(224,160,48,0.12)', border: '1px solid rgba(224,160,48,0.25)', flexShrink: 0 }}>
+            {pl.sessions} séances
+          </span>
+        </div>
+      ))}
+      <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 10, lineHeight: '16px' }}>
+        Une piste : baisse d'une série et monte le poids, ou change l'angle du mouvement pendant deux semaines.
+      </p>
+    </div>
+  );
+
   const SECTION_MAP: Record<string, React.ReactNode> = {
     cycle: cycleSection,
     seances: seancesSection,
@@ -621,6 +652,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     bodyWeight: bodyWeightSection,
     personalRecord: personalRecordSection,
     exerciseProgress: exerciseProgressSection,
+    plateau: plateauSection,
   };
 
   // ── Édition de l'accueil : réordonner par rapport aux voisins VISIBLES

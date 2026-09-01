@@ -146,15 +146,16 @@ weeklyStats: boolean;
 bodyWeight: boolean;
 personalRecord: boolean;
 exerciseProgress: boolean;
+plateau: boolean;
 }
 
 export type HomeSectionKey =
 | 'cycle' | 'seances' | 'nutrition' | 'supersetRule' | 'muscleAlert' | 'cardio' | 'weeklyGoal' | 'nextSession'
-| 'lastSession' | 'weeklyStats' | 'bodyWeight' | 'personalRecord' | 'exerciseProgress';
+| 'lastSession' | 'weeklyStats' | 'bodyWeight' | 'personalRecord' | 'exerciseProgress' | 'plateau';
 
 const DEFAULT_HOME_ORDER: HomeSectionKey[] = [
 'nextSession', 'lastSession', 'weeklyStats', 'cycle', 'weeklyGoal', 'seances', 'muscleAlert', 'cardio', 'nutrition', 'supersetRule',
-'bodyWeight', 'personalRecord', 'exerciseProgress',
+'bodyWeight', 'personalRecord', 'exerciseProgress', 'plateau',
 ];
 
 // kcal/h par défaut pour chaque type d'activité cardio (utilisées pour
@@ -452,6 +453,11 @@ cycle: true, nutrition: true, supersetRule: true, muscleAlert: true, cardio: tru
 // dernier record, progression) démarrent masqués — à ajouter via le
 // bouton "+ Ajouter un widget" de l'accueil pour qui les veut.
 lastSession: true, weeklyStats: true, bodyWeight: false, personalRecord: false, exerciseProgress: false,
+// Le plateau ne s'affiche que s'il y a vraiment une stagnation à signaler,
+// et il faut plusieurs semaines de données avant qu'il ait quoi que ce soit
+// à dire : visible par défaut, il ne prendra de la place que le jour où il
+// sert.
+plateau: true,
 },
 homeSectionOrder: DEFAULT_HOME_ORDER,
 iconShape: 'rounded',
@@ -747,6 +753,7 @@ gymId: session.gymId,
 // (La charge d'entraînement, elle, a vraiment besoin du RPE — c'est sa
 // définition : RPE × durée.)
 tonnage: computeTonnage(session.exerciseProgress),
+exerciseNameOverrides: session.exerciseNameOverrides,
 };
 const updatedHistory = [entry, ...history].slice(0, HISTORY_LIMIT);
 const currentStreak = computeCurrentWeekStreak(updatedHistory, weeklySessionGoal);

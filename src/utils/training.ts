@@ -8,6 +8,15 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
  * poids et les reps sont numériques. Les séries au poids du corps ("PDC")
  * ou sautées ne comptent pas dans le tonnage (convention classique).
  */
+/**
+ * Vrai si, ce jour-là, l'exercice avait été REMPLACÉ par un autre mouvement.
+ * Les séries sont enregistrées sous l'id de l'exercice prévu au programme :
+ * sans ce filtre, une perf faite sur un autre mouvement viendrait gonfler la
+ * courbe, le record et le 1RM estimé de l'exercice qu'on n'a pas fait.
+ */
+export const wasSubstituted = (entry: HistoryEntry, exerciseId: string): boolean =>
+  !!entry.exerciseNameOverrides?.[exerciseId];
+
 export const computeTonnage = (exerciseProgress: ExerciseProgress): number => {
   let total = 0;
   for (const entries of Object.values(exerciseProgress)) {
@@ -118,6 +127,7 @@ export const compareSessionToHistory = (
  */
 export const getLastExerciseSets = (history: HistoryEntry[], exerciseId: string): SetEntry[] | null => {
   for (const entry of history) {
+    if (wasSubstituted(entry, exerciseId)) continue;
     const sets = entry.exerciseProgress[exerciseId];
     if (sets && sets.some((s) => s.completed)) return sets;
   }
@@ -188,6 +198,7 @@ export const ALL_EXERCISES = WORKOUTS.flatMap((w) => w.exercises).reduce(
 export const getMaxWeightEver = (history: HistoryEntry[], exerciseId: string): number => {
   let max = 0;
   for (const entry of history) {
+    if (wasSubstituted(entry, exerciseId)) continue;
     const sets = entry.exerciseProgress[exerciseId];
     if (!sets) continue;
     for (const s of sets) {
@@ -202,6 +213,7 @@ export const getMaxWeightEver = (history: HistoryEntry[], exerciseId: string): n
 export const getExerciseWeightHistory = (history: HistoryEntry[], exerciseId: string): ExerciseHistoryPoint[] => {
   const points: ExerciseHistoryPoint[] = [];
   for (const entry of history) {
+    if (wasSubstituted(entry, exerciseId)) continue;
     const sets = entry.exerciseProgress[exerciseId];
     if (!sets) continue;
     let max = 0;
@@ -234,6 +246,7 @@ export interface E1RMPoint {
 export const getExerciseE1RMHistory = (history: HistoryEntry[], exerciseId: string): E1RMPoint[] => {
   const points: E1RMPoint[] = [];
   for (const entry of history) {
+    if (wasSubstituted(entry, exerciseId)) continue;
     const sets = entry.exerciseProgress[exerciseId];
     if (!sets) continue;
     let best = 0;
@@ -254,6 +267,7 @@ export const getExerciseE1RMHistory = (history: HistoryEntry[], exerciseId: stri
 export const getMaxE1RMEver = (history: HistoryEntry[], exerciseId: string): number => {
   let max = 0;
   for (const entry of history) {
+    if (wasSubstituted(entry, exerciseId)) continue;
     const sets = entry.exerciseProgress[exerciseId];
     if (!sets) continue;
     for (const s of sets) {
@@ -293,6 +307,7 @@ export const getMostRecentPersonalRecord = (history: HistoryEntry[]): PersonalRe
 
   for (const entry of chronological) {
     for (const [exerciseId, sets] of Object.entries(entry.exerciseProgress)) {
+      if (wasSubstituted(entry, exerciseId)) continue;
       let entryMax = 0;
       for (const s of sets) {
         if (!s.completed) continue;
@@ -357,6 +372,77 @@ export const getFeaturedExerciseProgress = (
   }
 
   return best;
+};
+
+// ─── Plateaux ───────────────────────────────────────────────────────────────
+
+export interface PlateauExercise {
+  exerciseId: string;
+  exerciseName: string;
+  /** Meilleur 1RM estimé sur la fenêtre observée. */
+  bestE1RM: number;
+  /** Depuis combien de semaines ce meilleur n'a pas été battu. */
+  weeksStuck: number;
+  /** Nombre de séances faites sur cet exercice pendant la fenêtre. */
+  sessions: number;
+}
+
+/**
+ * Exercices qui stagnent : le 1RM estimé n'a pas progressé de plus de
+ * `toleranceKg` depuis au moins `minWeeks` semaines, alors que l'exercice est
+ * toujours travaillé.
+ *
+ * Trois garde-fous, parce qu'un « plateau » annoncé à tort est pire que pas
+ * d'alerte du tout :
+ *  - il faut au moins `minSessions` séances sur la fenêtre — deux points ne
+ *    font pas une stagnation, juste deux points ;
+ *  - l'exercice doit avoir été fait récemment, sinon ce n'est pas un plateau
+ *    mais un exercice abandonné ;
+ *  - les séances où l'exercice a été remplacé sont déjà exclues en amont, par
+ *    getExerciseE1RMHistory.
+ *
+ * Le 1RM estimé est une ESTIMATION (formule d'Epley) : à lire comme une
+ * tendance, pas comme une mesure de force.
+ */
+export const detectPlateaus = (
+  history: HistoryEntry[],
+  { minWeeks = 4, toleranceKg = 1, minSessions = 4, recentDays = 21 } = {}
+): PlateauExercise[] => {
+  const now = Date.now();
+  const recentCutoff = now - recentDays * 86400000;
+  const out: PlateauExercise[] = [];
+
+  for (const ex of ALL_EXERCISES) {
+    const points = getExerciseE1RMHistory(history, ex.id);
+    if (points.length < minSessions) continue;
+
+    const last = points[points.length - 1];
+    if (last.date < recentCutoff) continue; // abandonné, pas en plateau
+
+    // Meilleur de tous les temps sur cet exercice, et depuis quand il tient.
+    let bestE1RM = 0;
+    let bestDate = 0;
+    for (const p of points) {
+      if (p.e1rm > bestE1RM) { bestE1RM = p.e1rm; bestDate = p.date; }
+    }
+    if (bestE1RM <= 0) continue;
+
+    const weeksStuck = Math.floor((now - bestDate) / WEEK_MS);
+    if (weeksStuck < minWeeks) continue;
+
+    // Il faut aussi que rien n'ait approché ce record depuis : si la dernière
+    // séance est à 1 kg près du meilleur, c'est de la stagnation ; si elle est
+    // très en dessous, c'est une décharge ou une mauvaise passe, pas un plateau.
+    if (bestE1RM - last.e1rm > toleranceKg * 4) continue;
+
+    const sessions = points.filter((p) => p.date >= bestDate).length;
+    if (sessions < 2) continue; // le record est la dernière séance : rien à dire
+
+    out.push({ exerciseId: ex.id, exerciseName: ex.name, bestE1RM, weeksStuck, sessions });
+  }
+
+  // Le plus long plateau d'abord : c'est celui sur lequel agir en priorité.
+  return out.sort((a, b) => b.weeksStuck - a.weeksStuck);
 };
 
 // ─── Groupes musculaires pas travaillés récemment ───────────────────────────
