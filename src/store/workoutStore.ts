@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { WorkoutSession, ExerciseProgress, SetEntry, HistoryEntry, TimerState, CardioActivityType, CardioEntry, BodyWeightEntry, NavTabKey } from '../data/types';
+import { WorkoutSession, ExerciseProgress, SetEntry, HistoryEntry, TimerState, CardioActivityType, CardioEntry, CardioStats, BodyWeightEntry, NavTabKey } from '../data/types';
 import { getWorkout, getBaseWorkout, setCustomWorkouts, setSessionWorkoutOverride, MESOCYCLE_WEEKS } from '../data/workouts';
 import { applyAdaptation, type Gym, type GymProfile, type SessionAdaptation } from '../utils/gymAdapt';
 import { Program } from '../data/programs';
@@ -358,7 +358,10 @@ setCaloriesPerHour: (value: number) => void;
 setCustomAccentColor: (hex: string) => void;
 setAmoledMode: (enabled: boolean) => void;
 setBodyDiagramEnabled: (enabled: boolean) => void;
-addCardioEntry: (type: CardioActivityType, durationMin: number, rpe?: number) => void;
+// `stats` et `caloriesOverride` ne servent qu'au mode vélo : quand le vélo
+// annonce lui-même ses calories, elles valent mieux que notre estimation
+// durée × kcal/h. Une saisie manuelle appelle la fonction sans eux.
+addCardioEntry: (type: CardioActivityType, durationMin: number, rpe?: number, stats?: CardioStats, caloriesOverride?: number) => void;
 deleteCardioEntry: (id: string) => void;
 setCardioKcalPerHour: (type: CardioActivityType, value: number) => void;
 setWeeklySessionGoal: (value: number) => void;
@@ -941,15 +944,18 @@ setCustomAccentColor: (hex) => set({ customAccentColor: hex, accentTheme: 'custo
 setAmoledMode: (enabled) => set({ amoledMode: enabled }),
 setBodyDiagramEnabled: (enabled) => set({ bodyDiagramEnabled: enabled }),
 
-addCardioEntry: (type, durationMin, rpe) => {
+addCardioEntry: (type, durationMin, rpe, stats, caloriesOverride) => {
 const kcalPerHour = get().cardioKcalPerHour[type] ?? DEFAULT_CARDIO_KCAL_PER_HOUR[type];
 const entry: CardioEntry = {
 id: `cardio-${Date.now()}`,
 type,
 date: Date.now(),
 durationMin,
-calories: Math.round((kcalPerHour / 60) * durationMin),
+calories: caloriesOverride != null && caloriesOverride > 0
+? Math.round(caloriesOverride)
+: Math.round((kcalPerHour / 60) * durationMin),
 rpe,
+stats,
 };
 set((state) => ({
 cardioHistory: [entry, ...state.cardioHistory].slice(0, 50),

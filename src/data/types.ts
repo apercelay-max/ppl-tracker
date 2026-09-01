@@ -109,6 +109,25 @@ export interface CardioEntry {
   durationMin: number;
     calories: number;      // calculées à l'ajout (durationMin/60 * kcal/h de l'activité)
   rpe?: number;          // Ressenti 1-10, facultatif
+  // Relevés du mode vélo. Tous facultatifs : une entrée saisie à la main n'en
+  // a aucun, une entrée enregistrée avec un vélo sans capteur de puissance
+  // n'aura que la cadence, etc.
+  stats?: CardioStats;
+}
+
+/** Ce qu'un vélo connecté a réellement mesuré pendant la séance. */
+export interface CardioStats {
+  avgPower?: number;       // watts
+  maxPower?: number;       // watts
+  avgCadence?: number;     // tours/min
+  maxCadence?: number;     // tours/min
+  avgSpeed?: number;       // km/h
+  distanceKm?: number;
+  avgHr?: number;
+  maxHr?: number;
+  /** D'où viennent les chiffres : utile pour ne pas comparer des pommes et des poires. */
+  source?: 'bluetooth' | 'manuel';
+  deviceName?: string;
 }
 
 // ─── Poids du corps (fonctionnalité en essai) ───────────────────────────────

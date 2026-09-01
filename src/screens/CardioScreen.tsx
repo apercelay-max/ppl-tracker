@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useWorkoutStore, CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import type { CardioActivityType } from '../data/types';
 
-interface CardioScreenProps { onBack: () => void; }
+interface CardioScreenProps { onBack: () => void; onOpenBike?: () => void; }
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -14,7 +14,7 @@ const formatCardioDate = (ts: number): string => {
   return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 };
 
-export const CardioScreen: React.FC<CardioScreenProps> = ({ onBack }) => {
+export const CardioScreen: React.FC<CardioScreenProps> = ({ onBack, onOpenBike }) => {
   const cardioHistory = useWorkoutStore((s) => s.cardioHistory);
   const addCardioEntry = useWorkoutStore((s) => s.addCardioEntry);
   const deleteCardioEntry = useWorkoutStore((s) => s.deleteCardioEntry);
@@ -47,6 +47,21 @@ export const CardioScreen: React.FC<CardioScreenProps> = ({ onBack }) => {
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Vélo, marche, course...</p>
           </div>
         </div>
+
+        {/* Mode vélo — séance en direct, avec les mesures du vélo si un
+            capteur Bluetooth est disponible. */}
+        {onOpenBike && (
+          <button onClick={onOpenBike} className="glass-card" style={bikeCta}>
+            <span style={{ fontSize: 22, lineHeight: 1 }} aria-hidden="true">🚴</span>
+            <span style={{ flex: 1, textAlign: 'left' }}>
+              <span style={{ display: 'block', color: 'var(--text-primary)', fontSize: 15, fontWeight: 800 }}>Mode vélo</span>
+              <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: 11.5, marginTop: 2 }}>
+                Chrono, puissance, cadence — en direct
+              </span>
+            </span>
+            <span style={{ color: 'var(--text-dim)', fontSize: 17 }}>›</span>
+          </button>
+        )}
 
         {/* Résumé de la semaine */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
@@ -200,4 +215,9 @@ const deleteBtn: React.CSSProperties = {
   width: 26, height: 26, borderRadius: 8, flexShrink: 0,
   background: 'var(--bg-elevated)', color: 'var(--text-dim)', fontSize: 12, cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
+};
+
+const bikeCta: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 14, width: '100%', cursor: 'pointer',
+  borderRadius: 26, padding: '16px 18px', marginBottom: 16,
 };

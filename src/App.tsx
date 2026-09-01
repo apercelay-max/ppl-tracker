@@ -8,6 +8,7 @@ import type { SessionAdaptation } from './utils/gymAdapt';
 import { ObjectivesScreen } from './screens/ObjectivesScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { CardioScreen } from './screens/CardioScreen';
+import { BikeScreen } from './screens/BikeScreen';
 import { ExercicesScreen } from './screens/ExercicesScreen';
 import { CatalogueScreen } from './screens/CatalogueScreen';
 import { PoidsScreen } from './screens/PoidsScreen';
@@ -26,7 +27,7 @@ import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 
 type View =
 | 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'historique'
-| 'cardio' | 'exercices' | 'catalogue' | 'poids' | 'profil' | 'auth';
+| 'cardio' | 'velo' | 'exercices' | 'catalogue' | 'poids' | 'profil' | 'auth';
 
 // Durée d'affichage du splash "PPL" au démarrage, avant le fondu de sortie
 // (voir .splash-fade dans index.css). Volontairement court pour ne pas
@@ -208,7 +209,11 @@ screen = <ObjectivesScreen onBack={handleBack} />;
 } else if (view === 'historique') {
 screen = <HistoryScreen onBack={handleBack} />;
 } else if (view === 'cardio') {
-screen = <CardioScreen onBack={handleBack} />;
+screen = <CardioScreen onBack={handleBack} onOpenBike={() => setView('velo')} />;
+} else if (view === 'velo') {
+// Le mode vélo se comporte comme une séance : pas de barre de navigation, on
+// en sort par son propre bouton « Terminer » ou par la flèche.
+screen = <BikeScreen onBack={() => setView('cardio')} />;
 } else if (view === 'catalogue') {
 screen = <CatalogueScreen onBack={handleBack} />;
 } else if (view === 'exercices') {
