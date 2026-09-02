@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 export type HRStatus = 'idle' | 'connecting' | 'connected';
 
@@ -50,6 +50,10 @@ export const useHeartRate = () => {
     setStatus('idle');
     setHr(null);
   }, []);
+
+  // Si on quitte l'écran (retour, navigation) sans passer par "Terminer",
+  // la connexion GATT et ses écouteurs ne doivent pas rester ouverts.
+  useEffect(() => () => { try { deviceRef.current?.gatt?.disconnect(); } catch {} }, []);
 
   return { hr, status, error, connect, disconnect, isSupported };
 };
