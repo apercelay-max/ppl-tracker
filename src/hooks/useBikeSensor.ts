@@ -214,5 +214,9 @@ export const useBikeSensor = () => {
     setDeviceName(null);
   }, [isSupported]);
 
+  // Si on quitte l'écran (retour, navigation) sans passer par "Terminer",
+  // la connexion GATT et ses écouteurs ne doivent pas rester ouverts.
+  useEffect(() => () => { try { deviceRef.current?.gatt?.disconnect(); } catch { /* déjà déconnecté */ } }, []);
+
   return { reading, status, error, deviceName, connect, disconnect, isSupported };
 };
