@@ -738,9 +738,14 @@ set({ session: { ...session, currentExerciseIndex: step.exerciseIndex, currentSe
 },
 
 finishSession: () => {
-const { session, history, weeklySessionGoal, totalSessionsCompleted, bestWeekStreak, hapticsEnabled } = get();
+const { session, history, weeklySessionGoal, totalSessionsCompleted, bestWeekStreak, hapticsEnabled, sessionPausedAt } = get();
 if (!session) return;
-const durationMs = Date.now() - session.startTime;
+// Si la séance se termine (auto-avance sur la dernière série, par ex.)
+// pendant qu'elle est encore en pause, le temps de pause en cours ne doit
+// pas être compté dans la durée enregistrée — même correction que
+// resumeSession applique à startTime.
+const pausedMs = sessionPausedAt !== null ? Date.now() - sessionPausedAt : 0;
+const durationMs = Date.now() - session.startTime - pausedMs;
 const entry: HistoryEntry = {
 id: `${session.dayId}-${session.startTime}`,
 dayId: session.dayId, date: session.startTime,
