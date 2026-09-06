@@ -2,6 +2,7 @@ import { WorkoutDay } from './types';
 import { WORKOUTS } from './workouts';
 import { PPL_DEBUTANT_WORKOUTS, FULL_BODY_WORKOUTS, FORCE_5X5_WORKOUTS, WRIST_CONSOLIDATION_WORKOUTS } from './extraPrograms';
 import { CATALOG_PROGRAMS } from './catalogPrograms';
+import { APP_LIBRARY_PROGRAMS } from './appLibraryPrograms';
 
 // ─── Programmes sélectionnables (Réglages → Programme d'entraînement) ─────
 // "Strict V2.5" est le programme historique de l'appli (ex-V10, ex-V11),
@@ -112,6 +113,9 @@ export const BUILT_IN_PROGRAMS: Program[] = [
   WRIST_CONSOLIDATION_PROGRAM,
 // Programmes batis sur le catalogue d'exercices (voir catalogPrograms.ts).
 ...CATALOG_PROGRAMS,
+// Modèles repris des bibliothèques de routines des autres apps de sport
+// (voir appLibraryPrograms.ts).
+...APP_LIBRARY_PROGRAMS,
 ];
 
 // Combine programmes intégrés + programmes importés (donnés en argument,
