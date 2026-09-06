@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { IconArrowLeft, IconClose, IconDumbbell, IconSearch } from '../components/Icons';
 import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore } from '../store/workoutStore';
-import { ALL_EXERCISES, ALL_MUSCLE_GROUPS, getExerciseWeightHistory, getMaxWeightEver, getExerciseE1RMHistory, getMaxE1RMEver } from '../utils/training';
+import { ALL_EXERCISES, ALL_MUSCLE_GROUPS, getExerciseWeightHistory, getMaxWeightEver, getExerciseE1RMHistory, getMaxE1RMEver, loadForRpe, percentOf1RM, rpeToRir } from '../utils/training';
+import { solvePlates, describePlates } from '../utils/plates';
+import { usesBarbell } from '../utils/gymAdapt';
 import { MiniLineChart } from '../components/MiniLineChart';
 
 interface ExercicesScreenProps { onBack: () => void; }
@@ -17,6 +19,78 @@ const formatLastDate = (ts: number): string => {
   if (diffDays === 1) return 'hier';
   if (diffDays < 7) return `il y a ${diffDays} j`;
   return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+};
+
+// Traduit un effort visé (RPE, ou répétitions gardées en réserve) en charge à
+// mettre sur la barre, à partir du 1RM estimé de l'exercice. C'est le calcul
+// que font Liftosaur, Strive ou Hevy Pro : sans lui, « fais 5 reps à RPE 8 »
+// ne dit rien sur ce qu'il faut charger.
+const RPE_CHOICES = [10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6];
+const REP_CHOICES = [1, 2, 3, 4, 5, 6, 8, 10, 12];
+
+const RpeLoadPanel: React.FC<{ e1rm: number; exercise: { id: string; name: string } }> = ({ e1rm, exercise }) => {
+  const [reps, setReps] = useState(5);
+  const [rpe, setRpe] = useState(8);
+  const gymProfile = useWorkoutStore((s) => s.gymProfile);
+
+  const load = loadForRpe(e1rm, reps, rpe);
+  const pct = percentOf1RM(reps, rpe);
+  const rounded = load === null ? null : Math.round(load * 2) / 2;
+  // Le détail des disques n'a de sens que sur une barre : sur un exercice aux
+  // haltères ou à la poulie, il induirait en erreur.
+  const barType = usesBarbell(exercise);
+  const barKg = barType === 'Barre' ? gymProfile.barKg : barType === 'Barre EZ' ? gymProfile.ezBarKg : null;
+  const solution = rounded === null || barKg === null ? null : solvePlates(rounded, barKg, gymProfile.plates);
+
+  return (
+    <div style={rpeBox}>
+      <p style={rpeTitle}>QUELLE CHARGE POUR CET EFFORT ?</p>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+        <label style={rpeField}>
+          <span style={rpeFieldLabel}>Répétitions</span>
+          <select value={reps} onChange={(e) => setReps(Number(e.target.value))} style={rpeSelect}>
+            {REP_CHOICES.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </label>
+        <label style={rpeField}>
+          <span style={rpeFieldLabel}>Effort (RPE)</span>
+          <select value={rpe} onChange={(e) => setRpe(Number(e.target.value))} style={rpeSelect}>
+            {RPE_CHOICES.map((r) => (
+              <option key={r} value={r}>
+                {r.toString().replace('.', ',')} · {rpeToRir(r) === 0 ? 'échec' : `${rpeToRir(r).toString().replace('.', ',')} en réserve`}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {rounded === null || pct === null ? (
+        <p style={{ color: 'var(--text-muted)', fontSize: 11 }}>
+          Hors de la table : au-delà d'une quinzaine de répétitions à l'échec, l'estimation ne veut plus rien dire.
+        </p>
+      ) : (
+        <>
+          <p style={{ color: 'var(--text-primary)', fontSize: 19, fontWeight: 800 }}>
+            ≈ {rounded.toString().replace('.', ',')} kg
+            <span style={{ color: 'var(--text-dim)', fontSize: 12, fontWeight: 600 }}>
+              {'  '}soit {Math.round(pct * 100)} % de ton 1RM estimé
+            </span>
+          </p>
+          {solution && (
+            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 3 }}>
+              Barre de {barKg} kg, par côté : {describePlates(solution)}
+              {solution.exact ? '' : ` (soit ${solution.achieved.toString().replace('.', ',')} kg — le compte exact n'est pas faisable avec tes disques)`}
+            </p>
+          )}
+          <p style={{ color: 'var(--text-muted)', fontSize: 10, lineHeight: '14px', marginTop: 6 }}>
+            Calculé sur un 1RM estimé de {Math.round(e1rm)} kg, lui-même estimé depuis tes séances.
+            Deux estimations empilées : prends-le comme un point de départ à ajuster à la première série.
+          </p>
+        </>
+      )}
+    </div>
+  );
 };
 
 export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
@@ -130,6 +204,7 @@ export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
                               unit="kg"
                               emptyMessage="Pas encore assez de séances chiffrées sur cet exercice pour voir une courbe."
                             />
+                            {maxE1rm > 0 && <RpeLoadPanel e1rm={maxE1rm} exercise={ex} />}
                           </div>
                         )}
                       </div>
@@ -185,4 +260,21 @@ const modeBtn: React.CSSProperties = {
 };
 const modeBtnActive: React.CSSProperties = {
   background: 'var(--brand-1)', color: '#fff', border: '1px solid transparent',
+};
+
+const rpeBox: React.CSSProperties = {
+  background: 'var(--bg-surface)', border: '1px solid var(--border)',
+  borderRadius: 12, padding: 12, marginTop: 10,
+};
+const rpeTitle: React.CSSProperties = {
+  color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.2, marginBottom: 8,
+};
+const rpeField: React.CSSProperties = { flex: 1, display: 'block' };
+const rpeFieldLabel: React.CSSProperties = {
+  display: 'block', color: 'var(--text-muted)', fontSize: 10, fontWeight: 700, marginBottom: 4,
+};
+const rpeSelect: React.CSSProperties = {
+  width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+  borderRadius: 9, padding: '7px 8px', color: 'var(--text-primary)', fontSize: 13,
+  fontFamily: 'inherit',
 };

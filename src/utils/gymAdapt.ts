@@ -148,7 +148,7 @@ const EQUIPMENT_KEYWORDS: [RegExp, Equipment][] = [
  * Matériel nécessaire pour un exercice de programme. On passe d'abord par la
  * fiche catalogue (fiable quand elle est trouvée), sinon par mots-clés du nom.
  */
-export const inferEquipment = (ex: Exercise): Equipment => {
+export const inferEquipment = (ex: Pick<Exercise, 'id' | 'name'>): Equipment => {
   // Les noms de programme sont écrits à la main et disent explicitement le
   // matériel (« ... haltères », « ... poulie ») : quand c'est le cas, ils sont
   // plus fiables que le rapprochement catalogue, qui peut renvoyer la version
@@ -186,7 +186,7 @@ export const gymHasMachineFor = (exerciseName: string, gym: GymProfile): boolean
 };
 
 /** Vrai si l'exercice se charge sur une barre (donc calcul de disques utile). */
-export const usesBarbell = (ex: Exercise): 'Barre' | 'Barre EZ' | null => {
+export const usesBarbell = (ex: Pick<Exercise, 'id' | 'name'>): 'Barre' | 'Barre EZ' | null => {
   const eq = inferEquipment(ex);
   return eq === 'Barre' || eq === 'Barre EZ' ? eq : null;
 };

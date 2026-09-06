@@ -1,5 +1,6 @@
 import { ExerciseProgress, HistoryEntry, SetEntry, WorkoutDay } from '../data/types';
 import { WORKOUTS } from '../data/workouts';
+import { primaryGroupOf, resolveExerciseMuscles, volumeGroupOf } from './muscleMap';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -447,14 +448,33 @@ export const detectPlateaus = (
 
 // ─── Groupes musculaires pas travaillés récemment ───────────────────────────
 
-// Table exerciceId → groupe musculaire (construite une fois depuis workouts.ts).
-const EXERCISE_MUSCLE_GROUP: Record<string, string> = {};
-for (const w of WORKOUTS) {
-  for (const ex of w.exercises) EXERCISE_MUSCLE_GROUP[ex.id] = ex.muscleGroup;
-}
-
-// Liste ordonnée de tous les groupes musculaires distincts du programme.
+// Liste ordonnée des groupes musculaires du programme Strict — c'est l'ordre
+// d'affichage historique, on ne le change pas.
 export const ALL_MUSCLE_GROUPS: string[] = Array.from(new Set(WORKOUTS.flatMap((w) => w.exercises.map((e) => e.muscleGroup))));
+
+/**
+ * Groupes à afficher pour un historique donné : ceux du programme Strict
+ * (toujours, même à zéro), plus ceux réellement rencontrés dans l'historique.
+ *
+ * Sans ça, s'entraîner sur un autre programme faisait disparaître le travail
+ * des groupes que Strict ne nomme pas (ÉPAULES, ISCHIO-JAMBIERS, LOMBAIRES,
+ * TRAPÈZES…) : les séries étaient enregistrées mais n'apparaissaient nulle
+ * part. Les nouveaux groupes n'apparaissent qu'une fois vraiment travaillés,
+ * donc l'affichage ne bouge pas tant qu'on reste sur Strict.
+ */
+export const groupsForHistory = (history: HistoryEntry[]): string[] => {
+  const extra: string[] = [];
+  for (const entry of history) {
+    for (const [exId, sets] of Object.entries(entry.exerciseProgress)) {
+      if (!sets.some((s) => s.completed)) continue;
+      const group = primaryGroupOf(exId);
+      if (group && !ALL_MUSCLE_GROUPS.includes(group) && !extra.includes(group)) {
+        extra.push(group);
+      }
+    }
+  }
+  return [...ALL_MUSCLE_GROUPS, ...extra];
+};
 
 export interface MuscleGroupStatus {
   group: string;
@@ -469,11 +489,11 @@ export interface MuscleGroupStatus {
  */
 export const getMuscleGroupsStatus = (history: HistoryEntry[]): MuscleGroupStatus[] => {
   const now = Date.now();
-  return ALL_MUSCLE_GROUPS.map((group) => {
+  return groupsForHistory(history).map((group) => {
     let lastDate: number | null = null;
     for (const entry of history) {
       const worked = Object.entries(entry.exerciseProgress).some(
-        ([exId, sets]) => EXERCISE_MUSCLE_GROUP[exId] === group && sets.some((s) => s.completed)
+        ([exId, sets]) => primaryGroupOf(exId) === group && sets.some((s) => s.completed)
       );
       if (worked) { lastDate = entry.date; break; } // history triée du + récent au + ancien
     }
@@ -505,6 +525,15 @@ const RECOVERY_HOURS_BY_GROUP: Record<string, number> = {
   'DELTOÏDE POSTÉRIEUR': 48, // nom utilisé depuis Strict V11, même délai que ÉPAULES
   'TRICEPS': 48,
   'AVANT-BRAS': 24,
+  // Noms utilisés par le programme Strict et par les programmes bâtis sur le
+  // catalogue, qui n'avaient aucune entrée ici et retombaient donc en silence
+  // sur les 48 h par défaut.
+  'DELTOÏDE ANTÉRIEUR': 48,
+  'DELTOÏDE LATÉRAL': 48,
+  'AVANT-BRAS / BRACHIAL': 24,
+  'ISCHIOS': 72,
+  'LOMBAIRES': 72,
+  'TRAPÈZES': 48,
 };
 const DEFAULT_RECOVERY_HOURS = 48;
 
@@ -523,11 +552,11 @@ export interface MuscleRecoveryStatus {
  */
 export const getMuscleRecoveryStatus = (history: HistoryEntry[]): MuscleRecoveryStatus[] => {
   const now = Date.now();
-  return ALL_MUSCLE_GROUPS.map((group) => {
+  return groupsForHistory(history).map((group) => {
     let lastDate: number | null = null;
     for (const entry of history) {
       const worked = Object.entries(entry.exerciseProgress).some(
-        ([exId, sets]) => EXERCISE_MUSCLE_GROUP[exId] === group && sets.some((s) => s.completed)
+        ([exId, sets]) => primaryGroupOf(exId) === group && sets.some((s) => s.completed)
       );
       if (worked) { lastDate = entry.date; break; } // history triée du + récent au + ancien
     }
@@ -598,7 +627,7 @@ export const getMuscleGroupVolume = (history: HistoryEntry[], weeks = 4): Muscle
   for (const entry of history) {
     if (entry.date < cutoff) continue;
     for (const [exId, sets] of Object.entries(entry.exerciseProgress)) {
-      const group = EXERCISE_MUSCLE_GROUP[exId];
+      const group = primaryGroupOf(exId);
       if (!group) continue;
       for (const s of sets) {
         if (!s.completed) continue;
@@ -613,7 +642,7 @@ export const getMuscleGroupVolume = (history: HistoryEntry[], weeks = 4): Muscle
       }
     }
   }
-  return ALL_MUSCLE_GROUPS
+  return groupsForHistory(history)
     .map((group) => ({
       group,
       tonnage: Math.round(tonnageByGroup[group] ?? 0),
@@ -645,6 +674,18 @@ const MUSCLE_GROUP_TO_REGIONS: Record<string, BodyRegionKey[]> = {
   'AVANT-BRAS': ['front-forearm', 'back-forearm'],
   'FESSIERS': ['back-glute'],
   'ABDOS': ['front-abs'],
+  // Ces groupes-là étaient absents de la table : le travail des deltoïdes,
+  // des avant-bras et des ischios du programme Strict n'allumait donc
+  // strictement rien sur le schéma. LOMBAIRES et TRAPÈZES viennent des
+  // programmes bâtis sur le catalogue.
+  'DELTOÏDE ANTÉRIEUR': ['front-shoulder'],
+  'DELTOÏDE LATÉRAL': ['front-shoulder', 'back-shoulder'],
+  'AVANT-BRAS / BRACHIAL': ['front-forearm', 'back-forearm'],
+  'ISCHIOS': ['back-hamstring'],
+  'LOMBAIRES': ['back-lowerback'],
+  // Pas de zone dédiée aux trapèzes sur le schéma : le haut du dos est la
+  // zone visible la plus proche.
+  'TRAPÈZES': ['back-shoulder'],
 };
 
 /**
@@ -701,7 +742,7 @@ export const getBodyIntensityFromHistory = (history: HistoryEntry[], days = 9): 
   for (const entry of history) {
     if (entry.date < cutoff) continue;
     for (const [exId, sets] of Object.entries(entry.exerciseProgress)) {
-      const group = EXERCISE_MUSCLE_GROUP[exId];
+      const group = primaryGroupOf(exId);
       if (!group) continue;
       const completedCount = sets.filter((s) => s.completed).length;
       if (completedCount > 0) setsByGroup[group] = (setsByGroup[group] ?? 0) + completedCount;
@@ -745,3 +786,221 @@ export const getRecoveryRegionStatus = (history: HistoryEntry[]): Partial<Record
   }
   return result;
 };
+
+// ─── Volume effectif par muscle (séries effectives) ─────────────────────────
+//
+// Le tonnage (kg × reps) dit combien tu as déplacé, pas si un muscle reçoit
+// assez de travail : 4 séries de mollets pèsent plus lourd que 4 séries
+// d'élévations latérales sans qu'aucune épaule n'ait été mieux servie. La
+// mesure utilisée dans la littérature — et par Liftosaur, cf. l'analyse
+// comparative des apps — c'est le nombre de SÉRIES EFFECTIVES par muscle et
+// par semaine, avec les synergistes comptés pour une demi-série.
+//
+// Repère courant : 10 à 20 séries effectives par semaine et par muscle. En
+// dessous de 10 on entretient plus qu'on ne développe, au-dessus de 20 la
+// récupération devient le facteur limitant. Ce sont des repères, pas des
+// règles : un débutant progresse très bien plus bas.
+
+export const EFFECTIVE_SETS_MIN = 10;
+export const EFFECTIVE_SETS_MAX = 20;
+
+export interface EffectiveVolume {
+  group: string;
+  /** Séries effectives par semaine (principal ×1 + synergiste ×0,5). */
+  perWeek: number;
+  /** Séries où ce muscle est le muscle principal, par semaine. */
+  directPerWeek: number;
+  /** Total de séries effectives sur toute la fenêtre observée. */
+  total: number;
+}
+
+/**
+ * Séries effectives par muscle et par semaine sur les `weeks` dernières
+ * semaines. Compte toutes les séries validées, quel que soit le programme
+ * qui les a produites (voir muscleMap).
+ *
+ * Une série non chiffrée (poids du corps, gainage au temps) compte comme
+ * n'importe quelle autre : ici on compte des séries, pas des kilos.
+ */
+export const getEffectiveWeeklySets = (history: HistoryEntry[], weeks = 1): EffectiveVolume[] => {
+  const cutoff = Date.now() - weeks * WEEK_MS;
+  const effective: Record<string, number> = {};
+  const direct: Record<string, number> = {};
+
+  for (const entry of history) {
+    if (entry.date < cutoff) continue;
+    for (const [exId, sets] of Object.entries(entry.exerciseProgress)) {
+      const done = sets.filter((s) => s.completed).length;
+      if (done === 0) continue;
+      const overrideName = entry.exerciseNameOverrides?.[exId];
+      // Un exercice peut créditer deux fois le même groupe une fois les alias
+      // appliqués (ex. DELTOÏDE LATÉRAL en principal et « Épaules » en
+      // synergiste, tous deux ramenés à ÉPAULES) : on garde alors le poids le
+      // plus fort, sans additionner les deux.
+      const perGroup = new Map<string, number>();
+      for (const { group, weight } of resolveExerciseMuscles(exId, overrideName)) {
+        const canonical = volumeGroupOf(group);
+        perGroup.set(canonical, Math.max(perGroup.get(canonical) ?? 0, weight));
+      }
+      for (const [group, weight] of perGroup) {
+        effective[group] = (effective[group] ?? 0) + done * weight;
+        if (weight === 1) direct[group] = (direct[group] ?? 0) + done;
+      }
+    }
+  }
+
+  const round = (n: number) => Math.round(n * 10) / 10;
+  return Object.keys(effective)
+    .map((group) => ({
+      group,
+      perWeek: round(effective[group] / weeks),
+      directPerWeek: round((direct[group] ?? 0) / weeks),
+      total: round(effective[group]),
+    }))
+    .sort((a, b) => b.perWeek - a.perWeek);
+};
+
+// ─── Échelle RPE / RIR ↔ charge ─────────────────────────────────────────────
+//
+// Un RPE (effort perçu sur 10) ou un RIR (répétitions gardées en réserve) ne
+// devient utile que si on sait quelle charge mettre sur la barre. La table
+// classique donne, pour un nombre de répétitions MENÉES JUSQU'À L'ÉCHEC, le
+// pourcentage du maximum que ça représente.
+//
+// Le reste s'en déduit : à RPE 8, il te reste 2 répétitions en réserve, donc
+// 5 répétitions à RPE 8 sollicitent le même pourcentage que 7 répétitions à
+// l'échec. Pas besoin d'une table à deux entrées : une seule ligne suffit.
+
+/** % du 1RM tenable pour N répétitions menées à l'échec (index = N). */
+const PCT_AT_FAILURE: number[] = [
+  0,
+  1.000, 0.955, 0.922, 0.892, 0.863, 0.837, 0.811, 0.786,
+  0.762, 0.739, 0.707, 0.680, 0.653, 0.626, 0.599,
+];
+
+/**
+ * Part du 1RM correspondant à `reps` répétitions à l'effort `rpe` (6 à 10,
+ * demi-points acceptés). Renvoie null hors de la plage couverte par la table
+ * — au-delà d'une quinzaine de répétitions à l'échec, l'estimation ne vaut
+ * plus rien et il vaut mieux ne rien afficher qu'un chiffre inventé.
+ */
+export const percentOf1RM = (reps: number, rpe: number): number | null => {
+  if (!isFinite(reps) || !isFinite(rpe) || reps < 1 || rpe < 6 || rpe > 10) return null;
+  const equivalent = reps + (10 - rpe); // reps + répétitions gardées en réserve
+  const low = Math.floor(equivalent);
+  const high = Math.ceil(equivalent);
+  if (low < 1 || high >= PCT_AT_FAILURE.length) return null;
+  if (low === high) return PCT_AT_FAILURE[low];
+  const t = equivalent - low;
+  return PCT_AT_FAILURE[low] + (PCT_AT_FAILURE[high] - PCT_AT_FAILURE[low]) * t;
+};
+
+/** RIR (répétitions en réserve) ↔ RPE : RPE 8 = 2 en réserve. */
+export const rirToRpe = (rir: number): number => 10 - rir;
+export const rpeToRir = (rpe: number): number => 10 - rpe;
+
+/**
+ * Charge à mettre sur la barre pour faire `reps` répétitions à l'effort
+ * `rpe`, à partir d'un 1RM estimé. Renvoie null si l'estimation sort de la
+ * table.
+ */
+export const loadForRpe = (e1rm: number, reps: number, rpe: number): number | null => {
+  const pct = percentOf1RM(reps, rpe);
+  if (pct === null || !isFinite(e1rm) || e1rm <= 0) return null;
+  return e1rm * pct;
+};
+
+/**
+ * L'inverse : quel effort représente une série déjà faite, compte tenu du
+ * 1RM estimé. Sert à relire une séance (« tes 5×80 étaient à RPE 8,5 »).
+ */
+export const rpeOfSet = (weight: number, reps: number, e1rm: number): number | null => {
+  if (!isFinite(weight) || !isFinite(reps) || weight <= 0 || reps < 1 || e1rm <= 0) return null;
+  const pct = weight / e1rm;
+  // Tolérance : 81,1 / 100 vaut 0,8109999999999999 en virgule flottante, donc
+  // une comparaison stricte renvoyait RPE 7,5 là où la table dit exactement 8.
+  const EPSILON = 1e-6;
+  for (let rpe = 10; rpe >= 6; rpe -= 0.5) {
+    const p = percentOf1RM(reps, rpe);
+    if (p !== null && p <= pct + EPSILON) return rpe;
+  }
+  return null;
+};
+
+// ─── Suggestion de charge (double progression) ──────────────────────────────
+//
+// La règle appliquée par la plupart des programmes de l'appli, et celle que
+// les apps concurrentes automatisent : tant que tu n'atteins pas le haut de
+// la fourchette de répétitions sur TOUTES tes séries, tu gardes la charge ;
+// quand tu y arrives, tu montes d'un cran et tu repars du bas.
+//
+// Volontairement conservateur : on ne propose de monter que si toutes les
+// séries prévues ont été faites, et on ne propose jamais de baisser sur une
+// seule mauvaise série (un mauvais jour n'est pas une régression).
+
+export interface LoadSuggestion {
+  weight: number;
+  kind: 'up' | 'hold' | 'down';
+  reason: string;
+}
+
+/** « 6-10 » → { min: 6, max: 10 }. « 5 » → { min: 5, max: 5 }. */
+export const parseRepRange = (targetReps: string): { min: number; max: number } | null => {
+  const match = targetReps.match(/(\d+)\s*(?:[-–à]\s*(\d+))?/);
+  if (!match) return null;
+  const min = parseInt(match[1], 10);
+  const max = match[2] ? parseInt(match[2], 10) : min;
+  if (!isFinite(min) || !isFinite(max) || min <= 0) return null;
+  return { min, max: Math.max(min, max) };
+};
+
+export const suggestNextLoad = (
+  lastSets: SetEntry[],
+  targetReps: string,
+  plannedSets: number,
+  incrementKg: number
+): LoadSuggestion | null => {
+  const range = parseRepRange(targetReps);
+  if (!range) return null;
+
+  const done = lastSets.filter((s) => s.completed);
+  if (done.length === 0) return null;
+
+  const weights = done.map((s) => parseFloat(s.weight)).filter((w) => isFinite(w) && w > 0);
+  const reps = done.map((s) => parseInt(s.reps, 10)).filter((r) => isFinite(r) && r > 0);
+  if (weights.length === 0 || reps.length !== done.length) return null;
+
+  const weight = Math.max(...weights);
+  const allSetsDone = done.length >= plannedSets;
+  const everySetAtTop = reps.every((r) => r >= range.max);
+  const worstSet = Math.min(...reps);
+
+  if (allSetsDone && everySetAtTop) {
+    // Sur une cible à répétitions fixes (5×5), il n'y a pas de « repars en bas
+    // de fourchette » : la consigne s'arrête à la montée de charge.
+    const cible = range.min === range.max
+      ? `Toutes tes séries à la cible de ${range.max} reps la dernière fois`
+      : `Toutes tes séries en haut de la fourchette (${range.max}) la dernière fois`;
+    const suite = range.min === range.max ? '' : ` et repars à ${range.min}`;
+    return {
+      weight: weight + incrementKg,
+      kind: 'up',
+      reason: `${cible} : monte de ${formatIncrement(incrementKg)} kg${suite}.`,
+    };
+  }
+  if (worstSet < range.min) {
+    return {
+      weight,
+      kind: 'down',
+      reason: `Une série était descendue à ${worstSet} reps, sous la cible de ${range.min} : garde la même charge et vise d'abord ${range.min} partout.`,
+    };
+  }
+  return {
+    weight,
+    kind: 'hold',
+    reason: `Tu es dans la fourchette sans être en haut : même charge, cherche ${range.max} reps sur toutes les séries.`,
+  };
+};
+
+const formatIncrement = (n: number): string =>
+  (Math.round(n * 100) / 100).toString().replace('.', ',');

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getMuscleGroupsStatus, getMuscleRecoveryStatus, getRecoveryRegionStatus, getMaxWeightEver, ALL_EXERCISES, getBodyIntensityFromHistory } from '../utils/training';
 import type { BodyRegionKey } from '../utils/training';
@@ -13,9 +13,15 @@ interface ObjectivesScreenProps { onBack: () => void; }
 // "en retard" — même logique que l'alerte sur l'accueil (voir HomeScreen.tsx).
 const MUSCLE_ALERT_THRESHOLD_DAYS = 9;
 
+// Deuxième fenêtre pour le schéma corporel : la vue « 30 derniers jours » que
+// proposent les autres apps (la Body Heatmap de Hevy). Sur 9 jours on voit ce
+// qu'on vient de faire, sur 30 on voit les muscles qu'on néglige vraiment.
+const BODY_WINDOWS = [MUSCLE_ALERT_THRESHOLD_DAYS, 30];
+
 export const ObjectivesScreen: React.FC<ObjectivesScreenProps> = ({ onBack }) => {
   const history = useWorkoutStore((s) => s.history);
   const weeklySessionGoal = useWorkoutStore((s) => s.weeklySessionGoal);
+  const [bodyWindowDays, setBodyWindowDays] = useState<number>(MUSCLE_ALERT_THRESHOLD_DAYS);
 
   const now = Date.now();
   const sessionsThisWeek = history.filter((e) => now - e.date < 7 * 86400000).length;
@@ -54,7 +60,7 @@ export const ObjectivesScreen: React.FC<ObjectivesScreenProps> = ({ onBack }) =>
     .sort((a, b) => b.max - a.max)
     .slice(0, 8);
 
-  const bodyIntensity = getBodyIntensityFromHistory(history, MUSCLE_ALERT_THRESHOLD_DAYS);
+  const bodyIntensity = getBodyIntensityFromHistory(history, bodyWindowDays);
   const hasBodyData = Object.keys(bodyIntensity).length > 0;
 
   return (
@@ -164,6 +170,21 @@ export const ObjectivesScreen: React.FC<ObjectivesScreenProps> = ({ onBack }) =>
 
         {/* Corps — schéma des muscles travaillés récemment */}
         <p style={sectionLabel}>CORPS</p>
+        <div style={bodyWindowRow}>
+          {BODY_WINDOWS.map((d) => (
+            <button
+              key={d}
+              onClick={() => setBodyWindowDays(d)}
+              style={{
+                ...bodyWindowBtn,
+                background: bodyWindowDays === d ? 'var(--brand-1)' : 'transparent',
+                color: bodyWindowDays === d ? '#fff' : 'var(--text-muted)',
+              }}
+            >
+              {d} jours
+            </button>
+          ))}
+        </div>
         <div style={card}>
           {hasBodyData ? (
             <div style={{ width: '100%' }}>
@@ -230,6 +251,14 @@ const card: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14,
   background: 'var(--bg-card)', borderRadius: 14, padding: 16,
   border: '1px solid var(--border-mid)',
+};
+const bodyWindowRow: React.CSSProperties = {
+  display: 'flex', gap: 4, padding: 3, marginBottom: 10,
+  background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 999,
+};
+const bodyWindowBtn: React.CSSProperties = {
+  flex: 1, border: 'none', borderRadius: 999, padding: '7px 0',
+  fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
 };
 const legendRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',

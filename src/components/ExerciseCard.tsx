@@ -6,7 +6,7 @@ import { SetRow } from './SetRow';
 import { ExerciseAnimation } from './ExerciseAnimation';
 import { useWorkoutStore, useActiveGym } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
-import { getLastExerciseSets, getMaxWeightEver } from '../utils/training';
+import { getLastExerciseSets, getMaxWeightEver, suggestNextLoad } from '../utils/training';
 import { formatWeightForDisplay, weightUnitLabel } from '../utils/weight';
 import { usesBarbell } from '../utils/gymAdapt';
 
@@ -97,6 +97,21 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   const gym = useActiveGym();
   const barKg = barType === 'Barre' ? gym.barKg : barType === 'Barre EZ' ? gym.ezBarKg : null;
 
+  // Suggestion de charge en double progression : ce que la plupart des apps
+  // concurrentes automatisent — « la dernière fois tu as tout passé en haut de
+  // la fourchette, monte d'un cran ». Affichée seulement AVANT la première
+  // série validée : une fois la séance lancée, la charge est déjà choisie.
+  // L'incrément est celui de la salle si l'exercice se fait à la barre
+  // (2 disques de 1,25 = 2,5 kg), sinon l'incrément fin (haltères, goupille).
+  const loadSuggestion = completedCount === 0
+    ? suggestNextLoad(
+        lastTimeSets ?? [],
+        exercise.targetReps,
+        exercise.sets,
+        barKg !== null ? Math.min(...gym.plates) * 2 : gym.otherIncrementKg
+      )
+    : null;
+
   const effectiveRest = customRestSeconds[exercise.id] ?? exercise.restSeconds;
   const restLabel =
     exercise.restMode === 'superset' && exercise.supersetOrder === 1
@@ -149,6 +164,14 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           }}>{exercise.name}</p>
           {exerciseDeltaLabel && (
             <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{exerciseDeltaLabel}</p>
+          )}
+          {loadSuggestion && (
+            <p style={{
+              margin: '3px 0 0', fontSize: 11.5, fontWeight: 600, lineHeight: '15px',
+              color: loadSuggestion.kind === 'up' ? '#4CAF50' : 'var(--text-muted)',
+            }}>
+              {loadSuggestion.kind === 'up' ? '↑ ' : ''}{loadSuggestion.reason}
+            </p>
           )}
         </div>
       </div>

@@ -7,6 +7,7 @@ import { HistoryEntry } from '../data/types';
 import {
   bucketByWeek, computeLoadStatus, computeTonnage, WeekBucket,
   ALL_EXERCISES, getExerciseWeightHistory, getMuscleGroupVolume,
+  getEffectiveWeeklySets, EFFECTIVE_SETS_MIN, EFFECTIVE_SETS_MAX,
 } from '../utils/training';
 
 interface DashboardScreenProps { onBack: () => void; }
@@ -235,6 +236,76 @@ const MuscleGroupVolumeChart: React.FC<{ history: HistoryEntry[] }> = ({ history
   );
 };
 
+// Séries effectives par muscle — la mesure qui dit si un muscle reçoit assez
+// de travail, là où le tonnage ne dit que combien de kilos ont bougé. Les
+// muscles synergistes comptent pour une demi-série (un développé couché =
+// 1 série pecs + 0,5 triceps + 0,5 épaules), et la bande verte marque la
+// fourchette repère de 10 à 20 séries par semaine.
+const EffectiveSetsChart: React.FC<{ history: HistoryEntry[] }> = ({ history }) => {
+  const [weeks, setWeeks] = useState<1 | 4>(1);
+  const volumes = getEffectiveWeeklySets(history, weeks);
+  const max = Math.max(EFFECTIVE_SETS_MAX + 5, ...volumes.map((v) => v.perWeek));
+  const pct = (n: number) => `${Math.min(100, (n / max) * 100)}%`;
+
+  const colorFor = (n: number) =>
+    n < EFFECTIVE_SETS_MIN ? '#e8a020' : n <= EFFECTIVE_SETS_MAX ? '#4CAF50' : '#e03030';
+
+  return (
+    <div style={chartCard}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <p style={{ ...sectionLabel, marginBottom: 0 }}>SÉRIES EFFECTIVES / SEMAINE</p>
+        <div style={unitToggleTrack}>
+          <button onClick={() => setWeeks(1)} style={{ ...unitToggleBtn, background: weeks === 1 ? 'var(--brand-1)' : 'transparent', color: weeks === 1 ? '#fff' : 'var(--text-muted)' }}>7 j</button>
+          <button onClick={() => setWeeks(4)} style={{ ...unitToggleBtn, background: weeks === 4 ? 'var(--brand-1)' : 'transparent', color: weeks === 4 ? '#fff' : 'var(--text-muted)' }}>4 sem.</button>
+        </div>
+      </div>
+
+      {volumes.length === 0 ? (
+        <p style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center', padding: '10px 0' }}>
+          Pas encore de séries validées sur la période.
+        </p>
+      ) : (
+        <>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {volumes.map((v) => (
+              <div key={v.group}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700 }}>{v.group}</span>
+                  <span style={{ color: colorFor(v.perWeek), fontSize: 11, fontWeight: 700 }}>
+                    {v.perWeek.toLocaleString('fr-FR')} séries
+                  </span>
+                </div>
+                <div style={{ position: 'relative', height: 7, borderRadius: 4, background: 'var(--bg-elevated)', overflow: 'hidden' }}>
+                  {/* Bande repère 10-20 séries */}
+                  <div style={{
+                    position: 'absolute', top: 0, bottom: 0,
+                    left: pct(EFFECTIVE_SETS_MIN),
+                    width: `${((EFFECTIVE_SETS_MAX - EFFECTIVE_SETS_MIN) / max) * 100}%`,
+                    background: 'rgba(76,175,80,0.16)',
+                  }} />
+                  <div style={{
+                    position: 'relative', height: '100%', borderRadius: 4,
+                    width: pct(Math.max(0.2, v.perWeek)),
+                    background: colorFor(v.perWeek),
+                    transition: 'width 0.3s',
+                  }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: 10, lineHeight: '14px', marginTop: 10 }}>
+            Les muscles synergistes comptent pour une demi-série : un développé couché vaut
+            1 série pour les pecs et 0,5 pour les triceps et les épaules. Les trois faisceaux de
+            deltoïdes sont regroupés sous ÉPAULES — le catalogue ne les distingue pas dans les
+            muscles secondaires. La bande verte est le repère courant de{' '}
+            {EFFECTIVE_SETS_MIN} à {EFFECTIVE_SETS_MAX} séries par semaine : un repère, pas une règle.
+          </p>
+        </>
+      )}
+    </div>
+  );
+};
+
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onBack }) => {
   const history = useWorkoutStore((s) => s.history);
   const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
@@ -311,6 +382,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onBack }) => {
 
             {/* Volume par groupe musculaire */}
             <MuscleGroupVolumeChart history={history} />
+
+            {/* Séries effectives par muscle (synergistes comptés pour moitié) */}
+            <EffectiveSetsChart history={history} />
 
             {/* Progression par exercice */}
             <ProgressionChart history={history} />
