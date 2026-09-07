@@ -108,7 +108,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         lastTimeSets ?? [],
         exercise.targetReps,
         exercise.sets,
-        barKg !== null ? Math.min(...gym.plates) * 2 : gym.otherIncrementKg
+        barKg !== null && gym.plates.length > 0 ? Math.min(...gym.plates) * 2 : gym.otherIncrementKg
       )
     : null;
 
