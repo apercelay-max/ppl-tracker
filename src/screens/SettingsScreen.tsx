@@ -121,7 +121,7 @@ const CATEGORY_META: Record<CategoryId, { label: string; Icon: React.FC<{ size?:
 seance: { label: 'Séance', Icon: IconDumbbell, desc: 'Programme, repos, minuteur, muscles sollicités.' },
 apparence: { label: 'Apparence', Icon: IconPalette, desc: 'Couleurs, thème, texte, icônes, navigation, animations, accueil.' },
 objectifs: { label: 'Objectifs & calories', Icon: IconTarget, desc: 'Badges, calories, objectif hebdo, cardio.' },
-donnees: { label: 'Données & compte', Icon: IconSave, desc: 'Export, import, sauvegarde, synchronisation.' },
+donnees: { label: 'Données & compte', Icon: IconSave, desc: 'Export, import, sauvegarde, synchronisation, quiz de démarrage.' },
 };
 
 const CATEGORY_ORDER: CategoryId[] = ['seance', 'apparence', 'objectifs', 'donnees'];
@@ -149,6 +149,7 @@ objectifs: [
 donnees: [
 'export', 'import', 'sauvegarde', 'backup', 'fichier', 'excel', 'csv', 'json', 'compte',
 'connexion', 'inscription', 'synchro', 'synchronisation', 'cloud', 'appareil', 'deconnexion',
+'quiz', 'demarrage', 'questionnaire', 'profil', 'niveau', 'blessure',
 ],
 };
 
@@ -627,24 +628,6 @@ title="Supprimer ce programme importé"
 );
 })}
 </div>
-
-{/* Quiz de démarrage — rejouable à tout moment. Placé juste sous la
-liste des programmes : c'est le raccourci pour s'en faire un nouveau
-sans passer par le générateur et ses réglages un par un. */}
-<button onClick={onRestartQuiz} style={quizBtn}>
-<span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-<span style={quizIcon}><IconSparkles size={16} /></span>
-<span style={{ textAlign: 'left' }}>
-<span style={{ display: 'block', color: 'var(--text-primary)', fontSize: 13.5, fontWeight: 700 }}>
-Refaire le quiz de démarrage
-</span>
-<span style={{ display: 'block', color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
-Objectif, niveau, matériel, blessures — et un nouveau programme construit pour toi. Rien n'est supprimé.
-</span>
-</span>
-</span>
-<IconArrowRight size={15} />
-</button>
 
 {/* Temps de repos par défaut */}
 <p style={subLabel}>TEMPS DE REPOS PAR DÉFAUT</p>
@@ -1487,6 +1470,28 @@ e.target.value = '';
 {importMsg && (
 <p style={{ color: '#f5a623', fontSize: 11, marginBottom: 20, lineHeight: '15px' }}>{importMsg}</p>
 )}
+
+{/* Quiz de démarrage — rejouable à tout moment. Rangé ici, à côté du
+compte : c'est ce qui décrit l'utilisateur (objectif, niveau, matériel,
+blessures), au même titre que ses données, pas un réglage de séance. */}
+<p style={{ ...subLabel, marginTop: 4 }}>QUIZ DE DÉMARRAGE</p>
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+Tes réponses sont enregistrées avec le reste de tes réglages, donc elles suivent ton compte d'un appareil à l'autre.
+</p>
+<button onClick={onRestartQuiz} style={quizBtn}>
+<span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+<span style={quizIcon}><IconSparkles size={16} /></span>
+<span style={{ textAlign: 'left' }}>
+<span style={{ display: 'block', color: 'var(--text-primary)', fontSize: 13.5, fontWeight: 700 }}>
+Refaire le quiz de démarrage
+</span>
+<span style={{ display: 'block', color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+Objectif, niveau, matériel, blessures — et un nouveau programme construit pour toi. Rien n'est supprimé.
+</span>
+</span>
+</span>
+<IconArrowRight size={15} />
+</button>
 
 <p style={{ ...subLabel, marginTop: 4 }}>COMPTE</p>
 {!isSupabaseConfigured ? (
