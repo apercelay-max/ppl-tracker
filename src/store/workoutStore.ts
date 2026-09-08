@@ -135,6 +135,7 @@ if (!document.hidden && wakeLockSentinel === null) requestWakeLock();
 }
 
 export interface HomeSectionsVisible {
+coach: boolean;
 cycle: boolean;
 nutrition: boolean;
 supersetRule: boolean;
@@ -151,13 +152,27 @@ plateau: boolean;
 }
 
 export type HomeSectionKey =
-| 'cycle' | 'seances' | 'nutrition' | 'supersetRule' | 'muscleAlert' | 'cardio' | 'weeklyGoal' | 'nextSession'
+| 'coach' | 'cycle' | 'seances' | 'nutrition' | 'supersetRule' | 'muscleAlert' | 'cardio' | 'weeklyGoal' | 'nextSession'
 | 'lastSession' | 'weeklyStats' | 'bodyWeight' | 'personalRecord' | 'exerciseProgress' | 'plateau';
 
 const DEFAULT_HOME_ORDER: HomeSectionKey[] = [
-'nextSession', 'lastSession', 'weeklyStats', 'cycle', 'weeklyGoal', 'seances', 'muscleAlert', 'cardio', 'nutrition', 'supersetRule',
+'coach', 'nextSession', 'lastSession', 'weeklyStats', 'cycle', 'weeklyGoal', 'seances', 'muscleAlert', 'cardio', 'nutrition', 'supersetRule',
 'bodyWeight', 'personalRecord', 'exerciseProgress', 'plateau',
 ];
+
+// La « partie simple » de l'accueil : les blocs qui restent affichés en
+// permanence. Les autres ne sont NI retirés NI déplacés dans les réglages —
+// ils attendent derrière le bouton « Tout voir » en bas de l'écran, à un tap.
+// Léo compose lui-même cette liste depuis le mode édition de l'accueil
+// (l'étoile sur chaque widget), d'où un réglage persisté plutôt qu'une
+// constante figée. Le coach en fait partie : il s'efface déjà tout seul tant
+// qu'aucune séance n'est terminée, donc il ne coûte rien les premiers jours.
+const DEFAULT_HOME_ESSENTIALS: Record<HomeSectionKey, boolean> = {
+coach: true, nextSession: true, cycle: true, seances: true, weeklyGoal: true,
+lastSession: false, weeklyStats: false, nutrition: false, supersetRule: false,
+muscleAlert: false, cardio: false, bodyWeight: false, personalRecord: false,
+exerciseProgress: false, plateau: false,
+};
 
 // kcal/h par défaut pour chaque type d'activité cardio (utilisées pour
 // estimer les calories brûlées, réglables dans Réglages).
@@ -254,6 +269,7 @@ amoledMode: boolean;
 fontScale: 'sm' | 'md' | 'lg';
 homeSections: HomeSectionsVisible;
 homeSectionOrder: HomeSectionKey[];
+homeEssentials: Record<HomeSectionKey, boolean>;
 iconShape: 'square' | 'rounded' | 'circle';
 iconSize: 'sm' | 'md' | 'lg';
 defaultRestSeconds: number;
@@ -360,6 +376,7 @@ updateLastSessionNote: (note: string) => void;
 setAccentTheme: (id: string) => void;
 setFontScale: (s: 'sm' | 'md' | 'lg') => void;
 setHomeSectionVisible: (key: keyof HomeSectionsVisible, visible: boolean) => void;
+setHomeEssential: (key: HomeSectionKey, essential: boolean) => void;
 moveHomeSection: (key: HomeSectionKey, direction: 'up' | 'down') => void;
 setHomeSectionOrder: (order: HomeSectionKey[]) => void;
 setIconShape: (shape: 'square' | 'rounded' | 'circle') => void;
@@ -454,6 +471,10 @@ customAccentColor: '#e03030',
 amoledMode: false,
 fontScale: 'md',
 homeSections: {
+// Le coach ouvre l'accueil : c'est ce qu'on lit avant de lancer une
+// séance. Il ne s'affiche de toute façon qu'une fois une séance
+// terminée — avant, il n'a rien à dire.
+coach: true,
 cycle: true, nutrition: true, supersetRule: true, muscleAlert: true, cardio: true, weeklyGoal: true, nextSession: true,
 // Les 2 widgets demandés en priorité (séance précédente, stats de la
 // semaine) sont visibles par défaut. Les 3 autres (poids du corps,
@@ -467,6 +488,7 @@ lastSession: true, weeklyStats: true, bodyWeight: false, personalRecord: false, 
 plateau: true,
 },
 homeSectionOrder: DEFAULT_HOME_ORDER,
+homeEssentials: { ...DEFAULT_HOME_ESSENTIALS },
 iconShape: 'rounded',
 iconSize: 'md',
 defaultRestSeconds: 180,
@@ -940,6 +962,9 @@ setFontScale: (s) => set({ fontScale: s }),
 setHomeSectionVisible: (key, visible) =>
 set((state) => ({ homeSections: { ...state.homeSections, [key]: visible } })),
 
+setHomeEssential: (key, essential) =>
+set((state) => ({ homeEssentials: { ...state.homeEssentials, [key]: essential } })),
+
 moveHomeSection: (key, direction) => {
 set((state) => {
 const order = [...state.homeSectionOrder];
@@ -1146,6 +1171,7 @@ accentTheme: state.accentTheme,
 fontScale: state.fontScale,
 homeSections: state.homeSections,
 homeSectionOrder: state.homeSectionOrder,
+homeEssentials: state.homeEssentials,
 iconShape: state.iconShape,
 iconSize: state.iconSize,
 defaultRestSeconds: state.defaultRestSeconds,
@@ -1205,6 +1231,10 @@ p.timer = { isRunning: false, endTimestamp: null, totalSeconds: 0 };
 }
 const merged = { ...current, ...p };
 merged.homeSections = { ...current.homeSections, ...(p.homeSections ?? {}) };
+// Même précaution que pour homeSections : un bloc ajouté plus tard doit
+// apparaître avec sa valeur par défaut au lieu d'être absent du réglage
+// sauvegardé sur le téléphone.
+merged.homeEssentials = { ...current.homeEssentials, ...(p.homeEssentials ?? {}) };
 const savedOrder = p.homeSectionOrder ?? current.homeSectionOrder;
 const missingKeys = current.homeSectionOrder.filter((k) => !savedOrder.includes(k));
 merged.homeSectionOrder = [...savedOrder, ...missingKeys];

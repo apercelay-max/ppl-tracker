@@ -11,8 +11,10 @@ import {
   computeTonnage, getMostRecentPersonalRecord, getFeaturedExerciseProgress,
   detectPlateaus as getPlateaus,
 } from '../utils/training';
+import { getCoachBrief, getNutritionAdvice } from '../utils/coach';
+import type { CoachTone } from '../utils/coach';
 import type { CardioActivityType } from '../data/types';
-import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconGauge, IconMoon, IconPMark, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
+import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconGauge, IconLightbulb, IconMoon, IconPMark, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -54,11 +56,33 @@ const MUSCLE_ALERT_THRESHOLD_DAYS = 9;
 // incomplets).
 const FALLBACK_ACCENT = '#7a7a90';
 
+// Fenêtre pendant laquelle le conseil nutrition a encore un sens. Au-delà,
+// le repas d'après-séance est passé depuis longtemps : la carte ne ferait
+// qu'occuper une place sur l'accueil pour rappeler un train déjà parti.
+const NUTRITION_WINDOW_MS = 90 * 60 * 1000;
+
+// Respiration ajoutée entre deux blocs de l'accueil, en plus de la marge que
+// chaque carte porte déjà. C'est ce qui fait la différence entre une pile de
+// cartes collées et un écran qu'on lit.
+const HOME_BLOCK_GAP = 10;
+
+// Couleurs de la ligne « à faire » du coach. Vert quand il n'y a qu'à
+// continuer, ambre quand quelque chose doit changer — le même code couleur
+// que les séries hors fourchette, pour ne pas avoir deux langages visuels.
+const COACH_TONE_STYLE: Record<CoachTone, { color: string; bg: string; border: string }> = {
+  good: { color: '#4CAF50', bg: 'rgba(76,175,80,0.08)', border: 'rgba(76,175,80,0.22)' },
+  up: { color: '#4CAF50', bg: 'rgba(76,175,80,0.08)', border: 'rgba(76,175,80,0.22)' },
+  down: { color: '#f5a623', bg: 'rgba(245,166,35,0.08)', border: 'rgba(245,166,35,0.22)' },
+  warn: { color: '#f5a623', bg: 'rgba(245,166,35,0.08)', border: 'rgba(245,166,35,0.22)' },
+  hold: { color: 'var(--text-secondary)', bg: 'var(--bg-elevated)', border: 'var(--border-strong)' },
+};
+
 // Icônes (SVG inline, même style trait que le reste de l'app) affichées
 // dans le sélecteur "+ Ajouter un widget" — une par clé de HomeSectionKey,
 // même si "seances" n'y apparaît jamais (non retirable, donc jamais dans
 // availableKeys) : le Record doit rester exhaustif pour rester typé.
 const WIDGET_PICKER_ICONS: Record<HomeSectionKey, React.ReactNode> = {
+  coach: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.5 8.5 0 0 1 8.5 8.5Z" /><path d="M9 11h6M9 14.5h3.5" /></svg>,
   seances: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="5.5" width="16" height="14" rx="2.2" /><line x1="4" y1="9.5" x2="20" y2="9.5" /></svg>,
   lastSession: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>,
   weeklyStats: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>,
@@ -103,6 +127,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const homeSectionColors = useWorkoutStore((s) => s.homeSectionColors);
   const setHomeSectionOrder = useWorkoutStore((s) => s.setHomeSectionOrder);
   const setHomeSectionVisible = useWorkoutStore((s) => s.setHomeSectionVisible);
+  // Quels blocs composent la « partie simple » de l'accueil (voir
+  // DEFAULT_HOME_ESSENTIALS dans le store) — réglable bloc par bloc depuis le
+  // mode édition, l'étoile en haut à droite de chaque widget.
+  const homeEssentials = useWorkoutStore((s) => s.homeEssentials);
+  const setHomeEssential = useWorkoutStore((s) => s.setHomeEssential);
   const bodyWeightHistory = useWorkoutStore((s) => s.bodyWeightHistory);
   // Programme actif (voir Réglages → Programme d'entraînement) — Strict V10
   // par défaut, jamais supprimé même si un autre programme est choisi.
@@ -118,6 +147,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   // ── Widgets d'accueil (mode édition + sélecteur d'ajout) ─────────────────
   const [homeEditMode, setHomeEditMode] = useState(false);
   const [widgetPickerOpen, setWidgetPickerOpen] = useState(false);
+  // L'accueil s'ouvre replié sur sa partie simple. Volontairement NON
+  // persisté : chaque ouverture de l'app repart de l'écran calme, sinon un
+  // seul « Tout voir » suffirait à le recharger définitivement.
+  const [showAllSections, setShowAllSections] = useState(false);
 
   // ── Cardio (formulaire rapide d'ajout) ──────────────────────────────────
   const [cardioFormOpen, setCardioFormOpen] = useState(false);
@@ -173,6 +206,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   // Le suivi "semaine / RIR / objectif" (mésocycle 11 semaines) est propre
   // à Strict V2.2 — les autres programmes n'ont pas cette notion, donc le
   // bloc ne s'affiche que pour celui-ci, même si le réglage est activé.
+  // Remonté ici (et non juste au-dessus de « prochaine séance ») parce que le
+  // rappel superset a besoin de savoir si la prochaine séance est un Push.
+  const nextWorkout = activeProgram.workouts.find((w) => !cycleDoneIds.includes(w.id)) ?? activeProgram.workouts[0];
+
   const cycleSection = homeSections.cycle && activeProgramId === 'strict-v10' && (
     <div key="cycle" className="glass-card" style={{ ...weekCard, ...(homeSectionColors.cycle ? { borderLeft: `3px solid ${cycleColor}` } : {}) }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -283,13 +320,37 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     </div>
   );
 
-  const nutritionSection = homeSections.nutrition && (
+  // ── Coach ─────────────────────────────────────────────────────────────
+  // Trois lignes, jamais plus : ce qui s'est passé, le seul point à corriger,
+  // et quoi en faire aujourd'hui. Toute la logique est dans utils/coach.ts.
+  const coachSection = homeSections.coach && (() => {
+    const brief = getCoachBrief(history, getWorkout);
+    if (!brief) return null; // aucune séance terminée : rien à raconter
+    const tone = COACH_TONE_STYLE[brief.tone];
+    return (
+      <div key="coach" className="glass-card" style={{ ...cardioCard, ...(homeSectionColors.coach ? { borderLeft: `3px solid ${homeSectionColors.coach}` } : {}) }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}>
+          <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconLightbulb size={13} /></span>Coach
+        </p>
+        <p style={{ color: 'var(--text-dim)', fontSize: 12, lineHeight: '17px' }}>{brief.recap}</p>
+        <p style={{ color: 'var(--text-primary)', fontSize: 12, lineHeight: '17px', fontWeight: 600, marginTop: 6 }}>{brief.focus}</p>
+        <p style={{ color: tone.color, fontSize: 12, lineHeight: '17px', marginTop: 9, background: tone.bg, border: `1px solid ${tone.border}`, borderRadius: 10, padding: '7px 9px' }}>{brief.action}</p>
+      </div>
+    );
+  })();
+
+  // Chiffré avec la dernière pesée quand elle existe, en g/kg sinon.
+  const nutritionAdvice = getNutritionAdvice(bodyWeightHistory[0]?.weightKg);
+
+  // Le conseil nutrition ne vaut que juste après une séance. Avant, il occupe
+  // une carte entière pour parler d'un repas qui n'a pas lieu d'être.
+  const lastSessionAt = history[0]?.date ?? 0;
+  const justTrained = lastSessionAt > 0 && Date.now() - lastSessionAt < NUTRITION_WINDOW_MS;
+  const nutritionSection = homeSections.nutrition && justTrained && (
     <div key="nutrition" className="glass-card glass-gold" style={{ ...nutritionCard, ...(homeSectionColors.nutrition ? { borderLeft: `3px solid ${homeSectionColors.nutrition}` } : {}) }}>
       <p style={{ color: 'var(--text-gold-label)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconUtensils size={13} /></span>Nutrition post-training</p>
-      <p style={{ color: 'var(--text-gold-body)', fontSize: 12, lineHeight: '18px' }}>
-        Dans les <strong style={{ color: '#a07030' }}>30 min</strong> après la séance :
-        30-40g protéines · 50-80g glucides.
-      </p>
+      <p style={{ color: 'var(--text-gold-body)', fontSize: 12, lineHeight: '18px' }}>{nutritionAdvice.main}</p>
+      <p style={{ color: 'var(--text-gold-body)', fontSize: 12, lineHeight: '18px', marginTop: 6, opacity: 0.82 }}>{nutritionAdvice.secondary}</p>
     </div>
   );
 
@@ -323,7 +384,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     );
   })();
 
-  const supersetSection = homeSections.supersetRule && activeProgramId === 'strict-v10' && (
+  // Les supersets n'existent que sur Push A et Push B : ce rappel n'a rien à
+  // faire à l'écran un jour Pull.
+  const supersetSection = homeSections.supersetRule && activeProgramId === 'strict-v10'
+    && nextWorkout.id.startsWith('push') && (
     <div key="supersetRule" className="glass-card glass-green" style={{
       borderRadius: 26, padding: 16, marginTop: 10, marginBottom: 12,
       ...(homeSectionColors.supersetRule ? { borderLeft: `3px solid ${homeSectionColors.supersetRule}` } : {}),
@@ -441,7 +505,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     );
   })();
 
-  const nextWorkout = activeProgram.workouts.find((w) => !cycleDoneIds.includes(w.id)) ?? activeProgram.workouts[0];
   const nextColor = blockColor('nextSession', activeProgram.dayAccents[nextWorkout?.id ?? ''] ?? FALLBACK_ACCENT);
   const nextSessionSection = homeSections.nextSession && !resumeWorkout && nextWorkout && (
     <button key="nextSession" className="workout-card glass-card" style={{ ...nextSessionBanner, ...(homeSectionColors.nextSession ? { borderLeft: `3px solid ${nextColor}` } : {}) }} onClick={() => onSelectDay(nextWorkout.id)}>
@@ -639,6 +702,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   );
 
   const SECTION_MAP: Record<string, React.ReactNode> = {
+    coach: coachSection,
     cycle: cycleSection,
     seances: seancesSection,
     nutrition: nutritionSection,
@@ -659,6 +723,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   // uniquement (pas le voisin dans l'ordre complet, qui peut être masqué —
   // voir setHomeSectionOrder dans workoutStore.ts) ────────────────────────
   const renderableKeys = homeSectionOrder.filter((key) => Boolean(SECTION_MAP[key]));
+  // Partie simple / reste. renderableKeys ne contient déjà que les blocs qui
+  // rendent vraiment quelque chose (une section masquée, ou sans données à
+  // afficher, vaut false dans SECTION_MAP) : le compteur du bouton « Tout
+  // voir » est donc honnête, il n'annonce jamais des blocs vides.
+  const extraKeys = renderableKeys.filter((key) => !homeEssentials[key]);
+  // En mode édition on montre tout : impossible de réordonner, de retirer ou
+  // d'épingler un bloc qu'on ne voit pas.
+  const sectionsExpanded = homeEditMode || showAllSections;
+  const shownKeys = sectionsExpanded ? renderableKeys : renderableKeys.filter((key) => homeEssentials[key]);
   const availableKeys = homeSectionOrder.filter((key) => {
     const meta = HOME_SECTION_META[key];
     return meta.toggleable && !homeSections[key as keyof typeof homeSections];
@@ -762,7 +835,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
           </div>
         </div>
 
-        {/* Récupération musculaire — toujours visible en tête d'accueil */}
+        {/* Récupération musculaire — seulement quand il y a des séances à
+            analyser. Avant, cette carte occupait un bloc entier de l'accueil
+            pour annoncer qu'elle n'avait rien à dire. */}
+        {history.length > 0 && (
         <div className="glass-card" style={recoveryCard}>
           <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconBattery size={13} /></span>Récupération musculaire</p>
           {history.length === 0 ? (
@@ -797,6 +873,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
             </>
           )}
         </div>
+        )}
 
         {/* Alerte pic de charge d'entraînement */}
         {loadStatus && (
@@ -822,15 +899,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
         {/* Bandeau mode édition */}
         {homeEditMode && (
           <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px', marginBottom: 12 }}>
-            Réorganise, retire ou ajoute des widgets à ton accueil.
+            Réorganise, retire ou ajoute des widgets. L'étoile garde un bloc
+            dans la partie simple, toujours visible sans déplier.
           </p>
         )}
 
         {/* Blocs réordonnables selon les réglages */}
-        {renderableKeys.map((key, idx) => {
+        {shownKeys.map((key, idx) => {
           const meta = HOME_SECTION_META[key];
           return (
-            <div key={key} style={{ position: 'relative' }}>
+            <div key={key} style={{ position: 'relative', marginBottom: HOME_BLOCK_GAP }}>
               {homeEditMode && (
                 <div style={widgetCtrlCluster}>
                   <button
@@ -847,6 +925,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
                   </button>
+                  <button
+                    onClick={() => setHomeEssential(key, !homeEssentials[key])}
+                    style={{ ...widgetCtrlBtn, color: homeEssentials[key] ? '#f5a623' : 'var(--text-muted)' }}
+                    title={homeEssentials[key] ? 'Retirer de la partie simple' : 'Garder toujours visible'}
+                    aria-pressed={!!homeEssentials[key]}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill={homeEssentials[key] ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.1 8.6 22 9.6 17 14.5 18.2 21.4 12 18.1 5.8 21.4 7 14.5 2 9.6 8.9 8.6 12 2" /></svg>
+                  </button>
                   {meta.toggleable && (
                     <button
                       onClick={() => setHomeSectionVisible(key as keyof typeof homeSections, false)}
@@ -861,6 +947,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
             </div>
           );
         })}
+
+        {/* Tout voir : déplie le reste de l'accueil. Rien n'est supprimé ni
+            rangé ailleurs — les blocs sont juste repliés tant qu'on n'en a
+            pas besoin, et l'état repart replié à la prochaine ouverture. */}
+        {!homeEditMode && extraKeys.length > 0 && (
+          <button
+            onClick={() => setShowAllSections((v) => !v)}
+            style={showAllBtn}
+            aria-expanded={showAllSections}
+          >
+            {showAllSections ? 'Réduire' : `Tout voir (${extraKeys.length})`}
+            <svg
+              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ transform: showAllSections ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        )}
 
         {/* Ajouter un widget */}
         {homeEditMode && availableKeys.length > 0 && (
@@ -1065,6 +1171,15 @@ const widgetCtrlCluster: React.CSSProperties = {
 const widgetCtrlBtn: React.CSSProperties = {
   width: 22, height: 22, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
   color: 'var(--text-muted)', cursor: 'pointer',
+};
+// Bouton « Tout voir » : volontairement discret (pas de fond plein, pas de
+// couleur d'accent) pour ne pas redevenir un élément de plus qui attire
+// l'œil sur un écran dont tout l'intérêt est d'être calme.
+const showAllBtn: React.CSSProperties = {
+  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+  background: 'transparent', border: '1px solid var(--border-subtle)', borderRadius: 999,
+  padding: '13px 18px', color: 'var(--text-muted)', fontSize: 13, fontWeight: 600,
+  letterSpacing: 0.2, cursor: 'pointer', marginTop: 6, marginBottom: 26,
 };
 const addWidgetBtn: React.CSSProperties = {
   width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,

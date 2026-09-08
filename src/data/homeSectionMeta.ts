@@ -11,6 +11,7 @@ export interface HomeSectionMetaEntry {
 // lui-même (mode édition + sélecteur "+ Ajouter un widget"), pour ne pas
 // dupliquer les libellés à deux endroits qui pourraient diverger.
 export const HOME_SECTION_META: Record<HomeSectionKey, HomeSectionMetaEntry> = {
+  coach: { label: 'Coach', desc: 'Le récap de ta dernière séance et le seul point à corriger sur celle-ci.', toggleable: true },
   cycle: { label: 'Cycle en cours', desc: 'La carte semaine / RIR / objectif.', toggleable: true },
   seances: { label: 'Liste des séances', desc: 'Les séances du programme actif — toujours visible.', toggleable: false },
   nutrition: { label: 'Conseil nutrition', desc: 'Le rappel protéines/glucides après la séance.', toggleable: true },

@@ -7,6 +7,7 @@ import { ExerciseAnimation } from './ExerciseAnimation';
 import { useWorkoutStore, useActiveGym } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
 import { getLastExerciseSets, getMaxWeightEver, suggestNextLoad } from '../utils/training';
+import { getSetCoaching } from '../utils/coach';
 import { formatWeightForDisplay, weightUnitLabel } from '../utils/weight';
 import { usesBarbell } from '../utils/gymAdapt';
 
@@ -111,6 +112,30 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         barKg !== null ? Math.min(...gym.plates) * 2 : gym.otherIncrementKg
       )
     : null;
+
+  // Incrément réellement disponible dans la salle : le plus petit disque
+  // compte double (un de chaque côté de la barre), sinon l'incrément fin.
+  const incrementKg = barKg !== null && gym.plates.length > 0
+    ? Math.min(...gym.plates) * 2
+    : gym.otherIncrementKg;
+
+  // Conseil du coach sur la prochaine série, lu depuis la dernière série faite
+  // (voir utils/coach.ts). Uniquement sur l'exercice actif : ailleurs ce serait
+  // un conseil qu'on ne peut pas appliquer tout de suite.
+  const coachHint = isActive
+    ? getSetCoaching(
+        setEntries,
+        exercise.targetReps,
+        incrementKg,
+        // La virgule décimale est celle qu'on lit partout ailleurs dans l'app —
+        // formatWeightForDisplay garde le point parce qu'il sert aussi aux champs
+        // de saisie, où la virgule serait rejetée.
+        (kg) => `${formatWeightForDisplay(String(kg), weightUnit).replace('.', ',')} ${weightUnitLabel(weightUnit)}`
+      )
+    : null;
+  // La série qui reçoit le conseil : la première pas encore faite. Pendant le
+  // repos elle n'est pas encore « courante », d'où l'index calculé à part.
+  const coachHintSetIdx = setEntries.findIndex((s) => !s.completed);
 
   const effectiveRest = customRestSeconds[exercise.id] ?? exercise.restSeconds;
   const restLabel =
@@ -234,6 +259,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 lastTime={lastTimeSets?.[idx]}
                 previousMaxWeight={previousMaxWeight}
                 barKg={barKg}
+                coachHint={idx === coachHintSetIdx ? coachHint : null}
                 validateSignal={isActive && idx === currentSetIndex ? validateSignal : undefined}
               />
             </React.Fragment>

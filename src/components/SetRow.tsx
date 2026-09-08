@@ -4,6 +4,7 @@ import { SetEntry } from '../data/types';
 import { useWorkoutStore, useActiveGym } from '../store/workoutStore';
 import { formatWeightForDisplay, parseWeightInputToKg, weightUnitLabel } from '../utils/weight';
 import { solvePlates, nearestAchievable, describePlates, formatKg } from '../utils/plates';
+import type { CoachTip } from '../utils/coach';
 
 interface SetRowProps {
   setNumber: number;
@@ -28,6 +29,10 @@ interface SetRowProps {
   // Incrémenté par SessionScreen quand une secousse du téléphone doit valider
   // la série en cours (mains prises) — voir useShakeToValidate.
   validateSignal?: number;
+  // Conseil du coach calculé sur la série PRÉCÉDENTE de cet exercice, affiché
+  // sur la série en cours — c'est le retour qu'on veut lire juste après avoir
+  // reposé la barre. Calculé par ExerciseCard, voir utils/coach.ts.
+  coachHint?: CoachTip | null;
 }
 
 const parseTargetRange = (targetReps: string): [number, number] | null => {
@@ -45,7 +50,7 @@ const isRepOutOfRange = (reps: string, targetReps: string): boolean => {
 
 export const SetRow: React.FC<SetRowProps> = ({
   setNumber, targetReps, defaultWeight, entry, isCurrent, onComplete, onEdit, lastTime, previousMaxWeight, onWeightStart,
-  barKg, validateSignal,
+  barKg, validateSignal, coachHint,
 }) => {
   const weightUnit = useWorkoutStore((s) => s.weightUnit);
   const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
@@ -264,6 +269,14 @@ export const SetRow: React.FC<SetRowProps> = ({
           <span style={{ color: 'var(--text-micro)', fontSize: 12, fontWeight: 700, width: 22, textAlign: 'center', flexShrink: 0 }}>{setNumber}</span>
           <span style={{ color: 'var(--text-micro)', fontSize: 13 }}>{targetReps} reps</span>
         </div>
+        {/* Pendant le repos, la prochaine série n'est pas encore active : c'est
+            pourtant LE moment où le conseil sert, tant qu'on peut encore aller
+            changer la charge. */}
+        {coachHint && (
+          <p style={{ ...coachHintText, color: COACH_TONE_COLOR[coachHint.tone] }}>
+            <span style={{ fontWeight: 800, marginRight: 4 }}>{COACH_TONE_MARK[coachHint.tone]}</span>{coachHint.text}
+          </p>
+        )}
         {lastTimeHint && <p style={{ ...lastTimeText, marginLeft: 32 }}>{lastTimeHint}</p>}
       </div>
     );
@@ -301,6 +314,11 @@ export const SetRow: React.FC<SetRowProps> = ({
           boxShadow: isLivePR ? undefined : (reps ? '0 4px 14px rgba(var(--brand-1-rgb),0.35)' : 'none'),
         }} onClick={handleValidate} disabled={!reps} title={isLivePR ? 'Nouveau record en vue !' : undefined}><IconCheck size={14} /></button>
       </div>
+      {coachHint && (
+        <p style={{ ...coachHintText, color: COACH_TONE_COLOR[coachHint.tone] }}>
+          <span style={{ fontWeight: 800, marginRight: 4 }}>{COACH_TONE_MARK[coachHint.tone]}</span>{coachHint.text}
+        </p>
+      )}
       {plateHint && (
         <p style={{ ...plateHintText, color: plateHint.warn ? '#f5a623' : 'var(--text-dim)' }}>
           {plateHint.warn ? '⚠ ' : '⚖ '}{plateHint.text}
@@ -326,6 +344,15 @@ export const SetRow: React.FC<SetRowProps> = ({
 const rowWrap: React.CSSProperties = { borderBottom: '1px solid var(--border-subtle)', paddingBottom: 4, marginBottom: 2 };
 const lastTimeText: React.CSSProperties = { color: 'var(--text-micro)', fontSize: 10, marginTop: 2, marginBottom: 2 };
 const plateHintText: React.CSSProperties = { fontSize: 11, fontWeight: 600, marginLeft: 8, marginTop: 5 };
+// Conseil du coach : même gabarit que l'aide au chargement, en un peu plus
+// lisible — c'est une phrase, pas un relevé de disques.
+const coachHintText: React.CSSProperties = { fontSize: 11.5, fontWeight: 600, marginLeft: 8, marginTop: 6, lineHeight: '16px' };
+const COACH_TONE_COLOR: Record<CoachTip['tone'], string> = {
+  up: '#4CAF50', good: '#4CAF50', down: '#f5a623', warn: '#f5a623', hold: 'var(--text-dim)',
+};
+const COACH_TONE_MARK: Record<CoachTip['tone'], string> = {
+  up: '↑', good: '✓', down: '↓', warn: '⚠', hold: '→',
+};
 const rowDone: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, padding: '9px 6px 2px' };
 const doneNumBadge: React.CSSProperties = { width: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, flexShrink: 0 };
 const donePillWeight: React.CSSProperties = { flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', borderRadius: 10, padding: '5px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 };
