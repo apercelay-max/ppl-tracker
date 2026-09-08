@@ -342,11 +342,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   // Chiffré avec la dernière pesée quand elle existe, en g/kg sinon.
   const nutritionAdvice = getNutritionAdvice(bodyWeightHistory[0]?.weightKg);
 
-  // Le conseil nutrition ne vaut que juste après une séance. Avant, il occupe
-  // une carte entière pour parler d'un repas qui n'a pas lieu d'être.
-  const lastSessionAt = history[0]?.date ?? 0;
-  const justTrained = lastSessionAt > 0 && Date.now() - lastSessionAt < NUTRITION_WINDOW_MS;
-  const nutritionSection = homeSections.nutrition && justTrained && (
+  // Le conseil nutrition reste disponible en permanence sous « Tout voir »,
+  // mais il ne remonte dans la partie simple que dans la fenêtre qui suit une
+  // séance (voir promotedNow plus bas).
+  // Attention : `date` d'une entrée d'historique est l'heure de DÉBUT de la
+  // séance (voir finishSession dans le store), pas de fin — il faut ajouter
+  // durationMs, sinon une séance de 74 min ne laisserait que 16 minutes de
+  // fenêtre au lieu de 90.
+  const lastSessionEndedAt = history[0] ? history[0].date + history[0].durationMs : 0;
+  const justTrained = lastSessionEndedAt > 0 && Date.now() - lastSessionEndedAt < NUTRITION_WINDOW_MS;
+  const nutritionSection = homeSections.nutrition && (
     <div key="nutrition" className="glass-card glass-gold" style={{ ...nutritionCard, ...(homeSectionColors.nutrition ? { borderLeft: `3px solid ${homeSectionColors.nutrition}` } : {}) }}>
       <p style={{ color: 'var(--text-gold-label)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconUtensils size={13} /></span>Nutrition post-training</p>
       <p style={{ color: 'var(--text-gold-body)', fontSize: 12, lineHeight: '18px' }}>{nutritionAdvice.main}</p>
@@ -384,10 +389,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     );
   })();
 
-  // Les supersets n'existent que sur Push A et Push B : ce rappel n'a rien à
-  // faire à l'écran un jour Pull.
-  const supersetSection = homeSections.supersetRule && activeProgramId === 'strict-v10'
-    && nextWorkout.id.startsWith('push') && (
+  // Les supersets n'existent que sur Push A et Push B. Le rappel reste
+  // consultable tous les jours sous « Tout voir » ; il ne remonte dans la
+  // partie simple que les jours où il sert (voir promotedNow plus bas).
+  const isPushDay = nextWorkout.id.startsWith('push');
+  const supersetSection = homeSections.supersetRule && activeProgramId === 'strict-v10' && (
     <div key="supersetRule" className="glass-card glass-green" style={{
       borderRadius: 26, padding: 16, marginTop: 10, marginBottom: 12,
       ...(homeSectionColors.supersetRule ? { borderLeft: `3px solid ${homeSectionColors.supersetRule}` } : {}),
@@ -727,11 +733,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   // rendent vraiment quelque chose (une section masquée, ou sans données à
   // afficher, vaut false dans SECTION_MAP) : le compteur du bouton « Tout
   // voir » est donc honnête, il n'annonce jamais des blocs vides.
-  const extraKeys = renderableKeys.filter((key) => !homeEssentials[key]);
+  // Promotion automatique : un bloc non épinglé remonte quand même dans la
+  // partie simple à l'instant précis où il sert, puis redescend tout seul.
+  // C'est ce qui permet à « Tout voir » de vraiment tout montrer sans que
+  // l'accueil se recharge : l'info arrive au bon moment au lieu d'être là
+  // en permanence ou pas du tout.
+  const promotedNow: Partial<Record<HomeSectionKey, boolean>> = {
+    nutrition: justTrained,
+    supersetRule: isPushDay,
+  };
+  const isEssential = (key: HomeSectionKey) => homeEssentials[key] || promotedNow[key] === true;
+  const extraKeys = renderableKeys.filter((key) => !isEssential(key));
   // En mode édition on montre tout : impossible de réordonner, de retirer ou
   // d'épingler un bloc qu'on ne voit pas.
   const sectionsExpanded = homeEditMode || showAllSections;
-  const shownKeys = sectionsExpanded ? renderableKeys : renderableKeys.filter((key) => homeEssentials[key]);
+  const shownKeys = sectionsExpanded ? renderableKeys : renderableKeys.filter(isEssential);
   const availableKeys = homeSectionOrder.filter((key) => {
     const meta = HOME_SECTION_META[key];
     return meta.toggleable && !homeSections[key as keyof typeof homeSections];
@@ -835,10 +851,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
           </div>
         </div>
 
-        {/* Récupération musculaire — seulement quand il y a des séances à
-            analyser. Avant, cette carte occupait un bloc entier de l'accueil
-            pour annoncer qu'elle n'avait rien à dire. */}
-        {history.length > 0 && (
+        {/* Récupération musculaire — même règle que les blocs promus : elle
+            reste consultable sous « Tout voir », et ne s'invite dans la partie
+            simple que quand un groupe est vraiment à la traîne. Sans séance
+            dans l'historique elle n'a rien à calculer, donc rien à afficher. */}
+        {history.length > 0 && (sectionsExpanded || !!leastRecovered) && (
         <div className="glass-card" style={recoveryCard}>
           <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconBattery size={13} /></span>Récupération musculaire</p>
           {history.length === 0 ? (

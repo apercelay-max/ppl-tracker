@@ -165,13 +165,19 @@ const DEFAULT_HOME_ORDER: HomeSectionKey[] = [
 // ils attendent derrière le bouton « Tout voir » en bas de l'écran, à un tap.
 // Léo compose lui-même cette liste depuis le mode édition de l'accueil
 // (l'étoile sur chaque widget), d'où un réglage persisté plutôt qu'une
-// constante figée. Le coach en fait partie : il s'efface déjà tout seul tant
-// qu'aucune séance n'est terminée, donc il ne coûte rien les premiers jours.
+// constante figée.
+//
+// Trois blocs seulement, choisis par Léo : ce qu'il vient faire (la prochaine
+// séance), ce que le coach a repéré, et où il en est de sa semaine. Le cycle
+// et la liste des séances passent derrière « Tout voir » — c'est ce qui
+// occupait le plus de hauteur pour de l'information qu'on ne relit pas à
+// chaque ouverture. Le coach ne coûte rien les premiers jours : il s'efface
+// déjà tout seul tant qu'aucune séance n'est terminée.
 const DEFAULT_HOME_ESSENTIALS: Record<HomeSectionKey, boolean> = {
-coach: true, nextSession: true, cycle: true, seances: true, weeklyGoal: true,
-lastSession: false, weeklyStats: false, nutrition: false, supersetRule: false,
-muscleAlert: false, cardio: false, bodyWeight: false, personalRecord: false,
-exerciseProgress: false, plateau: false,
+coach: true, nextSession: true, weeklyGoal: true,
+cycle: false, seances: false, lastSession: false, weeklyStats: false,
+nutrition: false, supersetRule: false, muscleAlert: false, cardio: false,
+bodyWeight: false, personalRecord: false, exerciseProgress: false, plateau: false,
 };
 
 // kcal/h par défaut pour chaque type d'activité cardio (utilisées pour

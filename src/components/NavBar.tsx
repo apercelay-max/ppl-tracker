@@ -65,6 +65,17 @@ const TABS: { id: NavView; label: string }[] = [
 // Une phrase courte par onglet, affichée sous le libellé dans le menu "Plus".
 // Le menu en liste laisse la place pour ça (la grille d'icônes, non), et ça
 // évite d'avoir à deviner ce que contient un onglet qu'on ouvre rarement.
+// En mode simple, la barre ne garde que ces destinations (Réglages s'y
+// ajoute toujours, voir pinnedTabs). Les autres ne disparaissent pas : elles
+// basculent dans le menu « Plus » qui existe déjà juste en dessous, et
+// repasser en mode perso les remet exactement où elles étaient.
+//
+// Deux seulement, pas trois : avec Réglages et le bouton « Plus » ça fait
+// quatre emplacements, soit exactement ce que la barre peut tenir à côté du
+// bouton de lancement sur un écran de 375 px. À cinq, le bandeau « barre trop
+// chargée » se déclenchait — une alerte dans le mode censé être le plus calme.
+const SIMPLE_PINNED_TABS: NavView[] = ['home', 'dashboard'];
+
 const TAB_HINTS: Record<NavView, string> = {
 home: 'Ta séance du jour',
 objectifs: 'Objectifs et schéma corporel',
@@ -152,6 +163,7 @@ export const NavBar: React.FC<NavBarProps> = ({ active, onNavigate, onStartSessi
 const [refraction, setRefraction] = useState(false);
 useEffect(() => { setRefraction(supportsLiquidRefraction()); }, []);
 const navBarTabsEnabled = useWorkoutStore((s) => s.navBarTabsEnabled);
+const simplicityMode = useWorkoutStore((s) => s.simplicityMode);
 const navBarPinned = useWorkoutStore((s) => s.navBarPinned);
 const setNavBarTabPinned = useWorkoutStore((s) => s.setNavBarTabPinned);
 const [moreOpen, setMoreOpen] = useState(false);
@@ -170,8 +182,13 @@ const visibleTabs = TABS.filter((tab) => tab.id === 'settings' || navBarTabsEnab
 // Apparence → Barre de menus), pratique quand la barre est trop chargée.
 // "Réglages" reste toujours épinglé — sinon on perdrait l'accès au réglage
 // qui permet justement de gérer cette répartition.
-const pinnedTabs = visibleTabs.filter((tab) => tab.id === 'settings' || navBarPinned[tab.id]);
-const overflowTabs = visibleTabs.filter((tab) => tab.id !== 'settings' && !navBarPinned[tab.id]);
+// Le mode simple court-circuite la répartition manuelle : dix onglets dans
+// une barre de 375 px, ça fait 37 px chacun. Il en reste quatre, le reste
+// passe derrière « Plus » sans rien perdre.
+const isPinned = (tab: { id: NavView }) =>
+simplicityMode ? SIMPLE_PINNED_TABS.includes(tab.id) : navBarPinned[tab.id];
+const pinnedTabs = visibleTabs.filter((tab) => tab.id === 'settings' || isPinned(tab));
+const overflowTabs = visibleTabs.filter((tab) => tab.id !== 'settings' && !isPinned(tab));
 const isOverflowActive = overflowTabs.some((tab) => tab.id === active);
 
 useEffect(() => { setMoreOpen(false); }, [active]);
