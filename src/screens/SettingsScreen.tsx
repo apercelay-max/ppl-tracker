@@ -56,6 +56,8 @@ return `${m}:${s.toString().padStart(2, '0')}`;
 interface SettingsScreenProps {
 onBack: () => void;
 onOpenAccount: () => void;
+/** Relance le quiz de démarrage (voir components/OnboardingQuiz.tsx). */
+onRestartQuiz: () => void;
 syncStatus?: SyncStatus;
 lastSyncedAt?: number | null;
 }
@@ -171,7 +173,7 @@ if (diffMin < 60) return `il y a ${diffMin} min`;
 return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 };
 
-export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAccount, syncStatus, lastSyncedAt }) => {
+export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAccount, onRestartQuiz, syncStatus, lastSyncedAt }) => {
 const { user, loading: authLoading } = useAuth();
 const handleSignOut = () => { supabase?.auth.signOut(); };
 const accentTheme = useWorkoutStore((s) => s.accentTheme);
@@ -625,6 +627,24 @@ title="Supprimer ce programme importé"
 );
 })}
 </div>
+
+{/* Quiz de démarrage — rejouable à tout moment. Placé juste sous la
+liste des programmes : c'est le raccourci pour s'en faire un nouveau
+sans passer par le générateur et ses réglages un par un. */}
+<button onClick={onRestartQuiz} style={quizBtn}>
+<span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+<span style={quizIcon}><IconSparkles size={16} /></span>
+<span style={{ textAlign: 'left' }}>
+<span style={{ display: 'block', color: 'var(--text-primary)', fontSize: 13.5, fontWeight: 700 }}>
+Refaire le quiz de démarrage
+</span>
+<span style={{ display: 'block', color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+Objectif, niveau, matériel, blessures — et un nouveau programme construit pour toi. Rien n'est supprimé.
+</span>
+</span>
+</span>
+<IconArrowRight size={15} />
+</button>
 
 {/* Temps de repos par défaut */}
 <p style={subLabel}>TEMPS DE REPOS PAR DÉFAUT</p>
@@ -1676,6 +1696,16 @@ display: 'flex', alignItems: 'center', justifyContent: 'center',
 const programCard: React.CSSProperties = {
 flex: 1, textAlign: 'left', borderRadius: 14, padding: '12px 14px',
 cursor: 'pointer', transition: 'background 0.2s, border-color 0.2s',
+};
+const quizBtn: React.CSSProperties = {
+display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+width: '100%', padding: '13px 14px', marginBottom: 20, borderRadius: 14, cursor: 'pointer',
+background: 'var(--bg-surface)', border: '1px solid var(--border-mid)', color: 'var(--text-muted)',
+};
+const quizIcon: React.CSSProperties = {
+width: 34, height: 34, borderRadius: 12, flexShrink: 0,
+display: 'flex', alignItems: 'center', justifyContent: 'center',
+background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))', color: '#fff',
 };
 const programDeleteBtn: React.CSSProperties = {
 width: 32, borderRadius: 10, flexShrink: 0,

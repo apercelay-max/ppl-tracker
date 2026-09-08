@@ -541,3 +541,20 @@ export const ZONE_LABELS: Record<SoreZone, string> = {
   lombaires: 'Lombaires',
   genou: 'Genou',
 };
+
+/**
+ * Exercices du catalogue à écarter d'office quand une articulation est
+ * sensible (utilisé par le quiz de démarrage, qui construit un programme
+ * complet au lieu d'adapter une séance déjà écrite).
+ *
+ * On réutilise exactement les mêmes règles que l'adaptation de séance
+ * (`ZONE_RULES`) pour qu'une zone déclarée sensible veuille dire la même
+ * chose partout dans l'appli.
+ */
+export const catalogIdsToAvoid = (zones: SoreZone[]): string[] => {
+  if (zones.length === 0) return [];
+  const risky = zones.map((z) => ZONE_RULES[z].risky);
+  return EXERCISE_CATALOG
+    .filter((ex) => risky.some((r) => r.test(ex.name)))
+    .map((ex) => ex.id);
+};

@@ -6,6 +6,7 @@ import { applyAdaptation, type Gym, type GymProfile, type SessionAdaptation } fr
 import { Program } from '../data/programs';
 import { bucketByWeek, computeTonnage } from '../utils/training';
 import { getNextStep } from '../utils/supersets';
+import type { TrainingProfile } from '../utils/onboardingQuiz';
 
 const notifSupported = typeof Notification !== 'undefined';
 let notifTimeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -317,6 +318,11 @@ hasCompletedOnboarding: boolean;
 // depuis Réglages → Apparence → "Réglages avancés", pas figé après le choix
 // initial.
 simplicityMode: boolean;
+// Réponses du quiz de démarrage (objectif, niveau, matériel, blessures...) —
+// null tant que le quiz n'a jamais été rempli. Sert à pré-remplir le quiz
+// quand on le refait et à expliquer d'où vient le programme généré (voir
+// components/OnboardingQuiz.tsx et utils/onboardingQuiz.ts).
+trainingProfile: TrainingProfile | null;
 startSession: (dayId: string, adaptation?: SessionAdaptation | null, gymId?: string) => void;
 completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
 editSet: (exerciseId: string, setIndex: number) => void;
@@ -401,6 +407,7 @@ setUltraAnimationStyle: (style: 'confetti' | 'fireworks' | 'sparkles') => void;
 setUltraTransitionStyle: (style: 'bounce' | 'slide' | 'zoom' | 'flip') => void;
 setSimplicityMode: (enabled: boolean) => void;
 completeOnboarding: (choice: 'perso' | 'simple') => void;
+saveTrainingProfile: (profile: TrainingProfile) => void;
 }
 
 // Recalcule le registre des séances importées (voir data/workouts.ts →
@@ -499,6 +506,7 @@ ultraAnimationStyle: 'confetti',
 ultraTransitionStyle: 'bounce',
 hasCompletedOnboarding: false,
 simplicityMode: false,
+trainingProfile: null,
 
 startSession: (dayId, adaptation = null, gymId) => {
 // On part TOUJOURS de la séance du programme, jamais d'une éventuelle
@@ -1116,6 +1124,8 @@ setUltraTransitionStyle: (style) => set({ ultraTransitionStyle: style }),
 setSimplicityMode: (enabled) => set({ simplicityMode: enabled }),
 // Appelé une seule fois, depuis OnboardingModal, au tout premier lancement.
 completeOnboarding: (choice) => set({ hasCompletedOnboarding: true, simplicityMode: choice === 'simple' }),
+
+saveTrainingProfile: (profile) => set({ trainingProfile: profile }),
 }),
 {
 name: 'ppl-tracker-store',
@@ -1176,6 +1186,7 @@ ultraAnimationStyle: state.ultraAnimationStyle,
 ultraTransitionStyle: state.ultraTransitionStyle,
 hasCompletedOnboarding: state.hasCompletedOnboarding,
 simplicityMode: state.simplicityMode,
+trainingProfile: state.trainingProfile,
 }),
 // Merge personnalisé : par défaut, zustand/persist remplace entièrement
 // les objets imbriqués (homeSections, homeSectionOrder) par la version
@@ -1273,6 +1284,7 @@ merged.hasCompletedOnboarding = p.hasCompletedOnboarding ?? hadPriorState;
 merged.weightUnit = p.weightUnit ?? 'kg';
     merged.weightUnitToggleStyle = p.weightUnitToggleStyle ?? 'toast';
 merged.simplicityMode = p.simplicityMode ?? false;
+merged.trainingProfile = p.trainingProfile ?? null;
 
 return merged;
 },

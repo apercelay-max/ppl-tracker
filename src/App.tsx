@@ -19,7 +19,7 @@ import { NavBar } from './components/NavBar';
 import type { NavView } from './components/NavBar';
 import { SplashScreen } from './components/SplashScreen';
 import { SyncConflictModal } from './components/SyncConflictModal';
-import { OnboardingModal } from './components/OnboardingModal';
+import { OnboardingQuiz } from './components/OnboardingQuiz';
 import { useWorkoutStore } from './store/workoutStore';
 import { useCloudSync } from './hooks/useCloudSync';
 import { getAccent, hexToRgbTriplet } from './data/accents';
@@ -58,10 +58,13 @@ const highContrast = useWorkoutStore((s) => s.highContrast);
 const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
 const ultraAnimationsEnabled = useWorkoutStore((s) => s.ultraAnimationsEnabled);
 const ultraTransitionStyle = useWorkoutStore((s) => s.ultraTransitionStyle);
-// Écran "Personnalisation ou simplicité", affiché une seule fois au tout
-// premier lancement (voir OnboardingModal.tsx et workoutStore.ts).
+// Quiz de démarrage (objectif, niveau, matériel...), affiché une seule fois
+// au tout premier lancement — voir OnboardingQuiz.tsx et workoutStore.ts.
+// Il est aussi rejouable depuis les Réglages : dans ce cas `quizOpen` le
+// rouvre par-dessus l'écran courant, avec un bouton pour en ressortir.
 const hasCompletedOnboarding = useWorkoutStore((s) => s.hasCompletedOnboarding);
-const completeOnboarding = useWorkoutStore((s) => s.completeOnboarding);
+const trainingProfile = useWorkoutStore((s) => s.trainingProfile);
+const [quizOpen, setQuizOpen] = useState(false);
 
 // Synchro cloud (Supabase) — se met en route toute seule dès qu'un
 // utilisateur est connecté (voir hooks/useCloudSync.ts). Le modal de
@@ -232,6 +235,7 @@ screen = (
 <SettingsScreen
 onBack={handleBackFromSettings}
 onOpenAccount={handleOpenAccount}
+onRestartQuiz={() => { setView(settingsReturnView); setQuizOpen(true); }}
 syncStatus={sync.status}
 lastSyncedAt={sync.lastSyncedAt}
 />
@@ -273,8 +277,12 @@ hasSessionInProgress={!!session && !session.isComplete}
 />
 )}
 {splashVisible && <SplashScreen fadingOut={splashFading} />}
-{!hasCompletedOnboarding && (
-<OnboardingModal onChoose={(choice) => completeOnboarding(choice)} />
+{(!hasCompletedOnboarding || quizOpen) && (
+<OnboardingQuiz
+initialProfile={trainingProfile}
+canDismiss={quizOpen}
+onClose={() => setQuizOpen(false)}
+/>
 )}
 {sync.status === 'conflict' && sync.conflict && (
 <SyncConflictModal
