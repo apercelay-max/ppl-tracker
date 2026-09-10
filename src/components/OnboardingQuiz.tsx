@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { CATALOG_EQUIPMENT, CATALOG_GROUPS, type Equipment } from '../data/exercisesCatalog';
 import { ZONE_LABELS, type SoreZone } from '../utils/gymAdapt';
@@ -774,26 +774,42 @@ const IntroLine: React.FC<{ icon: React.ReactNode; text: string }> = ({ icon, te
 const NumberField: React.FC<{
   label: string; value: number | null; onChange: (v: number | null) => void;
   placeholder: string; min: number; max: number;
-}> = ({ label, value, onChange, placeholder, min, max }) => (
-  <div style={{ flex: 1, minWidth: 0 }}>
-    <p style={fieldLabel}>{label}</p>
-    <input
-      type="number"
-      inputMode="numeric"
-      value={value ?? ''}
-      min={min}
-      max={max}
-      onChange={(e) => {
-        const n = parseFloat(e.target.value);
-        // Une saisie vide efface la valeur au lieu d'enregistrer NaN, et on
-        // ne retient rien d'aberrant (doigt qui glisse sur le pavé).
-        onChange(Number.isFinite(n) && n >= min && n <= max ? n : null);
-      }}
-      placeholder={placeholder}
-      style={{ ...textInput, marginBottom: 0 }}
-    />
-  </div>
-);
+}> = ({ label, value, onChange, placeholder, min, max }) => {
+  // Texte affiché géré à part de la valeur validée : un champ contrôlé
+  // directement par `value ?? ''` se réinitialise à vide à chaque frappe qui
+  // sort de la plage, y compris un simple préfixe en cours de saisie (ex.
+  // taper "1" puis "0" pour un âge dont le minimum est 10 efface le "1" avant
+  // que le "0" n'ait pu s'ajouter) — il devient alors impossible de saisir la
+  // plupart des valeurs au clavier. Le texte local suit toujours la frappe ;
+  // seule la valeur transmise au parent est validée par rapport à min/max.
+  const [text, setText] = useState(value !== null ? String(value) : '');
+  useEffect(() => {
+    if (value !== null && value !== parseFloat(text)) setText(String(value));
+  }, [value]);
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <p style={fieldLabel}>{label}</p>
+      <input
+        type="number"
+        inputMode="numeric"
+        value={text}
+        min={min}
+        max={max}
+        onChange={(e) => {
+          const raw = e.target.value;
+          setText(raw);
+          const n = parseFloat(raw);
+          // Une saisie vide ou hors plage n'enregistre rien pour le parent
+          // (pas de NaN, rien d'aberrant type doigt qui glisse sur le pavé),
+          // mais le texte affiché, lui, garde ce qui a été tapé.
+          onChange(Number.isFinite(n) && n >= min && n <= max ? n : null);
+        }}
+        placeholder={placeholder}
+        style={{ ...textInput, marginBottom: 0 }}
+      />
+    </div>
+  );
+};
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
