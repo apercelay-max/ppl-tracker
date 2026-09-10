@@ -854,8 +854,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
         {/* Récupération musculaire — même règle que les blocs promus : elle
             reste consultable sous « Tout voir », et ne s'invite dans la partie
             simple que quand un groupe est vraiment à la traîne. Sans séance
-            dans l'historique elle n'a rien à calculer, donc rien à afficher. */}
-        {history.length > 0 && (sectionsExpanded || !!leastRecovered) && (
+            dans l'historique elle n'a rien à calculer, donc rien à afficher.
+            `leastRecovered` désigne le groupe le PIRE parmi ceux déjà
+            travaillés, ce qui existe dès la première séance même si ce
+            groupe est en fait totalement récupéré (`recovered: true`) — il
+            faut donc bien vérifier `recovered`, pas juste la présence d'un
+            groupe, sinon la carte reste promue en permanence. */}
+        {history.length > 0 && (sectionsExpanded || (!!leastRecovered && !leastRecovered.recovered)) && (
         <div className="glass-card" style={recoveryCard}>
           <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconBattery size={13} /></span>Récupération musculaire</p>
           {history.length === 0 ? (
