@@ -580,7 +580,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
       return;
     }
     if (upstream.status === 429) {
-      fail(res, 429, 'QUOTA_DEPASSE', 'Le quota gratuit du coach IA est atteint pour aujourd’hui. Le coach local reste disponible.');
+      // Mesuré : ce 429 est le plus souvent la limite PAR MINUTE, pas le
+      // quota du jour — une requête normale repasse quelques dizaines de
+      // secondes plus tard. Le message ne doit donc pas annoncer une panne
+      // jusqu'à demain.
+      fail(res, 429, 'QUOTA_DEPASSE', 'Trop de demandes d’un coup : attends une minute et réessaie. Si ça continue, c’est le quota du jour qui est atteint — le coach local reste disponible.');
       return;
     }
     if (upstream.status === 504) {
