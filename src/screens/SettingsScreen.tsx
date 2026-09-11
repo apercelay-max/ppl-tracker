@@ -44,6 +44,7 @@ const NAV_TAB_META: { id: NavTabKey; label: string; Icon: React.FC<{ size?: numb
 { id: 'exercices', label: 'Exercices', Icon: IconDumbbell },
 { id: 'poids', label: 'Poids', Icon: IconScale },
 { id: 'dashboard', label: 'Stats', Icon: IconBarChart },
+{ id: 'coach', label: 'Coach', Icon: IconSparkles },
 { id: 'profil', label: 'Profil', Icon: IconUser },
 ];
 

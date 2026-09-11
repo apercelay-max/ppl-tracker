@@ -13,6 +13,7 @@ import { ActivityScreen } from './screens/ActivityScreen';
 import { ExercicesScreen } from './screens/ExercicesScreen';
 import { CatalogueScreen } from './screens/CatalogueScreen';
 import { PoidsScreen } from './screens/PoidsScreen';
+import { CoachScreen } from './screens/CoachScreen';
 import { ProfilScreen } from './screens/ProfilScreen';
 import { AuthScreen } from './screens/AuthScreen';
 import { NavBar } from './components/NavBar';
@@ -28,7 +29,7 @@ import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 
 type View =
 | 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'historique'
-| 'cardio' | 'activite' | 'exercices' | 'catalogue' | 'poids' | 'profil' | 'auth';
+| 'cardio' | 'activite' | 'exercices' | 'catalogue' | 'poids' | 'coach' | 'profil' | 'auth';
 
 // Durée d'affichage du splash "PPL" au démarrage, avant le fondu de sortie
 // (voir .splash-fade dans index.css). Volontairement court pour ne pas
@@ -226,6 +227,8 @@ screen = <CatalogueScreen onBack={handleBack} />;
 screen = <ExercicesScreen onBack={handleBack} />;
 } else if (view === 'poids') {
 screen = <PoidsScreen onBack={handleBack} />;
+} else if (view === 'coach') {
+screen = <CoachScreen onBack={handleBack} />;
 } else if (view === 'profil') {
 screen = <ProfilScreen onBack={handleBack} />;
 } else if (view === 'auth') {
@@ -246,7 +249,7 @@ screen = <HomeScreen onSelectDay={handleSelectDay} onOpenDashboard={handleOpenDa
 
 // La barre ne s'affiche jamais pendant une séance (intro/session) — même
 // activée dans les Réglages, elle distrairait pendant l'entraînement.
-const NAV_VIEWS: View[] = ['home', 'objectifs', 'historique', 'cardio', 'exercices', 'catalogue', 'poids', 'dashboard', 'profil', 'settings'];
+const NAV_VIEWS: View[] = ['home', 'objectifs', 'historique', 'cardio', 'exercices', 'catalogue', 'poids', 'dashboard', 'coach', 'profil', 'settings'];
 const showNavBar = navBarEnabled && NAV_VIEWS.includes(view);
 const activeNavTab: NavView = (NAV_VIEWS.includes(view) ? view : 'home') as NavView;
 

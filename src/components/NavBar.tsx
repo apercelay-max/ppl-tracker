@@ -6,6 +6,18 @@ HomeIcon, TargetIcon, CalendarIcon, HeartPulseIcon,
 DumbbellIcon, ScaleIcon, ChartIcon, UserIcon, SlidersIcon, PlusIcon,
 } from './NavIcons';
 
+// Étincelles du Coach IA. Définie ici comme BookIcon plus bas : elle ne sert
+// qu'à la barre, et elle a besoin de la variante "filled" comme les autres.
+const SparklesIcon: React.FC<{ size?: number; filled?: boolean }> = ({ size = 22, filled }) => (
+<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+strokeWidth={filled ? 2 : 1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+<path d="M12 3l1.9 4.6L18.5 9.5 13.9 11.4 12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3Z"
+fill={filled ? 'currentColor' : 'none'} fillOpacity={filled ? 0.2 : 0} />
+<path d="M18 15l.9 2.1 2.1.9-2.1.9L18 21l-.9-2.1-2.1-.9 2.1-.9L18 15Z"
+fill={filled ? 'currentColor' : 'none'} fillOpacity={filled ? 0.2 : 0} />
+</svg>
+);
+
 // Le schéma corporel ("Corps") vit maintenant dans l'écran Objectifs (section
 // dédiée) plutôt que dans un onglet séparé — voir ObjectivesScreen.tsx.
 
@@ -58,6 +70,7 @@ const TABS: { id: NavView; label: string }[] = [
 { id: 'catalogue', label: 'Catalogue' },
 { id: 'poids', label: 'Poids' },
 { id: 'dashboard', label: 'Stats' },
+{ id: 'coach', label: 'Coach' },
 { id: 'profil', label: 'Profil' },
 { id: 'settings', label: 'Réglages' },
 ];
@@ -85,6 +98,7 @@ exercices: 'Tes exercices et tes records',
 catalogue: 'Tous les mouvements',
 poids: 'Suivi du poids de corps',
 dashboard: 'Volume, progression, graphiques',
+coach: 'Ton bilan analysé par l’IA',
 profil: 'Compte et synchronisation',
 settings: 'Apparence, barre de menus…',
 };
@@ -103,6 +117,7 @@ exercices: DumbbellIcon,
 catalogue: BookIcon,
 poids: ScaleIcon,
 dashboard: ChartIcon,
+coach: SparklesIcon,
 profil: UserIcon,
 settings: SlidersIcon,
 };

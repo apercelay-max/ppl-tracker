@@ -207,7 +207,7 @@ export const NAV_TAB_ORDER: NavTabKey[] = [
 
 const DEFAULT_NAV_TABS_ENABLED: Record<NavTabKey, boolean> = {
 home: true, objectifs: true, historique: true, cardio: true,
-exercices: true, catalogue: true, poids: true, dashboard: true, profil: true, settings: true,
+exercices: true, catalogue: true, poids: true, dashboard: true, coach: true, profil: true, settings: true,
 };
 
 // Parmi les onglets activés, ceux qui restent épinglés directement dans la
@@ -217,6 +217,9 @@ exercices: true, catalogue: true, poids: true, dashboard: true, profil: true, se
 const DEFAULT_NAV_TABS_PINNED: Record<NavTabKey, boolean> = {
 home: true, objectifs: true, historique: true, cardio: true,
 exercices: true, catalogue: true, poids: true, dashboard: true, profil: true, settings: true,
+// Pas épinglé d'origine : le Coach arrive dans le menu « Plus » pour ne pas
+// pousser un onglet hors de la barre. À épingler dans Réglages si voulu.
+coach: false,
 };
 
 // Matériel de la salle — sert au calcul des disques (« 2×10 + 2,5 par côté »)
