@@ -30,6 +30,7 @@ import type {
   CoachAiPriority,
   CoachAiResponse,
 } from '../src/utils/coachDigest';
+import type { CoachProgramView, CoachProposal } from '../src/utils/coachPatch';
 
 // ─── Types minimaux du handler ─────────────────────────────────────────────
 //
@@ -78,7 +79,10 @@ const DEFAULT_MODEL = 'gemini-3.5-flash';
 /** Au-delà, ce n'est plus un digest : c'est quelqu'un qui pousse l'historique
  *  brut (ou n'importe quoi d'autre) dans la fonction. Un digest normal fait
  *  2 à 4 Ko. */
-const MAX_BODY_BYTES = 24_000;
+// Le premier message d'une conversation porte le digest (~4 Ko), le programme
+// (~4,5 Ko) et l'index du catalogue (~12 Ko) : le plafond doit laisser passer
+// ça, tout en refusant un historique complet envoyé par erreur.
+const MAX_BODY_BYTES = 48_000;
 
 /** Longueur maximale d'une question libre. */
 const MAX_QUESTION_CHARS = 500;
@@ -122,6 +126,27 @@ INTERDITS ABSOLUS (sécurité, pas préférence)
 - Les seuils de volume à respecter sont ceux du champ "limits" du digest, pas
   ceux d'un adulte entraîné.
 
+MODIFIER LE PROGRAMME
+Quand le message de l'utilisateur arrive avec un objet "programme", tu peux
+PROPOSER des modifications, dans le champ "proposition" de ta réponse. Tu ne
+les appliques pas : l'utilisateur voit ta proposition et la valide ou la
+refuse. Règles :
+- N'utilise QUE les identifiants "id" présents dans l'objet "programme", pour
+  les séances comme pour les exercices. Un identifiant inventé est rejeté.
+- Pour ajouter ou remplacer un exercice, mets dans "catalogueId" un
+  identifiant pris TEL QUEL dans la liste « Exercices disponibles » fournie
+  avec le message (la partie avant le « | »). N'écris pas de nom libre : un
+  identifiant absent de la liste est rejeté.
+- Ne propose rien sur un exercice marqué "superset" : la paire se casserait.
+- Trois modifications au maximum par proposition, et seulement si elles
+  répondent à quelque chose de précis dans le digest (un plateau, un volume
+  au-dessus du plafond). Pas de refonte parce que ce serait « mieux ».
+- Ne propose rien du tout si la question ne le demande pas : dans ce cas,
+  réponds normalement et laisse "proposition" absent.
+- Ne décris pas les chiffres du « avant → après » dans ton texte :
+  l'application les affiche elle-même à partir du programme réel. Explique
+  seulement POURQUOI, dans le champ "raison".
+
 STYLE
 Phrases courtes. Chiffres du digest à l'appui. Une action concrète et
 faisable dès la prochaine séance.`;
@@ -159,6 +184,45 @@ const BRIEF_SCHEMA = {
     encouragement: { type: 'string' },
   },
   required: ['resume', 'points', 'encouragement'],
+} as const;
+
+// ─── Schéma de sortie du mode « chat » ─────────────────────────────────────
+//
+// Le texte de la réponse ET, éventuellement, une proposition de modification
+// du programme. Union à plat pour les opérations : les schémas acceptés par
+// l'API ne gèrent pas les unions, et `validateProposal` côté appli tolère
+// déjà les champs absents — c'est lui qui tranche, pas le schéma.
+
+const CHAT_SCHEMA = {
+  type: 'object',
+  properties: {
+    reponse: { type: 'string' },
+    proposition: {
+      type: 'object',
+      properties: {
+        titre: { type: 'string' },
+        raison: { type: 'string' },
+        ops: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              op: { type: 'string', enum: ['reglages', 'retirer', 'ajouter', 'remplacer'] },
+              jourId: { type: 'string' },
+              exerciceId: { type: 'string' },
+              series: { type: 'integer' },
+              reps: { type: 'string' },
+              reposS: { type: 'integer' },
+              catalogueId: { type: 'string' },
+            },
+            required: ['op', 'jourId'],
+          },
+        },
+      },
+      required: ['titre', 'raison', 'ops'],
+    },
+  },
+  required: ['reponse'],
 } as const;
 
 // ─── Utilitaires ───────────────────────────────────────────────────────────
@@ -227,6 +291,40 @@ const parseBrief = (text: string): CoachAiBrief | null => {
   };
 };
 
+/**
+ * Réponse du mode « chat » : du texte, et parfois une proposition de
+ * modification du programme. Si le modèle a répondu en texte brut malgré le
+ * schéma, on garde le texte — une conversation qui marche vaut mieux qu'une
+ * erreur pour un champ manquant.
+ */
+const parseChat = (text: string): { reponse: string; proposition?: CoachProposal } => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { reponse: text };
+  }
+  const raw = parsed as { reponse?: unknown; proposition?: unknown };
+  const reponse = typeof raw.reponse === 'string' && raw.reponse.trim() !== '' ? raw.reponse : text;
+
+  const p = raw.proposition as { titre?: unknown; raison?: unknown; ops?: unknown } | undefined;
+  if (!p || typeof p !== 'object' || !Array.isArray(p.ops) || p.ops.length === 0) {
+    return { reponse };
+  }
+
+  // On ne filtre rien ici : c'est `utils/coachPatch.validateProposal`, côté
+  // appli, qui confronte chaque opération au programme réel et aux limites.
+  // Le serveur ne connaît pas le programme, il ne peut pas juger.
+  return {
+    reponse,
+    proposition: {
+      titre: typeof p.titre === 'string' ? p.titre : 'Modification proposée',
+      raison: typeof p.raison === 'string' ? p.raison : '',
+      ops: p.ops as CoachProposal['ops'],
+    },
+  };
+};
+
 // ─── Handler ───────────────────────────────────────────────────────────────
 
 export default async function handler(req: ApiRequest, res: ApiResponse): Promise<void> {
@@ -256,6 +354,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
   // ── Validation ──
   const body = (req.body ?? {}) as {
     mode?: unknown; digest?: unknown; question?: unknown; apiKey?: unknown; previousInteractionId?: unknown;
+    program?: unknown; catalog?: unknown;
   };
   const mode = body.mode as CoachAiMode | undefined;
   if (mode !== 'brief' && mode !== 'chat') {
@@ -325,7 +424,18 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
     // chaque message pour rien.
     input = question;
   } else {
-    input = `${CHAT_GUARD}\n\nRésumé d'entraînement (chiffres déjà calculés par l'application) :\n${digestJson}\n\n`
+    // Le programme n'est joint qu'au premier tour, comme le digest : les
+    // tours suivants s'appuient sur l'échange gardé par Google.
+    const programJson = body.program && typeof body.program === 'object'
+      ? `\n\nProgramme actuel (identifiants à utiliser tels quels) :\n${JSON.stringify(body.program)}`
+      : '';
+    // Catalogue des exercices disponibles, au format « identifiant|Nom ». Le
+    // coach doit choisir DANS cette liste : un nom libre ne serait pas
+    // retrouvable de façon fiable côté appli.
+    const catalogJson = Array.isArray(body.catalog) && body.catalog.length > 0
+      ? `\n\nExercices disponibles, au format identifiant|Nom (choisis dedans, par identifiant) :\n${(body.catalog as unknown[]).join('\n')}`
+      : '';
+    input = `${CHAT_GUARD}\n\nRésumé d'entraînement (chiffres déjà calculés par l'application) :\n${digestJson}${programJson}${catalogJson}\n\n`
       + `Question de l'utilisateur :\n${question}`;
   }
 
@@ -353,6 +463,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
   }
   if (mode === 'brief') {
     payload.response_format = { type: 'text', mime_type: 'application/json', schema: BRIEF_SCHEMA };
+  } else {
+    payload.response_format = { type: 'text', mime_type: 'application/json', schema: CHAT_SCHEMA };
   }
 
   // ── Appel ──
@@ -440,8 +552,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
 
   if (mode === 'chat') {
     const interactionId = (parsedUpstream as { id?: unknown })?.id;
+    const { reponse, proposition } = parseChat(text);
     const answer: CoachAiResponse = {
-      ok: true, mode: 'chat', model, reponse: text,
+      ok: true, mode: 'chat', model, reponse, proposition,
       interactionId: typeof interactionId === 'string' ? interactionId : undefined,
     };
     res.status(200).json(answer);

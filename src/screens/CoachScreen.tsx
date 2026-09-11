@@ -5,13 +5,16 @@ import { useWorkoutStore } from '../store/workoutStore';
 import { getWorkout } from '../data/workouts';
 import { getProgram } from '../data/programs';
 import { buildCoachDigest, digestSizeBytes } from '../utils/coachDigest';
+import {
+  buildCatalogIndex, buildCoachProgram, buildProgramView, isCoachProgram, validateProposal,
+} from '../utils/coachPatch';
 import type { CoachAiPriority, CoachAiResponse } from '../utils/coachDigest';
 import { getCoachBrief } from '../utils/coach';
 import {
   clearChat, maskApiKey, readCachedBrief, readChat, readStoredApiKey, requestCoachAi,
   sendChatMessage, writeCachedBrief, writeChat, writeStoredApiKey,
 } from '../utils/coachAi';
-import type { CachedBrief, ChatState } from '../utils/coachAi';
+import type { CachedBrief, ChatProposal, ChatState } from '../utils/coachAi';
 
 interface CoachScreenProps { onBack: () => void; }
 
@@ -22,6 +25,11 @@ const PRIORITY_COLOR: Record<CoachAiPriority, string> = {
   moyenne: '#f59e0b',
   basse: 'var(--text-dim)',
 };
+
+// Texte déposé dans le champ par le raccourci : il n'envoie pas tout seul,
+// l'utilisateur peut le compléter avant d'appuyer sur Envoyer.
+const SUGGEST_PROMPT =
+  'Regarde mon programme et mes stats : est-ce qu\'il y a quelque chose à changer ? Propose-le-moi.';
 
 const formatWhen = (ts: number): string => {
   const mins = Math.floor((Date.now() - ts) / 60000);
@@ -40,6 +48,8 @@ export const CoachScreen: React.FC<CoachScreenProps> = ({ onBack }) => {
   const weeklySessionGoal = useWorkoutStore((s) => s.weeklySessionGoal);
   const activeProgramId = useWorkoutStore((s) => s.activeProgramId);
   const customPrograms = useWorkoutStore((s) => s.customPrograms);
+  const upsertCustomProgram = useWorkoutStore((s) => s.upsertCustomProgram);
+  const setActiveProgram = useWorkoutStore((s) => s.setActiveProgram);
 
   const [apiKey, setApiKey] = useState<string>(readStoredApiKey);
   const [keyDraft, setKeyDraft] = useState('');
@@ -69,6 +79,16 @@ export const CoachScreen: React.FC<CoachScreenProps> = ({ onBack }) => {
     programName: getProgram(activeProgramId, customPrograms).name,
     weeklySessionGoal,
   }), [history, trainingProfile, bodyWeightHistory, activeProgramId, customPrograms, weeklySessionGoal]);
+
+  // Programme actif : c'est sur LUI que les propositions sont validées puis
+  // appliquées, jamais sur une copie figée au montage de l'écran.
+  const activeProgram = useMemo(
+    () => getProgram(activeProgramId, customPrograms),
+    [activeProgramId, customPrograms]
+  );
+  const programView = useMemo(() => buildProgramView(activeProgram), [activeProgram]);
+  // Liste figée : le catalogue ne change pas à l'exécution.
+  const catalogIndex = useMemo(() => buildCatalogIndex(), []);
 
   // Repère de secours : le coach local, celui qui tourne sans réseau. Il
   // reste affiché sous le bilan IA — c'est lui qui parle pendant la séance.
@@ -124,17 +144,65 @@ export const CoachScreen: React.FC<CoachScreenProps> = ({ onBack }) => {
       question: clean,
       previousInteractionId: chat.interactionId,
       apiKey: apiKey || undefined,
+      program: programView,
+      catalog: catalogIndex,
     });
 
     if (handleResponse(response) && response.ok && response.mode === 'chat') {
+      // La proposition du modèle est confrontée au programme RÉEL avant
+      // d'être affichée : identifiants, limites ado, séance qui se viderait.
+      // Ce qui s'affiche ensuite est donc vrai par construction, même si le
+      // modèle a raconté n'importe quoi.
+      let proposition: ChatProposal | undefined;
+      if (response.proposition) {
+        const validated = validateProposal(activeProgram, response.proposition);
+        if (validated.changes.length > 0 || validated.rejets.length > 0) {
+          proposition = {
+            titre: response.proposition.titre,
+            raison: response.proposition.raison,
+            changes: validated.changes,
+            ops: validated.ops,
+            rejets: validated.rejets,
+            statut: 'en-attente',
+          };
+        }
+      }
       const withReply: ChatState = {
-        messages: [...withMine.messages, { role: 'coach', text: response.reponse, at: Date.now() }],
+        messages: [...withMine.messages, { role: 'coach', text: response.reponse, at: Date.now(), proposition }],
         interactionId: response.interactionId,
       };
       setChat(withReply);
       writeChat(withReply);
     }
     setAsking(false);
+  };
+
+  /** Marque une proposition comme traitée : elle reste visible dans la
+   *  conversation, mais ne redemande plus de décision. */
+  const settleProposal = (index: number, statut: ChatProposal['statut']) => {
+    const next: ChatState = {
+      ...chat,
+      messages: chat.messages.map((message, i) =>
+        i === index && message.proposition
+          ? { ...message, proposition: { ...message.proposition, statut } }
+          : message
+      ),
+    };
+    setChat(next);
+    writeChat(next);
+  };
+
+  const applyProposal = (index: number) => {
+    const proposition = chat.messages[index]?.proposition;
+    if (!proposition || proposition.ops.length === 0) return;
+
+    // Un programme intégré n'est pas modifiable (il vit dans le code) : on
+    // fabrique un programme personnalisé dérivé, à l'id stable, et l'original
+    // reste dans la liste pour pouvoir y revenir.
+    const updated = buildCoachProgram(activeProgram, proposition.ops);
+    upsertCustomProgram(updated);
+    if (activeProgramId !== updated.id) setActiveProgram(updated.id);
+    settleProposal(index, 'appliquee');
   };
 
   const resetChat = () => {
@@ -255,9 +323,70 @@ export const CoachScreen: React.FC<CoachScreenProps> = ({ onBack }) => {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {chat.messages.map((message, i) => (
-                <div key={i} style={message.role === 'moi' ? bubbleMineWrap : bubbleCoachWrap}>
-                  <div style={message.role === 'moi' ? bubbleMine : bubbleCoach}>{message.text}</div>
-                </div>
+                <React.Fragment key={i}>
+                  <div style={message.role === 'moi' ? bubbleMineWrap : bubbleCoachWrap}>
+                    <div style={message.role === 'moi' ? bubbleMine : bubbleCoach}>{message.text}</div>
+                  </div>
+
+                  {message.proposition && (
+                    <div style={proposalCard}>
+                      <p style={proposalTitle}>{message.proposition.titre}</p>
+                      {message.proposition.raison !== '' && (
+                        <p style={proposalReason}>{message.proposition.raison}</p>
+                      )}
+
+                      {message.proposition.changes.map((change, c) => (
+                        <div key={c} style={changeRow}>
+                          <span style={changeDay}>{change.jour}</span>
+                          <span style={{ color: 'var(--text-primary)', fontSize: 12.5, fontWeight: 600 }}>
+                            {change.exercice}
+                          </span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                            {change.champ}
+                            {change.avant !== undefined && change.apres !== undefined
+                              ? ` : ${change.avant} → ${change.apres}`
+                              : change.apres !== undefined ? ` ${change.apres}` : ''}
+                          </span>
+                        </div>
+                      ))}
+
+                      {message.proposition.rejets.length > 0 && (
+                        <div style={rejectBlock}>
+                          {message.proposition.rejets.map((rejet, r) => (
+                            <p key={r} style={{ color: 'var(--text-dim)', fontSize: 11.5, lineHeight: 1.4 }}>
+                              Pas appliqué : {rejet}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+
+                      {message.proposition.statut === 'en-attente' && message.proposition.ops.length > 0 ? (
+                        <>
+                          {!isCoachProgram(activeProgramId) && (
+                            <p style={{ color: 'var(--text-dim)', fontSize: 11.5, lineHeight: 1.4, marginTop: 10 }}>
+                              « {activeProgram.name} » restera dans ta liste de programmes, intact. Le cycle
+                              repartira à la première séance.
+                            </p>
+                          )}
+                          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                            <button type="button" onClick={() => applyProposal(i)} style={applyBtn}>
+                              Appliquer
+                            </button>
+                            <button type="button" onClick={() => settleProposal(i, 'refusee')} style={refuseBtn}>
+                              Refuser
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <p style={{ color: 'var(--text-dim)', fontSize: 11.5, marginTop: 10 }}>
+                          {message.proposition.statut === 'appliquee' ? 'Appliqué à ton programme.'
+                            : message.proposition.statut === 'refusee' ? 'Refusé, rien n’a changé.'
+                            : 'Rien d’applicable là-dedans.'}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </React.Fragment>
               ))}
               {asking && (
                 <div style={bubbleCoachWrap}>
@@ -283,6 +412,15 @@ export const CoachScreen: React.FC<CoachScreenProps> = ({ onBack }) => {
             style={{ ...primaryBtn, marginTop: 8, opacity: asking || !question.trim() ? 0.55 : 1 }}
           >
             {asking ? 'Le coach réfléchit…' : 'Envoyer'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setQuestion(SUGGEST_PROMPT); chatInputRef.current?.focus(); }}
+            disabled={asking}
+            style={suggestBtn}
+          >
+            Propose-moi des changements sur mon programme
           </button>
         </div>
 
@@ -437,6 +575,43 @@ const bubbleCoach: React.CSSProperties = {
   ...bubbleBase,
   background: 'var(--bg-elevated)', border: '1px solid var(--border)',
   color: 'var(--text-primary)', borderBottomLeftRadius: 5,
+};
+const proposalCard: React.CSSProperties = {
+  background: 'var(--bg-surface)', border: '1px solid var(--brand-1)',
+  borderRadius: 14, padding: '12px 13px', marginTop: 2,
+};
+const proposalTitle: React.CSSProperties = {
+  color: 'var(--text-primary)', fontSize: 13, fontWeight: 800,
+};
+const proposalReason: React.CSSProperties = {
+  color: 'var(--text-muted)', fontSize: 12.5, lineHeight: 1.45, marginTop: 4,
+};
+const changeRow: React.CSSProperties = {
+  display: 'flex', flexDirection: 'column', gap: 1,
+  marginTop: 10, paddingTop: 9, borderTop: '1px solid var(--border-subtle)',
+};
+const changeDay: React.CSSProperties = {
+  color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1,
+  textTransform: 'uppercase',
+};
+const rejectBlock: React.CSSProperties = {
+  marginTop: 10, paddingTop: 9, borderTop: '1px solid var(--border-subtle)',
+  display: 'flex', flexDirection: 'column', gap: 3,
+};
+const applyBtn: React.CSSProperties = {
+  flex: 1, background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))',
+  borderRadius: 10, padding: '10px 12px', color: '#fff',
+  fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+};
+const refuseBtn: React.CSSProperties = {
+  flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+  borderRadius: 10, padding: '10px 12px', color: 'var(--text-muted)',
+  fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+};
+const suggestBtn: React.CSSProperties = {
+  width: '100%', marginTop: 8, background: 'transparent',
+  border: '1px solid var(--border-strong)', borderRadius: 10, padding: '9px 12px',
+  color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer',
 };
 const keyRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,

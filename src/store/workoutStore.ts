@@ -425,6 +425,12 @@ addBodyWeightEntry: (weightKg: number) => void;
 deleteBodyWeightEntry: (id: string) => void;
 setActiveProgram: (id: string) => void;
 addCustomProgram: (program: Program) => void;
+// Remplace le programme de même id s'il existe, sinon l'ajoute. Sert au
+// programme « ajusté par le coach », qui garde un id stable d'une
+// validation à l'autre : avec addCustomProgram on empilerait des copies, et
+// avec remove+add on repasserait par setActiveProgram, qui remet le cycle à
+// zéro (cycleDoneIds).
+upsertCustomProgram: (program: Program) => void;
 removeCustomProgram: (id: string) => void;
 setBadgesEnabled: (enabled: boolean) => void;
 setHapticsEnabled: (enabled: boolean) => void;
@@ -1133,6 +1139,17 @@ setActiveProgram: (id) => set({ activeProgramId: id, cycleDoneIds: [] }),
 addCustomProgram: (program) => {
 set((state) => {
 const customPrograms = [...state.customPrograms, program];
+syncCustomWorkoutsRegistry(customPrograms);
+return { customPrograms };
+});
+},
+
+upsertCustomProgram: (program) => {
+set((state) => {
+const exists = state.customPrograms.some((p) => p.id === program.id);
+const customPrograms = exists
+? state.customPrograms.map((p) => (p.id === program.id ? program : p))
+: [...state.customPrograms, program];
 syncCustomWorkoutsRegistry(customPrograms);
 return { customPrograms };
 });

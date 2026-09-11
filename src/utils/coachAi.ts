@@ -12,6 +12,7 @@ import { buildCoachDigest } from './coachDigest';
 import type {
   CoachAiBrief, CoachAiRequest, CoachAiResponse, CoachDigest, CoachDigestInput,
 } from './coachDigest';
+import type { CoachPatchOp, CoachProgramView, PatchChange } from './coachPatch';
 
 export const COACH_AI_ENDPOINT = '/api/coach';
 
@@ -151,10 +152,25 @@ export const requestCoachAi = async (request: CoachAiRequest): Promise<CoachAiRe
 // tout seul sur une conversation neuve avec le digest — l'utilisateur ne voit
 // qu'une réponse qui arrive normalement.
 
+/** Proposition de modification attachée à un message du coach, DÉJÀ passée
+ *  par `validateProposal` : `changes` est calculé à partir du programme réel,
+ *  `rejets` dit ce qui a été écarté. Rien n'est appliqué avant que
+ *  l'utilisateur appuie sur « Appliquer » — d'où le statut, gardé avec la
+ *  conversation pour qu'un message déjà traité ne redemande pas une décision. */
+export interface ChatProposal {
+  titre: string;
+  raison: string;
+  changes: PatchChange[];
+  ops: CoachPatchOp[];
+  rejets: string[];
+  statut: 'en-attente' | 'appliquee' | 'refusee';
+}
+
 export interface ChatMessage {
   role: 'moi' | 'coach';
   text: string;
   at: number;
+  proposition?: ChatProposal;
 }
 
 export interface ChatState {
@@ -207,19 +223,31 @@ interface SendChatOptions {
   question: string;
   previousInteractionId?: string;
   apiKey?: string;
+  /** Programme actuel : joint uniquement quand la conversation démarre, sinon
+   *  on le renverrait à chaque message pour rien. Sans lui, le coach ne peut
+   *  proposer aucune modification (il n'a pas les identifiants réels). */
+  program?: CoachProgramView;
+  /** Index du catalogue (`buildCatalogIndex`), premier tour seulement : sans
+   *  lui le coach ne peut pas désigner un exercice existant. */
+  catalog?: string[];
 }
 
 /** Envoie un message de la conversation. Repart d'une conversation neuve, une
  *  seule fois, si Google a oublié l'échange précédent. */
 export const sendChatMessage = async (options: SendChatOptions): Promise<CoachAiResponse> => {
-  const { digest, question, previousInteractionId, apiKey } = options;
+  const { digest, question, previousInteractionId, apiKey, program, catalog } = options;
 
   const first = await requestCoachAi({
     mode: 'chat', digest, question, previousInteractionId, apiKey,
+    // Premier tour seulement.
+    program: previousInteractionId ? undefined : program,
+    catalog: previousInteractionId ? undefined : catalog,
   });
 
   if (!first.ok && first.code === 'CONVERSATION_PERDUE') {
-    return requestCoachAi({ mode: 'chat', digest, question, apiKey });
+    // Conversation neuve : le programme repart avec, sinon le coach perdrait
+    // la capacité de proposer des modifications au milieu d'une discussion.
+    return requestCoachAi({ mode: 'chat', digest, question, apiKey, program, catalog });
   }
   return first;
 };

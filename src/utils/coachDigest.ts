@@ -18,6 +18,7 @@
 // qu'on peut appeler dans un test avec un historique fabriqué.
 
 import type { BodyWeightEntry, HistoryEntry, WorkoutDay } from '../data/types';
+import type { CoachProgramView, CoachProposal } from './coachPatch';
 import type { TrainingProfile } from './onboardingQuiz';
 import { EXPERIENCE_LABELS, GOAL_LABELS } from './onboardingQuiz';
 import { COACH_LIMITS } from './coach';
@@ -191,6 +192,13 @@ export interface CoachAiRequest {
   digest: CoachDigest;
   /** Question libre de l'utilisateur. Obligatoire en mode « chat ». */
   question?: string;
+  /** Programme actuel, en mode « chat » et au premier tour seulement : sans
+   *  lui le coach ne peut rien proposer de modifiable, faute d'identifiants
+   *  réels. Construit par `utils/coachPatch.buildProgramView`. */
+  program?: CoachProgramView;
+  /** Index du catalogue au format « identifiant|Nom », premier tour du chat
+   *  seulement. Le coach doit choisir un exercice DEDANS. */
+  catalog?: string[];
   /** Conversation en cours (mode « chat ») : identifiant de l'échange
    *  précédent, renvoyé par l'API. C'est Google qui garde l'historique — on
    *  ne réexpédie donc ni les messages passés ni le digest à chaque tour. */
@@ -241,7 +249,13 @@ export type CoachAiErrorCode =
 
 export type CoachAiResponse =
   | { ok: true; mode: 'brief'; model: string; brief: CoachAiBrief }
-  | { ok: true; mode: 'chat'; model: string; reponse: string; interactionId?: string }
+  | {
+      ok: true; mode: 'chat'; model: string; reponse: string; interactionId?: string;
+      /** Modification de programme suggérée. BRUTE : rien n'est validé à ce
+       *  stade — il faut la passer par `validateProposal` avant de l'afficher,
+       *  et ne jamais l'appliquer sans accord de l'utilisateur. */
+      proposition?: CoachProposal;
+    }
   | { ok: false; code: CoachAiErrorCode; message: string };
 
 // ─── Petits utilitaires ────────────────────────────────────────────────────
