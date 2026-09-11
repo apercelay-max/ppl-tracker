@@ -133,10 +133,17 @@ les appliques pas : l'utilisateur voit ta proposition et la valide ou la
 refuse. Règles :
 - N'utilise QUE les identifiants "id" présents dans l'objet "programme", pour
   les séances comme pour les exercices. Un identifiant inventé est rejeté.
-- Pour ajouter ou remplacer un exercice, mets dans "catalogueId" un
-  identifiant pris TEL QUEL dans la liste « Exercices disponibles » fournie
-  avec le message (la partie avant le « | »). N'écris pas de nom libre : un
-  identifiant absent de la liste est rejeté.
+- La proposition a deux tableaux, à remplir selon le cas :
+  "reglages" pour changer des séries, des répétitions ou un repos sur un
+  exercice déjà présent ("jourId" + "exerciceId" + les champs qui changent) ;
+  "echanges" pour ajouter, remplacer ou retirer un exercice.
+- Dans "echanges", "catalogueId" est OBLIGATOIRE pour ajouter et remplacer :
+  un identifiant pris TEL QUEL dans la liste « Exercices disponibles » fournie
+  avec le message (la partie avant le « | »). N'écris jamais un nom libre à la
+  place. Pour remplacer et retirer, ajoute aussi "exerciceId", l'exercice du
+  programme concerné.
+- N'annonce pas dans ton texte un changement que tu n'as pas mis dans les
+  tableaux : l'utilisateur verrait une promesse sans le bouton qui va avec.
 - Ne propose rien sur un exercice marqué "superset" : la paire se casserait.
 - Trois modifications au maximum par proposition, et seulement si elles
   répondent à quelque chose de précis dans le digest (un plateau, un volume
@@ -202,24 +209,44 @@ const CHAT_SCHEMA = {
       properties: {
         titre: { type: 'string' },
         raison: { type: 'string' },
-        ops: {
+        // Deux tableaux séparés, et pas un seul tableau d'opérations à champs
+        // optionnels : mesuré en vrai, avec un tableau unique le modèle
+        // annonçait un remplacement dans son texte mais oubliait le
+        // "catalogueId", donc l'appli le rejetait. Un schéma ne sait pas
+        // exiger un champ selon la valeur d'un autre — en séparant, le champ
+        // devient obligatoire par construction.
+        reglages: {
           type: 'array',
           items: {
             type: 'object',
             properties: {
-              op: { type: 'string', enum: ['reglages', 'retirer', 'ajouter', 'remplacer'] },
               jourId: { type: 'string' },
               exerciceId: { type: 'string' },
               series: { type: 'integer' },
               reps: { type: 'string' },
               reposS: { type: 'integer' },
+            },
+            required: ['jourId', 'exerciceId'],
+          },
+        },
+        echanges: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              op: { type: 'string', enum: ['ajouter', 'remplacer', 'retirer'] },
+              jourId: { type: 'string' },
+              /** Exercice du programme visé — pour remplacer et retirer. */
+              exerciceId: { type: 'string' },
+              /** Identifiant pris dans la liste fournie — pour ajouter et
+               *  remplacer. Obligatoire ici, c'est tout l'intérêt. */
               catalogueId: { type: 'string' },
             },
-            required: ['op', 'jourId'],
+            required: ['op', 'jourId', 'catalogueId'],
           },
         },
       },
-      required: ['titre', 'raison', 'ops'],
+      required: ['titre', 'raison'],
     },
   },
   required: ['reponse'],
@@ -307,20 +334,32 @@ const parseChat = (text: string): { reponse: string; proposition?: CoachProposal
   const raw = parsed as { reponse?: unknown; proposition?: unknown };
   const reponse = typeof raw.reponse === 'string' && raw.reponse.trim() !== '' ? raw.reponse : text;
 
-  const p = raw.proposition as { titre?: unknown; raison?: unknown; ops?: unknown } | undefined;
-  if (!p || typeof p !== 'object' || !Array.isArray(p.ops) || p.ops.length === 0) {
-    return { reponse };
-  }
+  const p = raw.proposition as {
+    titre?: unknown; raison?: unknown; reglages?: unknown; echanges?: unknown; ops?: unknown;
+  } | undefined;
+  if (!p || typeof p !== 'object') return { reponse };
 
-  // On ne filtre rien ici : c'est `utils/coachPatch.validateProposal`, côté
-  // appli, qui confronte chaque opération au programme réel et aux limites.
-  // Le serveur ne connaît pas le programme, il ne peut pas juger.
+  // Les deux tableaux du schéma sont remis à plat dans la liste d'opérations
+  // que l'appli sait valider. `ops` est encore accepté au cas où le modèle
+  // réponde à l'ancienne forme — ça ne coûte rien et évite de perdre une
+  // proposition correcte pour une question de forme.
+  const ops: unknown[] = [];
+  if (Array.isArray(p.reglages)) {
+    for (const item of p.reglages) ops.push({ ...(item as object), op: 'reglages' });
+  }
+  if (Array.isArray(p.echanges)) ops.push(...p.echanges);
+  if (Array.isArray(p.ops)) ops.push(...p.ops);
+  if (ops.length === 0) return { reponse };
+
+  // On ne filtre rien de plus ici : c'est `utils/coachPatch.validateProposal`,
+  // côté appli, qui confronte chaque opération au programme réel et aux
+  // limites. Le serveur ne connaît pas le programme, il ne peut pas juger.
   return {
     reponse,
     proposition: {
       titre: typeof p.titre === 'string' ? p.titre : 'Modification proposée',
       raison: typeof p.raison === 'string' ? p.raison : '',
-      ops: p.ops as CoachProposal['ops'],
+      ops: ops as CoachProposal['ops'],
     },
   };
 };
