@@ -227,6 +227,8 @@ const CHAT_SCHEMA = {
         // devient obligatoire par construction.
         reglages: {
           type: 'array',
+          description:
+            'Changements de séries, de répétitions ou de repos sur des exercices DÉJÀ présents dans le programme.',
           items: {
             type: 'object',
             properties: {
@@ -241,16 +243,28 @@ const CHAT_SCHEMA = {
         },
         echanges: {
           type: 'array',
+          // Les descriptions ne sont pas décoratives : le modèle est
+          // irrégulier sur ce tableau — il lui arrive d'annoncer un
+          // remplacement dans son texte sans rien mettre ici, et le bouton
+          // n'apparaît alors pas. Les descriptions sont là pour réduire ça.
+          description:
+            'À remplir DÈS QUE tu parles d’ajouter, de remplacer ou de retirer un exercice. '
+            + 'Sans entrée ici, aucun changement d’exercice ne sera appliqué et l’utilisateur ne verra aucun bouton.',
           items: {
             type: 'object',
+            description: 'Un ajout, un remplacement ou un retrait d’exercice.',
             properties: {
               op: { type: 'string', enum: ['ajouter', 'remplacer', 'retirer'] },
-              jourId: { type: 'string' },
-              /** Exercice du programme visé — pour remplacer et retirer. */
-              exerciceId: { type: 'string' },
-              /** Identifiant pris dans la liste fournie — pour ajouter et
-               *  remplacer. Obligatoire ici, c'est tout l'intérêt. */
-              catalogueId: { type: 'string' },
+              jourId: { type: 'string', description: 'Identifiant de la séance, pris dans le programme.' },
+              exerciceId: {
+                type: 'string',
+                description: 'Exercice du programme concerné — pour « remplacer » et « retirer ».',
+              },
+              catalogueId: {
+                type: 'string',
+                description:
+                  'Identifiant copié tel quel dans la liste « Exercices disponibles » (la partie avant le « | ») — pour « ajouter » et « remplacer ».',
+              },
             },
             required: ['op', 'jourId', 'catalogueId'],
           },
