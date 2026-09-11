@@ -318,7 +318,12 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
       // Bas mais pas nul : on veut des formulations naturelles, pas de la
       // créativité sur des chiffres.
       temperature: 0.4,
-      max_output_tokens: mode === 'brief' ? 900 : 500,
+      // Large, et ce n'est pas du gaspillage : les jetons de RÉFLEXION du
+      // modèle se déduisent de ce budget avant qu'il écrive quoi que ce soit.
+      // Mesuré sur un vrai digest : 1 460 jetons de réflexion pour 469 de
+      // texte. À 900, la réponse revenait coupée en plein JSON
+      // (`status: "incomplete"`), donc impossible à relire → « réponse vide ».
+      max_output_tokens: mode === 'brief' ? 4000 : 2500,
     },
   };
   if (mode === 'brief') {
@@ -410,7 +415,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
 
   const brief = parseBrief(text);
   if (!brief || brief.points.length === 0) {
-    fail(res, 502, 'REPONSE_VIDE', 'Le bilan du coach IA est arrivé incomplet. Réessaie.');
+    fail(res, 502, 'REPONSE_VIDE', 'Le bilan est revenu incomplet (réponse coupée). Réessaie ; si ça recommence, c’est le budget de jetons qu’il faut remonter.');
     return;
   }
   const answer: CoachAiResponse = { ok: true, mode: 'brief', model, brief };
