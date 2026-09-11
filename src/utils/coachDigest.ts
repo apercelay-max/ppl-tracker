@@ -191,6 +191,10 @@ export interface CoachAiRequest {
   digest: CoachDigest;
   /** Question libre de l'utilisateur. Obligatoire en mode « chat ». */
   question?: string;
+  /** Conversation en cours (mode « chat ») : identifiant de l'échange
+   *  précédent, renvoyé par l'API. C'est Google qui garde l'historique — on
+   *  ne réexpédie donc ni les messages passés ni le digest à chaque tour. */
+  previousInteractionId?: string;
   /** Clé d'API saisie dans l'appli (Coach → Clé d'API). Quand elle est là,
    *  elle prime sur celle du serveur : c'est un geste explicite de
    *  l'utilisateur, il doit voir son effet. Sinon, le serveur utilise la
@@ -230,11 +234,14 @@ export type CoachAiErrorCode =
   | 'QUOTA_DEPASSE'
   | 'DELAI_DEPASSE'
   | 'REPONSE_VIDE'
+  /** L'échange précédent n'est plus connu de Google (expiré). Le client
+   *  repart d'une conversation neuve, en rejoignant le digest. */
+  | 'CONVERSATION_PERDUE'
   | 'ERREUR_MODELE';
 
 export type CoachAiResponse =
   | { ok: true; mode: 'brief'; model: string; brief: CoachAiBrief }
-  | { ok: true; mode: 'chat'; model: string; reponse: string }
+  | { ok: true; mode: 'chat'; model: string; reponse: string; interactionId?: string }
   | { ok: false; code: CoachAiErrorCode; message: string };
 
 // ─── Petits utilitaires ────────────────────────────────────────────────────

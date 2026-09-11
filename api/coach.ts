@@ -254,7 +254,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
   }
 
   // ── Validation ──
-  const body = (req.body ?? {}) as { mode?: unknown; digest?: unknown; question?: unknown; apiKey?: unknown };
+  const body = (req.body ?? {}) as {
+    mode?: unknown; digest?: unknown; question?: unknown; apiKey?: unknown; previousInteractionId?: unknown;
+  };
   const mode = body.mode as CoachAiMode | undefined;
   if (mode !== 'brief' && mode !== 'chat') {
     fail(res, 400, 'REQUETE_INVALIDE', 'Le champ « mode » doit valoir « brief » ou « chat ».');
@@ -272,6 +274,15 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
     }
     question = body.question.trim().slice(0, MAX_QUESTION_CHARS);
   }
+  // Identifiant de l'échange précédent : c'est Google qui garde l'historique
+  // de la conversation (« previous_interaction_id »), donc l'appli n'a pas à
+  // renvoyer les anciens messages ni le digest à chaque tour.
+  const previousId = typeof body.previousInteractionId === 'string' ? body.previousInteractionId.trim() : '';
+  if (previousId && (previousId.length > 300 || /\s/.test(previousId))) {
+    fail(res, 400, 'REQUETE_INVALIDE', 'L’identifiant de conversation envoyé n’a pas une forme valide.');
+    return;
+  }
+  const continuing = mode === 'chat' && previousId !== '';
 
   // ── Clé d'API ──
   // Elle n'existe pas encore le temps que Léo la crée : on répond proprement
@@ -303,16 +314,23 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
 
   // ── Construction de la requête ──
   const digestJson = JSON.stringify(body.digest);
-  const input = mode === 'brief'
-    ? `Voici le résumé d'entraînement (chiffres déjà calculés par l'application) :\n${digestJson}\n\n`
+  let input: string;
+  if (mode === 'brief') {
+    input = `Voici le résumé d'entraînement (chiffres déjà calculés par l'application) :\n${digestJson}\n\n`
       + 'Rédige le bilan : un résumé d\'une phrase, puis 2 à 3 points classés par priorité, puis une phrase d\'encouragement honnête. '
-      + 'Ne cite que des chiffres présents dans ce résumé.'
-    : `${CHAT_GUARD}\n\nRésumé d'entraînement (chiffres déjà calculés par l'application) :\n${digestJson}\n\n`
+      + 'Ne cite que des chiffres présents dans ce résumé.';
+  } else if (continuing) {
+    // Suite de conversation : le digest et les consignes sont déjà dans
+    // l'échange que Google a gardé. Les renvoyer coûterait des jetons à
+    // chaque message pour rien.
+    input = question;
+  } else {
+    input = `${CHAT_GUARD}\n\nRésumé d'entraînement (chiffres déjà calculés par l'application) :\n${digestJson}\n\n`
       + `Question de l'utilisateur :\n${question}`;
+  }
 
   const payload: Record<string, unknown> = {
     model,
-    system_instruction: SYSTEM_PROMPT,
     input,
     generation_config: {
       // Bas mais pas nul : on veut des formulations naturelles, pas de la
@@ -326,6 +344,13 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
       max_output_tokens: mode === 'brief' ? 4000 : 2500,
     },
   };
+  if (continuing) {
+    payload.previous_interaction_id = previousId;
+    // Pas de system_instruction ici : elle fait partie de l'échange initial,
+    // que l'API rejoue toute seule. La renvoyer la dupliquerait.
+  } else {
+    payload.system_instruction = SYSTEM_PROMPT;
+  }
   if (mode === 'brief') {
     payload.response_format = { type: 'text', mime_type: 'application/json', schema: BRIEF_SCHEMA };
   }
@@ -369,6 +394,12 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
       detail = '';
     }
 
+    if (continuing && (upstream.status === 400 || upstream.status === 403 || upstream.status === 404)) {
+      // L'échange précédent a expiré ou n'existe plus. Le client repart d'une
+      // conversation neuve avec le digest, sans rien demander à l'utilisateur.
+      fail(res, 409, 'CONVERSATION_PERDUE', 'La conversation précédente a expiré. On repart de zéro.');
+      return;
+    }
     if (upstream.status === 400 || upstream.status === 401 || upstream.status === 403) {
       fail(res, 502, 'CLE_INVALIDE', 'Cette clé est refusée par Google. Vérifie celle de l’écran Coach, ou GEMINI_API_KEY dans les réglages Vercel.');
       return;
@@ -408,7 +439,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
   }
 
   if (mode === 'chat') {
-    const answer: CoachAiResponse = { ok: true, mode: 'chat', model, reponse: text };
+    const interactionId = (parsedUpstream as { id?: unknown })?.id;
+    const answer: CoachAiResponse = {
+      ok: true, mode: 'chat', model, reponse: text,
+      interactionId: typeof interactionId === 'string' ? interactionId : undefined,
+    };
     res.status(200).json(answer);
     return;
   }

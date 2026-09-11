@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { IconArrowLeft, IconCheck, IconSparkles } from '../components/Icons';
 import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore } from '../store/workoutStore';
@@ -8,9 +8,10 @@ import { buildCoachDigest, digestSizeBytes } from '../utils/coachDigest';
 import type { CoachAiPriority, CoachAiResponse } from '../utils/coachDigest';
 import { getCoachBrief } from '../utils/coach';
 import {
-  maskApiKey, readCachedBrief, readStoredApiKey, requestCoachAi, writeCachedBrief, writeStoredApiKey,
+  clearChat, maskApiKey, readCachedBrief, readChat, readStoredApiKey, requestCoachAi,
+  sendChatMessage, writeCachedBrief, writeChat, writeStoredApiKey,
 } from '../utils/coachAi';
-import type { CachedBrief } from '../utils/coachAi';
+import type { CachedBrief, ChatState } from '../utils/coachAi';
 
 interface CoachScreenProps { onBack: () => void; }
 
@@ -48,8 +49,14 @@ export const CoachScreen: React.FC<CoachScreenProps> = ({ onBack }) => {
   const [error, setError] = useState<string | null>(null);
   const [needsKey, setNeedsKey] = useState(false);
   const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState<string | null>(null);
+  const [chat, setChat] = useState<ChatState>(readChat);
   const [asking, setAsking] = useState(false);
+  // Fin de la liste des messages : on y descend à chaque nouveau message,
+  // sinon la réponse arrive hors de l'écran sur un téléphone.
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
+  // Le champ garde le focus après l'envoi : sur téléphone, ça évite que le
+  // clavier se referme entre deux messages d'une même conversation.
+  const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Le digest est recalculé seulement quand les données changent — c'est du
   // pur calcul local, mais sur 10 semaines d'historique ça ne sert à rien de
@@ -98,16 +105,47 @@ export const CoachScreen: React.FC<CoachScreenProps> = ({ onBack }) => {
   const ask = async () => {
     const clean = question.trim();
     if (!clean || asking) return;
+
+    // Le message part à l'écran tout de suite : attendre la réponse pour
+    // l'afficher donnerait l'impression que le bouton n'a rien fait.
+    const withMine: ChatState = {
+      ...chat,
+      messages: [...chat.messages, { role: 'moi', text: clean, at: Date.now() }],
+    };
+    setChat(withMine);
+    writeChat(withMine);
+    setQuestion('');
+    chatInputRef.current?.focus();
     setAsking(true);
     setError(null);
-    setAnswer(null);
-    const response = await requestCoachAi({ mode: 'chat', digest, question: clean, apiKey: apiKey || undefined });
+
+    const response = await sendChatMessage({
+      digest,
+      question: clean,
+      previousInteractionId: chat.interactionId,
+      apiKey: apiKey || undefined,
+    });
+
     if (handleResponse(response) && response.ok && response.mode === 'chat') {
-      setAnswer(response.reponse);
-      setQuestion('');
+      const withReply: ChatState = {
+        messages: [...withMine.messages, { role: 'coach', text: response.reponse, at: Date.now() }],
+        interactionId: response.interactionId,
+      };
+      setChat(withReply);
+      writeChat(withReply);
     }
     setAsking(false);
   };
+
+  const resetChat = () => {
+    clearChat();
+    setChat({ messages: [] });
+    setError(null);
+  };
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [chat.messages.length, asking]);
 
   const saveKey = () => {
     const clean = keyDraft.trim();
@@ -200,35 +238,53 @@ export const CoachScreen: React.FC<CoachScreenProps> = ({ onBack }) => {
           </div>
         )}
 
-        {/* ── Question libre ───────────────────────────────────────────── */}
-        {cached && (
-          <>
-            <p style={sectionLabel}>POSER UNE QUESTION</p>
-            <div style={card}>
-              <textarea
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                placeholder="Pourquoi mon développé couché stagne ?"
-                rows={3}
-                style={textareaStyle}
-              />
-              <button
-                type="button"
-                onClick={ask}
-                disabled={asking || !question.trim()}
-                style={{ ...primaryBtn, marginTop: 10, opacity: asking || !question.trim() ? 0.55 : 1 }}
-              >
-                {asking ? 'Le coach réfléchit…' : 'Envoyer'}
-              </button>
+        {/* ── Conversation ─────────────────────────────────────────────── */}
+        <div style={chatHeaderRow}>
+          <p style={{ ...sectionLabel, margin: 0 }}>PARLER AU COACH</p>
+          {chat.messages.length > 0 && (
+            <button type="button" onClick={resetChat} style={linkBtn}>Effacer</button>
+          )}
+        </div>
 
-              {answer && (
-                <p style={{ color: 'var(--text-primary)', fontSize: 13, lineHeight: 1.5, marginTop: 14, whiteSpace: 'pre-wrap' }}>
-                  {answer}
-                </p>
+        <div style={card}>
+          {chat.messages.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)', fontSize: 12.5, lineHeight: 1.5 }}>
+              Pose-lui ce que tu veux : il a tes stats sous les yeux, et il se souvient de ce qui
+              a été dit avant dans la conversation.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {chat.messages.map((message, i) => (
+                <div key={i} style={message.role === 'moi' ? bubbleMineWrap : bubbleCoachWrap}>
+                  <div style={message.role === 'moi' ? bubbleMine : bubbleCoach}>{message.text}</div>
+                </div>
+              ))}
+              {asking && (
+                <div style={bubbleCoachWrap}>
+                  <div style={{ ...bubbleCoach, color: 'var(--text-dim)' }}>Le coach réfléchit…</div>
+                </div>
               )}
+              <div ref={chatEndRef} />
             </div>
-          </>
-        )}
+          )}
+
+          <textarea
+            ref={chatInputRef}
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="Pourquoi mon développé couché stagne ?"
+            rows={2}
+            style={{ ...textareaStyle, marginTop: chat.messages.length === 0 ? 12 : 14 }}
+          />
+          <button
+            type="button"
+            onClick={ask}
+            disabled={asking || !question.trim()}
+            style={{ ...primaryBtn, marginTop: 8, opacity: asking || !question.trim() ? 0.55 : 1 }}
+          >
+            {asking ? 'Le coach réfléchit…' : 'Envoyer'}
+          </button>
+        </div>
 
         {/* ── Coach local ──────────────────────────────────────────────── */}
         {localBrief && (
@@ -361,6 +417,26 @@ const iconBtn: React.CSSProperties = {
 const linkBtn: React.CSSProperties = {
   background: 'transparent', border: 'none', padding: '10px 0 0',
   color: 'var(--text-dim)', fontSize: 12, cursor: 'pointer', textDecoration: 'underline',
+};
+const chatHeaderRow: React.CSSProperties = {
+  display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+  gap: 10, margin: '18px 0 10px',
+};
+const bubbleMineWrap: React.CSSProperties = { display: 'flex', justifyContent: 'flex-end' };
+const bubbleCoachWrap: React.CSSProperties = { display: 'flex', justifyContent: 'flex-start' };
+const bubbleBase: React.CSSProperties = {
+  maxWidth: '85%', borderRadius: 14, padding: '9px 12px',
+  fontSize: 13, lineHeight: 1.45, whiteSpace: 'pre-wrap',
+};
+const bubbleMine: React.CSSProperties = {
+  ...bubbleBase,
+  background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))',
+  color: '#fff', borderBottomRightRadius: 5,
+};
+const bubbleCoach: React.CSSProperties = {
+  ...bubbleBase,
+  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+  color: 'var(--text-primary)', borderBottomLeftRadius: 5,
 };
 const keyRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,

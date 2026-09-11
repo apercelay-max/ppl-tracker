@@ -29,6 +29,7 @@ export const COACH_AI_ENDPOINT = '/api/coach';
 // recrée une sur AI Studio.
 const KEY_STORAGE = 'ppl-gemini-key';
 const BRIEF_STORAGE = 'ppl-coach-ai-brief';
+const CHAT_STORAGE = 'ppl-coach-chat';
 
 export const readStoredApiKey = (): string => {
   try {
@@ -135,4 +136,90 @@ export const requestCoachAi = async (request: CoachAiRequest): Promise<CoachAiRe
     return networkError('Réponse inattendue du serveur.');
   }
   return parsed;
+};
+
+// ─── Conversation ─────────────────────────────────────────────────────────
+//
+// C'est Google qui garde l'historique de l'échange (`previous_interaction_id`)
+// et l'appli qui garde les messages pour pouvoir les réafficher. On ne
+// réexpédie donc ni les anciens messages ni le digest à chaque tour : le
+// deuxième message d'une conversation coûte quelques dizaines de jetons au
+// lieu de plus de mille.
+//
+// Conséquence à connaître : l'identifiant peut expirer côté Google. Dans ce
+// cas la fonction répond CONVERSATION_PERDUE, et `sendChatMessage` repart
+// tout seul sur une conversation neuve avec le digest — l'utilisateur ne voit
+// qu'une réponse qui arrive normalement.
+
+export interface ChatMessage {
+  role: 'moi' | 'coach';
+  text: string;
+  at: number;
+}
+
+export interface ChatState {
+  messages: ChatMessage[];
+  /** Dernier échange connu de Google. Absent = la prochaine question démarre
+   *  une conversation neuve. */
+  interactionId?: string;
+}
+
+/** Au-delà, on oublie les plus vieux messages : c'est de l'affichage, et le
+ *  contexte réel vit chez Google, pas dans cette liste. */
+const CHAT_MAX_MESSAGES = 60;
+
+const EMPTY_CHAT: ChatState = { messages: [] };
+
+export const readChat = (): ChatState => {
+  try {
+    const raw = localStorage.getItem(CHAT_STORAGE);
+    if (!raw) return EMPTY_CHAT;
+    const parsed = JSON.parse(raw) as ChatState;
+    return Array.isArray(parsed?.messages) ? parsed : EMPTY_CHAT;
+  } catch {
+    return EMPTY_CHAT;
+  }
+};
+
+export const writeChat = (state: ChatState): void => {
+  try {
+    const trimmed: ChatState = {
+      ...state,
+      messages: state.messages.slice(-CHAT_MAX_MESSAGES),
+    };
+    localStorage.setItem(CHAT_STORAGE, JSON.stringify(trimmed));
+  } catch {
+    // Pas de stockage : la conversation reste à l'écran, elle ne survivra
+    // juste pas à un rechargement.
+  }
+};
+
+export const clearChat = (): void => {
+  try {
+    localStorage.removeItem(CHAT_STORAGE);
+  } catch {
+    // Rien à faire de plus.
+  }
+};
+
+interface SendChatOptions {
+  digest: CoachDigest;
+  question: string;
+  previousInteractionId?: string;
+  apiKey?: string;
+}
+
+/** Envoie un message de la conversation. Repart d'une conversation neuve, une
+ *  seule fois, si Google a oublié l'échange précédent. */
+export const sendChatMessage = async (options: SendChatOptions): Promise<CoachAiResponse> => {
+  const { digest, question, previousInteractionId, apiKey } = options;
+
+  const first = await requestCoachAi({
+    mode: 'chat', digest, question, previousInteractionId, apiKey,
+  });
+
+  if (!first.ok && first.code === 'CONVERSATION_PERDUE') {
+    return requestCoachAi({ mode: 'chat', digest, question, apiKey });
+  }
+  return first;
 };
