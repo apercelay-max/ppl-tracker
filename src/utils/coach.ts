@@ -6,9 +6,20 @@
 //
 // Les seuils ci-dessous ne sont pas inventés : ils viennent d'une revue des
 // positions officielles et méta-analyses pour un pratiquant ADOLESCENT
-// (12-15 ans) — NSCA / Lloyd et al. 2014, AAP, ACSM, ANSES (avis
-// 2014-SA-0008), ISSN, matrice RPE/RIR de Helms & Tuchscherer,
-// Schoenfeld & Aragon (fenêtre anabolique), Milewski et al. 2014 (sommeil).
+// (12-15 ans) — NSCA / Lloyd et al. 2014, AAP, ACSM, ISSN, matrice RPE/RIR
+// de Helms & Tuchscherer, Schoenfeld & Aragon (fenêtre anabolique),
+// Milewski et al. 2014 (sommeil), et côté français la HAS (guide « Activité
+// physique à des fins de santé chez l'enfant et l'adolescent », octobre 2025)
+// plus l'ANSES.
+//
+// Attention aux deux avis de l'ANSES, ils ne disent pas la même chose et
+// l'en-tête de ce fichier les confondait :
+//   - saisine 2012-SA-0155 (février 2016) = repères d'activité physique et de
+//     sédentarité. C'est celui des règles de VOLUME et d'alimentation.
+//   - saisine 2014-SA-0008 (novembre 2016) = compléments alimentaires pour
+//     sportifs. C'est celui de la règle « aucun complément », uniquement.
+// Le détail de chaque source, avec ses liens, est dans
+// `src/data/referentiels.ts` — c'est affiché dans l'appli, donc vérifiable.
 // Chaque constante porte sa source : si un jour tu changes un chiffre,
 // tu sais ce que tu contredis.
 
@@ -331,9 +342,12 @@ export interface NutritionAdvice {
  * un oubli :
  *  - aucune notion de déficit calorique ou de « sèche ». Pendant la poussée
  *    de croissance, la restriction énergétique compromet la minéralisation
- *    osseuse et augmente les blessures (ANSES, AAP) ;
+ *    osseuse et augmente les blessures (ANSES 2012-SA-0155, AAP, HAS 2025) ;
  *  - aucune recommandation de complément alimentaire. L'ANSES (avis
- *    2014-SA-0008) les déconseille formellement avant 18 ans.
+ *    2014-SA-0008, novembre 2016) a documenté des effets indésirables
+ *    cardiovasculaires et psychiatriques ; le guide HAS d'octobre 2025
+ *    signale en plus que les adolescents qui font de la musculation sont
+ *    particulièrement sollicités par leur entourage pour en prendre.
  *
  * La « fenêtre anabolique de 30 minutes » a aussi disparu : Schoenfeld et
  * Aragon l'ont infirmée, la sensibilité du muscle dure 24 à 48 h.

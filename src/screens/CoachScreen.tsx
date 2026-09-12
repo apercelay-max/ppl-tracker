@@ -6,15 +6,17 @@ import { getWorkout } from '../data/workouts';
 import { getProgram } from '../data/programs';
 import { buildCoachDigest, digestSizeBytes } from '../utils/coachDigest';
 import {
-  buildCatalogIndex, buildCoachProgram, buildProgramView, isCoachProgram, validateProposal,
+  buildCatalogIndex, buildCoachProgram, buildProgramView, isCoachProgram, validateNewProgram,
+  validateProposal,
 } from '../utils/coachPatch';
 import type { CoachAiPriority, CoachAiResponse } from '../utils/coachDigest';
 import { getCoachBrief } from '../utils/coach';
+import { AVERTISSEMENTS, REGLES_SOURCEES, SOURCES, sourceById } from '../data/referentiels';
 import {
   clearChat, maskApiKey, readCachedBrief, readChat, readStoredApiKey, requestCoachAi,
   sendChatMessage, writeCachedBrief, writeChat, writeStoredApiKey,
 } from '../utils/coachAi';
-import type { CachedBrief, ChatProposal, ChatState } from '../utils/coachAi';
+import type { CachedBrief, ChatNewProgram, ChatProposal, ChatState } from '../utils/coachAi';
 
 interface CoachScreenProps { onBack: () => void; }
 
@@ -30,6 +32,11 @@ const PRIORITY_COLOR: Record<CoachAiPriority, string> = {
 // l'utilisateur peut le compléter avant d'appuyer sur Envoyer.
 const SUGGEST_PROMPT =
   'Regarde mon programme et mes stats : est-ce qu\'il y a quelque chose à changer ? Propose-le-moi.';
+
+// Le nombre de séances est dans le texte : sans indication, le coach part sur
+// 3 ou 4 et autant que ce soit un choix visible, modifiable avant d'envoyer.
+const NEW_PROGRAM_PROMPT =
+  'Construis-moi un nouveau programme complet de 4 séances par semaine, à partir de mes stats.';
 
 const formatWhen = (ts: number): string => {
   const mins = Math.floor((Date.now() - ts) / 60000);
@@ -61,6 +68,7 @@ export const CoachScreen: React.FC<CoachScreenProps> = ({ onBack }) => {
   const [question, setQuestion] = useState('');
   const [chat, setChat] = useState<ChatState>(readChat);
   const [asking, setAsking] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
   // Fin de la liste des messages : on y descend à chaque nouveau message,
   // sinon la réponse arrive hors de l'écran sur un téléphone.
   const chatEndRef = useRef<HTMLDivElement | null>(null);
@@ -167,8 +175,28 @@ export const CoachScreen: React.FC<CoachScreenProps> = ({ onBack }) => {
           };
         }
       }
+      // Programme complet : le contrôle décisif est le volume de la semaine,
+      // fait par validateNewProgram. S'il ne passe pas, on garde quand même
+      // l'objet pour AFFICHER les raisons du refus au lieu de rien dire.
+      let nouveauProgramme: ChatNewProgram | undefined;
+      if (response.nouveauProgramme) {
+        const checked = validateNewProgram(response.nouveauProgramme);
+        nouveauProgramme = {
+          nom: response.nouveauProgramme.nom,
+          raison: response.nouveauProgramme.raison,
+          apercu: checked.apercu,
+          volume: checked.volume,
+          rejets: checked.rejets,
+          statut: 'en-attente',
+          program: checked.program ?? undefined,
+        };
+      }
+
       const withReply: ChatState = {
-        messages: [...withMine.messages, { role: 'coach', text: response.reponse, at: Date.now(), proposition }],
+        messages: [
+          ...withMine.messages,
+          { role: 'coach', text: response.reponse, at: Date.now(), proposition, nouveauProgramme },
+        ],
         interactionId: response.interactionId,
       };
       setChat(withReply);
@@ -190,6 +218,28 @@ export const CoachScreen: React.FC<CoachScreenProps> = ({ onBack }) => {
     };
     setChat(next);
     writeChat(next);
+  };
+
+  const settleProgram = (index: number, statut: ChatNewProgram['statut']) => {
+    const next: ChatState = {
+      ...chat,
+      messages: chat.messages.map((message, i) =>
+        i === index && message.nouveauProgramme
+          ? { ...message, nouveauProgramme: { ...message.nouveauProgramme, statut, program: undefined } }
+          : message
+      ),
+    };
+    setChat(next);
+    writeChat(next);
+  };
+
+  const applyProgram = (index: number) => {
+    const proposed = chat.messages[index]?.nouveauProgramme?.program;
+    if (!proposed) return;
+    // Nouveau programme : il s'ajoute à la liste, il ne remplace rien.
+    upsertCustomProgram(proposed);
+    setActiveProgram(proposed.id);
+    settleProgram(index, 'appliquee');
   };
 
   const applyProposal = (index: number) => {
@@ -328,6 +378,75 @@ export const CoachScreen: React.FC<CoachScreenProps> = ({ onBack }) => {
                     <div style={message.role === 'moi' ? bubbleMine : bubbleCoach}>{message.text}</div>
                   </div>
 
+                  {message.nouveauProgramme && (
+                    <div style={proposalCard}>
+                      <p style={proposalTitle}>{message.nouveauProgramme.nom}</p>
+                      {message.nouveauProgramme.raison !== '' && (
+                        <p style={proposalReason}>{message.nouveauProgramme.raison}</p>
+                      )}
+
+                      {message.nouveauProgramme.apercu.map((jour) => (
+                        <div key={jour.jour} style={changeRow}>
+                          <span style={changeDay}>
+                            {jour.jour}{jour.duree ? ` · ${jour.duree}` : ''}
+                          </span>
+                          {jour.focus && (
+                            <span style={{ color: 'var(--text-dim)', fontSize: 11.5 }}>{jour.focus}</span>
+                          )}
+                          {jour.exercices.map((ligne) => (
+                            <span key={ligne} style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: 1.45 }}>
+                              {ligne}
+                            </span>
+                          ))}
+                        </div>
+                      ))}
+
+                      {message.nouveauProgramme.volume.length > 0 && (
+                        <div style={rejectBlock}>
+                          <span style={changeDay}>Séries par semaine</span>
+                          <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: 1.45 }}>
+                            {message.nouveauProgramme.volume
+                              .map((v) => `${v.groupe.toLowerCase()} ${v.series}${v.depasse ? ' (au-dessus du plafond)' : ''}`)
+                              .join(' · ')}
+                          </p>
+                        </div>
+                      )}
+
+                      {message.nouveauProgramme.rejets.length > 0 && (
+                        <div style={rejectBlock}>
+                          {message.nouveauProgramme.rejets.map((rejet, r) => (
+                            <p key={r} style={{ color: 'var(--text-dim)', fontSize: 11.5, lineHeight: 1.4 }}>
+                              {message.nouveauProgramme?.program ? 'Ajusté : ' : 'Refusé : '}{rejet}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+
+                      {message.nouveauProgramme.statut === 'en-attente' && message.nouveauProgramme.program ? (
+                        <>
+                          <p style={{ color: 'var(--text-dim)', fontSize: 11.5, lineHeight: 1.4, marginTop: 10 }}>
+                            Ce programme s'ajoutera à ta liste et deviendra le programme actif. Aucun de tes
+                            programmes actuels n'est modifié ni supprimé.
+                          </p>
+                          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                            <button type="button" onClick={() => applyProgram(i)} style={applyBtn}>
+                              Utiliser ce programme
+                            </button>
+                            <button type="button" onClick={() => settleProgram(i, 'refusee')} style={refuseBtn}>
+                              Refuser
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <p style={{ color: 'var(--text-dim)', fontSize: 11.5, marginTop: 10 }}>
+                          {message.nouveauProgramme.statut === 'appliquee' ? 'Programme ajouté et activé.'
+                            : message.nouveauProgramme.statut === 'refusee' ? 'Refusé, rien n’a changé.'
+                            : 'Ce programme ne respecte pas les repères, il n’est pas applicable.'}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   {message.proposition && (
                     <div style={proposalCard}>
                       <p style={proposalTitle}>{message.proposition.titre}</p>
@@ -422,6 +541,15 @@ export const CoachScreen: React.FC<CoachScreenProps> = ({ onBack }) => {
           >
             Propose-moi des changements sur mon programme
           </button>
+
+          <button
+            type="button"
+            onClick={() => { setQuestion(NEW_PROGRAM_PROMPT); chatInputRef.current?.focus(); }}
+            disabled={asking}
+            style={suggestBtn}
+          >
+            Construis-moi un programme complet
+          </button>
         </div>
 
         {/* ── Coach local ──────────────────────────────────────────────── */}
@@ -438,6 +566,67 @@ export const CoachScreen: React.FC<CoachScreenProps> = ({ onBack }) => {
             </div>
           </>
         )}
+
+        {/* ── Sources ──────────────────────────────────────────────────── */}
+        {/* Les conseils du coach viennent de recommandations officielles, et
+            l'appli doit pouvoir le montrer : sans ça, « le plafond est de 14
+            séries » n'est qu'une phrase de plus sur un écran. */}
+        <p style={sectionLabel}>D'OÙ VIENNENT CES CONSEILS</p>
+        <div style={card}>
+          <p style={{ color: 'var(--text-muted)', fontSize: 12.5, lineHeight: 1.5 }}>
+            Les seuils du coach ne sont pas inventés : ils viennent de la HAS, de l'OMS, de l'ANSES et du
+            consensus international de la NSCA sur la musculation chez le jeune.
+          </p>
+          <button type="button" onClick={() => setSourcesOpen(!sourcesOpen)} style={linkBtn}>
+            {sourcesOpen ? 'Masquer les sources' : 'Voir les sources et ce qu’elles disent'}
+          </button>
+
+          {sourcesOpen && (
+            <>
+              {AVERTISSEMENTS.map((avert) => {
+                const source = sourceById(avert.sourceId);
+                return (
+                  <div key={avert.titre} style={avertBlock}>
+                    <p style={{ color: 'var(--text-primary)', fontSize: 12.5, fontWeight: 700 }}>{avert.titre}</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: 1.45, marginTop: 3 }}>
+                      {avert.texte}
+                    </p>
+                    {source && (
+                      <a href={source.url} target="_blank" rel="noreferrer" style={sourceLink}>
+                        {source.organisme} — {source.date}
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+
+              <p style={{ ...sectionLabel, marginTop: 16 }}>RÈGLE PAR RÈGLE</p>
+              {REGLES_SOURCEES.map((regle) => (
+                <div key={regle.regle} style={regleRow}>
+                  <p style={{ color: 'var(--text-primary)', fontSize: 12.5, lineHeight: 1.4 }}>{regle.regle}</p>
+                  <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>
+                    {regle.sourceIds.map((id) => sourceById(id)?.organisme.split(' (')[0]).filter(Boolean).join(' · ')}
+                  </p>
+                </div>
+              ))}
+
+              <p style={{ ...sectionLabel, marginTop: 16 }}>LES DOCUMENTS</p>
+              {SOURCES.map((source) => (
+                <div key={source.id} style={regleRow}>
+                  <a href={source.url} target="_blank" rel="noreferrer" style={sourceTitleLink}>
+                    {source.titre}
+                  </a>
+                  <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>
+                    {source.organisme} · {source.date}
+                    {source.reference ? ` · ${source.reference}` : ''}
+                    {source.acces === 'payant' ? ' · article payant' : ''}
+                  </p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: 1.4, marginTop: 3 }}>{source.dit}</p>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
 
         {/* ── Clé d'API ────────────────────────────────────────────────── */}
         <p style={sectionLabel}>CLÉ D'API</p>
@@ -612,6 +801,20 @@ const suggestBtn: React.CSSProperties = {
   width: '100%', marginTop: 8, background: 'transparent',
   border: '1px solid var(--border-strong)', borderRadius: 10, padding: '9px 12px',
   color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer',
+};
+const avertBlock: React.CSSProperties = {
+  marginTop: 12, paddingTop: 11, borderTop: '1px solid var(--border-subtle)',
+};
+const regleRow: React.CSSProperties = {
+  marginTop: 10, paddingTop: 9, borderTop: '1px solid var(--border-subtle)',
+};
+const sourceLink: React.CSSProperties = {
+  display: 'inline-block', marginTop: 5,
+  color: 'var(--brand-1)', fontSize: 11.5, fontWeight: 600, textDecoration: 'none',
+};
+const sourceTitleLink: React.CSSProperties = {
+  color: 'var(--text-primary)', fontSize: 12.5, fontWeight: 700,
+  textDecoration: 'underline', lineHeight: 1.4,
 };
 const keyRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,

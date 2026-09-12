@@ -18,7 +18,7 @@
 // qu'on peut appeler dans un test avec un historique fabriqué.
 
 import type { BodyWeightEntry, HistoryEntry, WorkoutDay } from '../data/types';
-import type { CoachProgramView, CoachProposal } from './coachPatch';
+import type { CoachNewProgram, CoachProgramView, CoachProposal } from './coachPatch';
 import type { TrainingProfile } from './onboardingQuiz';
 import { EXPERIENCE_LABELS, GOAL_LABELS } from './onboardingQuiz';
 import { COACH_LIMITS } from './coach';
@@ -255,6 +255,9 @@ export type CoachAiResponse =
        *  stade — il faut la passer par `validateProposal` avant de l'afficher,
        *  et ne jamais l'appliquer sans accord de l'utilisateur. */
       proposition?: CoachProposal;
+      /** Programme complet proposé. BRUT lui aussi : à passer par
+       *  `validateNewProgram` avant tout affichage. */
+      nouveauProgramme?: CoachNewProgram;
     }
   | { ok: false; code: CoachAiErrorCode; message: string };
 

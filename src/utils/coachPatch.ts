@@ -22,7 +22,7 @@ import { parseRepRange } from './training';
 import { findCatalogExercise } from './catalogMatch';
 import { EXERCISE_CATALOG } from '../data/exercisesCatalog';
 import type { CatalogExercise } from '../data/exercisesCatalog';
-import { addCatalogExerciseToWorkout, removeExerciseFromWorkout } from './workoutGenerator';
+import { addCatalogExerciseToWorkout, removeExerciseFromWorkout, weeklySetsByGroup } from './workoutGenerator';
 
 // ─── Garde-fous ───────────────────────────────────────────────────────────
 //
@@ -50,6 +50,10 @@ export const PATCH_LIMITS = {
   maxOps: 8,
   /** Une séance vidée de ses exercices casserait l'accueil et le cycle. */
   minExercisesPerDay: 2,
+  /** Plafond de séries par groupe musculaire et par SEMAINE. Même repère que
+   *  COACH_LIMITS.volumeMax, appliqué ici à un programme entier proposé par
+   *  le coach. (NSCA / Lloyd et al. 2014) */
+  volumeMaxHebdo: 14,
 } as const;
 
 // ─── Ce que le modèle voit du programme ───────────────────────────────────
@@ -402,4 +406,223 @@ export const buildCoachProgram = (base: Program, ops: CoachPatchOp[]): Program =
     source: `Dérivé de « ${cleanName} », modifié sur proposition du coach IA et validé par toi.`,
     isCustom: true,
   };
+};
+
+// ─── Programme complet proposé par le coach ───────────────────────────────
+//
+// Même principe que pour les modifications : le coach propose, l'appli
+// vérifie, l'utilisateur valide. La différence c'est l'ampleur — une semaine
+// entière — donc le contrôle le plus important n'est pas exercice par
+// exercice mais GLOBAL : le volume hebdomadaire par groupe musculaire.
+// Un programme dont chaque séance est correcte peut très bien faire 22 séries
+// de pectoraux sur la semaine.
+
+/** Accents de couleur par jour, repris de utils/importParser pour que les
+ *  programmes venus d'ailleurs aient tous la même allure. */
+const NEUTRAL_ACCENTS = ['#7c6fcd', '#e03030', '#e8a020', '#2563eb', '#16a34a', '#ea580c', '#d946ef', '#0891b2'];
+
+/** Estimation de durée : même formule que le générateur de l'appli
+ *  (`workoutGenerator.exerciseSeconds`), soit séries × (45 s d'effort +
+ *  le repos de l'exercice), plus 6 min d'échauffement. Le repos compte pour
+ *  l'essentiel du temps : en l'oubliant, une séance de 7 séries s'affichait
+ *  « ≈ 11 min » au lieu de 26. */
+const WARMUP_MINUTES = 6;
+const SECONDS_PER_SET = 45;
+
+export const NEW_PROGRAM_LIMITS = {
+  joursMin: 1,
+  joursMax: 7,
+  exercicesParJourMin: 2,
+  exercicesParJourMax: 10,
+} as const;
+
+export interface CoachNewProgramExercise {
+  catalogueId: string;
+  series?: number;
+  reps?: string;
+  reposS?: number;
+}
+
+export interface CoachNewProgramDay {
+  nom: string;
+  focus?: string;
+  exercices: CoachNewProgramExercise[];
+}
+
+export interface CoachNewProgram {
+  nom: string;
+  raison: string;
+  jours: CoachNewProgramDay[];
+}
+
+export interface NewProgramPreview {
+  jour: string;
+  focus?: string;
+  duree: string;
+  /** Une ligne par exercice, déjà mise en forme : « Développé couché — 4×8-10, 150 s ». */
+  exercices: string[];
+}
+
+export interface ValidatedNewProgram {
+  /** null si la proposition n'est pas applicable — `rejets` dit pourquoi. */
+  program: Program | null;
+  apercu: NewProgramPreview[];
+  /** Volume hebdomadaire par groupe, tel que l'appli le calcule. */
+  volume: { groupe: string; series: number; depasse: boolean }[];
+  rejets: string[];
+}
+
+const skeletonDay = (nom: string, focus: string | undefined, index: number): WorkoutDay => ({
+  id: `coach-j${index + 1}`,
+  dayNumber: index + 1,
+  name: nom,
+  focus: focus ?? '',
+  muscleGroups: '',
+  estimatedDuration: '',
+  exercises: [],
+});
+
+/**
+ * Vérifie un programme proposé par le coach et le construit s'il tient debout.
+ * Ne modifie rien dans le store : renvoie un objet Program prêt à être ajouté,
+ * ou null avec les raisons.
+ */
+export const validateNewProgram = (proposal: CoachNewProgram): ValidatedNewProgram => {
+  const rejets: string[] = [];
+  const jours = Array.isArray(proposal?.jours) ? proposal.jours : [];
+
+  if (jours.length < NEW_PROGRAM_LIMITS.joursMin || jours.length > NEW_PROGRAM_LIMITS.joursMax) {
+    rejets.push(`Un programme de ${jours.length} séances n'est pas exploitable (il en faut entre ${NEW_PROGRAM_LIMITS.joursMin} et ${NEW_PROGRAM_LIMITS.joursMax}).`);
+    return { program: null, apercu: [], volume: [], rejets };
+  }
+
+  // ── Construction, séance par séance ──
+  const name = (proposal.nom || '').trim() || 'Programme proposé par le coach';
+  const dayAccents: Record<string, string> = {};
+  const dayTypeLabels: Record<string, string> = {};
+
+  let program: Program = {
+    id: `coach-nouveau-${Date.now()}`,
+    name,
+    focusLabel: `${name} · proposé par le coach`,
+    shortDescription: `${jours.length} séance${jours.length > 1 ? 's' : ''} par semaine, construites par le coach IA à partir de tes stats et validées par toi.`,
+    source:
+      'Programme proposé par le coach IA à partir de tes statistiques, construit uniquement avec des '
+      + 'exercices du catalogue de l\'appli, puis vérifié contre les repères de volume pour un adolescent '
+      + 'et validé par toi. Ce n\'est pas un programme rédigé par un professionnel de santé.',
+    isCustom: true,
+    workouts: jours.map((jour, i) => skeletonDay((jour?.nom || `Séance ${i + 1}`).trim(), jour?.focus?.trim(), i)),
+    dayAccents,
+    dayTypeLabels,
+  };
+
+  jours.forEach((jour, i) => {
+    const dayId = `coach-j${i + 1}`;
+    dayAccents[dayId] = NEUTRAL_ACCENTS[i % NEUTRAL_ACCENTS.length];
+    dayTypeLabels[dayId] = `J${i + 1}`;
+
+    const exercices = Array.isArray(jour?.exercices) ? jour.exercices : [];
+    for (const wanted of exercices) {
+      const cat = catalogById.get((wanted?.catalogueId ?? '').trim());
+      if (!cat) {
+        rejets.push(`${jour?.nom ?? `Séance ${i + 1}`} : exercice introuvable dans le catalogue (${wanted?.catalogueId ?? '?'}), ignoré.`);
+        continue;
+      }
+      const before = program;
+      program = addCatalogExerciseToWorkout(program, dayId, cat);
+      if (program === before) continue; // déjà présent dans la séance
+
+      // Réglages demandés, chacun ramené dans les limites — ici on CORRIGE au
+      // lieu de rejeter : un exercice tout neuf sans réglage valide n'a pas de
+      // valeur « avant » à conserver, et la valeur par défaut du catalogue est
+      // toujours acceptable. Chaque correction est signalée.
+      const exId = `cat-${cat.id}`;
+      const patch: Partial<Exercise> = {};
+
+      if (typeof wanted.series === 'number') {
+        const s = Math.min(PATCH_LIMITS.setsMax, Math.max(PATCH_LIMITS.setsMin, Math.round(wanted.series)));
+        if (s !== Math.round(wanted.series)) rejets.push(`${cat.name} : ${Math.round(wanted.series)} séries ramenées à ${s}.`);
+        patch.sets = s;
+      }
+      if (typeof wanted.reps === 'string' && wanted.reps.trim() !== '') {
+        const range = parseRepRange(wanted.reps);
+        if (!range || range.min < PATCH_LIMITS.repsMin || range.max > PATCH_LIMITS.repsMax) {
+          rejets.push(`${cat.name} : « ${wanted.reps} » hors des repères (${PATCH_LIMITS.repsMin} à ${PATCH_LIMITS.repsMax} répétitions), fourchette du catalogue gardée.`);
+        } else {
+          patch.targetReps = wanted.reps.trim();
+        }
+      }
+      if (typeof wanted.reposS === 'number') {
+        const floor = cat.type === 'Polyarticulaire' ? PATCH_LIMITS.restFloorCompound : PATCH_LIMITS.restMin;
+        const r = Math.min(PATCH_LIMITS.restMax, Math.max(floor, Math.round(wanted.reposS)));
+        if (r !== Math.round(wanted.reposS)) rejets.push(`${cat.name} : repos de ${Math.round(wanted.reposS)} s ramené à ${r} s.`);
+        patch.restSeconds = r;
+      }
+
+      if (Object.keys(patch).length > 0) {
+        program = {
+          ...program,
+          workouts: program.workouts.map((d) =>
+            d.id !== dayId ? d : { ...d, exercises: d.exercises.map((e) => (e.id === exId ? { ...e, ...patch } : e)) }
+          ),
+        };
+      }
+    }
+  });
+
+  // ── Séances trop maigres ──
+  const maigres = program.workouts.filter((d) => d.exercises.length < NEW_PROGRAM_LIMITS.exercicesParJourMin);
+  if (maigres.length > 0) {
+    rejets.push(`${maigres.map((d) => d.name).join(', ')} : moins de ${NEW_PROGRAM_LIMITS.exercicesParJourMin} exercices exploitables, le programme n'est pas applicable.`);
+    return { program: null, apercu: [], volume: [], rejets };
+  }
+  const trop = program.workouts.filter((d) => d.exercises.length > NEW_PROGRAM_LIMITS.exercicesParJourMax);
+  if (trop.length > 0) {
+    rejets.push(`${trop.map((d) => d.name).join(', ')} : plus de ${NEW_PROGRAM_LIMITS.exercicesParJourMax} exercices, c'est trop long pour une séance.`);
+    return { program: null, apercu: [], volume: [], rejets };
+  }
+
+  // ── Le contrôle qui compte : le volume de la SEMAINE ──
+  // `weeklySetsByGroup` compte les séries par groupe principal de chaque
+  // exercice — pas le volume « effectif » avec les synergistes de muscleMap.
+  // C'est volontaire : c'est la même mesure que celle affichée à côté du
+  // générateur, et elle suffit à attraper le vrai risque (un programme qui
+  // empile 22 séries de pectoraux sur la semaine).
+  const volume = weeklySetsByGroup(program).map((v) => ({
+    groupe: v.group,
+    series: v.sets,
+    depasse: v.sets > PATCH_LIMITS.volumeMaxHebdo,
+  }));
+  const depassements = volume.filter((v) => v.depasse);
+  if (depassements.length > 0) {
+    for (const d of depassements) {
+      rejets.push(`${d.groupe.toLowerCase()} : ${d.series} séries sur la semaine, le plafond à ton âge est de ${PATCH_LIMITS.volumeMaxHebdo}.`);
+    }
+    return { program: null, apercu: [], volume, rejets };
+  }
+
+  // ── Finitions : groupes travaillés et durée estimée ──
+  program = {
+    ...program,
+    dayAccents,
+    dayTypeLabels,
+    workouts: program.workouts.map((d) => {
+      const groupes = [...new Set(d.exercises.map((e) => e.muscleGroup))];
+      const seconds = d.exercises.reduce((sum, e) => sum + e.sets * (SECONDS_PER_SET + e.restSeconds), 0);
+      return {
+        ...d,
+        muscleGroups: groupes.join(' / '),
+        estimatedDuration: `≈ ${Math.round(WARMUP_MINUTES + seconds / 60)} min`,
+      };
+    }),
+  };
+
+  const apercu: NewProgramPreview[] = program.workouts.map((d) => ({
+    jour: d.name,
+    focus: d.focus || undefined,
+    duree: d.estimatedDuration,
+    exercices: d.exercises.map((e) => `${e.name} — ${e.sets}×${e.targetReps}, ${e.restSeconds} s`),
+  }));
+
+  return { program, apercu, volume, rejets };
 };

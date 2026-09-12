@@ -12,7 +12,8 @@ import { buildCoachDigest } from './coachDigest';
 import type {
   CoachAiBrief, CoachAiRequest, CoachAiResponse, CoachDigest, CoachDigestInput,
 } from './coachDigest';
-import type { CoachPatchOp, CoachProgramView, PatchChange } from './coachPatch';
+import type { CoachPatchOp, CoachProgramView, NewProgramPreview, PatchChange } from './coachPatch';
+import type { Program } from '../data/programs';
 
 export const COACH_AI_ENDPOINT = '/api/coach';
 
@@ -166,11 +167,27 @@ export interface ChatProposal {
   statut: 'en-attente' | 'appliquee' | 'refusee';
 }
 
+/** Programme complet proposé, déjà passé par `validateNewProgram`. Le
+ *  `program` construit est gardé tel quel pour que « Appliquer » marche encore
+ *  après un rechargement — mais seulement tant que la décision est en
+ *  attente : une fois traité, on le jette (c'est une dizaine de Ko par
+ *  proposition, inutile de les empiler dans le localStorage). */
+export interface ChatNewProgram {
+  nom: string;
+  raison: string;
+  apercu: NewProgramPreview[];
+  volume: { groupe: string; series: number; depasse: boolean }[];
+  rejets: string[];
+  statut: 'en-attente' | 'appliquee' | 'refusee';
+  program?: Program;
+}
+
 export interface ChatMessage {
   role: 'moi' | 'coach';
   text: string;
   at: number;
   proposition?: ChatProposal;
+  nouveauProgramme?: ChatNewProgram;
 }
 
 export interface ChatState {
@@ -201,7 +218,14 @@ export const writeChat = (state: ChatState): void => {
   try {
     const trimmed: ChatState = {
       ...state,
-      messages: state.messages.slice(-CHAT_MAX_MESSAGES),
+      messages: state.messages.slice(-CHAT_MAX_MESSAGES).map((message) => {
+        const np = message.nouveauProgramme;
+        if (!np || np.statut === 'en-attente' || !np.program) return message;
+        // Décision prise : l'aperçu suffit à garder une trace lisible, le
+        // programme construit ne sert plus à rien.
+        const { program: _drop, ...reste } = np;
+        return { ...message, nouveauProgramme: reste };
+      }),
     };
     localStorage.setItem(CHAT_STORAGE, JSON.stringify(trimmed));
   } catch {

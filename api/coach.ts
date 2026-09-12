@@ -30,7 +30,7 @@ import type {
   CoachAiPriority,
   CoachAiResponse,
 } from '../src/utils/coachDigest';
-import type { CoachProgramView, CoachProposal } from '../src/utils/coachPatch';
+import type { CoachNewProgram, CoachProgramView, CoachProposal } from '../src/utils/coachPatch';
 
 // ─── Types minimaux du handler ─────────────────────────────────────────────
 //
@@ -126,6 +126,18 @@ INTERDITS ABSOLUS (sécurité, pas préférence)
 - Les seuils de volume à respecter sont ceux du champ "limits" du digest, pas
   ceux d'un adulte entraîné.
 
+D'OÙ VIENNENT CES RÈGLES
+Guide de la HAS « Activité physique à des fins de santé chez l'enfant et
+l'adolescent » (octobre 2025), lignes directrices de l'OMS (2020), repères
+ANSES sur l'activité physique (saisine 2012-SA-0155, février 2016), avis ANSES
+sur les compléments pour sportifs (saisine 2014-SA-0008), position statement
+NSCA / consensus international sur la musculation chez le jeune (Lloyd et al.,
+2014). Tu peux nommer l'organisme quand ça aide à comprendre (« la HAS
+recommande… »), mais n'invente JAMAIS un numéro d'avis, une date ou une
+citation : si tu n'es pas sûr de la référence, dis simplement « les
+recommandations pédiatriques ». L'appli affiche la liste complète des sources
+avec leurs liens, tu n'as pas à les recopier.
+
 MODIFIER LE PROGRAMME
 Quand le message de l'utilisateur arrive avec un objet "programme", tu peux
 PROPOSER des modifications, dans le champ "proposition" de ta réponse. Tu ne
@@ -144,6 +156,21 @@ refuse. Règles :
   programme concerné.
 - N'annonce pas dans ton texte un changement que tu n'as pas mis dans les
   tableaux : l'utilisateur verrait une promesse sans le bouton qui va avec.
+
+CRÉER UN PROGRAMME COMPLET
+Si l'utilisateur demande un nouveau programme (et seulement dans ce cas),
+remplis "nouveauProgramme" au lieu de "proposition" : un nom, la raison, et
+une entrée par séance avec ses exercices. Contraintes à respecter, sinon
+l'appli refuse le programme entier :
+- 2 à 10 exercices par séance, et le nombre de séances que demande
+  l'utilisateur (3 ou 4 par semaine si tu n'as pas d'indication).
+- Chaque exercice vient de la liste « Exercices disponibles », par son
+  identifiant, avec ses séries, sa fourchette de répétitions et son repos.
+- Jamais moins de 6 répétitions. Au moins 120 s de repos sur un exercice
+  polyarticulaire (développé, squat, soulevé, rowing, traction).
+- Et surtout : au TOTAL de la semaine, pas plus de 14 séries pour un même
+  groupe musculaire. C'est le contrôle qui fait refuser le plus de
+  programmes — compte-les avant de répondre.
 - Ne propose rien sur un exercice marqué "superset" : la paire se casserait.
 - Trois modifications au maximum par proposition, et seulement si elles
   répondent à quelque chose de précis dans le digest (un plateau, un volume
@@ -272,6 +299,48 @@ const CHAT_SCHEMA = {
       },
       required: ['titre', 'raison'],
     },
+    // Programme complet. Séparé de « proposition » exprès : ce ne sont pas
+    // les mêmes garde-fous côté appli (ici c'est le volume de la SEMAINE qui
+    // décide), et mélanger les deux dans un même objet menait le modèle à
+    // remplir l'un en croyant remplir l'autre.
+    nouveauProgramme: {
+      type: 'object',
+      description:
+        'Un programme d’entraînement complet, à ne remplir QUE si l’utilisateur demande un nouveau programme.',
+      properties: {
+        nom: { type: 'string' },
+        raison: { type: 'string' },
+        jours: {
+          type: 'array',
+          description: 'Une entrée par séance de la semaine.',
+          items: {
+            type: 'object',
+            properties: {
+              nom: { type: 'string', description: 'Nom court de la séance, ex. « Push A ».' },
+              focus: { type: 'string', description: 'Ce que la séance travaille, en quelques mots.' },
+              exercices: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    catalogueId: {
+                      type: 'string',
+                      description: 'Identifiant copié tel quel dans la liste « Exercices disponibles ».',
+                    },
+                    series: { type: 'integer' },
+                    reps: { type: 'string', description: 'Fourchette, ex. « 8-10 ». Jamais moins de 6.' },
+                    reposS: { type: 'integer', description: 'Repos en secondes. Au moins 120 sur un polyarticulaire.' },
+                  },
+                  required: ['catalogueId', 'series', 'reps', 'reposS'],
+                },
+              },
+            },
+            required: ['nom', 'exercices'],
+          },
+        },
+      },
+      required: ['nom', 'raison', 'jours'],
+    },
     reponse: { type: 'string' },
   },
   required: ['reponse'],
@@ -349,7 +418,9 @@ const parseBrief = (text: string): CoachAiBrief | null => {
  * schéma, on garde le texte — une conversation qui marche vaut mieux qu'une
  * erreur pour un champ manquant.
  */
-const parseChat = (text: string): { reponse: string; proposition?: CoachProposal } => {
+const parseChat = (
+  text: string
+): { reponse: string; proposition?: CoachProposal; nouveauProgramme?: CoachNewProgram } => {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -369,13 +440,25 @@ const parseChat = (text: string): { reponse: string; proposition?: CoachProposal
     }
     return { reponse: text };
   }
-  const raw = parsed as { reponse?: unknown; proposition?: unknown };
+  const raw = parsed as { reponse?: unknown; proposition?: unknown; nouveauProgramme?: unknown };
   const reponse = typeof raw.reponse === 'string' && raw.reponse.trim() !== '' ? raw.reponse : text;
+
+  // Programme complet : transmis tel quel, c'est `validateNewProgram` côté
+  // appli qui décide s'il tient debout (volume hebdomadaire compris).
+  const np = raw.nouveauProgramme as { nom?: unknown; raison?: unknown; jours?: unknown } | undefined;
+  const nouveauProgramme: CoachNewProgram | undefined =
+    np && typeof np === 'object' && Array.isArray(np.jours) && np.jours.length > 0
+      ? {
+          nom: typeof np.nom === 'string' ? np.nom : 'Programme proposé par le coach',
+          raison: typeof np.raison === 'string' ? np.raison : '',
+          jours: np.jours as CoachNewProgram['jours'],
+        }
+      : undefined;
 
   const p = raw.proposition as {
     titre?: unknown; raison?: unknown; reglages?: unknown; echanges?: unknown; ops?: unknown;
   } | undefined;
-  if (!p || typeof p !== 'object') return { reponse };
+  if (!p || typeof p !== 'object') return { reponse, nouveauProgramme };
 
   // Les deux tableaux du schéma sont remis à plat dans la liste d'opérations
   // que l'appli sait valider. `ops` est encore accepté au cas où le modèle
@@ -387,13 +470,14 @@ const parseChat = (text: string): { reponse: string; proposition?: CoachProposal
   }
   if (Array.isArray(p.echanges)) ops.push(...p.echanges);
   if (Array.isArray(p.ops)) ops.push(...p.ops);
-  if (ops.length === 0) return { reponse };
+  if (ops.length === 0) return { reponse, nouveauProgramme };
 
   // On ne filtre rien de plus ici : c'est `utils/coachPatch.validateProposal`,
   // côté appli, qui confronte chaque opération au programme réel et aux
   // limites. Le serveur ne connaît pas le programme, il ne peut pas juger.
   return {
     reponse,
+    nouveauProgramme,
     proposition: {
       titre: typeof p.titre === 'string' ? p.titre : 'Modification proposée',
       raison: typeof p.raison === 'string' ? p.raison : '',
@@ -633,9 +717,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
 
   if (mode === 'chat') {
     const interactionId = (parsedUpstream as { id?: unknown })?.id;
-    const { reponse, proposition } = parseChat(text);
+    const { reponse, proposition, nouveauProgramme } = parseChat(text);
     const answer: CoachAiResponse = {
-      ok: true, mode: 'chat', model, reponse, proposition,
+      ok: true, mode: 'chat', model, reponse, proposition, nouveauProgramme,
       interactionId: typeof interactionId === 'string' ? interactionId : undefined,
     };
     res.status(200).json(answer);
