@@ -172,6 +172,18 @@ const isCompound = (ex: Exercise): boolean => {
 };
 
 /**
+ * Un exercice du catalogue est-il déjà présent dans la séance ? Comparer les
+ * seuls identifiants `cat-<id>` ne suffit pas : les programmes intégrés
+ * (dont celui de Léo, actif par défaut) utilisent leurs propres identifiants
+ * (`push-a-6`, etc.), jamais le préfixe `cat-`. Sans passer chaque exercice
+ * existant par `findCatalogExercise` (même résolution qu'`isCompound`), un
+ * « ajouter » ou un « remplacer » sur un mouvement déjà présent dans ces
+ * programmes ne serait jamais reconnu comme un doublon.
+ */
+const alreadyInDay = (day: WorkoutDay, cat: CatalogExercise): boolean =>
+  day.exercises.some((e) => e.id === `cat-${cat.id}` || findCatalogExercise(e.id, e.name)?.id === cat.id);
+
+/**
  * Vérifie une proposition contre le programme réel. Ne modifie rien : renvoie
  * les opérations retenues, le « avant → après » à afficher, et les rejets.
  */
@@ -282,7 +294,7 @@ export const validateProposal = (program: Program, proposal: CoachProposal): Val
         rejets.push(`Exercice de remplacement introuvable dans le catalogue (${op.catalogueId ?? op.parNom ?? '?'}) : ignoré.`);
         continue;
       }
-      if (day.exercises.some((e) => e.id === `cat-${cat.id}`)) {
+      if (alreadyInDay(day, cat)) {
         rejets.push(`${cat.name} est déjà dans ${day.name} : remplacement ignoré.`);
         continue;
       }
@@ -297,7 +309,7 @@ export const validateProposal = (program: Program, proposal: CoachProposal): Val
         rejets.push(`Exercice introuvable dans le catalogue (${op.catalogueId ?? op.nom ?? '?'}) : ajout ignoré.`);
         continue;
       }
-      if (day.exercises.some((e) => e.id === `cat-${cat.id}`)) {
+      if (alreadyInDay(day, cat)) {
         rejets.push(`${cat.name} est déjà dans ${day.name} : ajout ignoré.`);
         continue;
       }
