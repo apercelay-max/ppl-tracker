@@ -240,6 +240,13 @@ export type CoachAiErrorCode =
   | 'RESEAU'
   | 'CLE_INVALIDE'
   | 'QUOTA_DEPASSE'
+  /** Le nombre de demandes au coach IA inclus dans l'abonnement est épuisé
+   *  pour ce mois. Rien à voir avec 'QUOTA_DEPASSE', qui vient de Google :
+   *  ici c'est NOTRE limite, et le coach local reste disponible. */
+  | 'QUOTA_ABONNEMENT'
+  /** La requête n'est pas authentifiée alors que le serveur exige un compte
+   *  (PAYWALL_ENFORCE). Le client doit proposer de se connecter. */
+  | 'CONNEXION_REQUISE'
   | 'DELAI_DEPASSE'
   | 'REPONSE_VIDE'
   /** L'échange précédent n'est plus connu de Google (expiré). Le client

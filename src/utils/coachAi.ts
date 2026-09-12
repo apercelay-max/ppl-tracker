@@ -13,6 +13,7 @@ import type {
   CoachAiBrief, CoachAiRequest, CoachAiResponse, CoachDigest, CoachDigestInput,
 } from './coachDigest';
 import type { CoachPatchOp, CoachProgramView, PatchChange } from './coachPatch';
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 
 export const COACH_AI_ENDPOINT = '/api/coach';
 
@@ -103,12 +104,39 @@ export const digestFromStore = (input: CoachDigestInput): CoachDigest => buildCo
 
 const networkError = (message: string): CoachAiResponse => ({ ok: false, code: 'RESEAU', message });
 
+/**
+ * En-têtes de l'appel, avec le jeton de session quand il y en a un.
+ *
+ * Le serveur ne s'en sert QUE si le contrôle d'abonnement est allumé
+ * (PAYWALL_ENFORCE, voir api/_entitlement.ts) ; tant qu'il est éteint, le
+ * jeton est ignoré et l'appel se comporte comme avant. L'envoyer dès
+ * maintenant évite d'avoir à se souvenir de cette ligne le jour où on
+ * allumera le contrôle — c'est exactement le genre d'oubli qui donne un
+ * « connecte-toi » à des gens déjà connectés.
+ *
+ * Pas de compte, ou Supabase pas configuré : on part sans jeton. C'est un cas
+ * normal, pas une erreur.
+ */
+const authHeaders = async (): Promise<Record<string, string>> => {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (!isSupabaseConfigured || !supabase) return headers;
+
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (token) headers.Authorization = `Bearer ${token}`;
+  } catch {
+    /* session illisible : on appelle sans jeton */
+  }
+  return headers;
+};
+
 export const requestCoachAi = async (request: CoachAiRequest): Promise<CoachAiResponse> => {
   let response: Response;
   try {
     response = await fetch(COACH_AI_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await authHeaders(),
       body: JSON.stringify(request),
     });
   } catch {

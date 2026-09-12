@@ -16,9 +16,37 @@ import { CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import { motionSensorSupported, requestMotionPermission } from '../hooks/useShakeToValidate';
 import { GymsSettings } from '../components/GymsSettings';
 import type { CardioActivityType, NavTabKey } from '../data/types';
+import { ENTITLEMENTS, TIER_LABEL, TIER_PRICE, type Entitlements, type Tier } from '../lib/entitlements';
 import { IconActivity, IconArrowRight, IconBarChart, IconBounce, IconCalendar, IconCheck, IconClose, IconDownload, IconDumbbell, IconFireworks, IconHome, IconMonitor, IconMoon, IconPalette, IconPartyPopper, IconRefreshCw, IconRotateCcw, IconSave, IconScale, IconSearch, IconSparkles, IconSun, IconTarget, IconUpload, IconUser } from '../components/Icons';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
+
+// ─── Récapitulatif du palier simulé (Réglages → Données → Test) ────────────
+// Volontairement court : on montre ce qui SE VOIT en utilisant l'appli, pas
+// les 19 clés de Entitlements. Le but est de vérifier d'un coup d'œil que le
+// palier sélectionné correspond bien à ce qu'on a décidé de vendre.
+const TIER_SUMMARY_ROWS: { label: string; value: (e: Entitlements) => string }[] = [
+  { label: 'Historique', value: (e) => (Number.isFinite(e.historyDays) ? `${e.historyDays} jours` : 'Illimité') },
+  { label: 'Programmes', value: (e) => (Number.isFinite(e.programs) ? `${e.programs}` : 'Les 111') },
+  { label: 'Salles', value: (e) => (Number.isFinite(e.gyms) ? `${e.gyms}` : 'Illimitées') },
+  { label: 'Publicité', value: (e) => (e.showAds ? 'Oui' : 'Aucune') },
+  { label: 'Sauvegarde cloud', value: (e) => (e.cloudSync ? 'Oui' : 'Non') },
+  { label: 'Adaptation de séance', value: (e) => ({ none: 'Non', time: 'Temps réduit', full: 'Complète' })[e.sessionAdapt] },
+  { label: 'Suivi du corps', value: (e) => ({ none: 'Non', basic: 'Poids', full: 'Poids + mensurations' })[e.weightTracking] },
+  { label: 'Personnalisation', value: (e) => ({ basic: 'Thème', accents: 'Thème + accents', full: 'Totale' })[e.theming] },
+  { label: 'Import / export', value: (e) => (e.dataImport ? 'Oui' : 'Non') },
+  { label: 'Cardio GPS + capteurs', value: (e) => (e.cardioSensors ? 'Oui' : 'Non') },
+  { label: 'Sync Garmin', value: (e) => (e.garminSync ? 'Oui' : 'Non') },
+  { label: 'Stats avancées', value: (e) => (e.advancedStats ? 'Oui' : 'Non') },
+  { label: 'Coach IA', value: (e) => (e.coachAiPerMonth >= 150 ? 'Illimité' : `${e.coachAiPerMonth} / mois`) },
+  { label: 'Modifs de programme', value: (e) => (e.coachPatch ? 'Oui' : 'Non') },
+  { label: 'Programme généré par IA', value: (e) => (e.aiProgramGen ? 'Oui' : 'Non') },
+  { label: 'Bilan hebdomadaire', value: (e) => (e.weeklyReview ? 'Oui' : 'Non') },
+  { label: 'Deload & plateaux', value: (e) => (e.deloadDetection ? 'Oui' : 'Non') },
+  { label: 'Rapport mensuel', value: (e) => (e.monthlyReport ? 'Oui' : 'Non') },
+  { label: 'Lien coach', value: (e) => (e.coachShareLink ? 'Oui' : 'Non') },
+];
+
 
 const VAPID_PUBLIC_KEY = 'BJoSxXQJwt-i1AhuIBtDocpTSPQXj7NVsNV0104CLSqX9Uj2IP_-up_cFb6StENbdJJd4pCFZ3Wx5UspZFprQH0';
 
@@ -249,6 +277,10 @@ const addCustomProgram = useWorkoutStore((s) => s.addCustomProgram);
 const removeCustomProgram = useWorkoutStore((s) => s.removeCustomProgram);
 const badgesEnabled = useWorkoutStore((s) => s.badgesEnabled);
 const setBadgesEnabled = useWorkoutStore((s) => s.setBadgesEnabled);
+const paywallTestEnabled = useWorkoutStore((s) => s.paywallTestEnabled);
+const setPaywallTestEnabled = useWorkoutStore((s) => s.setPaywallTestEnabled);
+const paywallTestTier = useWorkoutStore((s) => s.paywallTestTier);
+const setPaywallTestTier = useWorkoutStore((s) => s.setPaywallTestTier);
 // Mode simplifié (choisi au premier lancement, modifiable ici) : masque les
 // réglages de personnalisation cosmétique (couleurs, icônes, animations,
 // barre de menus, accueil) pour ne garder que l'essentiel. Voir App.tsx /
@@ -1530,6 +1562,82 @@ Se connecter / créer un compte
 </button>
 </>
 )}
+
+{/* ─── Test des abonnements ────────────────────────────────────────
+    Banc d'essai local. Aucun paiement n'est branché et rien n'est
+    envoyé nulle part : l'interrupteur ne fait qu'appliquer, sur CET
+    appareil, les limites du palier choisi, pour qu'on voie l'appli
+    avec les yeux d'un utilisateur gratuit, Pro ou Max. Éteint, tout
+    reste débloqué comme avant. */}
+<p style={subLabel}>TEST — ABONNEMENTS</p>
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '16px' }}>
+Banc d'essai : aucun paiement n'est branché, rien n'est envoyé. L'interrupteur applique
+les limites du palier choisi sur cet appareil uniquement, le temps de vérifier à quoi
+ressemble l'appli depuis chaque offre. Aucune donnée n'est supprimée — l'historique
+au-delà de la limite est masqué, puis revient dès que tu éteins.
+</p>
+<div style={{ ...toggleRow, marginBottom: paywallTestEnabled ? 10 : 20 }}>
+<div style={{ flex: 1 }}>
+<p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Tester les abonnements</p>
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+Simule un palier pour voir ce qui est bloqué.
+</p>
+</div>
+<button
+onClick={() => setPaywallTestEnabled(!paywallTestEnabled)}
+style={{
+...switchTrack,
+background: paywallTestEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
+justifyContent: paywallTestEnabled ? 'flex-end' : 'flex-start',
+}}
+>
+<span style={switchThumb} />
+</button>
+</div>
+{paywallTestEnabled && (
+<>
+<div style={{ ...segmentRow, marginBottom: 10 }}>
+{(['free', 'pro', 'max'] as Tier[]).map((t) => (
+<button
+key={t}
+onClick={() => setPaywallTestTier(t)}
+style={{
+...segmentBtn,
+background: paywallTestTier === t ? 'var(--brand-1)' : 'var(--bg-elevated)',
+color: paywallTestTier === t ? '#fff' : 'var(--text-muted)',
+}}
+>
+<span style={{ fontSize: 13, fontWeight: 800 }}>{TIER_LABEL[t]}</span>
+<span style={{ fontSize: 10, opacity: 0.8 }}>{TIER_PRICE[t]}</span>
+</button>
+))}
+</div>
+<div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 14, padding: '4px 14px', marginBottom: 20 }}>
+{TIER_SUMMARY_ROWS.map((row, i) => {
+const value = row.value(ENTITLEMENTS[paywallTestTier]);
+// Grisé quand la ligne est un manque : « Non », et « Oui » pour la
+// publicité, qui est le seul cas où la réponse positive est la mauvaise.
+const off = value === 'Non' || (value === 'Oui' && row.label === 'Publicité');
+return (
+<div
+key={row.label}
+style={{
+display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+padding: '9px 0',
+borderTop: i === 0 ? 'none' : '1px solid var(--border-subtle)',
+}}
+>
+<span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{row.label}</span>
+<span style={{ color: off ? 'var(--text-dim)' : 'var(--text-secondary)', fontSize: 12, fontWeight: 700, textAlign: 'right' }}>
+{value}
+</span>
+</div>
+);
+})}
+</div>
+</>
+)}
+
 </div>
 )}
 </div>

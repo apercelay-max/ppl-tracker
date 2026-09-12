@@ -31,6 +31,7 @@ import type {
   CoachAiResponse,
 } from '../src/utils/coachDigest';
 import type { CoachProgramView, CoachProposal } from '../src/utils/coachPatch';
+import { checkCoachAccess, recordCoachUse } from './_entitlement';
 
 // ─── Types minimaux du handler ─────────────────────────────────────────────
 //
@@ -44,6 +45,10 @@ interface ApiRequest {
   method?: string;
   /** Vercel parse déjà le JSON quand Content-Type: application/json. */
   body?: unknown;
+  /** En-têtes de la requête. On n'en lit qu'un : `authorization`, qui porte le
+   *  jeton Supabase quand le contrôle d'abonnement est actif. Node met les
+   *  noms en minuscules, mais on ne s'y fie pas aveuglément (voir authHeader). */
+  headers?: Record<string, string | string[] | undefined>;
 }
 
 interface ApiResponse {
@@ -488,6 +493,22 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
   }
   const model = env('GEMINI_MODEL') || DEFAULT_MODEL;
 
+  // ── Abonnement ──
+  // Placé ICI, après la validation et avant le moindre appel à Google : c'est
+  // le dernier endroit où refuser ne coûte rien. Éteint tant que
+  // PAYWALL_ENFORCE ne vaut pas 1 — voir api/_entitlement.ts.
+  //
+  // L'en-tête est cherché dans les deux casses : Node normalise en minuscules,
+  // mais ce handler tourne aussi derrière d'autres runtimes pendant les tests.
+  const rawAuth = req.headers?.authorization ?? req.headers?.Authorization;
+  const authHeader = Array.isArray(rawAuth) ? rawAuth[0] : rawAuth;
+  const gate = await checkCoachAccess(authHeader, clientKey !== '');
+  if (!gate.ok) {
+    fail(res, gate.status, gate.code, gate.message);
+    return;
+  }
+
+
   // ── Construction de la requête ──
   const digestJson = JSON.stringify(body.digest);
   let input: string;
@@ -638,6 +659,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
       ok: true, mode: 'chat', model, reponse, proposition,
       interactionId: typeof interactionId === 'string' ? interactionId : undefined,
     };
+    // Décompté seulement maintenant : une réponse obtenue est une réponse due.
+    await recordCoachUse(gate.userId);
     res.status(200).json(answer);
     return;
   }
@@ -648,5 +671,6 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
     return;
   }
   const answer: CoachAiResponse = { ok: true, mode: 'brief', model, brief };
+  await recordCoachUse(gate.userId);
   res.status(200).json(answer);
 }

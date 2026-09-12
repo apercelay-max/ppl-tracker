@@ -7,6 +7,7 @@ import { Program } from '../data/programs';
 import { bucketByWeek, computeTonnage } from '../utils/training';
 import { getNextStep } from '../utils/supersets';
 import type { TrainingProfile } from '../utils/onboardingQuiz';
+import type { Tier } from '../lib/entitlements';
 
 const notifSupported = typeof Notification !== 'undefined';
 let notifTimeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -167,18 +168,26 @@ const DEFAULT_HOME_ORDER: HomeSectionKey[] = [
 // (l'étoile sur chaque widget), d'où un réglage persisté plutôt qu'une
 // constante figée.
 //
-// Trois blocs seulement, choisis par Léo : ce qu'il vient faire (la prochaine
-// séance), ce que le coach a repéré, et où il en est de sa semaine. Le cycle
-// et la liste des séances passent derrière « Tout voir » — c'est ce qui
-// occupait le plus de hauteur pour de l'information qu'on ne relit pas à
-// chaque ouverture. Le coach ne coûte rien les premiers jours : il s'efface
-// déjà tout seul tant qu'aucune séance n'est terminée.
+// Quatre blocs, choisis par Léo : ce qu'il vient faire (la prochaine séance),
+// ce que le coach a repéré, où il en est de sa semaine, et ses chiffres
+// (tonnage vs la semaine dernière + mini graphe sur 4 semaines). Le cycle et
+// la liste des séances passent derrière « Tout voir » — c'est ce qui occupait
+// le plus de hauteur pour de l'information qu'on ne relit pas à chaque
+// ouverture. Deux de ces quatre ne coûtent rien les premiers jours : le coach
+// et les stats s'effacent tout seuls tant qu'aucune séance n'est terminée.
 const DEFAULT_HOME_ESSENTIALS: Record<HomeSectionKey, boolean> = {
-coach: true, nextSession: true, weeklyGoal: true,
-cycle: false, seances: false, lastSession: false, weeklyStats: false,
+coach: true, nextSession: true, weeklyGoal: true, weeklyStats: true,
+cycle: false, seances: false, lastSession: false,
 nutrition: false, supersetRule: false, muscleAlert: false, cardio: false,
 bodyWeight: false, personalRecord: false, exerciseProgress: false, plateau: false,
 };
+
+// Révision de la composition ci-dessus. Sans ce compteur, un téléphone qui a
+// déjà ouvert l'app garde sa composition sauvegardée pour toujours : changer
+// DEFAULT_HOME_ESSENTIALS n'aurait aucun effet là où ça compte (le merge fait
+// gagner la valeur persistée). À chaque fois qu'on change la composition
+// voulue par défaut, on incrémente ici et le merge la réapplique une fois.
+const HOME_ESSENTIALS_REV = 2;
 
 // kcal/h par défaut pour chaque type d'activité cardio (utilisées pour
 // estimer les calories brûlées, réglables dans Réglages).
@@ -279,6 +288,7 @@ fontScale: 'sm' | 'md' | 'lg';
 homeSections: HomeSectionsVisible;
 homeSectionOrder: HomeSectionKey[];
 homeEssentials: Record<HomeSectionKey, boolean>;
+homeEssentialsRev: number;
 iconShape: 'square' | 'rounded' | 'circle';
 iconSize: 'sm' | 'md' | 'lg';
 defaultRestSeconds: number;
@@ -319,6 +329,15 @@ bodyWeightHistory: BodyWeightEntry[];
 activeProgramId: string;
 customPrograms: Program[];
 badgesEnabled: boolean;
+// ─── Test des abonnements (Réglages → Données) ───────────────────────────
+// Aucun paiement n'est branché : c'est un banc d'essai pour voir à quoi
+// ressemble l'appli depuis chaque palier. Tant que `paywallTestEnabled`
+// est faux, useEntitlement() renvoie UNLIMITED et RIEN n'est limité —
+// l'appli se comporte exactement comme avant. Le jour où un vrai
+// abonnement existera, le palier viendra du serveur et ces deux champs ne
+// serviront plus qu'au développement.
+paywallTestEnabled: boolean;
+paywallTestTier: Tier;
 totalSessionsCompleted: number;
 totalCardioSessions: number;
 bestWeekStreak: number;
@@ -433,6 +452,8 @@ addCustomProgram: (program: Program) => void;
 upsertCustomProgram: (program: Program) => void;
 removeCustomProgram: (id: string) => void;
 setBadgesEnabled: (enabled: boolean) => void;
+setPaywallTestEnabled: (enabled: boolean) => void;
+setPaywallTestTier: (tier: Tier) => void;
 setHapticsEnabled: (enabled: boolean) => void;
 setUltraAnimationsEnabled: (enabled: boolean) => void;
 setUltraAnimationStyle: (style: 'confetti' | 'fireworks' | 'sparkles') => void;
@@ -504,6 +525,7 @@ plateau: true,
 },
 homeSectionOrder: DEFAULT_HOME_ORDER,
 homeEssentials: { ...DEFAULT_HOME_ESSENTIALS },
+homeEssentialsRev: HOME_ESSENTIALS_REV,
 iconShape: 'rounded',
 iconSize: 'md',
 defaultRestSeconds: 180,
@@ -534,6 +556,10 @@ bodyWeightHistory: [],
 activeProgramId: 'strict-v10',
 customPrograms: [],
 badgesEnabled: true,
+// Test des abonnements : éteint par défaut. Tant qu'il l'est, aucune
+// limite n'est appliquée nulle part (voir hooks/useEntitlement.ts).
+paywallTestEnabled: false,
+paywallTestTier: 'free',
 totalSessionsCompleted: 0,
 totalCardioSessions: 0,
 bestWeekStreak: 0,
@@ -1168,6 +1194,8 @@ activeProgramId: state.activeProgramId === id ? 'strict-v10' : state.activeProgr
 },
 
 setBadgesEnabled: (enabled) => set({ badgesEnabled: enabled }),
+setPaywallTestEnabled: (enabled) => set({ paywallTestEnabled: enabled }),
+setPaywallTestTier: (tier) => set({ paywallTestTier: tier }),
 setHapticsEnabled: (enabled) => set({ hapticsEnabled: enabled }),
 setUltraAnimationsEnabled: (enabled) => set({ ultraAnimationsEnabled: enabled }),
 setUltraAnimationStyle: (style) => set({ ultraAnimationStyle: style }),
@@ -1198,6 +1226,7 @@ fontScale: state.fontScale,
 homeSections: state.homeSections,
 homeSectionOrder: state.homeSectionOrder,
 homeEssentials: state.homeEssentials,
+homeEssentialsRev: state.homeEssentialsRev,
 iconShape: state.iconShape,
 iconSize: state.iconSize,
 defaultRestSeconds: state.defaultRestSeconds,
@@ -1229,6 +1258,8 @@ bodyWeightHistory: state.bodyWeightHistory,
 activeProgramId: state.activeProgramId,
 customPrograms: state.customPrograms,
 badgesEnabled: state.badgesEnabled,
+paywallTestEnabled: state.paywallTestEnabled,
+paywallTestTier: state.paywallTestTier,
 totalSessionsCompleted: state.totalSessionsCompleted,
 totalCardioSessions: state.totalCardioSessions,
 bestWeekStreak: state.bestWeekStreak,
@@ -1261,6 +1292,15 @@ merged.homeSections = { ...current.homeSections, ...(p.homeSections ?? {}) };
 // apparaître avec sa valeur par défaut au lieu d'être absent du réglage
 // sauvegardé sur le téléphone.
 merged.homeEssentials = { ...current.homeEssentials, ...(p.homeEssentials ?? {}) };
+// ...mais un merge clé par clé ne suffit pas quand c'est la composition
+// VOULUE qui change (une clé déjà sauvegardée à false le resterait). Une
+// révision plus récente réapplique donc la composition par défaut une seule
+// fois. Les étoiles posées à la main après cette migration sont conservées :
+// le compteur ne se déclenche qu'une fois par révision.
+if ((p.homeEssentialsRev ?? 0) < HOME_ESSENTIALS_REV) {
+merged.homeEssentials = { ...DEFAULT_HOME_ESSENTIALS };
+}
+merged.homeEssentialsRev = HOME_ESSENTIALS_REV;
 const savedOrder = p.homeSectionOrder ?? current.homeSectionOrder;
 const missingKeys = current.homeSectionOrder.filter((k) => !savedOrder.includes(k));
 merged.homeSectionOrder = [...savedOrder, ...missingKeys];
@@ -1312,6 +1352,8 @@ setSessionWorkoutOverride(null);
 // limités à 50 entrées, c'est une base honnête — pas un chiffre
 // inventé — mais elle peut sous-compter l'activité plus ancienne).
 merged.badgesEnabled = p.badgesEnabled ?? true;
+merged.paywallTestEnabled = p.paywallTestEnabled ?? false;
+merged.paywallTestTier = p.paywallTestTier ?? 'free';
 const baseHistory = p.history ?? current.history;
 const baseCardio = p.cardioHistory ?? current.cardioHistory;
 const baseGoal = p.weeklySessionGoal ?? current.weeklySessionGoal;
