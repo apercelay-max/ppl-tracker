@@ -15,6 +15,7 @@ import type { SyncStatus } from '../hooks/useCloudSync';
 import { CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import { motionSensorSupported, requestMotionPermission } from '../hooks/useShakeToValidate';
 import { GymsSettings } from '../components/GymsSettings';
+import { BinomeSettings } from '../components/BinomeSettings';
 import type { CardioActivityType, NavTabKey } from '../data/types';
 import type { VoiceVerbosity } from '../store/workoutStore';
 import { isVoiceSupported, primeVoice, speak, stopVoice } from '../utils/voiceCoach';
@@ -63,6 +64,9 @@ onOpenAccount: () => void;
 onRestartQuiz: () => void;
 syncStatus?: SyncStatus;
 lastSyncedAt?: number | null;
+/** Catégorie ouverte à l'arrivée — un lien d'invitation binôme doit atterrir
+ *  sur « Données & compte », pas sur « Séance ». */
+initialCategory?: CategoryId;
 }
 
 const FONT_SCALES: { id: 'sm' | 'md' | 'lg'; label: string; preview: number }[] = [
@@ -119,6 +123,8 @@ const SECTION_META = HOME_SECTION_META;
 // "tout ce qui touche à une séance", "tout ce qui touche à l'apparence", etc.)
 // pour que la page reste simple à parcourir malgré le nombre de réglages.
 type CategoryId = 'seance' | 'apparence' | 'objectifs' | 'donnees';
+/** Exporté pour qu'App puisse ouvrir les Réglages directement sur une catégorie. */
+export type SettingsCategory = CategoryId;
 
 const CATEGORY_META: Record<CategoryId, { label: string; Icon: React.FC<{ size?: number; color?: string }>; desc: string }> = {
 seance: { label: 'Séance', Icon: IconDumbbell, desc: 'Programme, repos, minuteur, muscles sollicités.' },
@@ -177,7 +183,7 @@ if (diffMin < 60) return `il y a ${diffMin} min`;
 return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 };
 
-export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onOpenAccount, onRestartQuiz, syncStatus, lastSyncedAt }) => {
+export const SettingsScreen: React.FC<SettingsScreenProps> = ({ initialCategory, onBack, onOpenAccount, onRestartQuiz, syncStatus, lastSyncedAt }) => {
 const { user, loading: authLoading } = useAuth();
 const handleSignOut = () => { supabase?.auth.signOut(); };
 const accentTheme = useWorkoutStore((s) => s.accentTheme);
@@ -351,7 +357,7 @@ const onChange = () => setIsLandscape(mq.matches);
 mq.addEventListener('change', onChange);
 return () => mq.removeEventListener('change', onChange);
 }, []);
-const [activeTab, setActiveTab] = useState<CategoryId>('seance');
+const [activeTab, setActiveTab] = useState<CategoryId>(initialCategory ?? 'seance');
 const categoryRefs = useRef<Record<CategoryId, HTMLDivElement | null>>({
 seance: null, apparence: null, objectifs: null, donnees: null,
 });
@@ -363,6 +369,12 @@ requestAnimationFrame(() => {
 categoryRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 };
+// En paysage toutes les catégories sont affichées : l'onglet ne suffit pas,
+// il faut déplier et faire défiler jusqu'à la catégorie demandée.
+useEffect(() => {
+if (initialCategory && isLandscape) handleSidebarJump(initialCategory);
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 // Une catégorie s'affiche si : elle correspond à la recherche, ET (on est
 // en paysage — tout reste visible, la sidebar sert juste à naviguer — OU
 // en recherche active — OU c'est l'onglet actif en mode portrait/onglets).
@@ -1633,6 +1645,11 @@ Crée un compte ou connecte-toi pour synchroniser tes séances et réglages entr
 Se connecter / créer un compte
 </button>
 </>
+)}
+
+{/* Binôme — juste sous le compte, parce qu'il en a besoin. */}
+{isSupabaseConfigured && !authLoading && (
+<BinomeSettings signedIn={!!user} onOpenAccount={onOpenAccount} />
 )}
 </div>
 )}

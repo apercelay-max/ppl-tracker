@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { DataIcon } from '../components/DataIcon';
 import { MESOCYCLE_WEEKS, getProgressionWeek, getWorkout } from '../data/workouts';
 import { getProgram } from '../data/programs';
@@ -14,6 +14,8 @@ import {
 import { getCoachBrief, getNutritionAdvice } from '../utils/coach';
 import type { CoachTone } from '../utils/coach';
 import type { CardioActivityType } from '../data/types';
+import { refreshBinome, useBinome } from '../hooks/useBinome';
+import { markNudgesSeen, sendNudge } from '../lib/binome';
 import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconGauge, IconLightbulb, IconMoon, IconPMark, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
@@ -124,6 +126,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const addCardioEntry = useWorkoutStore((s) => s.addCardioEntry);
   const deleteCardioEntry = useWorkoutStore((s) => s.deleteCardioEntry);
   const weeklySessionGoal = useWorkoutStore((s) => s.weeklySessionGoal);
+  // ── Binôme ──
+  const { state: binome } = useBinome();
+  const [nudging, setNudging] = useState(false);
+  const [nudgeMsg, setNudgeMsg] = useState<string | null>(null);
+  // Nom de celui qui vient de te relancer. Gardé en local : dès qu'on l'a vu,
+  // la relance est marquée lue côté serveur et le compteur retombe à zéro —
+  // sans ça, le bandeau disparaîtrait au moment même où il s'affiche.
+  const [nudgedBy, setNudgedBy] = useState<string | null>(null);
+  useEffect(() => {
+    if (!binome?.connecte || !binome.en_binome || binome.relances_recues === 0 || !binome.partenaire) return;
+    setNudgedBy(binome.partenaire.nom);
+    void markNudgesSeen().then(() => refreshBinome());
+  }, [binome]);
   const homeSectionColors = useWorkoutStore((s) => s.homeSectionColors);
   const setHomeSectionOrder = useWorkoutStore((s) => s.setHomeSectionOrder);
   const setHomeSectionVisible = useWorkoutStore((s) => s.setHomeSectionVisible);
@@ -478,6 +493,90 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     </div>
   );
 
+  // Carte du binôme, affichée sous l'anneau hebdo : les deux se lisent ensemble.
+  const binomeCard = (() => {
+    if (!binome?.connecte || !binome.en_binome || !binome.partenaire) return null;
+    const p = binome.partenaire;
+    const pct = Math.min(1, p.semaine / Math.max(1, p.objectif));
+    const r = 20;
+    const circ = 2 * Math.PI * r;
+    const reached = p.semaine >= p.objectif;
+    const last = p.derniere_seance ? new Date(p.derniere_seance).getTime() : null;
+
+    // Sortie proposée après 3 semaines sans séance : un anneau vide qui ne
+    // bouge plus décourage au lieu de motiver.
+    const THREE_WEEKS = 21 * 86400000;
+    const inactiveSince = last ?? new Date(binome.depuis).getTime();
+    const inactive = Date.now() - inactiveSince > THREE_WEEKS;
+
+    // Une relance toutes les 6 heures : on le montre avant l'appui plutôt
+    // qu'en message d'erreur après.
+    const lastMine = binome.ma_derniere_relance ? new Date(binome.ma_derniere_relance).getTime() : 0;
+    const nextAt = lastMine + 6 * 3600000;
+    const cooldownH = Math.ceil((nextAt - Date.now()) / 3600000);
+    const canNudge = nextAt <= Date.now();
+
+    const handleNudge = async () => {
+      setNudging(true);
+      setNudgeMsg(null);
+      const res = await sendNudge();
+      setNudging(false);
+      if (!res.ok) { setNudgeMsg(res.message); return; }
+      if (!res.data.sent) {
+        const h = Math.max(1, Math.ceil((new Date(res.data.nextAllowedAt).getTime() - Date.now()) / 3600000));
+        setNudgeMsg(`Déjà relancé. Prochaine relance possible dans ${h} h.`);
+        return;
+      }
+      setNudgeMsg(res.data.push === 'envoye'
+        ? `Relance envoyée à ${p.nom}.`
+        : `Relance enregistrée — ${p.nom} la verra en ouvrant l'app.`);
+      void refreshBinome();
+    };
+
+    return (
+      <div className="glass-card" style={{ ...weeklyGoalCard, marginTop: 0, flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
+        {nudgedBy && (
+          <button onClick={() => setNudgedBy(null)} style={nudgeBanner}>
+            <span style={{ flex: 1, textAlign: 'left' }}>{nudgedBy} te met un coup de pied. C'est l'heure d'aller à la salle.</span>
+            <IconClose size={13} />
+          </button>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <svg width="48" height="48" viewBox="0 0 48 48" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+            <circle cx="24" cy="24" r={r} fill="none" stroke="var(--bg-elevated)" strokeWidth="6" />
+            <circle
+              cx="24" cy="24" r={r} fill="none"
+              stroke={reached ? '#4CAF50' : 'var(--brand-2)'}
+              strokeWidth="6" strokeLinecap="round"
+              strokeDasharray={circ} strokeDashoffset={circ * (1 - pct)}
+              style={{ transition: 'stroke-dashoffset 0.3s' }}
+            />
+          </svg>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 800 }}>
+              {p.nom} · {p.semaine} / {p.objectif}{' '}
+              <span style={{ fontWeight: 500, color: 'var(--text-muted)', fontSize: 12 }}>cette semaine</span>
+            </p>
+            <p style={{ color: inactive ? '#f5a623' : 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>
+              {inactive
+                ? `Rien depuis 3 semaines — tu peux changer de binôme dans les Réglages.`
+                : last ? `Dernière séance : ${formatRelativeDate(last).toLowerCase()}` : 'Pas encore de séance partagée'}
+            </p>
+          </div>
+          <button
+            onClick={handleNudge}
+            disabled={nudging || !canNudge}
+            style={{ ...nudgeBtn, opacity: nudging || !canNudge ? 0.5 : 1 }}
+            title={canNudge ? `Relancer ${p.nom}` : `Prochaine relance dans ${cooldownH} h`}
+          >
+            {nudging ? '…' : canNudge ? 'Relancer' : `${cooldownH} h`}
+          </button>
+        </div>
+        {nudgeMsg && <p style={{ color: 'var(--text-dim)', fontSize: 11 }}>{nudgeMsg}</p>}
+      </div>
+    );
+  })();
+
   const weeklyGoalSection = homeSections.weeklyGoal && (() => {
     const now = Date.now();
     const sessionsThisWeek = history.filter((e) => now - e.date < 7 * 86400000).length;
@@ -487,7 +586,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     const goalReached = sessionsThisWeek >= weeklySessionGoal;
     const goalColor = blockColor('weeklyGoal', 'var(--brand-1)');
     return (
-      <div key="weeklyGoal" className="glass-card" style={{ ...weeklyGoalCard, ...(homeSectionColors.weeklyGoal ? { borderLeft: `3px solid ${goalColor}` } : {}) }}>
+      <React.Fragment key="weeklyGoal">
+      <div className="glass-card" style={{ ...weeklyGoalCard, ...(homeSectionColors.weeklyGoal ? { borderLeft: `3px solid ${goalColor}` } : {}) }}>
         <svg width="64" height="64" viewBox="0 0 64 64" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
           <circle cx="32" cy="32" r={r} fill="none" stroke="var(--bg-elevated)" strokeWidth="7" />
           <circle
@@ -508,6 +608,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
           </p>
         </div>
       </div>
+      {binomeCard}
+      </React.Fragment>
     );
   })();
 
@@ -1107,6 +1209,17 @@ const nutritionCard: React.CSSProperties = {
 };
 const muscleAlertCard: React.CSSProperties = {
   borderRadius: 26, padding: 16, marginTop: 12, marginBottom: 12,
+};
+const nudgeBtn: React.CSSProperties = {
+  flexShrink: 0, padding: '9px 13px', borderRadius: 12, cursor: 'pointer',
+  background: 'rgba(var(--brand-1-rgb),0.14)', border: '1px solid rgba(var(--brand-1-rgb),0.4)',
+  color: 'var(--brand-1)', fontSize: 12.5, fontWeight: 800,
+};
+const nudgeBanner: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 10, width: '100%', cursor: 'pointer',
+  padding: '10px 12px', borderRadius: 14,
+  background: 'rgba(var(--brand-1-rgb),0.14)', border: '1px solid rgba(var(--brand-1-rgb),0.4)',
+  color: 'var(--text-primary)', fontSize: 12.5, fontWeight: 700, lineHeight: '17px',
 };
 const weeklyGoalCard: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14,

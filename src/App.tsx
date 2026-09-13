@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { HomeScreen } from './screens/HomeScreen';
 import { SessionScreen } from './screens/SessionScreen';
 import { DashboardScreen } from './screens/DashboardScreen';
-import { SettingsScreen } from './screens/SettingsScreen';
+import { SettingsScreen, type SettingsCategory } from './screens/SettingsScreen';
 import { WorkoutIntroScreen } from './screens/WorkoutIntroScreen';
 import type { SessionAdaptation } from './utils/gymAdapt';
 import type { CardioActivityType } from './data/types';
@@ -24,6 +24,8 @@ import { OnboardingQuiz } from './components/OnboardingQuiz';
 import { useWorkoutStore } from './store/workoutStore';
 import { useCloudSync } from './hooks/useCloudSync';
 import { useVoiceCoach } from './hooks/useVoiceCoach';
+import { setPendingInvite, useBinomeSync } from './hooks/useBinome';
+import { clearInviteCodeFromUrl, readInviteCodeFromUrl } from './lib/binome';
 import type { GymProfile } from './utils/gymAdapt';
 import { getAccent, hexToRgbTriplet } from './data/accents';
 import { getProgram } from './data/programs';
@@ -47,6 +49,10 @@ const [activityMode, setActivityMode] = useState<CardioActivityType>('velo');
 // D'où on est venu quand on ouvre les Réglages, pour y retourner sans
 // jamais toucher à une séance en cours (voir handleOpenSettings).
 const [settingsReturnView, setSettingsReturnView] = useState<View>('home');
+// Catégorie des Réglages à ouvrir d'office. Ne sert qu'à l'arrivée par un
+// lien d'invitation binôme ; remis à zéro dès qu'on ouvre les Réglages
+// normalement.
+const [settingsInitialCategory, setSettingsInitialCategory] = useState<SettingsCategory | undefined>(undefined);
 const theme = useWorkoutStore((s) => s.theme);
 // Pour l'étiquette du bouton rouge de la barre (« Commencer » vs « Reprendre »).
 const session = useWorkoutStore((s) => s.session);
@@ -77,6 +83,22 @@ const sync = useCloudSync();
 // quand on quitte l'écran de séance pendant un repos (Stats, Catalogue...).
 // Il ne dit rien tant qu'aucune séance n'est en cours.
 useVoiceCoach();
+// Binôme : charge l'état et partage chaque séance terminée (voir hooks/useBinome.ts).
+useBinomeSync();
+
+// Lien d'invitation (…/?binome=CODE). Le code est rangé pour la durée de
+// l'onglet — il faut peut-être d'abord se connecter — puis retiré de la barre
+// d'adresse, sinon un rechargement rejouerait l'acceptation. On ouvre les
+// Réglages sur « Données & compte », où l'invitation attend.
+useEffect(() => {
+const code = readInviteCodeFromUrl();
+if (!code) return;
+setPendingInvite(code);
+clearInviteCodeFromUrl();
+setSettingsReturnView('home');
+setSettingsInitialCategory('donnees');
+setView('settings');
+}, []);
 
 // ── Splash de démarrage ("PPL" en grand + icône) ────────────────────────
 const [splashVisible, setSplashVisible] = useState(true);
@@ -184,6 +206,7 @@ setView('dashboard');
 
 const handleOpenSettings = () => {
 setSettingsReturnView(view);
+setSettingsInitialCategory(undefined);
 setView('settings');
 };
 
@@ -242,6 +265,7 @@ screen = <AuthScreen onBack={handleBackFromAccount} />;
 } else if (view === 'settings') {
 screen = (
 <SettingsScreen
+initialCategory={settingsInitialCategory}
 onBack={handleBackFromSettings}
 onOpenAccount={handleOpenAccount}
 onRestartQuiz={() => { setView(settingsReturnView); setQuizOpen(true); }}
