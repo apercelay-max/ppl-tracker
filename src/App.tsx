@@ -24,6 +24,7 @@ import { OnboardingQuiz } from './components/OnboardingQuiz';
 import { useWorkoutStore } from './store/workoutStore';
 import { useCloudSync } from './hooks/useCloudSync';
 import { useVoiceCoach } from './hooks/useVoiceCoach';
+import type { GymProfile } from './utils/gymAdapt';
 import { getAccent, hexToRgbTriplet } from './data/accents';
 import { getProgram } from './data/programs';
 import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
@@ -153,9 +154,9 @@ setView('intro');
 // L'écran d'aperçu peut renvoyer un plan d'adaptation (temps dispo, forme
 // du jour, matériel dispo) : il est transmis tel quel au store, qui bâtit
 // la séance réellement faite à partir de là.
-const handleStartWorkout = (adaptation: SessionAdaptation | null = null, gymId?: string) => {
+const handleStartWorkout = (adaptation: SessionAdaptation | null = null, gymId?: string, passageGym?: GymProfile | null) => {
 if (!selectedDayId) return;
-useWorkoutStore.getState().startSession(selectedDayId, adaptation, gymId);
+useWorkoutStore.getState().startSession(selectedDayId, adaptation, gymId, passageGym ?? null);
 setView('session');
 };
 

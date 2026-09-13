@@ -71,6 +71,11 @@ export interface WorkoutSession {
     disabledSupersetGroupIds?: string[];
     /** Salle où la séance est faite (voir Réglages → Mes salles). */
     gymId?: string;
+    /** Salle de passage (hôtel, maison, dehors) décrite pour CETTE séance
+     *  seulement. Présente = elle prime sur la salle enregistrée pour le calcul
+     *  des disques et le matériel ; absente = séance dans une salle enregistrée.
+     *  Type importé en ligne pour ne pas ajouter de dépendance à ce fichier. */
+    passageGym?: import('../utils/gymAdapt').GymProfile;
 }
 
 // ─── History ──────────────────────────────────────────────────────────────

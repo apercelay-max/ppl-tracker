@@ -44,6 +44,13 @@ export interface GymProfile {
    * infaisable juste parce que Léo n'a pas fini de saisir ses machines.
    */
   machinesListComplete?: boolean;
+  /**
+   * Barre fixe : tractions, dips aux barres, rowing inversé, relevés suspendus.
+   * Absent = présente. C'est le cas de toutes les salles enregistrées jusqu'ici,
+   * et leur comportement ne change pas ; seule une salle de passage le met à
+   * `false`.
+   */
+  pullupBar?: boolean;
 }
 
 /** Une salle enregistrée (voir Réglages → Mes salles). */
@@ -95,7 +102,11 @@ export const isAdaptationActive = (a: SessionAdaptation | null): boolean =>
 const isIsolation = (ex: Exercise): boolean => {
   const cat = findCatalogExercise(ex.id, ex.name);
   if (cat) return cat.type === 'Isolation';
-  return /curl|[ée]l[ée]vation|extension|[ée]cart|mollet|crunch|face pull|shrug|kickback/i.test(ex.name);
+  // Filet de sécurité quand le nom du programme ne correspond à aucune fiche du
+  // catalogue. « oiseau » et « abduction » manquaient : sans eux, un oiseau aux
+  // haltères passait pour un polyarticulaire, et aucun remplaçant d'isolation ne
+  // pouvait atteindre le seuil de findSubstitute (le +6 du même type).
+  return /curl|[ée]l[ée]vation|extension|[ée]cart|mollet|crunch|face pull|shrug|kickback|oiseau|abduction|adduction|pull-?over|pec-?deck|butterfly/i.test(ex.name);
 };
 
 /** Temps d'exécution d'UNE série, hors repos. */
@@ -185,6 +196,21 @@ export const gymHasMachineFor = (exerciseName: string, gym: GymProfile): boolean
   });
 };
 
+/**
+ * L'exercice demande-t-il une barre fixe ?
+ *
+ * Par le nom, parce que le catalogue étiquette les tractions « Poids du corps » :
+ * c'est juste pour la charge, faux pour le matériel — et c'est exactement ce qui
+ * faisait proposer des tractions dans une chambre d'hôtel.
+ *
+ * Deux exclusions volontaires. Pas de « chin » dans le motif : il est contenu
+ * dans « machine », et aurait fait de tout exercice à la machine un exercice
+ * suspendu. Et « dips sur banc » n'est pas concerné : un banc suffit.
+ */
+const HANGING = /\btraction|rowing invers|australien|suspendu|muscle-up/i;
+export const needsPullupBar = (name: string): boolean =>
+  HANGING.test(name) || (/\bdips\b/i.test(name) && !/banc/i.test(name));
+
 /** Vrai si l'exercice se charge sur une barre (donc calcul de disques utile). */
 export const usesBarbell = (ex: Pick<Exercise, 'id' | 'name'>): 'Barre' | 'Barre EZ' | null => {
   const eq = inferEquipment(ex);
@@ -258,6 +284,8 @@ export const findSubstitute = ({
     if (allowedEquipment && !allowedEquipment.includes(c.equipment)) return false;
     if (avoid && avoid.test(c.name)) return false;
     if (c.equipment === 'Machine' && gym && !gymHasMachineFor(c.name, gym)) return false;
+    // Sans ce filtre, « tractions lestées » était remplacé par… « tractions ».
+    if (gym?.pullupBar === false && needsPullupBar(c.name)) return false;
     return true;
   });
   if (candidates.length === 0) return null;
@@ -345,8 +373,14 @@ export const buildAdaptation = (
       // Une machine peut être « disponible » en catégorie mais absente de
       // cette salle en particulier (liste des machines déclarée complète).
       const machineOk = needed !== 'Machine' || gymHasMachineFor(ex.name, gym);
-      if (equipementOk && machineOk) continue;
-      const raison = !equipementOk ? `${needed} indisponible` : 'machine absente de cette salle';
+      const barreOk = gym.pullupBar !== false || !needsPullupBar(ex.name);
+      if (equipementOk && machineOk && barreOk) continue;
+      // La barre fixe passe en premier : « Tractions (barre) » est lu comme un
+      // exercice à la barre olympique, mais la vraie raison est l'absence de barre
+      // de traction, et c'est celle-là que l'utilisateur doit lire.
+      const raison = !barreOk
+        ? 'pas de barre de traction'
+        : !equipementOk ? `${needed} indisponible` : 'machine absente de cette salle';
       const sub = findSubstitute({ exercise: ex, allowedEquipment: gym.availableEquipment, gym });
       if (sub) {
         const before = ex.name;
@@ -558,3 +592,81 @@ export const catalogIdsToAvoid = (zones: SoreZone[]): string[] => {
     .filter((ex) => risky.some((r) => r.test(ex.name)))
     .map((ex) => ex.id);
 };
+
+// ─── Salle de passage ──────────────────────────────────────────────────────
+//
+// Hôtel, vacances, week-end chez des proches : une salle où on ne reviendra
+// pas. L'enregistrer dans Réglages → Mes salles serait absurde (elle y resterait
+// pour toujours) et, pire, la choisir au démarrage la ferait devenir la salle
+// habituelle. Une salle de passage vit donc dans la séance elle-même et meurt
+// avec elle — voir `passageGym` dans WorkoutSession et `useActiveGym`.
+//
+// Le moteur n'a rien de spécial à savoir : buildAdaptation prend n'importe quel
+// GymProfile. Ces préréglages ne sont qu'un point de départ pour cocher vite ;
+// ce qui compte est la liste de matériel que l'utilisateur ajuste ensuite.
+
+export type PassagePresetId = 'hotel' | 'maison' | 'quartier' | 'dehors';
+
+export interface PassagePreset {
+  id: PassagePresetId;
+  label: string;
+  /** Ce qu'on trouve d'habitude sur place, pour savoir quoi vérifier. */
+  hint: string;
+  profile: GymProfile;
+}
+
+/** Identifiant réservé : ne correspond à aucune salle enregistrée, ce qui fait
+ *  de `setActiveGym(PASSAGE_GYM_ID)` un no-op — la salle habituelle reste. */
+export const PASSAGE_GYM_ID = 'passage';
+
+const passage = (
+  equipment: Equipment[], plates: number[], otherIncrementKg: number, pullupBar: boolean,
+): GymProfile => ({
+  barKg: 20,
+  ezBarKg: 10,
+  plates,
+  otherIncrementKg,
+  availableEquipment: equipment,
+  machines: [],
+  machinesListComplete: false,
+  pullupBar,
+});
+
+export const PASSAGE_PRESETS: PassagePreset[] = [
+  {
+    id: 'hotel',
+    label: "Salle d'hôtel",
+    hint: 'Souvent des haltères jusqu\'à 20 kg et un banc, rarement plus.',
+    profile: passage(['Haltères', 'Poids du corps'], [], 2, false),
+  },
+  {
+    id: 'maison',
+    label: 'À la maison',
+    hint: 'Haltères, élastiques, poids du corps.',
+    profile: passage(['Haltères', 'Élastique', 'Poids du corps'], [], 2, false),
+  },
+  {
+    id: 'quartier',
+    label: 'Petite salle',
+    hint: 'Barre, haltères et une poulie — peu de machines.',
+    profile: passage(['Barre', 'Barre EZ', 'Haltères', 'Poulie', 'Poids du corps'], [20, 10, 5, 2.5, 1.25], 2, true),
+  },
+  {
+    id: 'dehors',
+    label: 'Dehors',
+    hint: 'Poids du corps et élastiques — coche la barre si tu es dans un parc de street workout.',
+    // Incrément à 1 et pas 0 : plates.ts arrondit en divisant par cette valeur.
+    profile: passage(['Poids du corps', 'Élastique'], [], 1, false),
+  },
+];
+
+/** Disques supposés quand on coche « Barre » sur un préréglage qui n'en avait
+ *  pas : mieux vaut un calcul de disques approximatif que pas de calcul. */
+export const PASSAGE_FALLBACK_PLATES = [20, 10, 5, 2.5, 1.25];
+
+/** Une salle de passage habillée en `Gym`, pour les écrans qui en attendent une. */
+export const passageAsGym = (profile: GymProfile): Gym => ({
+  ...profile,
+  id: PASSAGE_GYM_ID,
+  name: 'Salle de passage',
+});

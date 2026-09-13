@@ -3,9 +3,11 @@ import type { WorkoutDay } from '../data/types';
 import { useWorkoutStore, useActiveGym } from '../store/workoutStore';
 import {
   buildAdaptation, applyAdaptation, isAdaptationActive, estimateWorkoutMinutes,
-  ZONE_LABELS, EMPTY_OPTIONS,
-  type AdaptOptions, type SessionAdaptation, type SoreZone,
+  ZONE_LABELS, EMPTY_OPTIONS, PASSAGE_PRESETS, PASSAGE_GYM_ID, PASSAGE_FALLBACK_PLATES, passageAsGym,
+  type AdaptOptions, type GymProfile, type PassagePreset, type PassagePresetId,
+  type SessionAdaptation, type SoreZone,
 } from '../utils/gymAdapt';
+import { CATALOG_EQUIPMENT, type Equipment } from '../data/exercisesCatalog';
 
 
 // ─── « Adapter la séance » ─────────────────────────────────────────────────
@@ -17,7 +19,9 @@ import {
 interface Props {
   workout: WorkoutDay;
   onClose: () => void;
-  onStart: (adaptation: SessionAdaptation | null, gymId: string) => void;
+  /** `passageGym` n'est fourni que pour une salle de passage : la séance en a
+   *  besoin même sans adaptation, pour calculer les disques sur place. */
+  onStart: (adaptation: SessionAdaptation | null, gymId: string, passageGym?: GymProfile | null) => void;
 }
 
 const TIME_CHOICES: (number | null)[] = [null, 30, 40, 50, 60];
@@ -31,7 +35,43 @@ export const SessionAdaptSheet: React.FC<Props> = ({ workout, onClose, onStart }
   // matériel sont donc toujours calculés (pour la salle habituelle bien
   // équipée, ça ne change simplement rien).
   const [gymId, setGymId] = useState(activeGym.id);
-  const gym = gyms.find((g) => g.id === gymId) ?? activeGym;
+
+  // ── Salle de passage ──
+  const [passageId, setPassageId] = useState<PassagePresetId>('hotel');
+  const [passageEquip, setPassageEquip] = useState<Equipment[]>(PASSAGE_PRESETS[0].profile.availableEquipment);
+  // À part de la liste de matériel : ce n'est pas une catégorie du catalogue
+  // (les tractions y sont « Poids du corps »), c'est une contrainte de lieu.
+  const [passageBar, setPassageBar] = useState<boolean>(PASSAGE_PRESETS[0].profile.pullupBar ?? false);
+  const isPassage = gymId === PASSAGE_GYM_ID;
+  const preset = PASSAGE_PRESETS.find((p) => p.id === passageId) ?? PASSAGE_PRESETS[0];
+
+  const passageProfile: GymProfile = useMemo(() => ({
+    ...preset.profile,
+    availableEquipment: passageEquip,
+    plates: passageEquip.includes('Barre') && preset.profile.plates.length === 0
+      ? PASSAGE_FALLBACK_PLATES
+      : preset.profile.plates,
+    pullupBar: passageBar,
+  }), [preset, passageEquip, passageBar]);
+
+  const choosePreset = (p: PassagePreset) => {
+    setPassageId(p.id);
+    setPassageEquip(p.profile.availableEquipment);
+    setPassageBar(p.profile.pullupBar ?? false);
+  };
+  // On ne laisse jamais la liste vide : buildAdaptation ignore une salle sans
+  // matériel, et la séance aurait l'air entièrement faisable alors qu'elle ne
+  // l'est pas.
+  const toggleEquip = (eq: Equipment) =>
+    setPassageEquip((list) =>
+      list.includes(eq) ? (list.length > 1 ? list.filter((e) => e !== eq) : list) : [...list, eq]);
+
+  // Mémorisé : passageAsGym renvoie un objet neuf, qui relancerait sinon le
+  // calcul de l'adaptation à chaque rendu.
+  const gym = useMemo(
+    () => (isPassage ? passageAsGym(passageProfile) : gyms.find((g) => g.id === gymId) ?? activeGym),
+    [isPassage, passageProfile, gyms, gymId, activeGym]
+  );
   const [options, setOptions] = useState<AdaptOptions>({ ...EMPTY_OPTIONS, awayGym: true });
 
   const patch = (p: Partial<AdaptOptions>) => setOptions((o) => ({ ...o, ...p }));
@@ -94,17 +134,48 @@ export const SessionAdaptSheet: React.FC<Props> = ({ workout, onClose, onStart }
           </div>
 
           {/* ── Salle ───────────────────────────────────────────────────── */}
-          {gyms.length > 1 && (
-            <>
-              <p style={{ ...sectionLabel, marginTop: 14 }}>DANS QUELLE SALLE ?</p>
+          {/* Toujours affichée, même avec une seule salle enregistrée : c'est
+              ici qu'on déclare une salle de passage, et ce besoin ne dépend pas
+              du nombre de salles qu'on a déjà. */}
+          <p style={{ ...sectionLabel, marginTop: 14 }}>DANS QUELLE SALLE ?</p>
+          <div style={chipRow}>
+            {gyms.map((g) => (
+              <button key={g.id} onClick={() => setGymId(g.id)} style={chip(g.id === gymId)}>
+                {g.name}
+              </button>
+            ))}
+            <button onClick={() => setGymId(PASSAGE_GYM_ID)} style={chip(isPassage)}>
+              Salle de passage
+            </button>
+          </div>
+
+          {isPassage && (
+            <div style={passageBox}>
+              <p style={passageIntro}>
+                Pour cette séance seulement — rien n'est ajouté à tes salles, et ta salle
+                habituelle ne change pas.
+              </p>
               <div style={chipRow}>
-                {gyms.map((g) => (
-                  <button key={g.id} onClick={() => setGymId(g.id)} style={chip(g.id === gymId)}>
-                    {g.name}
+                {PASSAGE_PRESETS.map((p) => (
+                  <button key={p.id} onClick={() => choosePreset(p)} style={chip(p.id === passageId)}>
+                    {p.label}
                   </button>
                 ))}
               </div>
-            </>
+              <p style={{ ...toggleHint, marginTop: -6, marginBottom: 12 }}>{preset.hint}</p>
+
+              <p style={sectionLabel}>CE QU'IL Y A VRAIMENT SUR PLACE</p>
+              <div style={{ ...chipRow, marginBottom: 0 }}>
+                {CATALOG_EQUIPMENT.filter((eq) => eq !== 'Autre').map((eq) => (
+                  <button key={eq} onClick={() => toggleEquip(eq)} style={chip(passageEquip.includes(eq))}>
+                    {eq}
+                  </button>
+                ))}
+                <button onClick={() => setPassageBar((b) => !b)} style={chip(passageBar)}>
+                  Barre de traction
+                </button>
+              </div>
+            </div>
           )}
 
           {/* ── Aperçu ───────────────────────────────────────────────────── */}
@@ -137,7 +208,10 @@ export const SessionAdaptSheet: React.FC<Props> = ({ workout, onClose, onStart }
 
         <div style={actions}>
           <button onClick={onClose} style={ghostBtn}>Annuler</button>
-          <button onClick={() => onStart(active ? adaptation : null, gym.id)} style={primaryBtn}>
+          <button
+            onClick={() => onStart(active ? adaptation : null, gym.id, isPassage ? passageProfile : null)}
+            style={primaryBtn}
+          >
             {active ? 'Démarrer adaptée' : 'Démarrer'}
           </button>
         </div>
@@ -209,6 +283,13 @@ const Switch: React.FC<{ on: boolean }> = ({ on }) => (
     />
   </span>
 );
+const passageBox: React.CSSProperties = {
+  marginTop: -4, marginBottom: 6, padding: '12px 12px 14px', borderRadius: 16,
+  background: 'var(--bg-surface)', border: '1px solid var(--border)',
+};
+const passageIntro: React.CSSProperties = {
+  color: 'var(--text-secondary)', fontSize: 12, lineHeight: '17px', marginBottom: 10,
+};
 const preview: React.CSSProperties = {
   marginTop: 16, marginBottom: 4, padding: 14, borderRadius: 16,
   background: 'var(--bg-base)', border: '1px solid var(--border)',

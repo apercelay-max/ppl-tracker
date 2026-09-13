@@ -1,8 +1,9 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { WorkoutSession, ExerciseProgress, SetEntry, HistoryEntry, TimerState, CardioActivityType, CardioEntry, CardioStats, BodyWeightEntry, NavTabKey } from '../data/types';
 import { getWorkout, getBaseWorkout, setCustomWorkouts, setSessionWorkoutOverride, MESOCYCLE_WEEKS } from '../data/workouts';
-import { applyAdaptation, type Gym, type GymProfile, type SessionAdaptation } from '../utils/gymAdapt';
+import { applyAdaptation, passageAsGym, PASSAGE_GYM_ID, type Gym, type GymProfile, type SessionAdaptation } from '../utils/gymAdapt';
 import { Program } from '../data/programs';
 import { bucketByWeek, computeTonnage } from '../utils/training';
 import { getNextStep } from '../utils/supersets';
@@ -360,7 +361,7 @@ simplicityMode: boolean;
 // quand on le refait et à expliquer d'où vient le programme généré (voir
 // components/OnboardingQuiz.tsx et utils/onboardingQuiz.ts).
 trainingProfile: TrainingProfile | null;
-startSession: (dayId: string, adaptation?: SessionAdaptation | null, gymId?: string) => void;
+startSession: (dayId: string, adaptation?: SessionAdaptation | null, gymId?: string, passageGym?: GymProfile | null) => void;
 completeSet: (exerciseId: string, setIndex: number, entry: SetEntry) => void;
 editSet: (exerciseId: string, setIndex: number) => void;
 restoreSessionPosition: (exerciseIndex: number, setIndex: number) => void;
@@ -482,8 +483,19 @@ return streak;
  * Il y a toujours au moins une salle, mais on retombe sur la première si
  * l'identifiant actif pointe dans le vide (sauvegarde bricolée à la main).
  */
-export const useActiveGym = (): Gym =>
-  useWorkoutStore((s) => s.gyms.find((g) => g.id === s.activeGymId) ?? s.gyms[0]);
+export const useActiveGym = (): Gym => {
+  // Une salle de passage en cours prime sur la salle enregistrée : c'est elle
+  // qui détermine les disques pendant la séance (SetRow, ExerciseCard).
+  //
+  // On sélectionne les références BRUTES et on compose avec useMemo. Construire
+  // l'objet dans le sélecteur renverrait un objet neuf à chaque appel : Zustand
+  // le compare par identité et redemanderait un rendu à chaque changement du
+  // store, jusqu'à la boucle.
+  const passage = useWorkoutStore((s) =>
+    s.session && !s.session.isComplete ? s.session.passageGym ?? null : null);
+  const saved = useWorkoutStore((s) => s.gyms.find((g) => g.id === s.activeGymId) ?? s.gyms[0]);
+  return useMemo(() => (passage ? passageAsGym(passage) : saved), [passage, saved]);
+};
 
 export const useWorkoutStore = create<WorkoutStore>()(
 persist(
@@ -563,7 +575,7 @@ hasCompletedOnboarding: false,
 simplicityMode: false,
 trainingProfile: null,
 
-startSession: (dayId, adaptation = null, gymId) => {
+startSession: (dayId, adaptation = null, gymId, passageGym = null) => {
 // On part TOUJOURS de la séance du programme, jamais d'une éventuelle
 // séance déjà adaptée encore en place : sinon relancer une séance
 // appliquerait l'adaptation par-dessus une adaptation.
@@ -584,7 +596,10 @@ set({
 session: {
 dayId, startTime: Date.now(), exerciseProgress,
 currentExerciseIndex: 0, currentSetIndex: 0, isComplete: false,
-gymId: gymId ?? get().activeGymId,
+// Salle de passage : on enregistre l'identifiant réservé plutôt qu'une
+// salle existante, pour que l'historique ne l'attribue pas à tort.
+gymId: passageGym ? PASSAGE_GYM_ID : (gymId ?? get().activeGymId),
+...(passageGym ? { passageGym } : {}),
 },
 // Jour 1 du cycle (Pull A) = redémarrage d'un nouveau cycle glissant
 // → on regrise toutes les séances de l'accueil.

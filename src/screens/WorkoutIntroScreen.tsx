@@ -8,14 +8,14 @@ import { useWorkoutStore } from '../store/workoutStore';
 import { ExerciseCard } from '../components/ExerciseCard';
 import { SessionAdaptSheet } from '../components/SessionAdaptSheet';
 import { GymPickerSheet } from '../components/GymPickerSheet';
-import type { SessionAdaptation } from '../utils/gymAdapt';
+import type { GymProfile, SessionAdaptation } from '../utils/gymAdapt';
 
 interface WorkoutIntroScreenProps {
 dayId: string;
 onBack: () => void;
 // Reçoit le plan d'adaptation choisi dans la fiche « Adapter la séance »,
 // ou null quand on démarre la séance du programme telle quelle.
-onStart: (adaptation?: SessionAdaptation | null, gymId?: string) => void;
+onStart: (adaptation?: SessionAdaptation | null, gymId?: string, passageGym?: GymProfile | null) => void;
 }
 
 // Couleurs/labels d'accent par séance, tous programmes confondus (Strict V11
@@ -74,9 +74,12 @@ const setActiveGym = useWorkoutStore((s) => s.setActiveGym);
 
 // La question « tu es dans quelle salle ? » n'a de sens qu'à partir de deux
 // salles enregistrées — sinon on démarre directement.
-const demarrer = (adaptation: SessionAdaptation | null, gymId: string) => {
-setActiveGym(gymId);
-onStart(adaptation, gymId);
+const demarrer = (adaptation: SessionAdaptation | null, gymId: string, passageGym: GymProfile | null = null) => {
+// Une salle de passage ne devient JAMAIS la salle habituelle : sinon un
+// week-end à l'hôtel ferait démarrer toutes les séances suivantes avec
+// les haltères de l'hôtel.
+if (!passageGym) setActiveGym(gymId);
+onStart(adaptation, gymId, passageGym);
 };
 const handleStartClick = () => {
 if (gyms.length > 1) { setGymPickerOpen(true); return; }
@@ -342,7 +345,7 @@ Démarrer
 <SessionAdaptSheet
 workout={workout}
 onClose={() => setAdaptOpen(false)}
-onStart={(adaptation, gymId) => { setAdaptOpen(false); demarrer(adaptation, gymId); }}
+onStart={(adaptation, gymId, passageGym) => { setAdaptOpen(false); demarrer(adaptation, gymId, passageGym ?? null); }}
 />
 )}
 
