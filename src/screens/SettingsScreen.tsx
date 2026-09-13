@@ -16,6 +16,8 @@ import { CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import { motionSensorSupported, requestMotionPermission } from '../hooks/useShakeToValidate';
 import { GymsSettings } from '../components/GymsSettings';
 import type { CardioActivityType, NavTabKey } from '../data/types';
+import type { VoiceVerbosity } from '../store/workoutStore';
+import { isVoiceSupported, primeVoice, speak, stopVoice } from '../utils/voiceCoach';
 import { IconActivity, IconArrowRight, IconBarChart, IconBounce, IconCalendar, IconCheck, IconClose, IconDownload, IconDumbbell, IconFireworks, IconHome, IconMonitor, IconMoon, IconPalette, IconPartyPopper, IconRefreshCw, IconRotateCcw, IconSave, IconScale, IconSearch, IconSparkles, IconSun, IconTarget, IconUpload, IconUser } from '../components/Icons';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
@@ -249,6 +251,12 @@ const addCustomProgram = useWorkoutStore((s) => s.addCustomProgram);
 const removeCustomProgram = useWorkoutStore((s) => s.removeCustomProgram);
 const badgesEnabled = useWorkoutStore((s) => s.badgesEnabled);
 const setBadgesEnabled = useWorkoutStore((s) => s.setBadgesEnabled);
+const voiceCoachEnabled = useWorkoutStore((s) => s.voiceCoachEnabled);
+const setVoiceCoachEnabled = useWorkoutStore((s) => s.setVoiceCoachEnabled);
+const voiceRate = useWorkoutStore((s) => s.voiceRate);
+const setVoiceRate = useWorkoutStore((s) => s.setVoiceRate);
+const voiceVerbosity = useWorkoutStore((s) => s.voiceVerbosity);
+const setVoiceVerbosity = useWorkoutStore((s) => s.setVoiceVerbosity);
 // Mode simplifié (choisi au premier lancement, modifiable ici) : masque les
 // réglages de personnalisation cosmétique (couleurs, icônes, animations,
 // barre de menus, accueil) pour ne garder que l'essentiel. Voir App.tsx /
@@ -827,6 +835,102 @@ justifyContent: shakeToValidateEnabled ? 'flex-end' : 'flex-start',
 <p style={{ color: '#f5a623', fontSize: 11, marginBottom: 16, lineHeight: '15px' }}>{shakeError}</p>
 )}
 <div style={{ marginBottom: 20 }} />
+
+{/* ─── Coach vocal ───────────────────────────────────────────────────
+    L'autre moitié de « Valider en secouant » : la secousse permet de
+    répondre sans regarder, la voix permet de savoir quoi faire sans
+    regarder. Les deux ensemble = une séance sans sortir le téléphone. */}
+<p style={subLabel}>COACH VOCAL</p>
+{!isVoiceSupported() ? (
+<p style={{ color: '#f5a623', fontSize: 11, marginBottom: 20, lineHeight: '15px' }}>
+Ce navigateur n'a pas de synthèse vocale. Le coach vocal n'est pas disponible ici.
+</p>
+) : (
+<>
+<div style={{ ...toggleRow, marginBottom: 8 }}>
+<div style={{ flex: 1 }}>
+<p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Annoncer la séance à voix haute</p>
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
+Exercice, numéro de série, charge de la série précédente, durée du repos et décompte. Avec des écouteurs et la validation par secousse, tu n'as plus à sortir le téléphone.
+</p>
+</div>
+<button
+onClick={() => {
+const next = !voiceCoachEnabled;
+setVoiceCoachEnabled(next);
+// Le déverrouillage DOIT partir d'un geste de l'utilisateur : sur
+// iPhone, une première phrase déclenchée par du code est ignorée,
+// et la file reste muette pour toute la session.
+if (next) { primeVoice(); speak('Coach vocal activé.', { rate: voiceRate }); }
+else stopVoice();
+}}
+style={{
+...switchTrack,
+background: voiceCoachEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
+justifyContent: voiceCoachEnabled ? 'flex-end' : 'flex-start',
+}}
+>
+<span style={switchThumb} />
+</button>
+</div>
+
+{voiceCoachEnabled && (
+<>
+<p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.2, margin: '14px 0 8px' }}>
+CE QU'IL DIT
+</p>
+<div style={{ ...segmentRow, marginBottom: 14 }}>
+{(['court', 'complet'] as VoiceVerbosity[]).map((v) => (
+<button
+key={v}
+onClick={() => setVoiceVerbosity(v)}
+style={{
+...segmentBtn,
+background: voiceVerbosity === v ? 'var(--brand-1)' : 'var(--bg-elevated)',
+color: voiceVerbosity === v ? '#fff' : 'var(--text-muted)',
+}}
+>
+<span style={{ fontSize: 13, fontWeight: 800 }}>{v === 'court' ? 'Court' : 'Complet'}</span>
+<span style={{ fontSize: 10, opacity: 0.8 }}>
+{v === 'court' ? "L'essentiel" : '+ contexte'}
+</span>
+</button>
+))}
+</div>
+
+<p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.2, margin: '0 0 8px' }}>
+VITESSE
+</p>
+<div style={{ ...toggleRow, marginBottom: 8, gap: 14 }}>
+<input
+type="range"
+min={0.8}
+max={1.5}
+step={0.05}
+value={voiceRate}
+onChange={(e) => setVoiceRate(parseFloat(e.target.value))}
+style={{ flex: 1, accentColor: 'var(--brand-1)' }}
+/>
+<span style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700, minWidth: 42, textAlign: 'right' }}>
+{voiceRate.toFixed(2)}×
+</span>
+</div>
+<button
+onClick={() => {
+primeVoice();
+speak('Développé couché. Série 2 sur 4. 80 kilos.', { rate: voiceRate, urgent: true });
+}}
+style={{ ...restBtn, padding: '12px 8px', marginBottom: 10 }}
+>
+Écouter un exemple
+</button>
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 20, lineHeight: '15px' }}>
+La voix est celle de ton appareil : elle ne consomme aucune donnée et fonctionne hors ligne. Sur iPhone, garde l'écran allumé pendant la séance (Réglages → Séance → l'écran reste allumé) — Safari coupe la voix quand le téléphone est verrouillé.
+</p>
+</>
+)}
+</>
+)}
 
 {/* Temps de repos par exercice */}
 <p style={subLabel}>TEMPS DE REPOS PAR EXERCICE</p>

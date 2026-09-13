@@ -23,6 +23,7 @@ import { SyncConflictModal } from './components/SyncConflictModal';
 import { OnboardingQuiz } from './components/OnboardingQuiz';
 import { useWorkoutStore } from './store/workoutStore';
 import { useCloudSync } from './hooks/useCloudSync';
+import { useVoiceCoach } from './hooks/useVoiceCoach';
 import { getAccent, hexToRgbTriplet } from './data/accents';
 import { getProgram } from './data/programs';
 import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
@@ -71,6 +72,10 @@ const [quizOpen, setQuizOpen] = useState(false);
 // utilisateur est connecté (voir hooks/useCloudSync.ts). Le modal de
 // conflit est rendu plus bas, par-dessus l'écran courant quel qu'il soit.
 const sync = useCloudSync();
+// Monté ici et pas dans SessionScreen : le coach doit continuer de parler
+// quand on quitte l'écran de séance pendant un repos (Stats, Catalogue...).
+// Il ne dit rien tant qu'aucune séance n'est en cours.
+useVoiceCoach();
 
 // ── Splash de démarrage ("PPL" en grand + icône) ────────────────────────
 const [splashVisible, setSplashVisible] = useState(true);

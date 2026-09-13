@@ -70,6 +70,12 @@ try { if ('vibrate' in navigator) navigator.vibrate([40, 30, 40]); } catch (_) {
 
 // ── Bip de fin de repos (Web Audio, pas besoin de fichier son) ────────────
 export type BeepTone = 'doux' | 'classique' | 'urgent' | 'melodique' | 'cloche';
+
+/** Ce que le coach vocal dit. 'court' = seulement ce qu'on ne peut pas deviner
+ *  sans regarder (numéro de série, charge, fin de repos) ; 'complet' ajoute le
+ *  contexte et les encouragements. Au bout de trois séances la plupart des gens
+ *  passent en 'court' — d'où le réglage. */
+export type VoiceVerbosity = 'court' | 'complet';
 let audioCtx: AudioContext | null = null;
 
 interface BeepNote { freq: number; delay: number; dur: number; }
@@ -319,6 +325,12 @@ bodyWeightHistory: BodyWeightEntry[];
 activeProgramId: string;
 customPrograms: Program[];
 badgesEnabled: boolean;
+// ─── Coach vocal ─────────────────────────────────────────────────────────
+// Éteint par défaut : une appli qui se met à parler toute seule après une
+// mise à jour est une mauvaise surprise, surtout dans une salle silencieuse.
+voiceCoachEnabled: boolean;
+voiceRate: number;
+voiceVerbosity: VoiceVerbosity;
 totalSessionsCompleted: number;
 totalCardioSessions: number;
 bestWeekStreak: number;
@@ -433,6 +445,9 @@ addCustomProgram: (program: Program) => void;
 upsertCustomProgram: (program: Program) => void;
 removeCustomProgram: (id: string) => void;
 setBadgesEnabled: (enabled: boolean) => void;
+setVoiceCoachEnabled: (enabled: boolean) => void;
+setVoiceRate: (rate: number) => void;
+setVoiceVerbosity: (v: VoiceVerbosity) => void;
 setHapticsEnabled: (enabled: boolean) => void;
 setUltraAnimationsEnabled: (enabled: boolean) => void;
 setUltraAnimationStyle: (style: 'confetti' | 'fireworks' | 'sparkles') => void;
@@ -534,6 +549,9 @@ bodyWeightHistory: [],
 activeProgramId: 'strict-v10',
 customPrograms: [],
 badgesEnabled: true,
+voiceCoachEnabled: false,
+voiceRate: 1.05,
+voiceVerbosity: 'court',
 totalSessionsCompleted: 0,
 totalCardioSessions: 0,
 bestWeekStreak: 0,
@@ -1168,6 +1186,9 @@ activeProgramId: state.activeProgramId === id ? 'strict-v10' : state.activeProgr
 },
 
 setBadgesEnabled: (enabled) => set({ badgesEnabled: enabled }),
+setVoiceCoachEnabled: (enabled) => set({ voiceCoachEnabled: enabled }),
+setVoiceRate: (rate) => set({ voiceRate: rate }),
+setVoiceVerbosity: (v) => set({ voiceVerbosity: v }),
 setHapticsEnabled: (enabled) => set({ hapticsEnabled: enabled }),
 setUltraAnimationsEnabled: (enabled) => set({ ultraAnimationsEnabled: enabled }),
 setUltraAnimationStyle: (style) => set({ ultraAnimationStyle: style }),
@@ -1229,6 +1250,9 @@ bodyWeightHistory: state.bodyWeightHistory,
 activeProgramId: state.activeProgramId,
 customPrograms: state.customPrograms,
 badgesEnabled: state.badgesEnabled,
+voiceCoachEnabled: state.voiceCoachEnabled,
+voiceRate: state.voiceRate,
+voiceVerbosity: state.voiceVerbosity,
 totalSessionsCompleted: state.totalSessionsCompleted,
 totalCardioSessions: state.totalCardioSessions,
 bestWeekStreak: state.bestWeekStreak,
@@ -1312,6 +1336,9 @@ setSessionWorkoutOverride(null);
 // limités à 50 entrées, c'est une base honnête — pas un chiffre
 // inventé — mais elle peut sous-compter l'activité plus ancienne).
 merged.badgesEnabled = p.badgesEnabled ?? true;
+merged.voiceCoachEnabled = p.voiceCoachEnabled ?? false;
+merged.voiceRate = p.voiceRate ?? 1.05;
+merged.voiceVerbosity = p.voiceVerbosity ?? 'court';
 const baseHistory = p.history ?? current.history;
 const baseCardio = p.cardioHistory ?? current.cardioHistory;
 const baseGoal = p.weeklySessionGoal ?? current.weeklySessionGoal;
