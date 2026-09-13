@@ -142,6 +142,22 @@ export const IconBell: React.FC<IconProps> = ({ size = 18, color = 'currentColor
   </svg>
 );
 
+export const IconVolume: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
+    <path d="M11 5 6 9H2v6h4l5 4z" />
+    <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+    <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+  </svg>
+);
+
+export const IconVolumeOff: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
+    <path d="M11 5 6 9H2v6h4l5 4z" />
+    <path d="m17 9 5 6" />
+    <path d="m22 9-5 6" />
+  </svg>
+);
+
 export const IconVibrate: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
     <rect x="8" y="4" width="8" height="16" rx="2" />

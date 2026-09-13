@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { IconClose } from '../components/Icons';
+import { IconClose, IconVolume, IconVolumeOff } from '../components/Icons';
+import { isVoiceSupported, primeVoice, speak, stopVoice } from '../utils/voiceCoach';
 import { getWorkout } from '../data/workouts';
 import { Exercise, SetEntry } from '../data/types';
 import { getMuscleRecoveryStatus } from '../utils/training';
@@ -63,6 +64,9 @@ const [previewEntries, setPreviewEntries] = useState<SetEntry[]>([]);
 const [previewIndex, setPreviewIndex] = useState(0);
 const [sheetVisible, setSheetVisible] = useState(false);
 const [adaptOpen, setAdaptOpen] = useState(false);
+const voiceCoachEnabled = useWorkoutStore((s) => s.voiceCoachEnabled);
+const setVoiceCoachEnabled = useWorkoutStore((s) => s.setVoiceCoachEnabled);
+const voiceRate = useWorkoutStore((s) => s.voiceRate);
 const [gymPickerOpen, setGymPickerOpen] = useState(false);
 const gyms = useWorkoutStore((s) => s.gyms);
 const activeGymId = useWorkoutStore((s) => s.activeGymId);
@@ -287,6 +291,40 @@ onAddSet={handleAddSet}
 )}
 
 <div style={startBar}>
+{/* Coach vocal, juste au-dessus de « Démarrer ».
+    Deux raisons de le mettre ICI plutôt que seulement dans les réglages :
+    c'est une décision qui se prend au moment d'attaquer (écouteurs ou pas,
+    salle pleine ou pas), et surtout ce bouton est un GESTE UTILISATEUR —
+    c'est ce que Safari exige pour autoriser la synthèse vocale. L'activer
+    depuis cet écran déverrouille la voix pile avant la séance, au lieu de
+    la laisser muette jusqu'au premier appui sur l'écran de séance. */}
+{isVoiceSupported() && (
+<button
+onClick={() => {
+const next = !voiceCoachEnabled;
+setVoiceCoachEnabled(next);
+if (next) { primeVoice(); speak('Coach vocal activé.', { rate: voiceRate }); }
+else stopVoice();
+}}
+style={{
+...voiceToggle,
+borderColor: voiceCoachEnabled ? accent : 'var(--border-strong)',
+color: voiceCoachEnabled ? accent : 'var(--text-dim)',
+}}
+aria-pressed={voiceCoachEnabled}
+>
+{voiceCoachEnabled ? <IconVolume size={15} /> : <IconVolumeOff size={15} />}
+<span style={{ flex: 1, textAlign: 'left' }}>
+Coach vocal
+<span style={{ color: 'var(--text-dim)', fontWeight: 600 }}>
+{voiceCoachEnabled ? ' — séries et repos annoncés' : ' — séance en silence'}
+</span>
+</span>
+<span style={{ fontWeight: 800, fontSize: 11, letterSpacing: 0.6 }}>
+{voiceCoachEnabled ? 'ON' : 'OFF'}
+</span>
+</button>
+)}
 <div style={startRow}>
 {/* Adapter avant de démarrer : temps dispo, forme du jour, matériel
 disponible. Volontairement à côté de « Démarrer » et pas caché dans
@@ -363,6 +401,14 @@ background: 'linear-gradient(to top, var(--bg-base) 60%, transparent)',
 };
 const startRow: React.CSSProperties = {
 display: 'flex', gap: 10, maxWidth: 480, margin: '0 auto',
+};
+const voiceToggle: React.CSSProperties = {
+display: 'flex', alignItems: 'center', gap: 9,
+maxWidth: 480, width: '100%', margin: '0 auto 8px',
+padding: '10px 14px', borderRadius: 14, cursor: 'pointer',
+background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+fontSize: 13, fontWeight: 700,
+transition: 'border-color 0.2s, color 0.2s',
 };
 const startBtn: React.CSSProperties = {
 flex: 1,
