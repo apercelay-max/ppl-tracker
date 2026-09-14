@@ -586,7 +586,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     const goalReached = sessionsThisWeek >= weeklySessionGoal;
     const goalColor = blockColor('weeklyGoal', 'var(--brand-1)');
     return (
-      <React.Fragment key="weeklyGoal">
       <div className="glass-card" style={{ ...weeklyGoalCard, ...(homeSectionColors.weeklyGoal ? { borderLeft: `3px solid ${goalColor}` } : {}) }}>
         <svg width="64" height="64" viewBox="0 0 64 64" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
           <circle cx="32" cy="32" r={r} fill="none" stroke="var(--bg-elevated)" strokeWidth="7" />
@@ -608,8 +607,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
           </p>
         </div>
       </div>
-      {binomeCard}
-      </React.Fragment>
     );
   })();
 
@@ -1014,6 +1011,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
             <span style={{ color: 'var(--brand-1)', fontSize: 22, fontWeight: 200, flexShrink: 0, opacity: 0.8 }}>›</span>
           </button>
         )}
+
+        {/* Binôme : indépendant du réglage "Objectif hebdo" (l'anneau du
+            partenaire et les relances ne doivent pas disparaître juste parce
+            que l'utilisateur a masqué son propre anneau hebdo). */}
+        {!homeEditMode && binomeCard}
 
         {/* Bandeau mode édition */}
         {homeEditMode && (
