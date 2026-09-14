@@ -1,5 +1,6 @@
 import { WorkoutDay } from './types';
 import { WORKOUTS } from './workouts';
+import { ANTOINE_WORKOUTS } from './workoutsAntoine';
 import { PPL_DEBUTANT_WORKOUTS, FULL_BODY_WORKOUTS, FORCE_5X5_WORKOUTS, WRIST_CONSOLIDATION_WORKOUTS } from './extraPrograms';
 import { CATALOG_PROGRAMS } from './catalogPrograms';
 import { APP_LIBRARY_PROGRAMS } from './appLibraryPrograms';
@@ -46,6 +47,31 @@ export const STRICT_V10_PROGRAM: Program = {
   dayTypeLabels: {
     'pull-a': 'PULL', 'push-a': 'PUSH', 'legs-a': 'LEGS',
     'pull-b': 'PULL', 'push-b': 'PUSH', 'legs-b': 'LEGS',
+  },
+};
+
+// Programme personnel d'Antoine (l'adulte responsable du compte, cf.
+// src/lib/supabaseClient.ts) — distinct du programme de Léo ci-dessus.
+// Tous les ids de séance/exercice sont préfixés "antoine-" (voir
+// workoutsAntoine.ts) : aucune collision possible avec STRICT_V10_PROGRAM,
+// aucun historique de l'un ne peut jamais s'afficher comme celui de
+// l'autre. Version V3.2 (13/09/2026), Phase 1 — Sèche, Sem 7-8 : pause
+// épaule partielle + jambes reconstruites en rééducation genou pure, à la
+// demande d'Antoine (détail dans les commentaires de workoutsAntoine.ts).
+export const STRICT_ANTOINE_PROGRAM: Program = {
+  id: 'strict-antoine',
+  name: 'Strict V3.2 (Antoine)',
+  focusLabel: 'Antoine · Reprise épaule + rééduc. genou',
+  shortDescription: 'Sem 7-8 : pause épaule partielle (postérieur seul, latéral dès Sem 8) et jambes en rééducation genou pure — 6 séances, Phase 1 — Sèche jusqu\'au 16/10.',
+  source: 'Le programme d\'Antoine, mis à jour de V3.0 vers V3.2 le 13/09/2026 (fichier « programme_hypertrophie_PPL_Strict_Phase1_V3.2_S7-S8.xlsx »).',
+  workouts: ANTOINE_WORKOUTS,
+  dayAccents: {
+    'antoine-pull-a': '#7c6fcd', 'antoine-push-a': '#e03030', 'antoine-legs-a-rehab': '#e8a020',
+    'antoine-pull-b': '#6a5fc0', 'antoine-push-b': '#cc2828', 'antoine-legs-b-rehab': '#d09018',
+  },
+  dayTypeLabels: {
+    'antoine-pull-a': 'PULL', 'antoine-push-a': 'PUSH', 'antoine-legs-a-rehab': 'LEGS',
+    'antoine-pull-b': 'PULL', 'antoine-push-b': 'PUSH', 'antoine-legs-b-rehab': 'LEGS',
   },
 };
 
@@ -107,6 +133,7 @@ export const WRIST_CONSOLIDATION_PROGRAM: Program = {
 // l'utilisateur, qui vivent dans le store — voir customPrograms).
 export const BUILT_IN_PROGRAMS: Program[] = [
   STRICT_V10_PROGRAM,
+  STRICT_ANTOINE_PROGRAM,
   PPL_DEBUTANT_PROGRAM,
   FULL_BODY_PROGRAM,
   FORCE_5X5_PROGRAM,

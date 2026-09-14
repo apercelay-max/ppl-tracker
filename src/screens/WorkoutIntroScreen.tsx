@@ -25,6 +25,8 @@ onStart: (adaptation?: SessionAdaptation | null, gymId?: string, passageGym?: Gy
 const DAY_ACCENT: Record<string, string> = {
 'pull-a': '#7c6fcd', 'push-a': '#e03030', 'legs-a': '#e8a020',
 'pull-b': '#6a5fc0', 'push-b': '#cc2828', 'legs-b': '#d09018',
+  'antoine-pull-a': '#7c6fcd', 'antoine-push-a': '#e03030', 'antoine-legs-a-rehab': '#e8a020',
+  'antoine-pull-b': '#6a5fc0', 'antoine-push-b': '#cc2828', 'antoine-legs-b-rehab': '#d09018',
 'pplb-pull': '#7c6fcd', 'pplb-push': '#e03030', 'pplb-legs': '#e8a020',
 'fb-a': '#2563eb', 'fb-b': '#16a34a', 'fb-c': '#ea580c',
 'f5x5-a': '#e03030', 'f5x5-b': '#7c6fcd',
@@ -34,6 +36,8 @@ const DAY_ACCENT: Record<string, string> = {
 const DAY_TYPE_LABEL: Record<string, string> = {
 'pull-a': 'PULL', 'push-a': 'PUSH', 'legs-a': 'LEGS',
 'pull-b': 'PULL', 'push-b': 'PUSH', 'legs-b': 'LEGS',
+  'antoine-pull-a': 'PULL', 'antoine-push-a': 'PUSH', 'antoine-legs-a-rehab': 'LEGS',
+  'antoine-pull-b': 'PULL', 'antoine-push-b': 'PUSH', 'antoine-legs-b-rehab': 'LEGS',
 'pplb-pull': 'PULL', 'pplb-push': 'PUSH', 'pplb-legs': 'LEGS',
 'fb-a': 'FULL A', 'fb-b': 'FULL B', 'fb-c': 'FULL C',
 'f5x5-a': 'FORCE A', 'f5x5-b': 'FORCE B',
