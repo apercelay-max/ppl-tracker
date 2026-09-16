@@ -1,6 +1,7 @@
 import { WorkoutDay, ProgressionWeek } from './types';
 import { PPL_DEBUTANT_WORKOUTS, FULL_BODY_WORKOUTS, FORCE_5X5_WORKOUTS, WRIST_CONSOLIDATION_WORKOUTS } from './extraPrograms';
 import { LEGACY_LEGS_WORKOUTS } from './legacyWorkouts';
+import { ANTOINE_WORKOUTS } from './workoutsAntoine';
 
 // ─── Mésocycle Phase 1 — Sèche (31/07 → 16/10/2026) ─────────────────────────
 // 11 semaines, deload + diet break en semaine 6. Repris tel quel de l'onglet
@@ -611,10 +612,13 @@ export const WORKOUTS: WorkoutDay[] = [
 // toujours retrouver une séance même si le programme actif a changé
 // depuis (voir workoutStore.ts → activeProgramId). LEGACY_LEGS_WORKOUTS y
 // figure pour que les anciennes séances Legs A/B enregistrées avant le
-// 19/08/2026 restent lisibles dans l'historique.
+// 19/08/2026 restent lisibles dans l'historique. ANTOINE_WORKOUTS (voir
+// workoutsAntoine.ts) est le programme personnel d'Antoine, entièrement
+// distinct de celui de Léo ci-dessus (ids préfixés "antoine-").
 const ALL_KNOWN_WORKOUTS: WorkoutDay[] = [
   ...WORKOUTS,
   ...LEGACY_LEGS_WORKOUTS,
+  ...ANTOINE_WORKOUTS,
   ...PPL_DEBUTANT_WORKOUTS,
   ...FULL_BODY_WORKOUTS,
   ...FORCE_5X5_WORKOUTS,

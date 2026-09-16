@@ -15,10 +15,14 @@ interface DashboardScreenProps { onBack: () => void; }
 const DAY_ACCENT: Record<string, string> = {
   'pull-a': '#7c6fcd', 'push-a': '#e03030', 'legs-a': '#e8a020',
   'pull-b': '#6a5fc0', 'push-b': '#cc2828', 'legs-b': '#d09018',
+  'antoine-pull-a': '#7c6fcd', 'antoine-push-a': '#e03030', 'antoine-legs-a-rehab': '#e8a020',
+  'antoine-pull-b': '#6a5fc0', 'antoine-push-b': '#cc2828', 'antoine-legs-b-rehab': '#d09018',
 };
 const DAY_TYPE_LABEL: Record<string, string> = {
   'pull-a': 'PULL', 'push-a': 'PUSH', 'legs-a': 'LEGS',
   'pull-b': 'PULL', 'push-b': 'PUSH', 'legs-b': 'LEGS',
+  'antoine-pull-a': 'PULL', 'antoine-push-a': 'PUSH', 'antoine-legs-a-rehab': 'LEGS',
+  'antoine-pull-b': 'PULL', 'antoine-push-b': 'PUSH', 'antoine-legs-b-rehab': 'LEGS',
 };
 
 const formatDate = (ts: number): string => {
