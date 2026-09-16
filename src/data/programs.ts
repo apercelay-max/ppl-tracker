@@ -5,13 +5,19 @@ import { CATALOG_PROGRAMS } from './catalogPrograms';
 import { APP_LIBRARY_PROGRAMS } from './appLibraryPrograms';
 
 // ─── Programmes sélectionnables (Réglages → Programme d'entraînement) ─────
-// "Strict V2.5" est le programme historique de l'appli (ex-V10, ex-V11),
-// toujours présent en premier — c'est le programme réellement suivi par Léo,
-// mis à jour au fil des versions envoyées (V10 → V11 le 19/07/2026, puis
-// V11 → V2.2 « Phase 1 Sèche » le 19/08/2026, puis V2.2 → V2.5 le
-// 24/08/2026 — corrections de repos réel sur trois exercices unilatéraux
-// et durées de séance recalculées, structure/exercices inchangés). Son id
-// reste 'strict-v10'
+// "Strict V4.0" est le programme historique de l'appli (ex-V10, ex-V11),
+// toujours présent en premier — c'est le programme réellement suivi par
+// Antoine, mis à jour au fil des versions envoyées (V10 → V11 le 19/07/2026,
+// puis V11 → V2.2 « Phase 1 Sèche » le 19/08/2026, puis V2.2 → V2.5 le
+// 24/08/2026 — corrections de repos réel uniquement — puis V2.5 → V3.0 le
+// 30/08/2026 — jambes sorties de fin de séance, 4 séances → 6 — puis
+// V3.0 → V3.2 le 13/09/2026 — pause épaule partielle (douleur deltoïde
+// antérieur/latéral, Sem 7-8) + jambes reconstruites en rééducation genou
+// pure sur demande d'Antoine — puis V3.2 → V4.0 le 16/09/2026 : épaule
+// déclarée muette (retour à charge pleine + réintroduction de l'antérieur),
+// contrainte matérielle actée (poids du corps + haltères ≤ 25 kg/pièce,
+// volume à 4 séries en compensation), jambes reconduites à l'identique —
+// cf. src/data/workouts.ts pour le détail. Son id reste 'strict-v10'
 // pour ne pas casser les réglages déjà enregistrés sur l'appareil. Les autres
 // sont des trames additionnelles, proposées en plus — changer de programme
 // actif ne supprime jamais les autres, ni l'historique déjà enregistré
@@ -31,21 +37,28 @@ export interface Program {
 
 export const STRICT_V10_PROGRAM: Program = {
   id: 'strict-v10',
-  name: 'Strict V2.5',
-  focusLabel: 'Strict V2.5 · Phase 1 Sèche',
-  shortDescription: '4 séances (Pull/Push A et B), jambes dissoutes en tri-set de fin de séance. Home gym, Phase 1 — Sèche jusqu\'au 16/10.',
-  source: 'Le programme de Léo, mis à jour de V2.2 vers V2.5 le 24/08/2026 (fichier « programme_hypertrophie_PPL_Strict_Phase1_V2.5.xlsx »).',
+  name: 'Strict V4.0',
+  focusLabel: 'Strict V4.0 · Épaules priorité 1 + rééduc. genou',
+  shortDescription: 'Sem 9-11 : épaule muette → retour à charge pleine et réintroduction de l\'antérieur, poids du corps + haltères ≤ 25 kg (volume à 4 séries), jambes en rééducation genou inchangée — 6 séances, fin de Phase 1 — Sèche (16/10).',
+  source: 'Le programme d\'Antoine, mis à jour de V3.2 vers V4.0 le 16/09/2026 (fichier « programme_hypertrophie_PPL_Strict_Phase1_V4.0_S9-S11.xlsx »).',
   workouts: WORKOUTS,
-  // Les clés 'legs-a'/'legs-b' n'existent plus dans le programme depuis la
-  // V2.2 : on les garde pour que l'historique d'avant le 19/08/2026 reste
-  // coloré/étiqueté comme avant.
+  // Les clés 'legs-a'/'legs-b' (sans suffixe) sont les anciennes séances
+  // Legs V11 (avant le 19/08/2026) ; 'legs-a-v3'/'legs-b-v3' celles de la
+  // V3.0 (30/08 → 13/09/2026, tri-sets hypertrophie) ; 'legs-a-rehab'/
+  // 'legs-b-rehab' sont les séances actives depuis le 13/09/2026
+  // (rééducation genou). Les trois générations sont gardées pour que
+  // l'historique déjà enregistré reste coloré/étiqueté correctement.
   dayAccents: {
     'pull-a': '#7c6fcd', 'push-a': '#e03030', 'legs-a': '#e8a020',
     'pull-b': '#6a5fc0', 'push-b': '#cc2828', 'legs-b': '#d09018',
+    'legs-a-v3': '#e8a020', 'legs-b-v3': '#d09018',
+    'legs-a-rehab': '#e8a020', 'legs-b-rehab': '#d09018',
   },
   dayTypeLabels: {
     'pull-a': 'PULL', 'push-a': 'PUSH', 'legs-a': 'LEGS',
     'pull-b': 'PULL', 'push-b': 'PUSH', 'legs-b': 'LEGS',
+    'legs-a-v3': 'LEGS', 'legs-b-v3': 'LEGS',
+    'legs-a-rehab': 'LEGS', 'legs-b-rehab': 'LEGS',
   },
 };
 

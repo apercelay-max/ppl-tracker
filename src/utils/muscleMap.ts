@@ -98,41 +98,55 @@ export const lookupExercise = (exerciseId: string): IndexedExercise | null =>
 
 // ─── Correspondances écrites à la main ─────────────────────────────────────
 //
-// Les exercices du programme Strict portent les noms que Léo utilise, pas ceux
-// du catalogue : « Squat bulgare unilatéral haltères » ne ressemble pas assez
-// à « Fente bulgare aux haltères » pour que le rapprochement automatique par
-// le nom le trouve. Sur 33 exercices, 10 seulement étaient reconnus — donc
-// 23 ne créditaient aucun synergiste.
+// Le catalogue ne connaît pas forcément un exercice sous le nom que Léo
+// utilise (ex. « Fente bulgare aux haltères » du catalogue pour un « Squat
+// bulgare unilatéral haltères » du programme) : le rapprochement automatique
+// par nom (catalogMatch.ts) rate alors une correspondance pourtant fiable.
+// Ces paires-là sont écrites à la main pour créditer leurs synergistes.
 //
-// Ces paires sont écrites à la main, une par une : le rapprochement
-// automatique a déjà été mesuré comme peu fiable sur ce programme, et une
-// fausse correspondance attribuerait du volume au mauvais muscle. Seuls les
-// équivalents francs sont listés ; en cas de doute, on laisse l'exercice sans
-// correspondance (il compte alors pour son seul muscle déclaré).
+// Reconstruite le 16/09/2026 : la précédente table datait des versions
+// V2.x/V3.0 (Push A/Pull B à 8-9 exercices) et n'avait pas suivi les refontes
+// V3.1/V3.2/V4.0, qui réattribuent les mêmes ids ('push-a-1', 'pull-b-5'...)
+// à des exercices totalement différents — chaque entrée pointait donc vers
+// un synergiste sans rapport, silencieusement (seul le widget « Séries
+// effectives / semaine » du Dashboard lit cette table ; le muscle PRINCIPAL
+// vient toujours de workouts.ts). Reconstruite de zéro à partir du contenu
+// réel de workouts.ts (V4.0) et legacyWorkouts.ts (V2.x et V3.0 — encore
+// potentiellement dans la fenêtre d'historique récente).
+//
+// Volontairement absents de cette table :
+//  - les ids qui n'existent plus dans aucun programme (orphelins depuis une
+//    refonte) — impossible de vérifier ce qu'ils désignaient encore ;
+//  - les exercices dont le meilleur équivalent catalogue n'a aucun muscle
+//    secondaire renseigné (la plupart des oiseaux, curls, élévations) :
+//    les lister ne changerait aucun chiffre, seulement du bruit ;
+//  - les séances de rééducation genou ('legs-a-rehab-*'/'legs-b-rehab-*') :
+//    leur objectif explicite (voir leurs notes et l'en-tête de WORKOUTS) est
+//    de ne PAS créditer d'hypertrophie tant que le genou n'est pas libéré —
+//    leur ajouter un synergiste irait à l'encontre de cette décision ;
+//  - les étirements et exercices de mobilité pure (dorsiflexion, heel
+//    slides, couch stretch...), absents du catalogue.
+// En cas de doute, on laisse l'exercice sans correspondance (il compte alors
+// pour son seul muscle déclaré) — mieux vaut aucune correspondance qu'une
+// fausse.
 const MANUAL_CATALOG_MATCH: Record<string, string> = {
-  'pull-a-1': 'oiseau-assis-buste-penche',
-  'pull-a-4': 'curl-marteau',
-  'pull-a-5': 'rowing-haltere-a-un-bras',
-  'pull-a-6': 'machine-a-abducteurs',
-  'pull-a-7': 'fente-bulgare-aux-halteres',
-  'pull-a-8': 'crunch-a-la-corde',
-  'push-a-1': 'elevations-laterales',
-  'push-a-2': 'elevations-frontales-halteres',
-  'push-a-4': 'ecarte-incline-halteres',
-  'push-a-5': 'extension-triceps-a-la-corde',
-  'push-a-7': 'extensions-mollets-debout-a-l-haltere',
-  'push-a-8': 'crunch-inverse',
-  'pull-b-1': 'oiseau-elevations-posterieures',
-  'pull-b-3': 'curl-incline',
-  'pull-b-5': 'curl-inverse-pronation',
-  'pull-b-7': 'extensions-mollets-assis',
-  'push-b-2': 'elevations-laterales-assis',
-  'push-b-4': 'ecarte-couche-halteres',
-  'push-b-5': 'extension-couche-barre-ez',
-  'push-b-6': 'dips-aux-barres-paralleles',
-  'push-b-7': 'souleve-de-terre-jambes-tendues-halteres',
-  'push-b-8': 'fentes-aux-halteres',
-  'push-b-9': 'gainage-planche',
+  // Pull A (V4.0)
+  'pull-a-4': 'tractions-pronation',
+  // Push A (V4.0)
+  'push-a-2': 'dips-version-pectoraux',
+  'push-a-4': 'pompes',
+  'push-a-7': 'developpe-couche-halteres',
+  // Push B (V4.0) — 'push-a-5' y a été déplacé (Pompes diamant, Jour 2 → Jour 5)
+  'push-a-5': 'pompes',
+  'push-b-2': 'pompes',
+  // Legs — générations antérieures (V2.x pré-19/08/2026, V3.0 30/08→13/09/2026),
+  // gardées pour que l'historique déjà enregistré sous ces ids continue de
+  // créditer les bons synergistes (voir legacyWorkouts.ts).
+  'legs-a-2': 'fentes-marchees-au-poids-du-corps',
+  'legs-b-3': 'fente-bulgare-aux-halteres',
+  'legs-a-v3-2': 'fente-bulgare-aux-halteres',
+  'legs-b-v3-4': 'souleve-de-terre-jambes-tendues-halteres',
+  'legs-b-v3-5': 'fentes-marchees-au-poids-du-corps',
 };
 
 // ─── Vocabulaire unifié pour le décompte des séries ────────────────────────
