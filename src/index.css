@@ -720,3 +720,156 @@ button { cursor: pointer; }
 @media (hover: hover) {
   .nav-drawer-row:hover { background: var(--glass-highlight) !important; }
 }
+
+/* ─── Accueil : design « salle de sport » ───────────────────────────────── */
+/* Tout est rangé sous .home-v2 (posée sur le conteneur de HomeScreen) : les
+   autres écrans gardent leur verre et leur halo, seul l'accueil passe à des
+   surfaces pleines, une seule couleur d'accent (--brand-1, donc celle choisie
+   dans Réglages) et des chiffres en police condensée. */
+.home-v2 {
+  --h-bg: #0C0E0D;
+  --h-surface: #151917;
+  --h-raised: #1C2120;
+  --h-line: #252B28;
+  --h-hero-line: #2E3632;
+  --h-text: #ECEFEA;
+  --h-text2: #C3C9C4;
+  --h-muted: #8D958F;
+  --h-good: #6CCB94;
+  --h-warn: #E8A33D;
+  --h-bad: #E0533D;
+  --h-off: #252B28;
+  --h-cond: 'Barlow Condensed', 'Arial Narrow', 'Roboto Condensed', sans-serif-condensed, sans-serif;
+  /* Les blocs internes (cardio, stats, poids…) lisent ces variables-là : on
+     les recale sur la palette de l'accueil pour que tout parle la même langue. */
+  --bg-card: var(--h-surface);
+  --bg-surface: var(--h-surface);
+  --bg-elevated: var(--h-raised);
+  --bg-higher: var(--h-raised);
+  --border-subtle: var(--h-line);
+  --border: var(--h-line);
+  --border-strong: var(--h-hero-line);
+  background: var(--h-bg);
+  color: var(--h-text);
+  font-variant-numeric: tabular-nums;
+}
+[data-theme="light"] .home-v2 {
+  --h-bg: #F2F3EF;
+  --h-surface: #FFFFFF;
+  --h-raised: #EEF0EB;
+  --h-line: #E0E3DC;
+  --h-hero-line: #D2D7CE;
+  --h-text: #131614;
+  --h-text2: #3A413C;
+  --h-muted: #5F6862;
+  --h-good: #23794D;
+  --h-warn: #A8680F;
+  --h-bad: #C0392B;
+  --h-off: #E0E3DC;
+}
+[data-theme="dark"][data-amoled="on"] .home-v2 {
+  --h-bg: #000000;
+  --h-surface: #0B0B0B;
+  --h-raised: #151515;
+  --h-line: #1E1E1E;
+  --h-hero-line: #2A2A2A;
+  --h-off: #222222;
+}
+[data-contrast="high"] .home-v2 {
+  --h-line: #4C4C5E;
+  --h-hero-line: #6A6A86;
+  --h-muted: var(--text-muted);
+  --h-text2: var(--text-secondary);
+}
+[data-theme="light"][data-contrast="high"] .home-v2 {
+  --h-line: #ADADC4;
+  --h-hero-line: #8080A0;
+}
+
+/* Cartes : pleines, sans flou ni ombre. :root remonte la spécificité au-dessus
+   des variantes teintées (.glass-gold…) et des règles de thème clair. */
+:root .home-v2 .glass-card {
+  background: var(--h-surface);
+  border: 1px solid var(--h-line);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+:root .home-v2 .glass-card.glass-gold  { background: var(--h-surface); border-color: rgba(232,163,61,0.38); }
+:root .home-v2 .glass-card.glass-green { background: var(--h-surface); border-color: rgba(108,203,148,0.34); }
+:root .home-v2 .glass-card.glass-red   { background: var(--h-surface); border-color: rgba(var(--brand-1-rgb),0.45); }
+:root .home-v2 .glass-card.glass-blue  { background: var(--h-surface); border-color: rgba(110,124,242,0.38); }
+:root .home-v2 .glass-tile {
+  background: transparent;
+  border: 1px solid var(--h-line);
+  box-shadow: none;
+}
+:root .home-v2 .glass-icon {
+  background: var(--h-surface);
+  border-color: var(--h-line);
+  color: var(--h-text);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-radius: 12px;
+}
+
+.home-stack, .home-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.home-wide { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.home-wide .home-col-main { position: sticky; top: 16px; }
+
+.home-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--h-muted); }
+.home-title { font-family: var(--h-cond); font-size: 28px; font-weight: 700; line-height: 1; letter-spacing: 0.01em; color: var(--h-text); }
+.home-note { font-size: 12.5px; line-height: 1.4; color: var(--h-text2); }
+.home-small { font-size: 12px; color: var(--h-muted); }
+
+.home-card { padding: 16px; border-radius: 18px; display: flex; flex-direction: column; gap: 12px; }
+.home-big { display: flex; align-items: baseline; gap: 4px; }
+.home-big b { font-family: var(--h-cond); font-size: 36px; font-weight: 700; line-height: 1; }
+.home-big i { font-style: normal; font-family: var(--h-cond); font-size: 20px; font-weight: 600; color: var(--h-muted); }
+.home-bar { height: 6px; border-radius: 3px; background: var(--h-off); overflow: hidden; }
+.home-bar > div { height: 100%; border-radius: 3px; transition: width 0.3s; }
+
+.home-days { display: flex; gap: 4px; }
+.home-days > div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.home-days > div > i { width: 100%; height: 6px; border-radius: 3px; background: var(--h-off); }
+.home-days > div.done > i { background: var(--brand-1); }
+.home-days > div > span { font-size: 10px; font-weight: 600; color: var(--h-muted); text-transform: uppercase; }
+.home-days > div.today > span { color: var(--h-text); }
+
+/* La séance du jour : l'élément qu'on vient chercher en ouvrant l'app. */
+.home-hero { padding: 22px 20px 20px; border-radius: 22px; display: flex; flex-direction: column; gap: 16px; }
+:root .home-v2 .glass-card.home-hero { border-color: var(--h-hero-line); }
+.home-hero-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.home-hero-title {
+  font-family: var(--h-cond); font-weight: 700; text-transform: uppercase;
+  font-size: clamp(46px, 14vw, 60px); line-height: 0.9; letter-spacing: -0.01em;
+  color: var(--h-text); text-wrap: balance; overflow-wrap: anywhere;
+}
+.home-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.home-chips span { font-size: 12px; font-weight: 500; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--h-line); color: var(--h-text2); }
+.home-start {
+  height: 54px; border-radius: 14px; width: 100%;
+  background: var(--brand-1); color: #fff;
+  font-size: 16px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: transform 0.12s ease, filter 0.15s ease;
+}
+.home-start:hover { filter: brightness(1.07); }
+.home-start:active { transform: scale(0.98); }
+.home-start:focus-visible, .home-v2 button:focus-visible { outline: 2px solid var(--brand-1); outline-offset: 2px; }
+.home-hero-foot { display: flex; flex-direction: column; gap: 12px; }
+.home-hero-last { font-size: 12px; color: var(--h-muted); text-align: center; }
+
+.home-wide .home-hero { padding: 34px; border-radius: 26px; gap: 22px; min-height: min(560px, 64vh); justify-content: space-between; }
+.home-wide .home-hero-title { font-size: clamp(72px, 7.5vw, 112px); line-height: 0.86; }
+.home-wide .home-chips span { font-size: 13px; padding: 6px 12px; }
+.home-wide .home-hero-foot { flex-direction: row; align-items: center; gap: 20px; }
+.home-wide .home-start { width: auto; padding: 0 28px; height: 56px; }
+.home-wide .home-hero-last { text-align: left; font-size: 13px; }
+.home-wide .home-card { padding: 20px; border-radius: 20px; }
+.home-wide .home-big b { font-size: 44px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .home-start, .home-bar > div { transition: none; }
+}

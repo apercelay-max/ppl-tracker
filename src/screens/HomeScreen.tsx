@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DataIcon } from '../components/DataIcon';
 import { MESOCYCLE_WEEKS, getProgressionWeek, getWorkout } from '../data/workouts';
 import { getProgram } from '../data/programs';
@@ -16,7 +16,7 @@ import type { CoachTone } from '../utils/coach';
 import type { CardioActivityType } from '../data/types';
 import { refreshBinome, useBinome } from '../hooks/useBinome';
 import { markNudgesSeen, sendNudge } from '../lib/binome';
-import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconGauge, IconLightbulb, IconMoon, IconPMark, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
+import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconGauge, IconLightbulb, IconMoon, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -62,11 +62,6 @@ const FALLBACK_ACCENT = '#7a7a90';
 // le repas d'après-séance est passé depuis longtemps : la carte ne ferait
 // qu'occuper une place sur l'accueil pour rappeler un train déjà parti.
 const NUTRITION_WINDOW_MS = 90 * 60 * 1000;
-
-// Respiration ajoutée entre deux blocs de l'accueil, en plus de la marge que
-// chaque carte porte déjà. C'est ce qui fait la différence entre une pile de
-// cartes collées et un écran qu'on lit.
-const HOME_BLOCK_GAP = 10;
 
 // Couleurs de la ligne « à faire » du coach. Vert quand il n'y a qu'à
 // continuer, ambre quand quelque chose doit changer — le même code couleur
@@ -194,28 +189,34 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   // (utils/training.ts), qui se base sur les durées de récup recommandées
   // par muscle et sur la dernière séance réelle où chacun a été travaillé.
   const { leastRecovered, averagePct } = getMuscleRecoverySummary(history);
-  const recoveryColor = averagePct >= 0.8 ? '#4CAF50' : averagePct >= 0.5 ? '#f5a623' : '#e03030';
+  const recoveryColor = averagePct >= 0.8 ? 'var(--h-good)' : averagePct >= 0.5 ? 'var(--h-warn)' : 'var(--h-bad)';
+  // getMuscleRecoverySummary renvoie toujours le groupe le moins récupéré,
+  // même s'il est à 100 % : l'afficher en orange « à récupérer en priorité »
+  // quand tout est prêt était un contresens. On ne le montre que s'il reste
+  // vraiment quelque chose à récupérer.
+  const needsRecovery = leastRecovered && leastRecovered.pct < 1 ? leastRecovered : null;
+
+  // ── Mise en page large (Mac, iPad paysage) ───────────────────────────────
+  // Au-delà de 1000 px, la séance du jour prend la colonne de gauche et les
+  // autres blocs passent à droite, au lieu d'une seule colonne étirée.
+  const wideQuery = '(min-width: 1000px)';
+  const [isWide, setIsWide] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia(wideQuery).matches);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia(wideQuery);
+    const onChange = () => setIsWide(mq.matches);
+    mq.addEventListener('change', onChange);
+    window.addEventListener('resize', onChange);
+    return () => { mq.removeEventListener('change', onChange); window.removeEventListener('resize', onChange); };
+  }, []);
+
+  const todayLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
   // ── Charge d'entraînement (alerte pic de charge) ─────────────────────────
   // Compare la charge de la semaine en cours à la moyenne des semaines
   // précédentes — voir computeLoadStatus (utils/training.ts). Renvoie null
   // si pas assez de données plutôt que d'inventer un statut.
   const loadStatus = computeLoadStatus(bucketByWeek(history));
-
-  // ── Effet holographique du titre ─────────────────────────────────────────
-  // Le dégradé animé (.titre-irise) bouge déjà tout seul en boucle. On
-  // ajoute par-dessus un reflet qui suit le doigt/la souris, comme une
-  // carte holographique, sans toucher à l'animation existante.
-  const titleWrapRef = useRef<HTMLDivElement>(null);
-  const [holoPos, setHoloPos] = useState({ x: 50, y: 50 });
-  const handleTitlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const rect = titleWrapRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setHoloPos({ x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) });
-  };
-  const handleTitlePointerLeave = () => setHoloPos({ x: 50, y: 50 });
 
   const cycleColor = blockColor('cycle', 'var(--brand-1)');
   // Le suivi "semaine / RIR / objectif" (mésocycle 11 semaines) est propre
@@ -273,7 +274,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
         {Array.from({ length: MESOCYCLE_WEEKS }, (_, i) => (
           <div key={i} style={{
             flex: 1, height: i + 1 === currentWeek ? 6 : 4, borderRadius: 3,
-            background: i + 1 < currentWeek ? cycleColor : i + 1 === currentWeek ? '#ffffff' : 'var(--border-strong)',
+            background: i + 1 < currentWeek ? cycleColor : i + 1 === currentWeek ? 'var(--h-text)' : 'var(--border-strong)',
             transition: 'background 0.3s, height 0.3s',
             boxShadow: i + 1 < currentWeek ? `0 0 6px rgba(var(--brand-1-rgb),0.4)` : 'none',
           }} />
@@ -308,7 +309,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
                 <span style={{ color: `${accent}60`, fontSize: 11, fontWeight: 700 }}>J{workout.dayNumber}</span>
               </div>
               <div style={{ flex: 1, padding: '14px 14px', textAlign: 'left' }}>
-                <p style={{ color: 'var(--text-primary)', fontSize: 18, fontWeight: 800, marginBottom: 3, letterSpacing: -0.3 }}>{workout.name}</p>
+                <p style={{ color: 'var(--h-text)', fontFamily: 'var(--h-cond)', fontSize: 24, fontWeight: 700, lineHeight: 1, textTransform: 'uppercase', marginBottom: 5 }}>{workout.name}</p>
                 <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 2 }}>{workout.muscleGroups}</p>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
                   {isDone ? (
@@ -342,14 +343,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     const brief = getCoachBrief(history, getWorkout);
     if (!brief) return null; // aucune séance terminée : rien à raconter
     const tone = COACH_TONE_STYLE[brief.tone];
+    // Le conseil à appliquer passe en premier et en gros : c'est la seule
+    // chose à retenir avant d'entrer en salle. Le constat et le rappel de la
+    // dernière séance suivent, en plus discret.
     return (
-      <div key="coach" className="glass-card" style={{ ...cardioCard, ...(homeSectionColors.coach ? { borderLeft: `3px solid ${homeSectionColors.coach}` } : {}) }}>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}>
-          <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconLightbulb size={13} /></span>Coach
-        </p>
-        <p style={{ color: 'var(--text-dim)', fontSize: 12, lineHeight: '17px' }}>{brief.recap}</p>
-        <p style={{ color: 'var(--text-primary)', fontSize: 12, lineHeight: '17px', fontWeight: 600, marginTop: 6 }}>{brief.focus}</p>
-        <p style={{ color: tone.color, fontSize: 12, lineHeight: '17px', marginTop: 9, background: tone.bg, border: `1px solid ${tone.border}`, borderRadius: 10, padding: '7px 9px' }}>{brief.action}</p>
+      <div key="coach" className="glass-card home-card" style={homeSectionColors.coach ? { borderColor: homeSectionColors.coach } : undefined}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <span className="home-eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <IconLightbulb size={13} />Le coach
+          </span>
+          <span style={{ width: 8, height: 8, borderRadius: 4, background: tone.color, flexShrink: 0 }} aria-hidden="true" />
+        </div>
+        <p style={{ color: 'var(--h-text)', fontSize: 15, lineHeight: 1.4, fontWeight: 500 }}>{brief.action}</p>
+        <p className="home-note">{brief.focus}</p>
+        <p className="home-small">{brief.recap}</p>
       </div>
     );
   })();
@@ -410,7 +417,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const isPushDay = nextWorkout.id.startsWith('push');
   const supersetSection = homeSections.supersetRule && activeProgramId === 'strict-v10' && (
     <div key="supersetRule" className="glass-card glass-green" style={{
-      borderRadius: 26, padding: 16, marginTop: 10, marginBottom: 12,
+      borderRadius: 18, padding: 16,
       ...(homeSectionColors.supersetRule ? { borderLeft: `3px solid ${homeSectionColors.supersetRule}` } : {}),
     }}>
       <p style={{ color: 'var(--text-ss-label)', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>⟳ Règle Superset</p>
@@ -580,56 +587,85 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const weeklyGoalSection = homeSections.weeklyGoal && (() => {
     const now = Date.now();
     const sessionsThisWeek = history.filter((e) => now - e.date < 7 * 86400000).length;
-    const pct = Math.min(1, sessionsThisWeek / weeklySessionGoal);
-    const r = 26;
-    const circumference = 2 * Math.PI * r;
     const goalReached = sessionsThisWeek >= weeklySessionGoal;
     const goalColor = blockColor('weeklyGoal', 'var(--brand-1)');
+    // Les 7 derniers jours, aujourd'hui en dernier : la même fenêtre glissante
+    // que le compteur au-dessus, pour que les deux disent toujours la même chose.
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const dayStart = startOfToday.getTime() - (6 - i) * 86400000;
+      const d = new Date(dayStart);
+      return {
+        key: dayStart,
+        label: d.toLocaleDateString('fr-FR', { weekday: 'narrow' }),
+        name: d.toLocaleDateString('fr-FR', { weekday: 'long' }),
+        done: history.some((e) => e.date >= dayStart && e.date < dayStart + 86400000),
+        today: i === 6,
+      };
+    });
     return (
-      <React.Fragment key="weeklyGoal">
-      <div className="glass-card" style={{ ...weeklyGoalCard, ...(homeSectionColors.weeklyGoal ? { borderLeft: `3px solid ${goalColor}` } : {}) }}>
-        <svg width="64" height="64" viewBox="0 0 64 64" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
-          <circle cx="32" cy="32" r={r} fill="none" stroke="var(--bg-elevated)" strokeWidth="7" />
-          <circle
-            cx="32" cy="32" r={r} fill="none"
-            stroke={goalReached ? '#4CAF50' : goalColor}
-            strokeWidth="7" strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={circumference * (1 - pct)}
-            style={{ transition: 'stroke-dashoffset 0.3s' }}
-          />
-        </svg>
-        <div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 800 }}>
-            {sessionsThisWeek} / {weeklySessionGoal} <span style={{ fontWeight: 500, color: 'var(--text-muted)', fontSize: 12 }}>séances cette semaine</span>
-          </p>
-          <p style={{ color: goalReached ? '#4CAF50' : 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>
-            {goalReached ? 'Objectif atteint 💪' : `Encore ${weeklySessionGoal - sessionsThisWeek} pour l'objectif`}
-          </p>
+      <div key="weeklyGoal" className="home-stack">
+      <div className="glass-card home-card" style={homeSectionColors.weeklyGoal ? { borderColor: goalColor } : undefined}>
+        <span className="home-eyebrow">Semaine</span>
+        <div className="home-big">
+          <b style={{ color: goalReached ? 'var(--h-good)' : 'var(--h-text)' }}>{sessionsThisWeek}</b>
+          <i>/ {weeklySessionGoal} séances</i>
         </div>
+        <div className="home-days" style={homeSectionColors.weeklyGoal ? { ['--brand-1' as string]: homeSectionColors.weeklyGoal } : undefined}>
+          {days.map((d) => (
+            <div key={d.key} className={`${d.done ? 'done' : ''} ${d.today ? 'today' : ''}`} title={`${d.name}${d.done ? ' : séance faite' : ''}`}>
+              <i /><span>{d.label}</span>
+            </div>
+          ))}
+        </div>
+        <p className="home-small" style={goalReached ? { color: 'var(--h-good)' } : undefined}>
+          {goalReached ? 'Objectif atteint' : `Encore ${weeklySessionGoal - sessionsThisWeek} pour l'objectif`}
+        </p>
       </div>
       {binomeCard}
-      </React.Fragment>
+      </div>
     );
   })();
 
-  const nextColor = blockColor('nextSession', activeProgram.dayAccents[nextWorkout?.id ?? ''] ?? FALLBACK_ACCENT);
+  // ── Séance du jour (la carte principale de l'accueil) ──────────────────
+  // Le bouton prend l'accent de l'app, sauf si une couleur perso a été
+  // choisie pour ce bloc dans les Réglages. La couleur du jour (Push, Pull…)
+  // reste visible sur la pastille à côté de « Prochaine séance ».
+  const lastEntry = history[0];
+  const dayAccent = activeProgram.dayAccents[nextWorkout?.id ?? ''] ?? FALLBACK_ACCENT;
+  const nextColor = blockColor('nextSession', 'var(--brand-1)');
+  const splitGroups = (groups: string) => groups.split(/\s*[/,·+]\s*/).map((g) => g.trim()).filter(Boolean);
+  const lastSessionLine = lastEntry
+    ? `Dernière séance : ${formatRelativeDate(lastEntry.date).toLowerCase()}${getWorkout(lastEntry.dayId)?.name ? ` · ${getWorkout(lastEntry.dayId)?.name}` : ''}`
+    : 'Ce sera ta première séance';
+  const playIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5Z" /></svg>;
+
   const nextSessionSection = homeSections.nextSession && !resumeWorkout && nextWorkout && (
-    <button key="nextSession" className="workout-card glass-card" style={{ ...nextSessionBanner, ...(homeSectionColors.nextSession ? { borderLeft: `3px solid ${nextColor}` } : {}) }} onClick={() => onSelectDay(nextWorkout.id)}>
-      <div style={{ ...nextSessionIcon, background: `${nextColor}20` }}>
-        <span style={{ display: 'inline-flex' }}><IconTarget size={20} color={nextColor} /></span>
+    <section key="nextSession" className="glass-card home-hero" aria-label="Prochaine séance">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="home-hero-head">
+          <span className="home-eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--h-text2)' }}>
+            <span style={{ width: 8, height: 8, borderRadius: 4, background: dayAccent }} aria-hidden="true" />
+            Prochaine séance
+          </span>
+          <span className="home-small">{[activeProgram.dayTypeLabels[nextWorkout.id], `J${nextWorkout.dayNumber}`].filter(Boolean).join(' · ')}</span>
+        </div>
+        <h2 className="home-hero-title">{nextWorkout.name}</h2>
+        <div className="home-chips">
+          {splitGroups(nextWorkout.muscleGroups).map((g) => <span key={g}>{g}</span>)}
+        </div>
+        <p className="home-small">{nextWorkout.exercises.length} exercices{nextWorkout.estimatedDuration ? ` · ${nextWorkout.estimatedDuration}` : ''}</p>
       </div>
-      <div style={{ textAlign: 'left', flex: 1 }}>
-        <p style={{ color: nextColor, fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>PROCHAINE SÉANCE</p>
-        <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800 }}>{nextWorkout.name}</p>
-        <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>{nextWorkout.muscleGroups}</p>
+      <div className="home-hero-foot">
+        <button className="home-start" style={homeSectionColors.nextSession ? { background: nextColor } : undefined} onClick={() => onSelectDay(nextWorkout.id)}>
+          {playIcon}Commencer la séance
+        </button>
+        <span className="home-hero-last">{lastSessionLine}</span>
       </div>
-      <span style={{ color: nextColor, fontSize: 22, fontWeight: 200, flexShrink: 0, opacity: 0.8 }}>›</span>
-    </button>
+    </section>
   );
 
   // ── Séance précédente ─────────────────────────────────────────────────
-  const lastEntry = history[0];
   const lastSessionSection = homeSections.lastSession && lastEntry && (() => {
     const lastWorkoutMeta = getWorkout(lastEntry.dayId);
     const tonnage = lastEntry.tonnage ?? computeTonnage(lastEntry.exerciseProgress);
@@ -850,6 +886,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   // d'épingler un bloc qu'on ne voit pas.
   const sectionsExpanded = homeEditMode || showAllSections;
   const shownKeys = sectionsExpanded ? renderableKeys : renderableKeys.filter(isEssential);
+  const wideLayout = isWide && !homeEditMode;
   const availableKeys = homeSectionOrder.filter((key) => {
     const meta = HOME_SECTION_META[key];
     return meta.toggleable && !homeSections[key as keyof typeof homeSections];
@@ -869,35 +906,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   };
 
   return (
-    <div className="screen-ambient" style={container}>
-      <div style={{ ...scroll, paddingBottom: navBarEnabled ? 112 : 80 }}>
+    <div className="home-v2" style={container}>
+      <div style={{ ...scroll, maxWidth: wideLayout ? 1180 : 560, paddingBottom: navBarEnabled ? 112 : 80 }}>
 
         {/* Header */}
         <div style={headerSection}>
           <div style={logoRow}>
-            <div style={{ ...logoBadge, width: iconSizes.logo, height: iconSizes.logo }}><span style={{ display: 'inline-flex', lineHeight: 1 }}><IconPMark size={iconSizes.logo * 0.6} color="#ffffff" /></span></div>
-            <div>
-              <div
-                ref={titleWrapRef}
-                style={{ position: 'relative', display: 'inline-block' }}
-                onPointerMove={handleTitlePointerMove}
-                onPointerLeave={handleTitlePointerLeave}
-              >
-                <h1 className="titre-irise" style={titleStyle}>PPL Tracker</h1>
-                <h1
-                  aria-hidden
-                  style={{
-                    ...titleStyle,
-                    position: 'absolute', inset: 0, margin: 0, pointerEvents: 'none',
-                    backgroundImage: `radial-gradient(circle at ${holoPos.x}% ${holoPos.y}%, rgba(255,255,255,0.95), rgba(255,255,255,0) 45%)`,
-                    WebkitBackgroundClip: 'text', backgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent', color: 'transparent',
-                    mixBlendMode: 'overlay',
-                    transition: 'background-image 0.08s linear',
-                  }}
-                >PPL Tracker</h1>
-              </div>
-              <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>{activeProgram.focusLabel}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+              <span className="home-eyebrow">{todayLabel}</span>
+              <h1 className="home-title">PPL Tracker</h1>
+              <p className="home-small" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeProgram.focusLabel}</p>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               {homeEditMode ? (
@@ -953,147 +971,170 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
           </div>
         </div>
 
-        {/* Récupération musculaire — même règle que les blocs promus : elle
-            reste consultable sous « Tout voir », et ne s'invite dans la partie
-            simple que quand un groupe est vraiment à la traîne. Sans séance
-            dans l'historique elle n'a rien à calculer, donc rien à afficher. */}
-        {history.length > 0 && (sectionsExpanded || !!leastRecovered) && (
-        <div className="glass-card" style={recoveryCard}>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconBattery size={13} /></span>Récupération musculaire</p>
-          {history.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px' }}>
-              Termine ta première séance pour voir la récupération de chaque muscle ici.
-            </p>
-          ) : (
-            <>
-              {leastRecovered ? (
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                    <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>À récupérer en priorité</span>
-                    <span style={{ color: '#f5a623', fontSize: 12, fontWeight: 800 }}>{Math.round(leastRecovered.pct * 100)}%</span>
+        {(() => {
+          // Récupération musculaire — même règle que les blocs promus : elle
+          // reste consultable sous « Tout voir », et ne s'invite dans la partie
+          // simple que quand un groupe n'est pas encore récupéré. Sans séance
+          // dans l'historique elle n'a rien à calculer, donc rien à afficher.
+          const recoveryBlock = history.length > 0 && (sectionsExpanded || !!needsRecovery) && (
+            <div key="recovery" className="glass-card home-card">
+              <span className="home-eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconBattery size={13} />Récupération</span>
+              <div className="home-big">
+                <b style={{ color: recoveryColor }}>{Math.round(averagePct * 100)}</b><i>% en moyenne</i>
+              </div>
+              {needsRecovery ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+                    <span className="home-note">Priorité : <strong style={{ color: 'var(--h-text)', fontWeight: 600 }}>{needsRecovery.group}</strong></span>
+                    <span style={{ color: 'var(--h-warn)', fontSize: 12, fontWeight: 700 }}>{Math.round(needsRecovery.pct * 100)} %</span>
                   </div>
-                  <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800, marginBottom: 6 }}>{leastRecovered.group}</p>
-                  <div style={recoveryBarTrack}>
-                    <div style={{ ...recoveryBarFill, width: `${Math.round(leastRecovered.pct * 100)}%`, background: '#f5a623' }} />
-                  </div>
+                  <div className="home-bar"><div style={{ width: `${Math.round(needsRecovery.pct * 100)}%`, background: 'var(--h-warn)' }} /></div>
                 </div>
               ) : (
-                <p style={{ color: '#4CAF50', fontSize: 12, marginBottom: 14 }}>Tous les groupes musculaires sont récupérés 💪</p>
+                <span className="home-note">Tous les muscles sont prêts</span>
               )}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>Moyenne de récupération</span>
-                  <span style={{ color: recoveryColor, fontSize: 12, fontWeight: 800 }}>{Math.round(averagePct * 100)}%</span>
-                </div>
-                <div style={recoveryBarTrack}>
-                  <div style={{ ...recoveryBarFill, width: `${Math.round(averagePct * 100)}%`, background: recoveryColor }} />
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-        )}
-
-        {/* Alerte pic de charge d'entraînement */}
-        {loadStatus && (
-          <div className="glass-card" style={{ ...recoveryCard, ...(loadStatus.level === 'spike' ? { border: '1px solid rgba(224,48,48,0.35)' } : {}) }}>
-            <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 6 }}>{loadStatus.label}</p>
-            <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px' }}>{loadStatus.detail}</p>
-          </div>
-        )}
-
-        {/* Reprise */}
-        {resumeWorkout && (
-          <button className="resume-btn glass-card glass-red" style={resumeCard} onClick={() => onSelectDay(resumeWorkout.id)}>
-            <div style={{ ...resumeIcon, width: iconSizes.resume, height: iconSizes.resume }}><span style={{ fontSize: iconSizes.resume * 0.4 }}>▶</span></div>
-            <div style={{ textAlign: 'left', flex: 1 }}>
-              <p style={{ color: 'var(--brand-1)', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>SÉANCE EN COURS</p>
-              <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800 }}>{resumeWorkout.name}</p>
-              <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>Appuie pour reprendre</p>
-            </div>
-            <span style={{ color: 'var(--brand-1)', fontSize: 22, fontWeight: 200, flexShrink: 0, opacity: 0.8 }}>›</span>
-          </button>
-        )}
-
-        {/* Bandeau mode édition */}
-        {homeEditMode && (
-          <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px', marginBottom: 12 }}>
-            Réorganise, retire ou ajoute des widgets. L'étoile garde un bloc
-            dans la partie simple, toujours visible sans déplier.
-          </p>
-        )}
-
-        {/* Blocs réordonnables selon les réglages */}
-        {shownKeys.map((key, idx) => {
-          const meta = HOME_SECTION_META[key];
-          return (
-            <div key={key} style={{ position: 'relative', marginBottom: HOME_BLOCK_GAP }}>
-              {homeEditMode && (
-                <div style={widgetCtrlCluster}>
-                  <button
-                    onClick={() => moveVisibleSection(key, 'up')}
-                    disabled={idx === 0}
-                    style={{ ...widgetCtrlBtn, opacity: idx === 0 ? 0.3 : 1 }}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15" /></svg>
-                  </button>
-                  <button
-                    onClick={() => moveVisibleSection(key, 'down')}
-                    disabled={idx === renderableKeys.length - 1}
-                    style={{ ...widgetCtrlBtn, opacity: idx === renderableKeys.length - 1 ? 0.3 : 1 }}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
-                  </button>
-                  <button
-                    onClick={() => setHomeEssential(key, !homeEssentials[key])}
-                    style={{ ...widgetCtrlBtn, color: homeEssentials[key] ? '#f5a623' : 'var(--text-muted)' }}
-                    title={homeEssentials[key] ? 'Retirer de la partie simple' : 'Garder toujours visible'}
-                    aria-pressed={!!homeEssentials[key]}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill={homeEssentials[key] ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.1 8.6 22 9.6 17 14.5 18.2 21.4 12 18.1 5.8 21.4 7 14.5 2 9.6 8.9 8.6 12 2" /></svg>
-                  </button>
-                  {meta.toggleable && (
-                    <button
-                      onClick={() => setHomeSectionVisible(key as keyof typeof homeSections, false)}
-                      style={{ ...widgetCtrlBtn, color: '#e03030' }}
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-                    </button>
-                  )}
-                </div>
-              )}
-              {SECTION_MAP[key]}
             </div>
           );
-        })}
 
-        {/* Tout voir : déplie le reste de l'accueil. Rien n'est supprimé ni
-            rangé ailleurs — les blocs sont juste repliés tant qu'on n'en a
-            pas besoin, et l'état repart replié à la prochaine ouverture. */}
-        {!homeEditMode && extraKeys.length > 0 && (
-          <button
-            onClick={() => setShowAllSections((v) => !v)}
-            style={showAllBtn}
-            aria-expanded={showAllSections}
-          >
-            {showAllSections ? 'Réduire' : `Tout voir (${extraKeys.length})`}
-            <svg
-              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
-              style={{ transform: showAllSections ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+          // Alerte pic de charge d'entraînement
+          const loadBlock = loadStatus && (
+            <div key="load" className="glass-card home-card" style={loadStatus.level === 'spike' ? { borderColor: 'var(--h-bad)' } : undefined}>
+              <span className="home-eyebrow" style={loadStatus.level === 'spike' ? { color: 'var(--h-bad)' } : undefined}>{loadStatus.label}</span>
+              <p className="home-note">{loadStatus.detail}</p>
+            </div>
+          );
+
+          // Reprise d'une séance en cours : prend la place de la séance du jour.
+          const resumeBlock = resumeWorkout && (
+            <section key="resume" className="glass-card glass-red home-hero" aria-label="Séance en cours">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div className="home-hero-head">
+                  <span className="home-eyebrow amber-pulse" style={{ color: 'var(--brand-1)' }}>Séance en cours</span>
+                </div>
+                <h2 className="home-hero-title">{resumeWorkout.name}</h2>
+                <div className="home-chips">
+                  {splitGroups(resumeWorkout.muscleGroups).map((g) => <span key={g}>{g}</span>)}
+                </div>
+              </div>
+              <div className="home-hero-foot">
+                <button className="home-start" onClick={() => onSelectDay(resumeWorkout.id)}>
+                  {playIcon}Reprendre la séance
+                </button>
+              </div>
+            </section>
+          );
+
+          const editBanner = homeEditMode && (
+            <p key="editBanner" className="home-small" style={{ lineHeight: '17px' }}>
+              Réorganise, retire ou ajoute des widgets. L'étoile garde un bloc
+              dans la partie simple, toujours visible sans déplier.
+            </p>
+          );
+
+          // Blocs réordonnables selon les réglages
+          const renderBlock = (key: HomeSectionKey, idx: number) => {
+            const meta = HOME_SECTION_META[key];
+            return (
+              <div key={key} style={{ position: 'relative' }}>
+                {homeEditMode && (
+                  <div style={widgetCtrlCluster}>
+                    <button
+                      onClick={() => moveVisibleSection(key, 'up')}
+                      disabled={idx === 0}
+                      style={{ ...widgetCtrlBtn, opacity: idx === 0 ? 0.3 : 1 }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15" /></svg>
+                    </button>
+                    <button
+                      onClick={() => moveVisibleSection(key, 'down')}
+                      disabled={idx === renderableKeys.length - 1}
+                      style={{ ...widgetCtrlBtn, opacity: idx === renderableKeys.length - 1 ? 0.3 : 1 }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                    </button>
+                    <button
+                      onClick={() => setHomeEssential(key, !homeEssentials[key])}
+                      style={{ ...widgetCtrlBtn, color: homeEssentials[key] ? '#f5a623' : 'var(--text-muted)' }}
+                      title={homeEssentials[key] ? 'Retirer de la partie simple' : 'Garder toujours visible'}
+                      aria-pressed={!!homeEssentials[key]}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill={homeEssentials[key] ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.1 8.6 22 9.6 17 14.5 18.2 21.4 12 18.1 5.8 21.4 7 14.5 2 9.6 8.9 8.6 12 2" /></svg>
+                    </button>
+                    {meta.toggleable && (
+                      <button
+                        onClick={() => setHomeSectionVisible(key as keyof typeof homeSections, false)}
+                        style={{ ...widgetCtrlBtn, color: '#e03030' }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                      </button>
+                    )}
+                  </div>
+                )}
+                {SECTION_MAP[key]}
+              </div>
+            );
+          };
+
+          // Tout voir : déplie le reste de l'accueil. Rien n'est supprimé ni
+          // rangé ailleurs — les blocs sont juste repliés tant qu'on n'en a
+          // pas besoin, et l'état repart replié à la prochaine ouverture.
+          const showAllButton = !homeEditMode && extraKeys.length > 0 && (
+            <button
+              key="showAll"
+              onClick={() => setShowAllSections((v) => !v)}
+              style={showAllBtn}
+              aria-expanded={showAllSections}
             >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
-        )}
+              {showAllSections ? 'Réduire' : `Tout voir · ${extraKeys.length} bloc${extraKeys.length > 1 ? 's' : ''}`}
+              <svg
+                width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+                style={{ transform: showAllSections ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+          );
 
-        {/* Ajouter un widget */}
-        {homeEditMode && availableKeys.length > 0 && (
-          <button onClick={() => setWidgetPickerOpen(true)} style={addWidgetBtn}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-            Ajouter un widget
-          </button>
-        )}
+          const addWidgetButton = homeEditMode && availableKeys.length > 0 && (
+            <button key="addWidget" onClick={() => setWidgetPickerOpen(true)} style={addWidgetBtn}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+              Ajouter un widget
+            </button>
+          );
+
+          // Grand écran : la séance du jour (ou celle en cours) à gauche, le
+          // reste à droite dans l'ordre choisi. Sur téléphone, et en mode
+          // édition, une seule colonne comme avant.
+          const heroKey: HomeSectionKey | null = shownKeys.includes('nextSession') && SECTION_MAP.nextSession ? 'nextSession' : null;
+          if (wideLayout && (heroKey || resumeBlock)) {
+            return (
+              <div className="home-wide">
+                <div className="home-col home-col-main">
+                  {resumeBlock}
+                  {heroKey && SECTION_MAP[heroKey]}
+                </div>
+                <div className="home-col">
+                  {recoveryBlock}
+                  {loadBlock}
+                  {shownKeys.filter((k) => k !== heroKey).map((k) => renderBlock(k, shownKeys.indexOf(k)))}
+                  {showAllButton}
+                </div>
+              </div>
+            );
+          }
+          return (
+            <div className="home-stack">
+              {recoveryBlock}
+              {loadBlock}
+              {resumeBlock}
+              {editBanner}
+              {shownKeys.map((k, idx) => renderBlock(k, idx))}
+              {showAllButton}
+              {addWidgetButton}
+            </div>
+          );
+        })()}
 
       </div>
 
@@ -1141,21 +1182,9 @@ const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto' };
 const scroll: React.CSSProperties = { maxWidth: 480, margin: '0 auto', padding: '0 16px 80px' };
 const headerSection: React.CSSProperties = {
   paddingTop: 'max(24px, env(safe-area-inset-top))',
-  paddingBottom: 18,
-  borderBottom: '1px solid var(--border-subtle)',
   marginBottom: 20,
 };
-const logoRow: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 14 };
-const logoBadge: React.CSSProperties = {
-  width: 48, height: 48, borderRadius: 'var(--icon-radius)',
-  background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  boxShadow: '0 4px 16px rgba(var(--brand-1-rgb),0.3)',
-  transition: 'width 0.2s, height 0.2s, border-radius 0.2s',
-};
-const titleStyle: React.CSSProperties = {
-  fontSize: 24, fontWeight: 800, letterSpacing: -0.5,
-};
+const logoRow: React.CSSProperties = { display: 'flex', alignItems: 'flex-end', gap: 14 };
 // Fond, bordure et arrondi viennent de .glass-icon (index.css) : ce sont les
 // cinq boutons de l'en-tête de l'accueil, ils doivent être en verre comme le
 // reste et suivre le thème.
@@ -1165,7 +1194,7 @@ const themeToggle: React.CSSProperties = {
 };
 const sectionLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 2 };
 const weekCard: React.CSSProperties = {
-  borderRadius: 26, padding: 20, marginBottom: 18,
+  borderRadius: 18, padding: 18,
 };
 const weekSelectorRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 4,
@@ -1178,37 +1207,16 @@ const weekMetric: React.CSSProperties = {
   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
 };
 const weekMetricLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 9, fontWeight: 700, letterSpacing: 1 };
-const recoveryCard: React.CSSProperties = {
-  borderRadius: 26, padding: 18,
-  marginTop: 4, marginBottom: 20,
-};
-const recoveryBarTrack: React.CSSProperties = {
-  width: '100%', height: 6, borderRadius: 3, background: 'var(--bg-elevated)', overflow: 'hidden',
-};
-const recoveryBarFill: React.CSSProperties = {
-  height: '100%', borderRadius: 3, transition: 'width 0.3s',
-};
-const resumeCard: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 14,
-  borderRadius: 26, padding: '16px 18px',
-  marginBottom: 22, marginTop: 4,
-  width: '100%', cursor: 'pointer',
-};
-const resumeIcon: React.CSSProperties = {
-  width: 40, height: 40, background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))',
-  borderRadius: 'var(--icon-radius)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-  color: '#fff', flexShrink: 0, boxShadow: '0 4px 12px rgba(var(--brand-1-rgb),0.35)',
-};
 const workoutCard: React.CSSProperties = {
   display: 'flex', alignItems: 'center',
-  borderRadius: 26, marginBottom: 11,
+  borderRadius: 18, marginBottom: 10,
   overflow: 'hidden', width: '100%', cursor: 'pointer',
 };
 const nutritionCard: React.CSSProperties = {
-  borderRadius: 26, padding: 16, marginTop: 12,
+  borderRadius: 18, padding: 16,
 };
 const muscleAlertCard: React.CSSProperties = {
-  borderRadius: 26, padding: 16, marginTop: 12, marginBottom: 12,
+  borderRadius: 18, padding: 16,
 };
 const nudgeBtn: React.CSSProperties = {
   flexShrink: 0, padding: '9px 13px', borderRadius: 12, cursor: 'pointer',
@@ -1223,19 +1231,10 @@ const nudgeBanner: React.CSSProperties = {
 };
 const weeklyGoalCard: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14,
-  borderRadius: 26, padding: 16, marginTop: 12, marginBottom: 12,
-};
-const nextSessionBanner: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 14,
-  borderRadius: 26, padding: '16px 18px',
-  marginBottom: 18, width: '100%', cursor: 'pointer',
-};
-const nextSessionIcon: React.CSSProperties = {
-  width: 44, height: 44, borderRadius: 'var(--icon-radius)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  borderRadius: 18, padding: 16,
 };
 const cardioCard: React.CSSProperties = {
-  borderRadius: 26, padding: 16, marginTop: 12, marginBottom: 12,
+  borderRadius: 18, padding: 16,
 };
 const cardioAddBtn: React.CSSProperties = {
   background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
@@ -1283,8 +1282,7 @@ const statTileValue: React.CSSProperties = { color: 'var(--text-secondary)', fon
 
 const personalRecordCard: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 14,
-  borderRadius: 26, padding: '16px 18px',
-  marginTop: 12, marginBottom: 12,
+  borderRadius: 18, padding: '16px 18px',
 };
 const personalRecordIcon: React.CSSProperties = {
   width: 44, height: 44, borderRadius: 'var(--icon-radius)',
@@ -1307,14 +1305,14 @@ const widgetCtrlBtn: React.CSSProperties = {
 // l'œil sur un écran dont tout l'intérêt est d'être calme.
 const showAllBtn: React.CSSProperties = {
   width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-  background: 'transparent', border: '1px solid var(--border-subtle)', borderRadius: 999,
-  padding: '13px 18px', color: 'var(--text-muted)', fontSize: 13, fontWeight: 600,
-  letterSpacing: 0.2, cursor: 'pointer', marginTop: 6, marginBottom: 26,
+  background: 'transparent', border: '1px dashed var(--h-line)', borderRadius: 14,
+  padding: '13px 18px', color: 'var(--h-muted)', fontSize: 13, fontWeight: 600,
+  letterSpacing: 0.2, cursor: 'pointer',
 };
 const addWidgetBtn: React.CSSProperties = {
   width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
   background: 'var(--bg-elevated)', border: '1px dashed var(--border-strong)', borderRadius: 14,
-  padding: 14, color: 'var(--brand-1)', fontSize: 13, fontWeight: 700, marginBottom: 16, cursor: 'pointer',
+  padding: 14, color: 'var(--brand-1)', fontSize: 13, fontWeight: 700, cursor: 'pointer',
 };
 
 // Sélecteur "+ Ajouter un widget" — même habillage liquid-glass que le
