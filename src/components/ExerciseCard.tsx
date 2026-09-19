@@ -145,55 +145,59 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       ? `${exercise.bilateralRestSeconds}s / ${exercise.restSeconds}s`
       : formatRest(effectiveRest);
 
-  return (
-    <div
-      className={`glass-card${isActive ? ' exercise-active' : ''}`}
-      style={{
-        borderRadius: 26, padding: '18px 16px', marginBottom: 12,
-        // Seules les bordures "état" restent en inline : l'exercice en cours
-        // garde son liseré rouge, l'exercice terminé son liseré vert. Le
-        // fond, lui, vient de .glass-card.
-        ...(isActive
-          ? { border: '1px solid rgba(var(--brand-1-rgb),0.4)' }
-          : allDone
-          ? { border: '1px solid rgba(76,175,80,0.28)' }
-          : {}),
-        opacity: allDone && !isActive ? 0.55 : 1,
-        transition: 'border-color 0.3s, opacity 0.3s, background 0.3s',
-      }}
-    >
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase' }}>
-            {exercise.muscleGroup}
-          </span>
-          {exercise.isSuperset && (
-            <span style={{ background: 'rgba(224,48,48,0.12)', borderRadius: 6, padding: '2px 7px', border: '1px solid rgba(224,48,48,0.2)', color: '#e03030', fontSize: 10, fontWeight: 700 }}>⟳ {exercise.supersetGroupId?.startsWith('ts-') ? 'TS' : 'SS'}</span>
+  const expanded = isActive || allDone || groupActive;
+  const stateClass = isActive ? ' is-active exercise-active' : allDone ? ' is-done' : '';
+
+  // Exercice pas encore commencé (ni actif, ni en cours dans un superset) :
+  // une ligne compacte, pour que l'exercice en cours reste le seul gros bloc.
+  if (!expanded) {
+    return (
+      <div className={`glass-card sv2-card is-compact${stateClass}`} style={{ padding: '12px 14px', gap: 0, marginBottom: 10, opacity: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <ExerciseAnimation exerciseId={exercise.id} size={Math.min(animSize, 40)} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p className="sv2-card-name">{exercise.name}</p>
+            <p style={{ fontSize: 12, color: 'var(--h-muted)', marginTop: 2 }}>
+              {exercise.muscleGroup.toLowerCase()} · {totalSets} × {exercise.targetReps}
+              {completedCount > 0 ? ` · ${completedCount}/${totalSets} faites` : ''}
+            </p>
+          </div>
+          {onSwitchTo && (
+            <button onClick={onSwitchTo} className="sv2-switch" title="Faire cet exercice maintenant" aria-label="Faire cet exercice maintenant">Faire</button>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {allDone && <span style={{ color: '#4CAF50', fontSize: 14 }} className="check-pop"><IconCheck size={14} /></span>}
-          <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>{restLabel}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`glass-card sv2-card${stateClass}`}
+      style={{ marginBottom: 12, opacity: allDone && !isActive ? 0.6 : 1 }}
+    >
+      {/* En-tête */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <span className="sv2-eyebrow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exercise.muscleGroup}</span>
+          {exercise.isSuperset && (
+            <span style={{ borderRadius: 999, padding: '2px 8px', border: '1px solid rgba(var(--brand-1-rgb),0.4)', color: 'var(--brand-1)', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>⟳ {exercise.supersetGroupId?.startsWith('ts-') ? 'TS' : 'SS'}</span>
+          )}
         </div>
+        {allDone && <span style={{ color: 'var(--h-good)', display: 'inline-flex' }} className="check-pop"><IconCheck size={16} /></span>}
       </div>
 
       {/* Nom + Animation */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <ExerciseAnimation exerciseId={exercise.id} size={animSize} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-          <p style={{
-            color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-            fontSize: 18, fontWeight: 800, lineHeight: '22px', letterSpacing: -0.3,
-            transition: 'color 0.3s', margin: 0,
-          }}>{exercise.name}</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
+          <p className="sv2-card-name">{exercise.name}</p>
           {exerciseDeltaLabel && (
-            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{exerciseDeltaLabel}</p>
+            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: 'var(--h-muted)' }}>{exerciseDeltaLabel}</p>
           )}
           {loadSuggestion && (
             <p style={{
-              margin: '3px 0 0', fontSize: 11.5, fontWeight: 600, lineHeight: '15px',
-              color: loadSuggestion.kind === 'up' ? '#4CAF50' : 'var(--text-muted)',
+              margin: 0, fontSize: 12.5, fontWeight: 600, lineHeight: 1.35,
+              color: loadSuggestion.kind === 'up' ? 'var(--h-good)' : 'var(--h-muted)',
             }}>
               {loadSuggestion.kind === 'up' ? '↑ ' : ''}{loadSuggestion.reason}
             </p>
@@ -201,123 +205,70 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         </div>
       </div>
 
-      {/* Badges cibles */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-        <div style={targetBadge}>
-          <span style={targetLabel}>REPS</span>
-          <span style={targetValue}>{exercise.targetReps}</span>
-        </div>
-        <div style={targetBadge}>
-          <span style={targetLabel}>SÉRIES</span>
-          <span style={targetValue}>{totalSets}</span>
-        </div>
-        <div style={{ ...targetBadge, background: 'var(--bg-green-tint)', border: '1px solid var(--border-green-tint)' }}>
-          <span style={{ ...targetLabel, color: '#3a8a3a' }}>RIR</span>
-          <span style={{ ...targetValue, color: '#5dcc5d' }}>{weekData.rir.replace('RIR ', '')}</span>
-        </div>
-        {completedCount > 0 && (
-          <div style={{
-            ...targetBadge,
-            background: allDone ? 'var(--bg-green-tint)' : 'var(--bg-gold-tint)',
-            border: allDone ? '1px solid var(--border-green-tint)' : '1px solid var(--border-gold-tint)',
-          }}>
-            <span style={{ ...targetLabel, color: allDone ? '#3a8a3a' : '#a07030' }}>FAIT</span>
-            <span style={{ ...targetValue, color: allDone ? '#4CAF50' : '#f5a623' }}>{completedCount}/{totalSets}</span>
-          </div>
-        )}
+      {/* Objectif, lisible d'un coup d'œil */}
+      <div className="sv2-pills">
+        {isActive && !allDone && <span className="key">Série {Math.min(completedCount + 1, totalSets)} sur {totalSets}</span>}
+        <span className={isActive && !allDone ? 'key' : undefined}>{exercise.targetReps} reps</span>
+        <span>{weekData.rir}</span>
+        <span>Repos {restLabel}</span>
+        {completedCount > 0 && <span className={allDone ? 'good' : undefined}>Fait {completedCount}/{totalSets}</span>}
       </div>
 
-      {/* Notes */}
-      {exercise.notes && (
-        <button onClick={() => setNotesOpen(!notesOpen)} style={{
-          display: 'flex', alignItems: 'flex-start', width: '100%',
-          background: 'var(--bg-base)', borderRadius: 10, padding: '8px 12px', marginBottom: 12,
-          cursor: 'pointer', border: '1px solid var(--border)',
-        }}>
-          <span style={{ color: 'var(--text-dim)', marginRight: 6, fontSize: 11 }}>{notesOpen ? '▾' : '▸'}</span>
-          <span style={{ flex: 1, textAlign: 'left', color: 'var(--text-muted)', fontSize: 12, fontStyle: 'italic', lineHeight: '17px' }}>
-            {notesOpen ? exercise.notes : exercise.notes.slice(0, 70) + (exercise.notes.length > 70 ? '…' : '')}
-          </span>
-        </button>
-      )}
-
       {/* Séries */}
-      {(isActive || allDone || groupActive) ? (
-        <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 12 }}>
-          {setEntries.map((entry, idx) => (
-            <React.Fragment key={idx}>
-              {restBarIndex === idx && restBar}
-              <SetRow
-                setNumber={idx + 1}
-                targetReps={exercise.targetReps}
-                defaultWeight={exercise.defaultWeight ?? ''}
-                entry={entry}
-                isCurrent={isActive && idx === currentSetIndex}
-                onComplete={(e) => onSetComplete(idx, e)}
-                onEdit={onEditSet ? () => onEditSet(idx) : undefined}
-                onWeightStart={onWeightStart ? () => onWeightStart(idx) : undefined}
-                lastTime={lastTimeSets?.[idx]}
-                previousMaxWeight={previousMaxWeight}
-                barKg={barKg}
-                coachHint={idx === coachHintSetIdx ? coachHint : null}
-                validateSignal={isActive && idx === currentSetIndex ? validateSignal : undefined}
-              />
-            </React.Fragment>
-          ))}
-          {restBarIndex === setEntries.length && restBar}
-        </div>
-      ) : (
-        <div style={{ padding: '8px 0 12px', textAlign: 'center' }}>
-          <span style={{ color: 'var(--text-micro)', fontSize: 13 }}>{totalSets} × {exercise.targetReps}</span>
-          {onSwitchTo && (
-            <button onClick={onSwitchTo} style={switchToBtn}>↪ Faire cet exercice maintenant</button>
-          )}
+      <div className="sv2-sets" style={{ display: 'flex', flexDirection: 'column' }}>
+        {setEntries.map((entry, idx) => (
+          <React.Fragment key={idx}>
+            {restBarIndex === idx && restBar}
+            <SetRow
+              setNumber={idx + 1}
+              targetReps={exercise.targetReps}
+              defaultWeight={exercise.defaultWeight ?? ''}
+              entry={entry}
+              isCurrent={isActive && idx === currentSetIndex}
+              onComplete={(e) => onSetComplete(idx, e)}
+              onEdit={onEditSet ? () => onEditSet(idx) : undefined}
+              onWeightStart={onWeightStart ? () => onWeightStart(idx) : undefined}
+              lastTime={lastTimeSets?.[idx]}
+              previousMaxWeight={previousMaxWeight}
+              barKg={barKg}
+              coachHint={idx === coachHintSetIdx ? coachHint : null}
+              validateSignal={isActive && idx === currentSetIndex ? validateSignal : undefined}
+            />
+          </React.Fragment>
+        ))}
+        {restBarIndex === setEntries.length && restBar}
+      </div>
+
+      {/* Actions secondaires — seulement si exercice actif */}
+      {isActive && !allDone && (onSkipSet || onSkipExercise || onAddSet) && (
+        <div className="sv2-secondary">
+          {onSkipSet && <button onClick={onSkipSet}>Passer la série</button>}
+          {onAddSet && <button onClick={onAddSet} className="plus">+ Série</button>}
+          {onSkipExercise && <button onClick={onSkipExercise}>Passer l'exercice</button>}
         </div>
       )}
 
-      {/* Actions skip/add — seulement si exercice actif */}
-      {isActive && !allDone && (
-        <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-          {onSkipSet && (
-            <button onClick={onSkipSet} style={actionBtn}>⏭ Passer série</button>
-          )}
-          {onSkipExercise && (
-            <button onClick={onSkipExercise} style={{ ...actionBtn, color: '#b84040' }}>⏩ Passer exercice</button>
-          )}
-          {onAddSet && (
-            <button onClick={onAddSet} style={{ ...actionBtn, color: '#4CAF50' }}>＋ Série</button>
-          )}
-        </div>
+      {/* Note du coach, repliée par défaut */}
+      {exercise.notes && (
+        <>
+          <button onClick={() => setNotesOpen(!notesOpen)} className="sv2-note-btn" aria-expanded={notesOpen}>
+            {notesOpen ? 'Masquer la note' : 'Note du coach'}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ transform: notesOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}><polyline points="6 9 12 15 18 9" /></svg>
+          </button>
+          {notesOpen && <p className="sv2-note">{exercise.notes}</p>}
+        </>
       )}
 
-      {/* Barre de progression */}
-      <div style={{ display: 'flex', gap: 4 }}>
+      {/* Barre de progression des séries */}
+      <div className="sv2-setbar">
         {setEntries.map((entry, idx) => (
           <div key={idx} style={{
-            flex: 1, height: 3, borderRadius: 2,
-            background: entry.completed ? (entry.reps === '—' ? '#555' : '#4CAF50') : (isActive && idx === currentSetIndex) ? '#3a1818' : 'var(--bg-elevated)',
-            transition: 'background 0.4s ease',
-            boxShadow: entry.completed && entry.reps !== '—' ? '0 0 6px rgba(76,175,80,0.35)' : 'none',
+            background: entry.completed
+              ? (entry.reps === '—' ? 'var(--h-hero-line)' : 'var(--h-good)')
+              : (isActive && idx === currentSetIndex) ? 'var(--brand-1)' : undefined,
           }} />
         ))}
       </div>
     </div>
   );
 };
-
-// ─── Styles ──────────────────────────────────────────────────────────────────
-
-const targetBadge: React.CSSProperties = { flex: 1, background: 'var(--bg-higher)', borderRadius: 10, padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, border: '1px solid var(--border-strong)' };
-const targetLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 9, fontWeight: 700, letterSpacing: 1 };
-const targetValue: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 };
-const actionBtn: React.CSSProperties = {
-  flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
-  borderRadius: 10, padding: '8px 4px', color: 'var(--text-muted)',
-  fontSize: 11, fontWeight: 700, cursor: 'pointer', letterSpacing: 0.2,
-};
-const switchToBtn: React.CSSProperties = {
-  width: '100%', marginTop: 8, background: 'var(--bg-elevated)', border: '1px dashed var(--border-strong)',
-  borderRadius: 10, padding: '8px 6px', color: 'var(--brand-1)',
-  fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
-};
-

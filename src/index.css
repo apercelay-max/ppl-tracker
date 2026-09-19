@@ -726,7 +726,7 @@ button { cursor: pointer; }
    autres écrans gardent leur verre et leur halo, seul l'accueil passe à des
    surfaces pleines, une seule couleur d'accent (--brand-1, donc celle choisie
    dans Réglages) et des chiffres en police condensée. */
-.home-v2 {
+.home-v2, .session-v2, .sv2-tokens {
   --h-bg: #0C0E0D;
   --h-surface: #151917;
   --h-raised: #1C2120;
@@ -749,11 +749,12 @@ button { cursor: pointer; }
   --border-subtle: var(--h-line);
   --border: var(--h-line);
   --border-strong: var(--h-hero-line);
-  background: var(--h-bg);
+  --grad: linear-gradient(135deg, var(--brand-1), var(--brand-2));
   color: var(--h-text);
   font-variant-numeric: tabular-nums;
 }
-[data-theme="light"] .home-v2 {
+.home-v2, .session-v2 { background: var(--h-bg); }
+[data-theme="light"] .home-v2, [data-theme="light"] .session-v2, [data-theme="light"] .sv2-tokens {
   --h-bg: #F2F3EF;
   --h-surface: #FFFFFF;
   --h-raised: #EEF0EB;
@@ -767,7 +768,7 @@ button { cursor: pointer; }
   --h-bad: #C0392B;
   --h-off: #E0E3DC;
 }
-[data-theme="dark"][data-amoled="on"] .home-v2 {
+[data-theme="dark"][data-amoled="on"] .home-v2, [data-theme="dark"][data-amoled="on"] .session-v2, [data-theme="dark"][data-amoled="on"] .sv2-tokens {
   --h-bg: #000000;
   --h-surface: #0B0B0B;
   --h-raised: #151515;
@@ -775,36 +776,36 @@ button { cursor: pointer; }
   --h-hero-line: #2A2A2A;
   --h-off: #222222;
 }
-[data-contrast="high"] .home-v2 {
+[data-contrast="high"] .home-v2, [data-contrast="high"] .session-v2, [data-contrast="high"] .sv2-tokens {
   --h-line: #4C4C5E;
   --h-hero-line: #6A6A86;
   --h-muted: var(--text-muted);
   --h-text2: var(--text-secondary);
 }
-[data-theme="light"][data-contrast="high"] .home-v2 {
+[data-theme="light"][data-contrast="high"] .home-v2, [data-theme="light"][data-contrast="high"] .session-v2, [data-theme="light"][data-contrast="high"] .sv2-tokens {
   --h-line: #ADADC4;
   --h-hero-line: #8080A0;
 }
 
 /* Cartes : pleines, sans flou ni ombre. :root remonte la spécificité au-dessus
    des variantes teintées (.glass-gold…) et des règles de thème clair. */
-:root .home-v2 .glass-card {
+:root .home-v2 .glass-card, :root .session-v2 .glass-card, :root .sv2-tokens .glass-card {
   background: var(--h-surface);
   border: 1px solid var(--h-line);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
 }
-:root .home-v2 .glass-card.glass-gold  { background: var(--h-surface); border-color: rgba(232,163,61,0.38); }
-:root .home-v2 .glass-card.glass-green { background: var(--h-surface); border-color: rgba(108,203,148,0.34); }
-:root .home-v2 .glass-card.glass-red   { background: var(--h-surface); border-color: rgba(var(--brand-1-rgb),0.45); }
-:root .home-v2 .glass-card.glass-blue  { background: var(--h-surface); border-color: rgba(110,124,242,0.38); }
-:root .home-v2 .glass-tile {
+:root .home-v2 .glass-card.glass-gold, :root .session-v2 .glass-card.glass-gold, :root .sv2-tokens .glass-card.glass-gold  { background: var(--h-surface); border-color: rgba(232,163,61,0.38); }
+:root .home-v2 .glass-card.glass-green, :root .session-v2 .glass-card.glass-green, :root .sv2-tokens .glass-card.glass-green { background: var(--h-surface); border-color: rgba(108,203,148,0.34); }
+:root .home-v2 .glass-card.glass-red, :root .session-v2 .glass-card.glass-red, :root .sv2-tokens .glass-card.glass-red   { background: var(--h-surface); border-color: rgba(var(--brand-1-rgb),0.45); }
+:root .home-v2 .glass-card.glass-blue, :root .session-v2 .glass-card.glass-blue, :root .sv2-tokens .glass-card.glass-blue  { background: var(--h-surface); border-color: rgba(110,124,242,0.38); }
+:root .home-v2 .glass-tile, :root .session-v2 .glass-tile, :root .sv2-tokens .glass-tile {
   background: transparent;
   border: 1px solid var(--h-line);
   box-shadow: none;
 }
-:root .home-v2 .glass-icon {
+:root .home-v2 .glass-icon, :root .session-v2 .glass-icon, :root .sv2-tokens .glass-icon {
   background: var(--h-surface);
   border-color: var(--h-line);
   color: var(--h-text);
@@ -872,4 +873,100 @@ button { cursor: pointer; }
 
 @media (prefers-reduced-motion: reduce) {
   .home-start, .home-bar > div { transition: none; }
+}
+
+/* ─── Séance : même langage que l'accueil, formes arrondies ────────────── */
+/* Tokens partagés avec .home-v2 (voir plus haut). Le dégradé de l'app
+   (--brand-1 → --brand-2) reste sur les actions principales, et la barre du
+   bas (SessionTabBar) garde sa capsule en verre : elle n'est pas touchée. */
+.sv2-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--h-muted); }
+.sv2-cond { font-family: var(--h-cond); }
+
+.sv2-header { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; padding-top: max(12px, env(safe-area-inset-top)); border-bottom: 1px solid var(--h-line); flex-shrink: 0; }
+.sv2-header-row { display: flex; align-items: center; gap: 10px; }
+.sv2-title { font-family: var(--h-cond); font-size: 24px; font-weight: 700; text-transform: uppercase; line-height: 1; color: var(--h-text); }
+.sv2-quick { display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; border: 1px solid var(--h-line); flex-shrink: 0; }
+.sv2-quick button { width: 32px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: var(--h-text); }
+.sv2-quick button.off { color: var(--h-muted); opacity: 0.55; }
+.sv2-round { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--h-line); background: var(--h-surface); color: var(--h-text); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sv2-prog { display: flex; align-items: center; gap: 10px; }
+.sv2-prog strong { font-family: var(--h-cond); font-size: 18px; font-weight: 700; white-space: nowrap; }
+.sv2-prog strong i { font-style: normal; color: var(--h-muted); font-weight: 600; }
+.sv2-segs { flex: 1; display: flex; gap: 3px; min-width: 0; }
+.sv2-segs > div { height: 6px; border-radius: 3px; background: var(--h-off); overflow: hidden; min-width: 4px; }
+.sv2-segs > div > i { display: block; height: 100%; background: linear-gradient(90deg, var(--brand-1), var(--brand-2)); box-shadow: 0 0 8px rgba(var(--brand-1-rgb),0.4); transition: width 0.3s; }
+
+/* Carte d'exercice */
+.sv2-card { border-radius: 30px; padding: 18px 16px 16px; display: flex; flex-direction: column; gap: 14px; transition: border-color 0.3s, opacity 0.3s; }
+:root .sv2-tokens .glass-card.sv2-card.is-active, :root .session-v2 .glass-card.sv2-card.is-active { border-color: rgba(var(--brand-1-rgb),0.45); }
+:root .session-v2 .glass-card.sv2-card.is-done { border-color: rgba(108,203,148,0.30); }
+.sv2-card-name { margin: 0; font-family: var(--h-cond); font-weight: 700; text-transform: uppercase; font-size: 30px; line-height: 0.95; color: var(--h-text); text-wrap: balance; overflow-wrap: anywhere; }
+.sv2-card.is-compact .sv2-card-name { font-family: inherit; text-transform: none; font-size: 15px; font-weight: 700; line-height: 1.25; color: var(--h-text2); }
+.sv2-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.sv2-pills span { font-size: 12px; font-weight: 500; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--h-line); color: var(--h-text2); }
+.sv2-pills span.key { border-color: var(--brand-1); color: var(--h-text); font-weight: 600; }
+.sv2-pills span.good { border-color: rgba(108,203,148,0.5); color: var(--h-good); font-weight: 600; }
+.sv2-secondary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.sv2-secondary button { height: 40px; border-radius: 999px; border: 1px solid var(--h-line); font-size: 12.5px; font-weight: 600; color: var(--h-muted); }
+.sv2-secondary button.plus { color: var(--h-good); }
+.sv2-note-btn { display: flex; align-items: center; gap: 6px; align-self: flex-start; font-size: 13px; font-weight: 600; color: var(--h-text2); padding: 2px 0; }
+.sv2-note { font-size: 13px; line-height: 1.5; color: var(--h-text2); border-top: 1px solid var(--h-line); padding-top: 12px; }
+.sv2-switch { height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--h-line); color: var(--brand-1); font-size: 12.5px; font-weight: 600; flex-shrink: 0; }
+.sv2-setbar { display: flex; gap: 4px; }
+.sv2-setbar > div { flex: 1; height: 4px; border-radius: 999px; background: var(--h-off); transition: background 0.4s; }
+
+/* Lignes de série */
+.sv2-set { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 2px; border-top: 1px solid var(--h-line); font-size: 14px; }
+.sv2-sets > .sv2-setwrap:first-child .sv2-set { border-top: 0; }
+.sv2-set .n { font-family: var(--h-cond); font-size: 18px; font-weight: 700; color: var(--h-muted); text-align: center; }
+.sv2-set .v { color: var(--h-muted); min-width: 0; }
+.sv2-set .t { font-size: 12px; color: var(--h-muted); }
+.sv2-set.done .v { color: var(--h-text); font-weight: 600; }
+.sv2-set.done .n { color: var(--h-good); }
+.sv2-set.warn .n, .sv2-set.warn .v b { color: var(--h-warn); }
+.sv2-set.skipped { opacity: 0.5; }
+.sv2-set.now .n { color: var(--brand-1); }
+.sv2-set.now .v { color: var(--h-text); font-weight: 600; }
+.sv2-edit { font-size: 12px; font-weight: 600; color: var(--h-muted); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--h-line); }
+.sv2-hint { font-size: 11.5px; line-height: 1.4; color: var(--h-muted); padding-left: 40px; margin-top: -4px; padding-bottom: 6px; }
+
+/* Saisie de la série en cours : tout au pouce */
+.sv2-entry { display: flex; flex-direction: column; gap: 10px; padding: 6px 0 4px; }
+.sv2-steppers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.sv2-stepper { border: 1px solid var(--h-line); border-radius: 24px; padding: 10px 8px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; background: var(--h-bg); transition: border-color 0.15s; }
+.sv2-stepper:focus-within { border-color: var(--brand-1); }
+.sv2-stepper-label { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--h-muted); }
+.sv2-unit { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--h-line); color: var(--h-text2); }
+.sv2-stepper input {
+  width: 100%; text-align: center; background: none; color: var(--h-text);
+  font-family: var(--h-cond); font-size: 44px; font-weight: 700; line-height: 1; padding: 0;
+}
+.sv2-stepper input::placeholder { color: var(--h-off); }
+.sv2-stepper-target { font-size: 11px; color: var(--h-muted); margin-top: -4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sv2-stepper-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; }
+.sv2-stepper-btns button { height: 44px; border-radius: 999px; background: var(--h-raised); color: var(--h-text); font-size: 22px; font-weight: 500; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
+.sv2-stepper-btns button:active { transform: scale(0.96); }
+.sv2-validate { height: 58px; border-radius: 999px; background: var(--grad); color: #fff; font-size: 17px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 6px 18px rgba(var(--brand-1-rgb),0.35); transition: transform 0.12s, box-shadow 0.15s, background 0.2s; width: 100%; }
+.sv2-validate:not(:disabled):active { transform: scale(0.98); }
+.sv2-validate:disabled { background: var(--h-raised); color: var(--h-muted); box-shadow: none; cursor: not-allowed; }
+.sv2-validate.validate-btn-pr { background: linear-gradient(120deg, #ffb21d, #ff7a1d, #ffd93d, #ff9d1d); background-size: 300% 300%; }
+.sv2-delta { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 3px 9px; flex-shrink: 0; }
+
+/* Repos : prend la place de la ligne en cours, lisible de loin */
+.sv2-rest { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px 12px 14px; margin: 4px 0 8px; border-radius: 24px; background: var(--h-bg); border: 1px solid var(--h-line); }
+.sv2-rest.over { border-color: rgba(108,203,148,0.5); }
+.sv2-rest-clock { font-family: var(--h-cond); font-size: 96px; font-weight: 700; line-height: 0.85; color: var(--h-text); }
+.sv2-rest.over .sv2-rest-clock { color: var(--h-good); }
+.sv2-rest-bar { width: 100%; height: 10px; border-radius: 999px; background: var(--h-off); overflow: hidden; }
+.sv2-rest-bar > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--brand-1), var(--brand-2)); transition: width 1s linear; }
+.sv2-rest.over .sv2-rest-bar > i { background: var(--h-good); }
+.sv2-rest-next { font-size: 13px; color: var(--h-text2); text-align: center; }
+.sv2-rest-ctrls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; }
+.sv2-rest-ctrls button { height: 46px; border-radius: 999px; background: var(--h-raised); color: var(--h-text); font-size: 14px; font-weight: 600; }
+.sv2-rest-skip { width: 100%; height: 54px; border-radius: 999px; background: var(--grad); color: #fff; font-size: 16px; font-weight: 600; box-shadow: 0 6px 18px rgba(var(--brand-1-rgb),0.35); }
+.sv2-rest.over .sv2-rest-skip { background: var(--h-good); color: #07110C; box-shadow: none; }
+.sv2-rest-note { font-size: 12.5px; line-height: 1.45; color: var(--h-text2); border-top: 1px solid var(--h-line); padding-top: 10px; width: 100%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sv2-rest-bar > i, .sv2-segs > div > i, .sv2-validate { transition: none; }
 }

@@ -229,6 +229,8 @@ const hapticsEnabled = useWorkoutStore((s) => s.hapticsEnabled);
 const setHapticsEnabled = useWorkoutStore((s) => s.setHapticsEnabled);
 const ultraAnimationsEnabled = useWorkoutStore((s) => s.ultraAnimationsEnabled);
 const setUltraAnimationsEnabled = useWorkoutStore((s) => s.setUltraAnimationsEnabled);
+const uiStyle = useWorkoutStore((s) => s.uiStyle);
+const setUiStyle = useWorkoutStore((s) => s.setUiStyle);
 const ultraAnimationStyle = useWorkoutStore((s) => s.ultraAnimationStyle);
 const setUltraAnimationStyle = useWorkoutStore((s) => s.setUltraAnimationStyle);
 const ultraTransitionStyle = useWorkoutStore((s) => s.ultraTransitionStyle);
@@ -1143,6 +1145,36 @@ boxShadow: themeMode === m.id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
 </button>
 ))}
 </div>
+
+{/* Style de l'interface : l'accueil et l'écran de séance existent en deux
+    versions. Visible même en mode simplifié, comme l'apparence : c'est ce
+    qui décide à quoi ressemble l'app au quotidien. */}
+<p style={{ ...subLabel, marginTop: 20 }}>STYLE DE L'INTERFACE</p>
+<div style={themeModePill} role="group" aria-label="Style de l'interface">
+{([
+{ id: 'nouveau', label: 'Nouveau', hint: 'Surfaces pleines, gros chiffres' },
+{ id: 'classique', label: 'Classique', hint: 'Verre et halo de couleur' },
+] as const).map((opt) => (
+<button
+key={opt.id}
+onClick={() => setUiStyle(opt.id)}
+aria-pressed={uiStyle === opt.id}
+title={opt.hint}
+style={{
+...themeModeBtn,
+background: uiStyle === opt.id ? 'var(--bg-base)' : 'transparent',
+color: uiStyle === opt.id ? 'var(--text-primary)' : 'var(--text-dim)',
+boxShadow: uiStyle === opt.id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
+}}
+>
+<span style={{ fontSize: 12, fontWeight: 700 }}>{opt.label}</span>
+<span style={{ fontSize: 10, fontWeight: 500, opacity: 0.8 }}>{opt.hint}</span>
+</button>
+))}
+</div>
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 6, lineHeight: '15px' }}>
+S'applique à l'accueil et à l'écran de séance.
+</p>
 
 {!simplicityMode && (
 <>

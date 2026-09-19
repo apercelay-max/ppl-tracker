@@ -6,6 +6,7 @@ import { Exercise, SetEntry } from '../data/types';
 import { getMuscleRecoveryStatus } from '../utils/training';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ExerciseCard } from '../components/ExerciseCard';
+import { ExerciseCardClassic } from '../components/ExerciseCardClassic';
 import { SessionAdaptSheet } from '../components/SessionAdaptSheet';
 import { GymPickerSheet } from '../components/GymPickerSheet';
 import type { GymProfile, SessionAdaptation } from '../utils/gymAdapt';
@@ -58,6 +59,8 @@ Array.from({ length: count }, () => ({ weight: '', reps: '', completed: false })
 export const WorkoutIntroScreen: React.FC<WorkoutIntroScreenProps> = ({ dayId, onBack, onStart }) => {
 const history = useWorkoutStore((s) => s.history);
 const currentWeek = useWorkoutStore((s) => s.currentWeek);
+const uiStyle = useWorkoutStore((s) => s.uiStyle);
+const PreviewCard = uiStyle === 'classique' ? ExerciseCardClassic : ExerciseCard;
 const workout = getWorkout(dayId);
 const [detailExercise, setDetailExercise] = useState<Exercise | null>(null);
 const [previewEntries, setPreviewEntries] = useState<SetEntry[]>([]);
@@ -278,7 +281,8 @@ onTouchStart={onHandleTouchStart}
 <button onClick={closeSheet} style={closeBtn}><IconClose size={14} /></button>
 </div>
 
-<ExerciseCard
+<div className={uiStyle === 'classique' ? undefined : 'sv2-tokens'}>
+<PreviewCard
 exercise={detailExercise}
 setEntries={previewEntries}
 currentSetIndex={previewIndex}
@@ -289,6 +293,7 @@ onSkipSet={handleSkipSet}
 onSkipExercise={closeSheet}
 onAddSet={handleAddSet}
 />
+</div>
 </div>
 </div>
 )}

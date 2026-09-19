@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { HomeScreen } from './screens/HomeScreen';
+import { HomeScreenClassic } from './screens/HomeScreenClassic';
 import { SessionScreen } from './screens/SessionScreen';
 import { DashboardScreen } from './screens/DashboardScreen';
 import { SettingsScreen, type SettingsCategory } from './screens/SettingsScreen';
@@ -67,6 +68,7 @@ const highContrast = useWorkoutStore((s) => s.highContrast);
 const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
 const ultraAnimationsEnabled = useWorkoutStore((s) => s.ultraAnimationsEnabled);
 const ultraTransitionStyle = useWorkoutStore((s) => s.ultraTransitionStyle);
+const uiStyle = useWorkoutStore((s) => s.uiStyle);
 // Quiz de démarrage (objectif, niveau, matériel...), affiché une seule fois
 // au tout premier lancement — voir OnboardingQuiz.tsx et workoutStore.ts.
 // Il est aussi rejouable depuis les Réglages : dans ce cas `quizOpen` le
@@ -274,7 +276,11 @@ lastSyncedAt={sync.lastSyncedAt}
 />
 );
 } else {
-screen = <HomeScreen onSelectDay={handleSelectDay} onOpenDashboard={handleOpenDashboard} onOpenSettings={handleOpenSettings} />;
+{
+  // Réglages → Personnalisation → Style de l'interface.
+  const Home = uiStyle === 'classique' ? HomeScreenClassic : HomeScreen;
+  screen = <Home onSelectDay={handleSelectDay} onOpenDashboard={handleOpenDashboard} onOpenSettings={handleOpenSettings} />;
+}
 }
 
 // La barre ne s'affiche jamais pendant une séance (intro/session) — même

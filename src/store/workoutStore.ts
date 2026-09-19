@@ -77,6 +77,7 @@ export type BeepTone = 'doux' | 'classique' | 'urgent' | 'melodique' | 'cloche';
  *  contexte et les encouragements. Au bout de trois séances la plupart des gens
  *  passent en 'court' — d'où le réglage. */
 export type VoiceVerbosity = 'court' | 'complet';
+export type UiStyle = 'nouveau' | 'classique';
 let audioCtx: AudioContext | null = null;
 
 interface BeepNote { freq: number; delay: number; dur: number; }
@@ -313,6 +314,10 @@ activeGymId: string;
 // Affichage de l'aide au chargement des disques : c'est une préférence
 // d'affichage, elle vaut pour toutes les salles.
 plateHelperEnabled: boolean;
+// Style de l'accueil et de l'écran de séance : « nouveau » (surfaces pleines,
+// chiffres condensés, saisie au pouce) ou « classique » (verre et halo, le
+// design d'avant septembre 2026). Réglages → Personnalisation.
+uiStyle: UiStyle;
 // Ancien réglage unique, conservé le temps de la migration des sauvegardes.
 gymProfile: GymProfile;
 // Valider une série en secouant le téléphone (mains prises/pleines de magnésie).
@@ -428,6 +433,7 @@ setNavBarTabEnabled: (key: NavTabKey, enabled: boolean) => void;
 setNavBarTabPinned: (key: NavTabKey, pinned: boolean) => void;
 setGymProfile: (patch: Partial<GymProfile>) => void;
 setPlateHelperEnabled: (enabled: boolean) => void;
+setUiStyle: (style: UiStyle) => void;
 addGym: (name: string) => string;
 updateGym: (id: string, patch: Partial<Gym>) => void;
 removeGym: (id: string) => void;
@@ -553,6 +559,7 @@ navBarPinned: { ...DEFAULT_NAV_TABS_PINNED },
 gyms: [{ ...INITIAL_GYM }],
 activeGymId: INITIAL_GYM.id,
 plateHelperEnabled: true,
+uiStyle: 'nouveau',
 gymProfile: { ...DEFAULT_GYM_PROFILE },
 shakeToValidateEnabled: false,
 sessionAdaptation: null,
@@ -1103,6 +1110,7 @@ return { gymProfile: next };
 setShakeToValidateEnabled: (enabled) => set({ shakeToValidateEnabled: enabled }),
 
 setPlateHelperEnabled: (enabled) => set({ plateHelperEnabled: enabled }),
+setUiStyle: (style) => set({ uiStyle: style }),
 
 addGym: (name) => {
 const gym = makeDefaultGym(name.trim() || 'Nouvelle salle');
@@ -1258,6 +1266,7 @@ navBarPinned: state.navBarPinned,
 gyms: state.gyms,
 activeGymId: state.activeGymId,
 plateHelperEnabled: state.plateHelperEnabled,
+uiStyle: state.uiStyle,
 gymProfile: state.gymProfile,
 shakeToValidateEnabled: state.shakeToValidateEnabled,
 sessionAdaptation: state.sessionAdaptation,

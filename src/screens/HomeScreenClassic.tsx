@@ -1,0 +1,1344 @@
+// Version « classique » de l'accueil, gardée à l'identique pour le réglage
+// Style de l'interface → Classique. Le style actuel est dans HomeScreen.tsx.
+import React, { useEffect, useRef, useState } from 'react';
+import { DataIcon } from '../components/DataIcon';
+import { MESOCYCLE_WEEKS, getProgressionWeek, getWorkout } from '../data/workouts';
+import { getProgram } from '../data/programs';
+import { useWorkoutStore, CARDIO_TYPE_LABELS } from '../store/workoutStore';
+import type { HomeSectionKey } from '../store/workoutStore';
+import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
+import { HOME_SECTION_META } from '../data/homeSectionMeta';
+import {
+  getMuscleGroupsStatus, getMuscleRecoverySummary, bucketByWeek, computeLoadStatus,
+  computeTonnage, getMostRecentPersonalRecord, getFeaturedExerciseProgress,
+  detectPlateaus as getPlateaus,
+} from '../utils/training';
+import { getCoachBrief, getNutritionAdvice } from '../utils/coach';
+import type { CoachTone } from '../utils/coach';
+import type { CardioActivityType } from '../data/types';
+import { refreshBinome, useBinome } from '../hooks/useBinome';
+import { markNudgesSeen, sendNudge } from '../lib/binome';
+import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconGauge, IconLightbulb, IconMoon, IconPMark, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
+
+const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
+
+// Renvoie une date relative courte ("Aujourd'hui", "Hier", "Il y a 3 j"...) —
+// utilisé par le cardio ET par le widget "Séance précédente".
+const formatRelativeDate = (ts: number): string => {
+  const diffDays = Math.floor((Date.now() - ts) / 86400000);
+  if (diffDays <= 0) return "Aujourd'hui";
+  if (diffDays === 1) return 'Hier';
+  if (diffDays < 7) return `Il y a ${diffDays} j`;
+  return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+};
+
+// Petit sparkline SVG normalisé (poids du corps, progression d'exercice) —
+// pas d'axes ni de libellés, contrairement à MiniLineChart qui est prévu
+// pour un écran dédié plus grand (voir components/MiniLineChart.tsx).
+const sparklinePoints = (values: number[], w: number, h: number, padY = 4): string => {
+  if (values.length < 2) return '';
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  return values
+    .map((v, i) => {
+      const x = (i / (values.length - 1)) * w;
+      const y = h - padY - ((v - min) / range) * (h - padY * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+};
+
+// Au-delà de ce seuil (en jours), un groupe musculaire est considéré
+// "en retard" — le cycle PPL Strict V10 repasse sur chaque groupe tous les
+// 4 à 8 jours environ, donc 9 jours laisse une vraie marge avant d'alerter.
+const MUSCLE_ALERT_THRESHOLD_DAYS = 9;
+
+// Couleur/label de secours pour un jour qui n'a pas d'entrée dans les
+// dayAccents/dayTypeLabels du programme actif (ne devrait pas arriver
+// pour les programmes intégrés, mais protège les programmes importés
+// incomplets).
+const FALLBACK_ACCENT = '#7a7a90';
+
+// Fenêtre pendant laquelle le conseil nutrition a encore un sens. Au-delà,
+// le repas d'après-séance est passé depuis longtemps : la carte ne ferait
+// qu'occuper une place sur l'accueil pour rappeler un train déjà parti.
+const NUTRITION_WINDOW_MS = 90 * 60 * 1000;
+
+// Respiration ajoutée entre deux blocs de l'accueil, en plus de la marge que
+// chaque carte porte déjà. C'est ce qui fait la différence entre une pile de
+// cartes collées et un écran qu'on lit.
+const HOME_BLOCK_GAP = 10;
+
+// Couleurs de la ligne « à faire » du coach. Vert quand il n'y a qu'à
+// continuer, ambre quand quelque chose doit changer — le même code couleur
+// que les séries hors fourchette, pour ne pas avoir deux langages visuels.
+const COACH_TONE_STYLE: Record<CoachTone, { color: string; bg: string; border: string }> = {
+  good: { color: '#4CAF50', bg: 'rgba(76,175,80,0.08)', border: 'rgba(76,175,80,0.22)' },
+  up: { color: '#4CAF50', bg: 'rgba(76,175,80,0.08)', border: 'rgba(76,175,80,0.22)' },
+  down: { color: '#f5a623', bg: 'rgba(245,166,35,0.08)', border: 'rgba(245,166,35,0.22)' },
+  warn: { color: '#f5a623', bg: 'rgba(245,166,35,0.08)', border: 'rgba(245,166,35,0.22)' },
+  hold: { color: 'var(--text-secondary)', bg: 'var(--bg-elevated)', border: 'var(--border-strong)' },
+};
+
+// Icônes (SVG inline, même style trait que le reste de l'app) affichées
+// dans le sélecteur "+ Ajouter un widget" — une par clé de HomeSectionKey,
+// même si "seances" n'y apparaît jamais (non retirable, donc jamais dans
+// availableKeys) : le Record doit rester exhaustif pour rester typé.
+const WIDGET_PICKER_ICONS: Record<HomeSectionKey, React.ReactNode> = {
+  coach: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.5 8.5 0 0 1 8.5 8.5Z" /><path d="M9 11h6M9 14.5h3.5" /></svg>,
+  seances: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="5.5" width="16" height="14" rx="2.2" /><line x1="4" y1="9.5" x2="20" y2="9.5" /></svg>,
+  lastSession: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>,
+  weeklyStats: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>,
+  nextSession: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>,
+  cycle: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></svg>,
+  weeklyGoal: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" /></svg>,
+  muscleAlert: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-9.33-5" /><path d="M6 16a6 6 0 0 0 9.33 5" /><path d="M12 2v4M12 18v4M2 12h4M18 12h4" /></svg>,
+  cardio: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>,
+  nutrition: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" /></svg>,
+  supersetRule: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36" /><polyline points="21 3 21 9 15 9" /></svg>,
+  bodyWeight: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="12" cy="12" r="4" /><line x1="12" y1="7.5" x2="13.4" y2="11" /></svg>,
+  personalRecord: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 21h8" /><path d="M12 17v4" /><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" /><path d="M7 5H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4" /><path d="M17 5h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4" /></svg>,
+  exerciseProgress: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="6" r="2.5" /><path d="M4 20 L9 13 L13 16 L18 8.5" /></svg>,
+  plateau: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3.5 17a9 9 0 1 1 17 0" /><path d="m12 13 4-3.5" /><circle cx="12" cy="14" r="1.4" /></svg>,
+};
+
+interface HomeScreenProps { onSelectDay: (dayId: string) => void; onOpenDashboard: () => void; onOpenSettings: () => void; }
+
+export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashboard, onOpenSettings }) => {
+  const currentWeek = useWorkoutStore((s) => s.currentWeek);
+  const setCurrentWeek = useWorkoutStore((s) => s.setCurrentWeek);
+  // Semaine mémorisée à l'ouverture de cet écran, pour pouvoir y revenir
+  // d'un coup après avoir navigué avec ‹/› (currentWeek est la VRAIE semaine
+  // du programme, pas juste un aperçu — la naviguer la change réellement).
+  const [homeWeekBaseline] = useState(currentWeek);
+  const session = useWorkoutStore((s) => s.session);
+  const theme = useWorkoutStore((s) => s.theme);
+  const setThemeMode = useWorkoutStore((s) => s.setThemeMode);
+  const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
+  const wakeLockEnabled = useWorkoutStore((s) => s.wakeLockEnabled);
+  const setWakeLockEnabled = useWorkoutStore((s) => s.setWakeLockEnabled);
+  const homeSections = useWorkoutStore((s) => s.homeSections);
+  const homeSectionOrder = useWorkoutStore((s) => s.homeSectionOrder);
+  const cycleDoneIds = useWorkoutStore((s) => s.cycleDoneIds);
+  const history = useWorkoutStore((s) => s.history);
+  const iconSize = useWorkoutStore((s) => s.iconSize);
+  const iconSizes = ICON_SIZE_PRESETS[iconSize];
+  const cardioHistory = useWorkoutStore((s) => s.cardioHistory);
+  const addCardioEntry = useWorkoutStore((s) => s.addCardioEntry);
+  const deleteCardioEntry = useWorkoutStore((s) => s.deleteCardioEntry);
+  const weeklySessionGoal = useWorkoutStore((s) => s.weeklySessionGoal);
+  // ── Binôme ──
+  const { state: binome } = useBinome();
+  const [nudging, setNudging] = useState(false);
+  const [nudgeMsg, setNudgeMsg] = useState<string | null>(null);
+  // Nom de celui qui vient de te relancer. Gardé en local : dès qu'on l'a vu,
+  // la relance est marquée lue côté serveur et le compteur retombe à zéro —
+  // sans ça, le bandeau disparaîtrait au moment même où il s'affiche.
+  const [nudgedBy, setNudgedBy] = useState<string | null>(null);
+  useEffect(() => {
+    if (!binome?.connecte || !binome.en_binome || binome.relances_recues === 0 || !binome.partenaire) return;
+    setNudgedBy(binome.partenaire.nom);
+    void markNudgesSeen().then(() => refreshBinome());
+  }, [binome]);
+  const homeSectionColors = useWorkoutStore((s) => s.homeSectionColors);
+  const setHomeSectionOrder = useWorkoutStore((s) => s.setHomeSectionOrder);
+  const setHomeSectionVisible = useWorkoutStore((s) => s.setHomeSectionVisible);
+  // Quels blocs composent la « partie simple » de l'accueil (voir
+  // DEFAULT_HOME_ESSENTIALS dans le store) — réglable bloc par bloc depuis le
+  // mode édition, l'étoile en haut à droite de chaque widget.
+  const homeEssentials = useWorkoutStore((s) => s.homeEssentials);
+  const setHomeEssential = useWorkoutStore((s) => s.setHomeEssential);
+  const bodyWeightHistory = useWorkoutStore((s) => s.bodyWeightHistory);
+  // Programme actif (voir Réglages → Programme d'entraînement) — Strict V10
+  // par défaut, jamais supprimé même si un autre programme est choisi.
+  const activeProgramId = useWorkoutStore((s) => s.activeProgramId);
+  const customPrograms = useWorkoutStore((s) => s.customPrograms);
+  const activeProgram = getProgram(activeProgramId, customPrograms);
+  // Couleur perso d'un bloc si réglée dans les Réglages, sinon la couleur
+  // par défaut de ce bloc (accent du thème, ou couleur du jour pour
+  // "prochaine séance"). Sert aussi à afficher un liseré de couleur sur la
+  // carte pour qu'on voie d'un coup d'œil qu'elle est personnalisée.
+  const blockColor = (key: HomeSectionKey, fallback: string) => homeSectionColors[key] ?? fallback;
+
+  // ── Widgets d'accueil (mode édition + sélecteur d'ajout) ─────────────────
+  const [homeEditMode, setHomeEditMode] = useState(false);
+  const [widgetPickerOpen, setWidgetPickerOpen] = useState(false);
+  // L'accueil s'ouvre replié sur sa partie simple. Volontairement NON
+  // persisté : chaque ouverture de l'app repart de l'écran calme, sinon un
+  // seul « Tout voir » suffirait à le recharger définitivement.
+  const [showAllSections, setShowAllSections] = useState(false);
+
+  // ── Cardio (formulaire rapide d'ajout) ──────────────────────────────────
+  const [cardioFormOpen, setCardioFormOpen] = useState(false);
+  const [cardioType, setCardioType] = useState<CardioActivityType>('velo');
+  const [cardioDuration, setCardioDuration] = useState(30);
+  const [cardioRpe, setCardioRpe] = useState<number | null>(null);
+
+  const handleAddCardio = () => {
+    addCardioEntry(cardioType, cardioDuration, cardioRpe ?? undefined);
+    setCardioFormOpen(false);
+    setCardioDuration(30);
+    setCardioRpe(null);
+  };
+
+  const weekData = getProgressionWeek(currentWeek);
+  const resumeWorkout = session && !session.isComplete
+    ? getWorkout(session.dayId)
+    : null;
+  const cycleProgress = ((currentWeek - 1) / (MESOCYCLE_WEEKS - 1)) * 100;
+
+  const wakeLockSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator;
+
+  // ── Récupération musculaire (widget affiché en tête d'écran d'accueil) ──
+  // Quel groupe musculaire a le plus besoin de récupérer, et la moyenne de
+  // récupération tous groupes confondus — voir getMuscleRecoverySummary
+  // (utils/training.ts), qui se base sur les durées de récup recommandées
+  // par muscle et sur la dernière séance réelle où chacun a été travaillé.
+  const { leastRecovered, averagePct } = getMuscleRecoverySummary(history);
+  const recoveryColor = averagePct >= 0.8 ? '#4CAF50' : averagePct >= 0.5 ? '#f5a623' : '#e03030';
+
+  // ── Charge d'entraînement (alerte pic de charge) ─────────────────────────
+  // Compare la charge de la semaine en cours à la moyenne des semaines
+  // précédentes — voir computeLoadStatus (utils/training.ts). Renvoie null
+  // si pas assez de données plutôt que d'inventer un statut.
+  const loadStatus = computeLoadStatus(bucketByWeek(history));
+
+  // ── Effet holographique du titre ─────────────────────────────────────────
+  // Le dégradé animé (.titre-irise) bouge déjà tout seul en boucle. On
+  // ajoute par-dessus un reflet qui suit le doigt/la souris, comme une
+  // carte holographique, sans toucher à l'animation existante.
+  const titleWrapRef = useRef<HTMLDivElement>(null);
+  const [holoPos, setHoloPos] = useState({ x: 50, y: 50 });
+  const handleTitlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = titleWrapRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setHoloPos({ x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) });
+  };
+  const handleTitlePointerLeave = () => setHoloPos({ x: 50, y: 50 });
+
+  const cycleColor = blockColor('cycle', 'var(--brand-1)');
+  // Le suivi "semaine / RIR / objectif" (mésocycle 11 semaines) est propre
+  // à Strict V2.2 — les autres programmes n'ont pas cette notion, donc le
+  // bloc ne s'affiche que pour celui-ci, même si le réglage est activé.
+  // Remonté ici (et non juste au-dessus de « prochaine séance ») parce que le
+  // rappel superset a besoin de savoir si la prochaine séance est un Push.
+  const nextWorkout = activeProgram.workouts.find((w) => !cycleDoneIds.includes(w.id)) ?? activeProgram.workouts[0];
+
+  const cycleSection = homeSections.cycle && activeProgramId === 'strict-v10' && (
+    <div key="cycle" className="glass-card" style={{ ...weekCard, ...(homeSectionColors.cycle ? { borderLeft: `3px solid ${cycleColor}` } : {}) }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div>
+          <p style={sectionLabel}>CYCLE EN COURS</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 15, fontWeight: 700, marginTop: 2 }}>{weekData.phase}</p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {currentWeek !== homeWeekBaseline && (
+            <button
+              className="week-btn"
+              style={{ ...weekBtn, width: 'auto', padding: '0 8px', fontSize: 11, fontWeight: 700 }}
+              onClick={() => setCurrentWeek(homeWeekBaseline)}
+              title="Revenir à la semaine en cours"
+            >
+              ↺ Sem. {homeWeekBaseline}
+            </button>
+          )}
+          <div className="glass-tile" style={weekSelectorRow}>
+            <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek - 1)} disabled={currentWeek <= 1}>‹</button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, minWidth: 28 }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: 9, fontWeight: 700, letterSpacing: 1 }}>SEM.</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 18, lineHeight: '1' }}>{currentWeek}</span>
+            </div>
+            <button className="week-btn" style={weekBtn} onClick={() => setCurrentWeek(currentWeek + 1)} disabled={currentWeek >= MESOCYCLE_WEEKS}>›</button>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+        <div className="glass-tile" style={weekMetric}>
+          <span style={weekMetricLabel}>RIR</span>
+          <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5, color: '#4CAF50' }}>{weekData.rir.replace('RIR ', '')}</span>
+        </div>
+        <div className="glass-tile" style={weekMetric}>
+          <span style={weekMetricLabel}>REPOS</span>
+          <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5, color: cycleColor }}>3:00</span>
+        </div>
+        <div className="glass-tile" style={{ ...weekMetric, flex: 2 }}>
+          <span style={weekMetricLabel}>OBJECTIF</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: 11, lineHeight: '14px' }}>{weekData.objective}</span>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 5, alignItems: 'center', marginBottom: 6 }}>
+        {Array.from({ length: MESOCYCLE_WEEKS }, (_, i) => (
+          <div key={i} style={{
+            flex: 1, height: i + 1 === currentWeek ? 6 : 4, borderRadius: 3,
+            background: i + 1 < currentWeek ? cycleColor : i + 1 === currentWeek ? '#ffffff' : 'var(--border-strong)',
+            transition: 'background 0.3s, height 0.3s',
+            boxShadow: i + 1 < currentWeek ? `0 0 6px rgba(var(--brand-1-rgb),0.4)` : 'none',
+          }} />
+        ))}
+      </div>
+      <p style={{ color: 'var(--text-micro)', fontSize: 10 }}>Semaine {currentWeek} / {MESOCYCLE_WEEKS} · {Math.round(cycleProgress)}% du cycle</p>
+    </div>
+  );
+
+  const seancesSection = (
+    <div key="seances">
+      <p style={{ ...sectionLabel, marginBottom: 10 }}>SÉANCES</p>
+      <div>
+        {activeProgram.workouts.map((workout, idx) => {
+          const accent = activeProgram.dayAccents[workout.id] ?? FALLBACK_ACCENT;
+          const typeLabel = activeProgram.dayTypeLabels[workout.id] ?? '';
+          const isDone = cycleDoneIds.includes(workout.id);
+          return (
+            <button
+              key={workout.id}
+              className="workout-card slide-up glass-card"
+              style={{ ...workoutCard, animationDelay: `${idx * 0.06}s`, opacity: isDone ? 0.5 : 1 }}
+              onClick={() => onSelectDay(workout.id)}
+            >
+              <div style={{
+                width: 48, alignSelf: 'stretch', flexShrink: 0,
+                background: `${accent}15`,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                borderRight: `1px solid ${accent}22`,
+              }}>
+                <span style={{ color: accent, fontSize: 10, fontWeight: 800, letterSpacing: 1.5 }}>{typeLabel}</span>
+                <span style={{ color: `${accent}60`, fontSize: 11, fontWeight: 700 }}>J{workout.dayNumber}</span>
+              </div>
+              <div style={{ flex: 1, padding: '14px 14px', textAlign: 'left' }}>
+                <p style={{ color: 'var(--text-primary)', fontSize: 18, fontWeight: 800, marginBottom: 3, letterSpacing: -0.3 }}>{workout.name}</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 2 }}>{workout.muscleGroups}</p>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
+                  {isDone ? (
+                    <span style={{
+                      background: 'rgba(76,175,80,0.12)', border: '1px solid rgba(76,175,80,0.3)',
+                      borderRadius: 6, padding: '2px 8px',
+                      color: '#4CAF50', fontSize: 10, fontWeight: 700,
+                    }}>✓ Fait ce cycle</span>
+                  ) : (
+                    <span style={{
+                      background: `${accent}15`, border: `1px solid ${accent}25`,
+                      borderRadius: 6, padding: '2px 8px',
+                      color: accent, fontSize: 10, fontWeight: 700,
+                    }}>{workout.exercises.length} exercices</span>
+                  )}
+                  <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>{workout.estimatedDuration}</span>
+                </div>
+              </div>
+              <span style={{ color: accent, fontSize: 22, fontWeight: 200, paddingRight: 14, flexShrink: 0, opacity: 0.6 }}>›</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  // ── Coach ─────────────────────────────────────────────────────────────
+  // Trois lignes, jamais plus : ce qui s'est passé, le seul point à corriger,
+  // et quoi en faire aujourd'hui. Toute la logique est dans utils/coach.ts.
+  const coachSection = homeSections.coach && (() => {
+    const brief = getCoachBrief(history, getWorkout);
+    if (!brief) return null; // aucune séance terminée : rien à raconter
+    const tone = COACH_TONE_STYLE[brief.tone];
+    return (
+      <div key="coach" className="glass-card" style={{ ...cardioCard, ...(homeSectionColors.coach ? { borderLeft: `3px solid ${homeSectionColors.coach}` } : {}) }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}>
+          <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconLightbulb size={13} /></span>Coach
+        </p>
+        <p style={{ color: 'var(--text-dim)', fontSize: 12, lineHeight: '17px' }}>{brief.recap}</p>
+        <p style={{ color: 'var(--text-primary)', fontSize: 12, lineHeight: '17px', fontWeight: 600, marginTop: 6 }}>{brief.focus}</p>
+        <p style={{ color: tone.color, fontSize: 12, lineHeight: '17px', marginTop: 9, background: tone.bg, border: `1px solid ${tone.border}`, borderRadius: 10, padding: '7px 9px' }}>{brief.action}</p>
+      </div>
+    );
+  })();
+
+  // Chiffré avec la dernière pesée quand elle existe, en g/kg sinon.
+  const nutritionAdvice = getNutritionAdvice(bodyWeightHistory[0]?.weightKg);
+
+  // Le conseil nutrition reste disponible en permanence sous « Tout voir »,
+  // mais il ne remonte dans la partie simple que dans la fenêtre qui suit une
+  // séance (voir promotedNow plus bas).
+  // Attention : `date` d'une entrée d'historique est l'heure de DÉBUT de la
+  // séance (voir finishSession dans le store), pas de fin — il faut ajouter
+  // durationMs, sinon une séance de 74 min ne laisserait que 16 minutes de
+  // fenêtre au lieu de 90.
+  const lastSessionEndedAt = history[0] ? history[0].date + history[0].durationMs : 0;
+  const justTrained = lastSessionEndedAt > 0 && Date.now() - lastSessionEndedAt < NUTRITION_WINDOW_MS;
+  const nutritionSection = homeSections.nutrition && (
+    <div key="nutrition" className="glass-card glass-gold" style={{ ...nutritionCard, ...(homeSectionColors.nutrition ? { borderLeft: `3px solid ${homeSectionColors.nutrition}` } : {}) }}>
+      <p style={{ color: 'var(--text-gold-label)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconUtensils size={13} /></span>Nutrition post-training</p>
+      <p style={{ color: 'var(--text-gold-body)', fontSize: 12, lineHeight: '18px' }}>{nutritionAdvice.main}</p>
+      <p style={{ color: 'var(--text-gold-body)', fontSize: 12, lineHeight: '18px', marginTop: 6, opacity: 0.82 }}>{nutritionAdvice.secondary}</p>
+    </div>
+  );
+
+  const muscleAlertSection = homeSections.muscleAlert && (() => {
+    if (history.length === 0) return null; // Rien à signaler avant la 1ère séance
+    const statuses = getMuscleGroupsStatus(history)
+      .filter((s) => s.daysSince === null || s.daysSince > MUSCLE_ALERT_THRESHOLD_DAYS)
+      .sort((a, b) => (b.daysSince ?? 999) - (a.daysSince ?? 999));
+    return (
+      <div key="muscleAlert" className="glass-card" style={{ ...muscleAlertCard, ...(homeSectionColors.muscleAlert ? { borderLeft: `3px solid ${homeSectionColors.muscleAlert}` } : {}) }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: statuses.length ? 8 : 0 }}>
+          <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconTarget size={13} /></span>Groupes musculaires
+        </p>
+        {statuses.length === 0 ? (
+          <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px' }}>
+            Tout est à jour, aucun groupe musculaire délaissé. 👍
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {statuses.map((s) => (
+              <div key={s.group} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{s.group}</span>
+                <span style={{ color: homeSectionColors.muscleAlert ?? '#f5a623', fontSize: 12, fontWeight: 700 }}>
+                  {s.daysSince === null ? 'jamais travaillé' : `${s.daysSince} j`}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  })();
+
+  // Les supersets n'existent que sur Push A et Push B. Le rappel reste
+  // consultable tous les jours sous « Tout voir » ; il ne remonte dans la
+  // partie simple que les jours où il sert (voir promotedNow plus bas).
+  const isPushDay = nextWorkout.id.startsWith('push');
+  const supersetSection = homeSections.supersetRule && activeProgramId === 'strict-v10' && (
+    <div key="supersetRule" className="glass-card glass-green" style={{
+      borderRadius: 26, padding: 16, marginTop: 10, marginBottom: 12,
+      ...(homeSectionColors.supersetRule ? { borderLeft: `3px solid ${homeSectionColors.supersetRule}` } : {}),
+    }}>
+      <p style={{ color: 'var(--text-ss-label)', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>⟳ Règle Superset</p>
+      <p style={{ color: 'var(--text-ss-body)', fontSize: 12, lineHeight: '17px' }}>
+        Enchaîne les deux exercices SS sans repos. Le minuteur de 3 min démarre uniquement après la paire. Push A & B uniquement.
+      </p>
+    </div>
+  );
+
+  const cardioColor = blockColor('cardio', 'var(--brand-1)');
+  const cardioSection = homeSections.cardio && (
+    <div key="cardio" className="glass-card" style={{ ...cardioCard, ...(homeSectionColors.cardio ? { borderLeft: `3px solid ${cardioColor}` } : {}) }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: cardioFormOpen || cardioHistory.length ? 10 : 0 }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700 }}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconActivity size={13} /></span>Cardio</p>
+        {!cardioFormOpen && (
+          <button onClick={() => setCardioFormOpen(true)} style={{ ...cardioAddBtn, color: cardioColor }}>+ Ajouter</button>
+        )}
+      </div>
+
+      {cardioFormOpen && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+            {CARDIO_TYPES.map((t) => (
+              <button
+                key={t}
+                onClick={() => setCardioType(t)}
+                style={{
+                  ...cardioTypeBtn,
+                  background: cardioType === t ? cardioColor : 'var(--bg-elevated)',
+                  color: cardioType === t ? '#fff' : 'var(--text-muted)',
+                }}
+              >
+                <span style={{ display: 'inline-flex' }}><DataIcon name={CARDIO_TYPE_LABELS[t].icon} size={15} /></span>
+                <span style={{ fontSize: 9, fontWeight: 700 }}>{CARDIO_TYPE_LABELS[t].label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <span style={{ color: 'var(--text-muted)', fontSize: 12, flex: 1 }}>Durée</span>
+            <button onClick={() => setCardioDuration((d) => Math.max(5, d - 5))} style={cardioStepBtn}>−</button>
+            <span style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 800, width: 56, textAlign: 'center' }}>{cardioDuration} min</span>
+            <button onClick={() => setCardioDuration((d) => Math.min(240, d + 5))} style={cardioStepBtn}>+</button>
+          </div>
+
+          <p style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 6 }}>Ressenti (facultatif)</p>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+            {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                onClick={() => setCardioRpe(cardioRpe === n ? null : n)}
+                style={{
+                  ...cardioRpeBtn,
+                  background: cardioRpe === n ? cardioColor : 'var(--bg-elevated)',
+                  color: cardioRpe === n ? '#fff' : 'var(--text-dim)',
+                }}
+              >{n}</button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={handleAddCardio} style={{ ...cardioValidateBtn, background: `linear-gradient(135deg, ${cardioColor}, var(--brand-2))` }}>Enregistrer</button>
+            <button onClick={() => setCardioFormOpen(false)} style={cardioCancelBtn}>Annuler</button>
+          </div>
+        </div>
+      )}
+
+      {cardioHistory.slice(0, 3).map((entry) => (
+        <div key={entry.id} style={cardioRow}>
+          <span style={{ display: 'inline-flex', color: 'var(--text-muted)' }}><DataIcon name={CARDIO_TYPE_LABELS[entry.type].icon} size={16} /></span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>{CARDIO_TYPE_LABELS[entry.type].label}</p>
+            <p style={{ color: 'var(--text-dim)', fontSize: 11 }}>
+              {formatRelativeDate(entry.date)} · {entry.durationMin} min · {entry.calories} kcal{entry.rpe ? ` · RPE ${entry.rpe}` : ''}
+            </p>
+          </div>
+          <button onClick={() => deleteCardioEntry(entry.id)} style={cardioDeleteBtn}><IconClose size={14} /></button>
+        </div>
+      ))}
+    </div>
+  );
+
+  // Carte du binôme, affichée sous l'anneau hebdo : les deux se lisent ensemble.
+  const binomeCard = (() => {
+    if (!binome?.connecte || !binome.en_binome || !binome.partenaire) return null;
+    const p = binome.partenaire;
+    const pct = Math.min(1, p.semaine / Math.max(1, p.objectif));
+    const r = 20;
+    const circ = 2 * Math.PI * r;
+    const reached = p.semaine >= p.objectif;
+    const last = p.derniere_seance ? new Date(p.derniere_seance).getTime() : null;
+
+    // Sortie proposée après 3 semaines sans séance : un anneau vide qui ne
+    // bouge plus décourage au lieu de motiver.
+    const THREE_WEEKS = 21 * 86400000;
+    const inactiveSince = last ?? new Date(binome.depuis).getTime();
+    const inactive = Date.now() - inactiveSince > THREE_WEEKS;
+
+    // Une relance toutes les 6 heures : on le montre avant l'appui plutôt
+    // qu'en message d'erreur après.
+    const lastMine = binome.ma_derniere_relance ? new Date(binome.ma_derniere_relance).getTime() : 0;
+    const nextAt = lastMine + 6 * 3600000;
+    const cooldownH = Math.ceil((nextAt - Date.now()) / 3600000);
+    const canNudge = nextAt <= Date.now();
+
+    const handleNudge = async () => {
+      setNudging(true);
+      setNudgeMsg(null);
+      const res = await sendNudge();
+      setNudging(false);
+      if (!res.ok) { setNudgeMsg(res.message); return; }
+      if (!res.data.sent) {
+        const h = Math.max(1, Math.ceil((new Date(res.data.nextAllowedAt).getTime() - Date.now()) / 3600000));
+        setNudgeMsg(`Déjà relancé. Prochaine relance possible dans ${h} h.`);
+        return;
+      }
+      setNudgeMsg(res.data.push === 'envoye'
+        ? `Relance envoyée à ${p.nom}.`
+        : `Relance enregistrée — ${p.nom} la verra en ouvrant l'app.`);
+      void refreshBinome();
+    };
+
+    return (
+      <div className="glass-card" style={{ ...weeklyGoalCard, marginTop: 0, flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
+        {nudgedBy && (
+          <button onClick={() => setNudgedBy(null)} style={nudgeBanner}>
+            <span style={{ flex: 1, textAlign: 'left' }}>{nudgedBy} te met un coup de pied. C'est l'heure d'aller à la salle.</span>
+            <IconClose size={13} />
+          </button>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <svg width="48" height="48" viewBox="0 0 48 48" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+            <circle cx="24" cy="24" r={r} fill="none" stroke="var(--bg-elevated)" strokeWidth="6" />
+            <circle
+              cx="24" cy="24" r={r} fill="none"
+              stroke={reached ? '#4CAF50' : 'var(--brand-2)'}
+              strokeWidth="6" strokeLinecap="round"
+              strokeDasharray={circ} strokeDashoffset={circ * (1 - pct)}
+              style={{ transition: 'stroke-dashoffset 0.3s' }}
+            />
+          </svg>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 800 }}>
+              {p.nom} · {p.semaine} / {p.objectif}{' '}
+              <span style={{ fontWeight: 500, color: 'var(--text-muted)', fontSize: 12 }}>cette semaine</span>
+            </p>
+            <p style={{ color: inactive ? '#f5a623' : 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>
+              {inactive
+                ? `Rien depuis 3 semaines — tu peux changer de binôme dans les Réglages.`
+                : last ? `Dernière séance : ${formatRelativeDate(last).toLowerCase()}` : 'Pas encore de séance partagée'}
+            </p>
+          </div>
+          <button
+            onClick={handleNudge}
+            disabled={nudging || !canNudge}
+            style={{ ...nudgeBtn, opacity: nudging || !canNudge ? 0.5 : 1 }}
+            title={canNudge ? `Relancer ${p.nom}` : `Prochaine relance dans ${cooldownH} h`}
+          >
+            {nudging ? '…' : canNudge ? 'Relancer' : `${cooldownH} h`}
+          </button>
+        </div>
+        {nudgeMsg && <p style={{ color: 'var(--text-dim)', fontSize: 11 }}>{nudgeMsg}</p>}
+      </div>
+    );
+  })();
+
+  const weeklyGoalSection = homeSections.weeklyGoal && (() => {
+    const now = Date.now();
+    const sessionsThisWeek = history.filter((e) => now - e.date < 7 * 86400000).length;
+    const pct = Math.min(1, sessionsThisWeek / weeklySessionGoal);
+    const r = 26;
+    const circumference = 2 * Math.PI * r;
+    const goalReached = sessionsThisWeek >= weeklySessionGoal;
+    const goalColor = blockColor('weeklyGoal', 'var(--brand-1)');
+    return (
+      <React.Fragment key="weeklyGoal">
+      <div className="glass-card" style={{ ...weeklyGoalCard, ...(homeSectionColors.weeklyGoal ? { borderLeft: `3px solid ${goalColor}` } : {}) }}>
+        <svg width="64" height="64" viewBox="0 0 64 64" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+          <circle cx="32" cy="32" r={r} fill="none" stroke="var(--bg-elevated)" strokeWidth="7" />
+          <circle
+            cx="32" cy="32" r={r} fill="none"
+            stroke={goalReached ? '#4CAF50' : goalColor}
+            strokeWidth="7" strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference * (1 - pct)}
+            style={{ transition: 'stroke-dashoffset 0.3s' }}
+          />
+        </svg>
+        <div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 800 }}>
+            {sessionsThisWeek} / {weeklySessionGoal} <span style={{ fontWeight: 500, color: 'var(--text-muted)', fontSize: 12 }}>séances cette semaine</span>
+          </p>
+          <p style={{ color: goalReached ? '#4CAF50' : 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>
+            {goalReached ? 'Objectif atteint 💪' : `Encore ${weeklySessionGoal - sessionsThisWeek} pour l'objectif`}
+          </p>
+        </div>
+      </div>
+      {binomeCard}
+      </React.Fragment>
+    );
+  })();
+
+  const nextColor = blockColor('nextSession', activeProgram.dayAccents[nextWorkout?.id ?? ''] ?? FALLBACK_ACCENT);
+  const nextSessionSection = homeSections.nextSession && !resumeWorkout && nextWorkout && (
+    <button key="nextSession" className="workout-card glass-card" style={{ ...nextSessionBanner, ...(homeSectionColors.nextSession ? { borderLeft: `3px solid ${nextColor}` } : {}) }} onClick={() => onSelectDay(nextWorkout.id)}>
+      <div style={{ ...nextSessionIcon, background: `${nextColor}20` }}>
+        <span style={{ display: 'inline-flex' }}><IconTarget size={20} color={nextColor} /></span>
+      </div>
+      <div style={{ textAlign: 'left', flex: 1 }}>
+        <p style={{ color: nextColor, fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>PROCHAINE SÉANCE</p>
+        <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800 }}>{nextWorkout.name}</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>{nextWorkout.muscleGroups}</p>
+      </div>
+      <span style={{ color: nextColor, fontSize: 22, fontWeight: 200, flexShrink: 0, opacity: 0.8 }}>›</span>
+    </button>
+  );
+
+  // ── Séance précédente ─────────────────────────────────────────────────
+  const lastEntry = history[0];
+  const lastSessionSection = homeSections.lastSession && lastEntry && (() => {
+    const lastWorkoutMeta = getWorkout(lastEntry.dayId);
+    const tonnage = lastEntry.tonnage ?? computeTonnage(lastEntry.exerciseProgress);
+    const setsCount = Object.values(lastEntry.exerciseProgress).reduce((sum, sets) => sum + sets.filter((s) => s.completed).length, 0);
+    const durationMin = Math.round(lastEntry.durationMs / 60000);
+    const accent = activeProgram.dayAccents[lastEntry.dayId] ?? FALLBACK_ACCENT;
+    return (
+      <div key="lastSession" className="glass-card" style={{ ...cardioCard, ...(homeSectionColors.lastSession ? { borderLeft: `3px solid ${homeSectionColors.lastSession}` } : {}) }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}>
+          <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconClock size={13} /></span>Séance précédente
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <div style={{ width: 6, alignSelf: 'stretch', borderRadius: 3, background: accent, flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 800 }}>{lastWorkoutMeta?.name ?? lastEntry.dayId}</p>
+            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>{formatRelativeDate(lastEntry.date)}</p>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div className="glass-tile" style={statTile}><span style={statTileLabel}>DURÉE</span><span style={statTileValue}>{durationMin} min</span></div>
+          <div className="glass-tile" style={statTile}><span style={statTileLabel}>TONNAGE</span><span style={statTileValue}>{tonnage.toLocaleString('fr-FR')} kg</span></div>
+          <div className="glass-tile" style={statTile}><span style={statTileLabel}>SÉRIES</span><span style={statTileValue}>{setsCount}</span></div>
+        </div>
+      </div>
+    );
+  })();
+
+  // ── Stats de la semaine ───────────────────────────────────────────────
+  const weeklyStatsSection = homeSections.weeklyStats && history.length > 0 && (() => {
+    const buckets = bucketByWeek(history, 4); // plus ancien → plus récent, dernier = cette semaine
+    const thisWeek = buckets[buckets.length - 1];
+    const lastWeek = buckets[buckets.length - 2];
+    const pct = lastWeek.tonnage > 0 ? Math.round(((thisWeek.tonnage - lastWeek.tonnage) / lastWeek.tonnage) * 100) : null;
+    const maxTonnage = Math.max(1, ...buckets.map((b) => b.tonnage));
+    return (
+      <div key="weeklyStats" className="glass-card" style={{ ...cardioCard, ...(homeSectionColors.weeklyStats ? { borderLeft: `3px solid ${homeSectionColors.weeklyStats}` } : {}) }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}>
+          <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconBarChart size={13} /></span>Stats de la semaine
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+          <div>
+            <p style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 3 }}>Tonnage cette semaine</p>
+            <p style={{ color: 'var(--text-primary)', fontSize: 20, fontWeight: 800 }}>{thisWeek.tonnage.toLocaleString('fr-FR')} kg</p>
+          </div>
+          {pct !== null && (
+            <span style={{
+              fontSize: 10, fontWeight: 800, borderRadius: 6, padding: '3px 7px',
+              color: pct >= 0 ? '#4CAF50' : '#f5a623',
+              background: pct >= 0 ? 'rgba(76,175,80,0.12)' : 'rgba(245,166,35,0.12)',
+              border: `1px solid ${pct >= 0 ? 'rgba(76,175,80,0.25)' : 'rgba(245,166,35,0.25)'}`,
+            }}>{pct >= 0 ? '+' : ''}{pct}%</span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 6, height: 46, alignItems: 'flex-end' }}>
+          {buckets.map((b, i) => (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
+              <div style={{
+                width: '100%', height: `${Math.max(6, Math.round((b.tonnage / maxTonnage) * 100))}%`, borderRadius: 4,
+                background: i === buckets.length - 1 ? 'var(--brand-1)' : 'var(--bg-elevated)',
+                opacity: i === buckets.length - 1 ? 1 : 0.75,
+              }} />
+              <span style={{ color: i === buckets.length - 1 ? 'var(--text-secondary)' : 'var(--text-micro)', fontSize: 8, fontWeight: 700 }}>
+                {i === buckets.length - 1 ? 'S' : `-${buckets.length - 1 - i}`}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  })();
+
+  // ── Poids du corps ────────────────────────────────────────────────────
+  const bodyWeightSection = homeSections.bodyWeight && bodyWeightHistory.length > 0 && (() => {
+    const last = bodyWeightHistory[0]; // stocké du plus récent au plus ancien
+    const previous = bodyWeightHistory[1];
+    const deltaKg = previous ? Math.round((last.weightKg - previous.weightKg) * 10) / 10 : null;
+    const trend = [...bodyWeightHistory].slice(0, 8).reverse().map((e) => e.weightKg); // plus ancien → plus récent
+    return (
+      <div key="bodyWeight" className="glass-card" style={{ ...cardioCard, ...(homeSectionColors.bodyWeight ? { borderLeft: `3px solid ${homeSectionColors.bodyWeight}` } : {}) }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}>
+          <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconScale size={13} /></span>Poids du corps
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+          <div>
+            <p style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 3 }}>Dernière pesée · {formatRelativeDate(last.date)}</p>
+            <p style={{ color: 'var(--text-primary)', fontSize: 20, fontWeight: 800 }}>{last.weightKg} kg</p>
+          </div>
+          {deltaKg !== null && deltaKg !== 0 && (
+            <span style={{
+              fontSize: 10, fontWeight: 800, borderRadius: 6, padding: '3px 7px',
+              color: 'var(--text-secondary)', background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+            }}>{deltaKg > 0 ? '↑' : '↓'} {Math.abs(deltaKg)} kg</span>
+          )}
+        </div>
+        {trend.length >= 2 ? (
+          <svg width="100%" height="36" viewBox="0 0 280 36" preserveAspectRatio="none" style={{ display: 'block' }}>
+            <polyline points={sparklinePoints(trend, 280, 36)} fill="none" stroke="var(--brand-1)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ) : (
+          <p style={{ color: 'var(--text-dim)', fontSize: 11 }}>Ajoute une autre pesée pour voir la tendance.</p>
+        )}
+      </div>
+    );
+  })();
+
+  // ── Dernier record perso ──────────────────────────────────────────────
+  const recentPR = getMostRecentPersonalRecord(history);
+  const personalRecordSection = homeSections.personalRecord && recentPR && (
+    <div key="personalRecord" className="glass-card glass-gold" style={{ ...personalRecordCard, ...(homeSectionColors.personalRecord ? { borderLeft: `3px solid ${homeSectionColors.personalRecord}` } : {}) }}>
+      <div style={personalRecordIcon}><IconTrophy size={20} color="#f5a623" /></div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ color: '#f5a623', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>NOUVEAU RECORD</p>
+        <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800 }}>{recentPR.exerciseName} — {recentPR.weight} kg</p>
+        <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>
+          +{Math.round((recentPR.weight - recentPR.previousMax) * 10) / 10} kg vs le record précédent · {formatRelativeDate(recentPR.date)}
+        </p>
+      </div>
+    </div>
+  );
+
+  // ── Progression sur un exercice ───────────────────────────────────────
+  const featuredProgress = getFeaturedExerciseProgress(history);
+  const exerciseProgressSection = homeSections.exerciseProgress && featuredProgress && (() => {
+    const trend = featuredProgress.e1rmHistory.map((p) => p.e1rm);
+    return (
+      <div key="exerciseProgress" className="glass-card" style={{ ...cardioCard, ...(homeSectionColors.exerciseProgress ? { borderLeft: `3px solid ${homeSectionColors.exerciseProgress}` } : {}) }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700 }}>
+            <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconTrendingUp size={13} /></span>Progression
+          </p>
+          <span style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', borderRadius: 8, padding: '3px 8px', color: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }}>
+            {featuredProgress.exerciseName}
+          </span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+          <div>
+            <p style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 3 }}>1RM estimé</p>
+            <p style={{ color: 'var(--text-primary)', fontSize: 20, fontWeight: 800 }}>{featuredProgress.currentE1RM} kg</p>
+          </div>
+          <span style={{ fontSize: 10, fontWeight: 800, borderRadius: 6, padding: '3px 7px', color: '#4CAF50', background: 'rgba(76,175,80,0.12)', border: '1px solid rgba(76,175,80,0.25)' }}>
+            +{featuredProgress.deltaKg} kg / {featuredProgress.weeksSpan} sem.
+          </span>
+        </div>
+        <svg width="100%" height="36" viewBox="0 0 280 36" preserveAspectRatio="none" style={{ display: 'block' }}>
+          <polyline points={sparklinePoints(trend, 280, 36)} fill="none" stroke="var(--brand-1)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+    );
+  })();
+
+  // ── Plateaux ──────────────────────────────────────────────────────────
+  // Ne s'affiche que s'il y a vraiment quelque chose à signaler : pas de carte
+  // « aucun plateau », qui prendrait de la place pour dire qu'il n'y a rien.
+  const plateaus = getPlateaus(history);
+  const plateauSection = homeSections.plateau && plateaus.length > 0 && (
+    <div key="plateau" className="glass-card" style={{ ...cardioCard, ...(homeSectionColors.plateau ? { borderLeft: `3px solid ${homeSectionColors.plateau}` } : {}) }}>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}>
+        <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconGauge size={13} /></span>
+        {plateaus.length === 1 ? 'Un exercice stagne' : `${plateaus.length} exercices stagnent`}
+      </p>
+      {plateaus.slice(0, 3).map((pl) => (
+        <div key={pl.exerciseId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderTop: '1px solid var(--border-subtle)' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl.exerciseName}</p>
+            <p style={{ color: 'var(--text-dim)', fontSize: 10.5, marginTop: 1 }}>
+              {pl.bestE1RM} kg estimés, inchangé depuis {pl.weeksStuck} semaine{pl.weeksStuck > 1 ? 's' : ''}
+            </p>
+          </div>
+          <span style={{ fontSize: 10, fontWeight: 800, borderRadius: 8, padding: '3px 8px', color: '#e0a030', background: 'rgba(224,160,48,0.12)', border: '1px solid rgba(224,160,48,0.25)', flexShrink: 0 }}>
+            {pl.sessions} séances
+          </span>
+        </div>
+      ))}
+      <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 10, lineHeight: '16px' }}>
+        Une piste : baisse d'une série et monte le poids, ou change l'angle du mouvement pendant deux semaines.
+      </p>
+    </div>
+  );
+
+  const SECTION_MAP: Record<string, React.ReactNode> = {
+    coach: coachSection,
+    cycle: cycleSection,
+    seances: seancesSection,
+    nutrition: nutritionSection,
+    supersetRule: supersetSection,
+    muscleAlert: muscleAlertSection,
+    cardio: cardioSection,
+    weeklyGoal: weeklyGoalSection,
+    nextSession: nextSessionSection,
+    lastSession: lastSessionSection,
+    weeklyStats: weeklyStatsSection,
+    bodyWeight: bodyWeightSection,
+    personalRecord: personalRecordSection,
+    exerciseProgress: exerciseProgressSection,
+    plateau: plateauSection,
+  };
+
+  // ── Édition de l'accueil : réordonner par rapport aux voisins VISIBLES
+  // uniquement (pas le voisin dans l'ordre complet, qui peut être masqué —
+  // voir setHomeSectionOrder dans workoutStore.ts) ────────────────────────
+  const renderableKeys = homeSectionOrder.filter((key) => Boolean(SECTION_MAP[key]));
+  // Partie simple / reste. renderableKeys ne contient déjà que les blocs qui
+  // rendent vraiment quelque chose (une section masquée, ou sans données à
+  // afficher, vaut false dans SECTION_MAP) : le compteur du bouton « Tout
+  // voir » est donc honnête, il n'annonce jamais des blocs vides.
+  // Promotion automatique : un bloc non épinglé remonte quand même dans la
+  // partie simple à l'instant précis où il sert, puis redescend tout seul.
+  // C'est ce qui permet à « Tout voir » de vraiment tout montrer sans que
+  // l'accueil se recharge : l'info arrive au bon moment au lieu d'être là
+  // en permanence ou pas du tout.
+  const promotedNow: Partial<Record<HomeSectionKey, boolean>> = {
+    nutrition: justTrained,
+    supersetRule: isPushDay,
+  };
+  const isEssential = (key: HomeSectionKey) => homeEssentials[key] || promotedNow[key] === true;
+  const extraKeys = renderableKeys.filter((key) => !isEssential(key));
+  // En mode édition on montre tout : impossible de réordonner, de retirer ou
+  // d'épingler un bloc qu'on ne voit pas.
+  const sectionsExpanded = homeEditMode || showAllSections;
+  const shownKeys = sectionsExpanded ? renderableKeys : renderableKeys.filter(isEssential);
+  const availableKeys = homeSectionOrder.filter((key) => {
+    const meta = HOME_SECTION_META[key];
+    return meta.toggleable && !homeSections[key as keyof typeof homeSections];
+  });
+
+  const moveVisibleSection = (key: HomeSectionKey, direction: 'up' | 'down') => {
+    const order = [...homeSectionOrder];
+    const isRenderable = (k: HomeSectionKey) => Boolean(SECTION_MAP[k]);
+    const renderableIdxs = order.map((k, i) => (isRenderable(k) ? i : -1)).filter((i) => i !== -1);
+    const realIdx = order.indexOf(key);
+    const posInRenderable = renderableIdxs.indexOf(realIdx);
+    const swapPos = direction === 'up' ? posInRenderable - 1 : posInRenderable + 1;
+    if (swapPos < 0 || swapPos >= renderableIdxs.length) return;
+    const swapRealIdx = renderableIdxs[swapPos];
+    [order[realIdx], order[swapRealIdx]] = [order[swapRealIdx], order[realIdx]];
+    setHomeSectionOrder(order);
+  };
+
+  return (
+    <div className="screen-ambient" style={container}>
+      <div style={{ ...scroll, paddingBottom: navBarEnabled ? 112 : 80 }}>
+
+        {/* Header */}
+        <div style={headerSection}>
+          <div style={logoRow}>
+            <div style={{ ...logoBadge, width: iconSizes.logo, height: iconSizes.logo }}><span style={{ display: 'inline-flex', lineHeight: 1 }}><IconPMark size={iconSizes.logo * 0.6} color="#ffffff" /></span></div>
+            <div>
+              <div
+                ref={titleWrapRef}
+                style={{ position: 'relative', display: 'inline-block' }}
+                onPointerMove={handleTitlePointerMove}
+                onPointerLeave={handleTitlePointerLeave}
+              >
+                <h1 className="titre-irise" style={titleStyle}>PPL Tracker</h1>
+                <h1
+                  aria-hidden
+                  style={{
+                    ...titleStyle,
+                    position: 'absolute', inset: 0, margin: 0, pointerEvents: 'none',
+                    backgroundImage: `radial-gradient(circle at ${holoPos.x}% ${holoPos.y}%, rgba(255,255,255,0.95), rgba(255,255,255,0) 45%)`,
+                    WebkitBackgroundClip: 'text', backgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent', color: 'transparent',
+                    mixBlendMode: 'overlay',
+                    transition: 'background-image 0.08s linear',
+                  }}
+                >PPL Tracker</h1>
+              </div>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>{activeProgram.focusLabel}</p>
+            </div>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+              {homeEditMode ? (
+                <button
+                  onClick={() => { setHomeEditMode(false); setWidgetPickerOpen(false); }}
+                  style={{
+                    height: iconSizes.header, padding: '0 14px', borderRadius: 'var(--icon-radius)',
+                    background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0,
+                  }}
+                >Terminé</button>
+              ) : (
+                <button
+                  onClick={() => setHomeEditMode(true)}
+                  className="glass-icon" style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
+                  title="Personnaliser l'accueil"
+                >
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                </button>
+              )}
+              <button
+                onClick={onOpenSettings}
+                className="glass-icon" style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
+                title="Réglages"
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconSettings size={18} /></span>
+              </button>
+              <button
+                onClick={onOpenDashboard}
+                className="glass-icon" style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
+                title="Dashboard"
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconBarChart size={18} /></span>
+              </button>
+              {wakeLockSupported && (
+                <button
+                  onClick={() => setWakeLockEnabled(!wakeLockEnabled)}
+                  className="glass-icon" style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header, background: wakeLockEnabled ? 'rgba(76,175,80,0.12)' : 'var(--bg-elevated)', borderColor: wakeLockEnabled ? 'rgba(76,175,80,0.3)' : 'var(--border)' }}
+                  title={wakeLockEnabled ? 'Écran toujours allumé (actif)' : 'Écran toujours allumé (inactif)'}
+                >
+                  {wakeLockEnabled ? <IconSun size={18} filled /> : <IconSun size={18} />}
+                </button>
+              )}
+              <button
+                onClick={() => setThemeMode(theme === 'dark' ? 'light' : 'dark')}
+                className="glass-icon" style={{ ...themeToggle, width: iconSizes.header, height: iconSizes.header }}
+                title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+              >
+                {theme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Récupération musculaire — même règle que les blocs promus : elle
+            reste consultable sous « Tout voir », et ne s'invite dans la partie
+            simple que quand un groupe est vraiment à la traîne. Sans séance
+            dans l'historique elle n'a rien à calculer, donc rien à afficher. */}
+        {history.length > 0 && (sectionsExpanded || !!leastRecovered) && (
+        <div className="glass-card" style={recoveryCard}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 10 }}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconBattery size={13} /></span>Récupération musculaire</p>
+          {history.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px' }}>
+              Termine ta première séance pour voir la récupération de chaque muscle ici.
+            </p>
+          ) : (
+            <>
+              {leastRecovered ? (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>À récupérer en priorité</span>
+                    <span style={{ color: '#f5a623', fontSize: 12, fontWeight: 800 }}>{Math.round(leastRecovered.pct * 100)}%</span>
+                  </div>
+                  <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800, marginBottom: 6 }}>{leastRecovered.group}</p>
+                  <div style={recoveryBarTrack}>
+                    <div style={{ ...recoveryBarFill, width: `${Math.round(leastRecovered.pct * 100)}%`, background: '#f5a623' }} />
+                  </div>
+                </div>
+              ) : (
+                <p style={{ color: '#4CAF50', fontSize: 12, marginBottom: 14 }}>Tous les groupes musculaires sont récupérés 💪</p>
+              )}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>Moyenne de récupération</span>
+                  <span style={{ color: recoveryColor, fontSize: 12, fontWeight: 800 }}>{Math.round(averagePct * 100)}%</span>
+                </div>
+                <div style={recoveryBarTrack}>
+                  <div style={{ ...recoveryBarFill, width: `${Math.round(averagePct * 100)}%`, background: recoveryColor }} />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+        )}
+
+        {/* Alerte pic de charge d'entraînement */}
+        {loadStatus && (
+          <div className="glass-card" style={{ ...recoveryCard, ...(loadStatus.level === 'spike' ? { border: '1px solid rgba(224,48,48,0.35)' } : {}) }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, marginBottom: 6 }}>{loadStatus.label}</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px' }}>{loadStatus.detail}</p>
+          </div>
+        )}
+
+        {/* Reprise */}
+        {resumeWorkout && (
+          <button className="resume-btn glass-card glass-red" style={resumeCard} onClick={() => onSelectDay(resumeWorkout.id)}>
+            <div style={{ ...resumeIcon, width: iconSizes.resume, height: iconSizes.resume }}><span style={{ fontSize: iconSizes.resume * 0.4 }}>▶</span></div>
+            <div style={{ textAlign: 'left', flex: 1 }}>
+              <p style={{ color: 'var(--brand-1)', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>SÉANCE EN COURS</p>
+              <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800 }}>{resumeWorkout.name}</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>Appuie pour reprendre</p>
+            </div>
+            <span style={{ color: 'var(--brand-1)', fontSize: 22, fontWeight: 200, flexShrink: 0, opacity: 0.8 }}>›</span>
+          </button>
+        )}
+
+        {/* Bandeau mode édition */}
+        {homeEditMode && (
+          <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px', marginBottom: 12 }}>
+            Réorganise, retire ou ajoute des widgets. L'étoile garde un bloc
+            dans la partie simple, toujours visible sans déplier.
+          </p>
+        )}
+
+        {/* Blocs réordonnables selon les réglages */}
+        {shownKeys.map((key, idx) => {
+          const meta = HOME_SECTION_META[key];
+          return (
+            <div key={key} style={{ position: 'relative', marginBottom: HOME_BLOCK_GAP }}>
+              {homeEditMode && (
+                <div style={widgetCtrlCluster}>
+                  <button
+                    onClick={() => moveVisibleSection(key, 'up')}
+                    disabled={idx === 0}
+                    style={{ ...widgetCtrlBtn, opacity: idx === 0 ? 0.3 : 1 }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15" /></svg>
+                  </button>
+                  <button
+                    onClick={() => moveVisibleSection(key, 'down')}
+                    disabled={idx === renderableKeys.length - 1}
+                    style={{ ...widgetCtrlBtn, opacity: idx === renderableKeys.length - 1 ? 0.3 : 1 }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                  </button>
+                  <button
+                    onClick={() => setHomeEssential(key, !homeEssentials[key])}
+                    style={{ ...widgetCtrlBtn, color: homeEssentials[key] ? '#f5a623' : 'var(--text-muted)' }}
+                    title={homeEssentials[key] ? 'Retirer de la partie simple' : 'Garder toujours visible'}
+                    aria-pressed={!!homeEssentials[key]}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill={homeEssentials[key] ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.1 8.6 22 9.6 17 14.5 18.2 21.4 12 18.1 5.8 21.4 7 14.5 2 9.6 8.9 8.6 12 2" /></svg>
+                  </button>
+                  {meta.toggleable && (
+                    <button
+                      onClick={() => setHomeSectionVisible(key as keyof typeof homeSections, false)}
+                      style={{ ...widgetCtrlBtn, color: '#e03030' }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                    </button>
+                  )}
+                </div>
+              )}
+              {SECTION_MAP[key]}
+            </div>
+          );
+        })}
+
+        {/* Tout voir : déplie le reste de l'accueil. Rien n'est supprimé ni
+            rangé ailleurs — les blocs sont juste repliés tant qu'on n'en a
+            pas besoin, et l'état repart replié à la prochaine ouverture. */}
+        {!homeEditMode && extraKeys.length > 0 && (
+          <button
+            onClick={() => setShowAllSections((v) => !v)}
+            style={showAllBtn}
+            aria-expanded={showAllSections}
+          >
+            {showAllSections ? 'Réduire' : `Tout voir (${extraKeys.length})`}
+            <svg
+              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ transform: showAllSections ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        )}
+
+        {/* Ajouter un widget */}
+        {homeEditMode && availableKeys.length > 0 && (
+          <button onClick={() => setWidgetPickerOpen(true)} style={addWidgetBtn}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            Ajouter un widget
+          </button>
+        )}
+
+      </div>
+
+      {/* Sélecteur de widget (bottom sheet, même style que le tiroir "+" de la nav bar) */}
+      {widgetPickerOpen && (
+        <>
+          <div onClick={() => setWidgetPickerOpen(false)} style={pickerBackdrop} />
+          <div style={{ ...pickerLayer, bottom: navBarEnabled ? 'calc(max(10px, env(safe-area-inset-bottom)) + 74px)' : 'max(10px, env(safe-area-inset-bottom))' }}>
+            <div className="navbar-glass nav-drawer-in" style={pickerSheet} role="menu">
+              <div style={pickerHandle} aria-hidden="true" />
+              <p style={pickerTitle}>Ajouter un widget</p>
+              <div style={pickerList}>
+                {availableKeys.map((key) => {
+                  const meta = HOME_SECTION_META[key];
+                  return (
+                    <button
+                      key={key}
+                      className="nav-drawer-row"
+                      onClick={() => { setHomeSectionVisible(key as keyof typeof homeSections, true); setWidgetPickerOpen(false); }}
+                      style={pickerRow}
+                    >
+                      <div style={pickerIconWrap}>{WIDGET_PICKER_ICONS[key]}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
+                        <span style={pickerLabel}>{meta.label}</span>
+                        <span style={pickerHint}>{meta.desc}</span>
+                      </div>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--brand-1)" strokeWidth="2.4" strokeLinecap="round" style={{ flexShrink: 0 }}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
+// Le fond (halo d'ambiance + var(--bg-base)) vient de la classe .screen-ambient
+// dans index.css : c'est lui qui donne quelque chose à filtrer au verre des cartes.
+const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto' };
+const scroll: React.CSSProperties = { maxWidth: 480, margin: '0 auto', padding: '0 16px 80px' };
+const headerSection: React.CSSProperties = {
+  paddingTop: 'max(24px, env(safe-area-inset-top))',
+  paddingBottom: 18,
+  borderBottom: '1px solid var(--border-subtle)',
+  marginBottom: 20,
+};
+const logoRow: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 14 };
+const logoBadge: React.CSSProperties = {
+  width: 48, height: 48, borderRadius: 'var(--icon-radius)',
+  background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  boxShadow: '0 4px 16px rgba(var(--brand-1-rgb),0.3)',
+  transition: 'width 0.2s, height 0.2s, border-radius 0.2s',
+};
+const titleStyle: React.CSSProperties = {
+  fontSize: 24, fontWeight: 800, letterSpacing: -0.5,
+};
+// Fond, bordure et arrondi viennent de .glass-icon (index.css) : ce sont les
+// cinq boutons de l'en-tête de l'accueil, ils doivent être en verre comme le
+// reste et suivre le thème.
+const themeToggle: React.CSSProperties = {
+  width: 36, height: 36, fontSize: 16, cursor: 'pointer', flexShrink: 0,
+  transition: 'width 0.2s, height 0.2s',
+};
+const sectionLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 2 };
+const weekCard: React.CSSProperties = {
+  borderRadius: 26, padding: 20, marginBottom: 18,
+};
+const weekSelectorRow: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 4,
+  borderRadius: 18, padding: '5px 9px',
+};
+const weekBtn: React.CSSProperties = { color: 'var(--text-muted)', fontSize: 20, fontWeight: 300, padding: '0 4px', borderRadius: 6 };
+const weekMetric: React.CSSProperties = {
+  flex: 1,
+  borderRadius: 17, padding: '9px 6px',
+  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+};
+const weekMetricLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 9, fontWeight: 700, letterSpacing: 1 };
+const recoveryCard: React.CSSProperties = {
+  borderRadius: 26, padding: 18,
+  marginTop: 4, marginBottom: 20,
+};
+const recoveryBarTrack: React.CSSProperties = {
+  width: '100%', height: 6, borderRadius: 3, background: 'var(--bg-elevated)', overflow: 'hidden',
+};
+const recoveryBarFill: React.CSSProperties = {
+  height: '100%', borderRadius: 3, transition: 'width 0.3s',
+};
+const resumeCard: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 14,
+  borderRadius: 26, padding: '16px 18px',
+  marginBottom: 22, marginTop: 4,
+  width: '100%', cursor: 'pointer',
+};
+const resumeIcon: React.CSSProperties = {
+  width: 40, height: 40, background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))',
+  borderRadius: 'var(--icon-radius)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+  color: '#fff', flexShrink: 0, boxShadow: '0 4px 12px rgba(var(--brand-1-rgb),0.35)',
+};
+const workoutCard: React.CSSProperties = {
+  display: 'flex', alignItems: 'center',
+  borderRadius: 26, marginBottom: 11,
+  overflow: 'hidden', width: '100%', cursor: 'pointer',
+};
+const nutritionCard: React.CSSProperties = {
+  borderRadius: 26, padding: 16, marginTop: 12,
+};
+const muscleAlertCard: React.CSSProperties = {
+  borderRadius: 26, padding: 16, marginTop: 12, marginBottom: 12,
+};
+const nudgeBtn: React.CSSProperties = {
+  flexShrink: 0, padding: '9px 13px', borderRadius: 12, cursor: 'pointer',
+  background: 'rgba(var(--brand-1-rgb),0.14)', border: '1px solid rgba(var(--brand-1-rgb),0.4)',
+  color: 'var(--brand-1)', fontSize: 12.5, fontWeight: 800,
+};
+const nudgeBanner: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 10, width: '100%', cursor: 'pointer',
+  padding: '10px 12px', borderRadius: 14,
+  background: 'rgba(var(--brand-1-rgb),0.14)', border: '1px solid rgba(var(--brand-1-rgb),0.4)',
+  color: 'var(--text-primary)', fontSize: 12.5, fontWeight: 700, lineHeight: '17px',
+};
+const weeklyGoalCard: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 14,
+  borderRadius: 26, padding: 16, marginTop: 12, marginBottom: 12,
+};
+const nextSessionBanner: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 14,
+  borderRadius: 26, padding: '16px 18px',
+  marginBottom: 18, width: '100%', cursor: 'pointer',
+};
+const nextSessionIcon: React.CSSProperties = {
+  width: 44, height: 44, borderRadius: 'var(--icon-radius)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+};
+const cardioCard: React.CSSProperties = {
+  borderRadius: 26, padding: 16, marginTop: 12, marginBottom: 12,
+};
+const cardioAddBtn: React.CSSProperties = {
+  background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+  borderRadius: 10, padding: '6px 10px', color: 'var(--brand-1)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+};
+const cardioTypeBtn: React.CSSProperties = {
+  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+  padding: '8px 2px', borderRadius: 10, cursor: 'pointer', border: '1px solid var(--border-strong)',
+};
+const cardioStepBtn: React.CSSProperties = {
+  width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+  background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+  color: 'var(--text-muted)', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+};
+const cardioRpeBtn: React.CSSProperties = {
+  flex: 1, height: 26, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+};
+const cardioValidateBtn: React.CSSProperties = {
+  flex: 1, background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))',
+  borderRadius: 10, padding: '10px 8px', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+};
+const cardioCancelBtn: React.CSSProperties = {
+  flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+  borderRadius: 10, padding: '10px 8px', color: 'var(--text-muted)', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+};
+const cardioRow: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 10,
+  padding: '8px 0', borderTop: '1px solid var(--border-subtle)',
+};
+const cardioDeleteBtn: React.CSSProperties = {
+  width: 24, height: 24, borderRadius: 7, flexShrink: 0,
+  background: 'var(--bg-elevated)', color: 'var(--text-dim)', fontSize: 11, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+};
+
+// ─── Widgets d'accueil (mode édition + sélecteur d'ajout) ────────────────────
+
+const statTile: React.CSSProperties = {
+  flex: 1, borderRadius: 17, padding: '9px 4px',
+  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+};
+const statTileLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 9, fontWeight: 700, letterSpacing: 1 };
+const statTileValue: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 };
+
+const personalRecordCard: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 14,
+  borderRadius: 26, padding: '16px 18px',
+  marginTop: 12, marginBottom: 12,
+};
+const personalRecordIcon: React.CSSProperties = {
+  width: 44, height: 44, borderRadius: 'var(--icon-radius)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  background: 'rgba(245,166,35,0.15)',
+};
+
+// Cluster de contrôles flottant (haut-droite d'un widget) en mode édition —
+// mêmes proportions que le tiroir de la nav bar pour rester cohérent.
+const widgetCtrlCluster: React.CSSProperties = {
+  position: 'absolute', top: 8, right: 8, zIndex: 2, display: 'flex', gap: 4,
+  background: 'var(--bg-higher)', border: '1px solid var(--border-strong)', borderRadius: 10, padding: 3,
+};
+const widgetCtrlBtn: React.CSSProperties = {
+  width: 22, height: 22, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+  color: 'var(--text-muted)', cursor: 'pointer',
+};
+// Bouton « Tout voir » : volontairement discret (pas de fond plein, pas de
+// couleur d'accent) pour ne pas redevenir un élément de plus qui attire
+// l'œil sur un écran dont tout l'intérêt est d'être calme.
+const showAllBtn: React.CSSProperties = {
+  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+  background: 'transparent', border: '1px solid var(--border-subtle)', borderRadius: 999,
+  padding: '13px 18px', color: 'var(--text-muted)', fontSize: 13, fontWeight: 600,
+  letterSpacing: 0.2, cursor: 'pointer', marginTop: 6, marginBottom: 26,
+};
+const addWidgetBtn: React.CSSProperties = {
+  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+  background: 'var(--bg-elevated)', border: '1px dashed var(--border-strong)', borderRadius: 14,
+  padding: 14, color: 'var(--brand-1)', fontSize: 13, fontWeight: 700, marginBottom: 16, cursor: 'pointer',
+};
+
+// Sélecteur "+ Ajouter un widget" — même habillage liquid-glass que le
+// tiroir "+" de la nav bar (components/NavBar.tsx), dupliqué ici plutôt
+// qu'importé pour ne pas coupler les deux composants pour quelques styles.
+const pickerBackdrop: React.CSSProperties = { position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.4)' };
+const pickerLayer: React.CSSProperties = {
+  position: 'fixed', left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 61, pointerEvents: 'none',
+};
+const pickerSheet: React.CSSProperties = {
+  pointerEvents: 'auto', display: 'flex', flexDirection: 'column', padding: '8px 8px 14px',
+  borderRadius: 26, maxWidth: 460, width: 'calc(100% - 24px)', maxHeight: '58vh',
+  background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
+  boxShadow: '0 -1px 0 var(--glass-highlight) inset, 0 12px 40px rgba(0,0,0,0.45)',
+};
+const pickerHandle: React.CSSProperties = { width: 38, height: 4, borderRadius: 2, background: 'var(--glass-highlight)', margin: '2px auto 8px', flexShrink: 0 };
+const pickerTitle: React.CSSProperties = { fontSize: 10, fontWeight: 700, letterSpacing: 1.1, textTransform: 'uppercase', color: 'var(--text-dim)', padding: '0 10px 6px', flexShrink: 0 };
+const pickerList: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', overscrollBehavior: 'contain' };
+const pickerRow: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '9px 10px', borderRadius: 16, border: 'none', cursor: 'pointer' };
+const pickerIconWrap: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 11,
+  flexShrink: 0, background: 'var(--bg-elevated)', color: 'var(--text-secondary)',
+};
+const pickerLabel: React.CSSProperties = { fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+const pickerHint: React.CSSProperties = { fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };

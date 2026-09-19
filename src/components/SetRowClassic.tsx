@@ -1,3 +1,5 @@
+// Version « classique » de SetRow, gardée à l'identique pour le réglage
+// Style de l'interface → Classique. Le style actuel est dans SetRow.tsx.
 import React, { useState, useEffect, useRef } from 'react';
 import { IconCheck } from './Icons';
 import { SetEntry } from '../data/types';
@@ -48,7 +50,7 @@ const isRepOutOfRange = (reps: string, targetReps: string): boolean => {
   return r < range[0] || r > range[1];
 };
 
-export const SetRow: React.FC<SetRowProps> = ({
+export const SetRowClassic: React.FC<SetRowProps> = ({
   setNumber, targetReps, defaultWeight, entry, isCurrent, onComplete, onEdit, lastTime, previousMaxWeight, onWeightStart,
   barKg, validateSignal, coachHint,
 }) => {
@@ -209,29 +211,19 @@ export const SetRow: React.FC<SetRowProps> = ({
     }
   }
 
-  // Reps − / + : même idée que pour le poids, sans ouvrir le clavier. Un
-  // champ vide part du bas de la fourchette cible (la valeur la plus probable).
-  const handleRepsStep = (delta: number) => {
-    const current = parseInt(reps);
-    if (isNaN(current)) {
-      const range = parseTargetRange(targetReps);
-      setReps(String(range ? range[0] : Math.max(0, delta)));
-      return;
-    }
-    setReps(String(Math.max(0, current + delta)));
-  };
-
-  const weightDisplay = (w: string) => (w ? formatWeightForDisplay(w, weightUnit).replace('.', ',') : null);
-
   // ── Série sautée ──────────────────────────────────────────────────────
   if (entry.completed && entry.reps === '—') {
     return (
-      <div className="sv2-setwrap">
-        <div className="sv2-set skipped">
-          <span className="n">{setNumber}</span>
-          <span className="v" style={{ fontStyle: 'italic' }}>Passée</span>
-          {onEdit ? <button onClick={onEdit} className="sv2-edit" title="Modifier">Modifier</button> : <span />}
+      <div style={rowWrap}>
+        <div style={{ ...rowDone, opacity: 0.45 }}>
+          <div style={doneNumBadge}>
+            <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>S</span>
+            <span style={{ color: 'var(--text-dim)', fontSize: 13, fontWeight: 800 }}>{setNumber}</span>
+          </div>
+          <span style={{ flex: 1, color: 'var(--text-dim)', fontSize: 13, fontStyle: 'italic' }}>passée</span>
+          {onEdit && <button onClick={onEdit} style={editBtn} title="Modifier">✎</button>}
         </div>
+        {lastTimeHint && <p style={lastTimeText}>{lastTimeHint}</p>}
       </div>
     );
   }
@@ -239,18 +231,34 @@ export const SetRow: React.FC<SetRowProps> = ({
   // ── Série validée ─────────────────────────────────────────────────────
   if (entry.completed) {
     const outOfRange = isRepOutOfRange(entry.reps, targetReps);
-    const w = weightDisplay(entry.weight);
     return (
-      <div className="sv2-setwrap">
-        <div className={`sv2-set done${outOfRange ? ' warn' : ''}`}>
-          <span className="n check-pop">{outOfRange ? '!' : '✓'}</span>
-          <span className="v">
-            {w ? `${w} ${weightUnitLabel(weightUnit)}` : 'PDC'} × <b className={outOfRange ? 'amber-pulse' : undefined}>{entry.reps}</b>
-            {outOfRange && <span style={{ color: 'var(--h-warn)', fontSize: 12, fontWeight: 500 }}> · hors fourchette</span>}
+      <div style={rowWrap}>
+        <div style={rowDone}>
+          <div style={doneNumBadge}>
+            <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>S</span>
+            <span style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontSize: 13, fontWeight: 800 }}>{setNumber}</span>
+          </div>
+          <div style={donePillWeight}>
+            <span style={{ color: 'var(--text-muted)', fontSize: 9, letterSpacing: 0.5 }}>{weightUnitLabel(weightUnit).toUpperCase()}</span>
+            <span style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 15 }}>{entry.weight ? formatWeightForDisplay(entry.weight, weightUnit) : '—'}</span>
+          </div>
+          <div style={{
+            ...donePillReps,
+            borderColor: outOfRange ? 'rgba(245,166,35,0.3)' : 'rgba(76,175,80,0.2)',
+            background: outOfRange ? 'rgba(245,166,35,0.08)' : 'rgba(76,175,80,0.06)',
+          }}>
+            <span style={{ color: outOfRange ? '#a06a00' : '#3a7a3a', fontSize: 9, letterSpacing: 0.5 }}>REPS</span>
+            <span className={outOfRange ? 'amber-pulse' : ''} style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontWeight: 700, fontSize: 15 }}>
+              {entry.reps}
+              {outOfRange && <span style={{ fontSize: 9, marginLeft: 2, verticalAlign: 'super' }}>⚠</span>}
+            </span>
+          </div>
+          <span className="check-pop" style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontSize: 13, width: 20, textAlign: 'center', flexShrink: 0, fontWeight: 700 }}>
+            {outOfRange ? '!' : '✓'}
           </span>
-          {onEdit ? <button onClick={onEdit} className="sv2-edit" title="Modifier cette série">Modifier</button> : <span />}
+          {onEdit && <button onClick={onEdit} style={editBtn} title="Modifier cette série">✎</button>}
         </div>
-        {lastTimeHint && <p className="sv2-hint">{lastTimeHint}</p>}
+        {lastTimeHint && <p style={lastTimeText}>{lastTimeHint}</p>}
       </div>
     );
   }
@@ -258,97 +266,110 @@ export const SetRow: React.FC<SetRowProps> = ({
   // ── Série future ─────────────────────────────────────────────────────
   if (!isCurrent) {
     return (
-      <div className="sv2-setwrap">
-        <div className="sv2-set">
-          <span className="n">{setNumber}</span>
-          <span className="v">À faire</span>
-          <span className="t">{targetReps} reps</span>
+      <div style={rowWrap}>
+        <div style={rowPending}>
+          <span style={{ color: 'var(--text-micro)', fontSize: 12, fontWeight: 700, width: 22, textAlign: 'center', flexShrink: 0 }}>{setNumber}</span>
+          <span style={{ color: 'var(--text-micro)', fontSize: 13 }}>{targetReps} reps</span>
         </div>
         {/* Pendant le repos, la prochaine série n'est pas encore active : c'est
             pourtant LE moment où le conseil sert, tant qu'on peut encore aller
             changer la charge. */}
         {coachHint && (
-          <p className="sv2-hint" style={{ color: COACH_TONE_COLOR[coachHint.tone], fontWeight: 600 }}>
+          <p style={{ ...coachHintText, color: COACH_TONE_COLOR[coachHint.tone] }}>
             <span style={{ fontWeight: 800, marginRight: 4 }}>{COACH_TONE_MARK[coachHint.tone]}</span>{coachHint.text}
           </p>
         )}
-        {lastTimeHint && <p className="sv2-hint">{lastTimeHint}</p>}
+        {lastTimeHint && <p style={{ ...lastTimeText, marginLeft: 32 }}>{lastTimeHint}</p>}
       </div>
     );
   }
 
   // ── Série active ─────────────────────────────────────────────────────
-  // Deux grands blocs Poids / Reps avec − / + au pouce, puis un seul gros
-  // bouton pour valider. Les champs restent tapables au clavier.
   return (
-    <div className="sv2-setwrap">
-      <div className="sv2-set now">
-        <span className="n">{setNumber}</span>
-        <span className="v">En cours</span>
-        <span className="t">{targetReps} reps</span>
-      </div>
-      <div className="sv2-entry">
-        <div className="sv2-steppers">
-          <div className="sv2-stepper">
-            <span className="sv2-stepper-label">
-              <label htmlFor={`sv2-weight-${setNumber}`}>Poids</label>
-              <button type="button" onClick={handleToggleWeightUnit} className="sv2-unit" title="Changer l'unité">{weightUnitLabel(weightUnit)}</button>
-            </span>
-            <input id={`sv2-weight-${setNumber}`} type="text" inputMode="decimal" value={weight}
-              onChange={(e) => handleWeightChange(e.target.value)} placeholder="0" onFocus={(e) => e.target.select()} />
-            <div className="sv2-stepper-btns">
-              <button type="button" onClick={() => handleWeightStep(-weightStep)} aria-label={`Moins ${weightStep} ${weightUnitLabel(weightUnit)}`}>−</button>
-              <button type="button" onClick={() => handleWeightStep(weightStep)} aria-label={`Plus ${weightStep} ${weightUnitLabel(weightUnit)}`}>+</button>
-            </div>
-          </div>
-          <div className="sv2-stepper">
-            <span className="sv2-stepper-label"><label htmlFor={`sv2-reps-${setNumber}`}>Reps</label></span>
-            <input id={`sv2-reps-${setNumber}`} type="text" inputMode="numeric" value={reps}
-              onChange={(e) => setReps(e.target.value)} placeholder="–" onFocus={(e) => e.target.select()}
-              onKeyDown={(e) => e.key === 'Enter' && handleValidate()} />
-            <div className="sv2-stepper-btns">
-              <button type="button" onClick={() => handleRepsStep(-1)} aria-label="Une rep de moins">−</button>
-              <button type="button" onClick={() => handleRepsStep(1)} aria-label="Une rep de plus">+</button>
-            </div>
-          </div>
+    <div style={{ ...rowWrap, marginBottom: 2 }}>
+      <div style={rowActive}>
+        <div style={activeNumBadge}>
+          <span style={{ color: 'var(--brand-1)', fontSize: 14, fontWeight: 800 }}>{setNumber}</span>
         </div>
-        <button
-          className={'sv2-validate' + (isLivePR ? ' validate-btn-pr' : '')}
-          onClick={handleValidate} disabled={!reps}
-          title={isLivePR ? 'Nouveau record en vue !' : undefined}
-        >
-          <IconCheck size={18} />
-          {isLivePR ? 'Valider · record en vue' : reps ? `Valider la série ${setNumber}` : 'Indique tes reps'}
-        </button>
-        {coachHint && (
-          <p style={{ fontSize: 12.5, fontWeight: 600, lineHeight: 1.4, color: COACH_TONE_COLOR[coachHint.tone] }}>
-            <span style={{ fontWeight: 800, marginRight: 4 }}>{COACH_TONE_MARK[coachHint.tone]}</span>{coachHint.text}
-          </p>
-        )}
-        {plateHint && (
-          <p style={{ fontSize: 12, fontWeight: 600, color: plateHint.warn ? 'var(--h-warn)' : 'var(--h-muted)' }}>
-            {plateHint.warn ? '⚠ ' : '⚖ '}{plateHint.text}
-          </p>
-        )}
-        {(lastTimeHint || liveDeltaBadge) && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-            {lastTimeHint && <p style={{ fontSize: 12, color: 'var(--h-muted)' }}>{lastTimeHint}</p>}
-            {liveDeltaBadge && (
-              <span className="sv2-delta" style={{
-                color: liveDeltaBadge.positive ? 'var(--h-good)' : 'var(--h-warn)',
-                border: '1px solid ' + (liveDeltaBadge.positive ? 'rgba(108,203,148,0.4)' : 'rgba(232,163,61,0.4)'),
-              }}>{liveDeltaBadge.text}</span>
-            )}
-          </div>
-        )}
+        <button type="button" onClick={() => handleWeightStep(-weightStep)} style={weightStepBtn}
+          title={`− ${weightStep} ${weightUnitLabel(weightUnit)}`}>−</button>
+        <div className="input-field" style={inputWrapper}>
+          <input style={inputField} type="text" inputMode="decimal" value={weight}
+            onChange={(e) => handleWeightChange(e.target.value)} placeholder={weightUnitLabel(weightUnit)} onFocus={(e) => e.target.select()} />
+          <button type="button" onClick={handleToggleWeightUnit} style={inputUnitBtn} title="Changer l'unité">{weightUnitLabel(weightUnit)}</button>
+        </div>
+        <button type="button" onClick={() => handleWeightStep(weightStep)} style={weightStepBtn}
+          title={`+ ${weightStep} ${weightUnitLabel(weightUnit)}`}>+</button>
+        <div className="input-field" style={inputWrapper}>
+          <input style={inputField} type="text" inputMode="numeric" value={reps}
+            onChange={(e) => setReps(e.target.value)} placeholder="Reps" onFocus={(e) => e.target.select()}
+            onKeyDown={(e) => e.key === 'Enter' && handleValidate()} />
+          <span style={inputUnit}>{targetReps}</span>
+        </div>
+        <button className={'validate-btn' + (isLivePR ? ' validate-btn-pr' : '')} style={{
+          ...validateBtn,
+          background: isLivePR
+            ? 'linear-gradient(120deg, #ffb21d, #ff7a1d, #ffd93d, #ff9d1d)'
+            : reps ? 'linear-gradient(135deg, var(--brand-1), var(--brand-2))' : 'var(--bg-elevated)',
+          backgroundSize: isLivePR ? '300% 300%' : undefined,
+          cursor: reps ? 'pointer' : 'not-allowed',
+          boxShadow: isLivePR ? undefined : (reps ? '0 4px 14px rgba(var(--brand-1-rgb),0.35)' : 'none'),
+        }} onClick={handleValidate} disabled={!reps} title={isLivePR ? 'Nouveau record en vue !' : undefined}><IconCheck size={14} /></button>
       </div>
+      {coachHint && (
+        <p style={{ ...coachHintText, color: COACH_TONE_COLOR[coachHint.tone] }}>
+          <span style={{ fontWeight: 800, marginRight: 4 }}>{COACH_TONE_MARK[coachHint.tone]}</span>{coachHint.text}
+        </p>
+      )}
+      {plateHint && (
+        <p style={{ ...plateHintText, color: plateHint.warn ? '#f5a623' : 'var(--text-dim)' }}>
+          {plateHint.warn ? '⚠ ' : '⚖ '}{plateHint.text}
+        </p>
+      )}
+      {(lastTimeHint || liveDeltaBadge) && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginLeft: 8, marginTop: 4 }}>
+          {lastTimeHint && <p style={{ ...lastTimeText, margin: 0 }}>{lastTimeHint}</p>}
+          {liveDeltaBadge && (
+            <span style={{
+              fontSize: 10, fontWeight: 800, borderRadius: 6, padding: '2px 6px', flexShrink: 0,
+              color: liveDeltaBadge.positive ? '#4CAF50' : '#f5a623',
+              background: liveDeltaBadge.positive ? 'rgba(76,175,80,0.12)' : 'rgba(245,166,35,0.12)',
+              border: '1px solid ' + (liveDeltaBadge.positive ? 'rgba(76,175,80,0.25)' : 'rgba(245,166,35,0.25)'),
+            }}>{liveDeltaBadge.text}</span>
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
+const rowWrap: React.CSSProperties = { borderBottom: '1px solid var(--border-subtle)', paddingBottom: 4, marginBottom: 2 };
+const lastTimeText: React.CSSProperties = { color: 'var(--text-micro)', fontSize: 10, marginTop: 2, marginBottom: 2 };
+const plateHintText: React.CSSProperties = { fontSize: 11, fontWeight: 600, marginLeft: 8, marginTop: 5 };
+// Conseil du coach : même gabarit que l'aide au chargement, en un peu plus
+// lisible — c'est une phrase, pas un relevé de disques.
+const coachHintText: React.CSSProperties = { fontSize: 11.5, fontWeight: 600, marginLeft: 8, marginTop: 6, lineHeight: '16px' };
 const COACH_TONE_COLOR: Record<CoachTip['tone'], string> = {
-  up: 'var(--h-good)', good: 'var(--h-good)', down: 'var(--h-warn)', warn: 'var(--h-warn)', hold: 'var(--h-muted)',
+  up: '#4CAF50', good: '#4CAF50', down: '#f5a623', warn: '#f5a623', hold: 'var(--text-dim)',
 };
 const COACH_TONE_MARK: Record<CoachTip['tone'], string> = {
   up: '↑', good: '✓', down: '↓', warn: '⚠', hold: '→',
 };
+const rowDone: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, padding: '9px 6px 2px' };
+const doneNumBadge: React.CSSProperties = { width: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, flexShrink: 0 };
+const donePillWeight: React.CSSProperties = { flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', borderRadius: 10, padding: '5px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 };
+const donePillReps: React.CSSProperties = { flex: 1, borderRadius: 10, padding: '5px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, border: '1px solid' };
+const editBtn: React.CSSProperties = { width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', color: 'var(--text-dim)', fontSize: 19, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' };
+const rowPending: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, padding: '7px 6px 2px' };
+const activeNumBadge: React.CSSProperties = { width: 28, height: 28, borderRadius: 8, background: 'rgba(var(--brand-1-rgb),0.12)', border: '1px solid rgba(var(--brand-1-rgb),0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
+const rowActive: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, padding: '10px 8px', background: 'var(--bg-red-tint)', borderRadius: 12, border: '1px solid #3a1818' };
+const inputWrapper: React.CSSProperties = { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', background: 'var(--bg-red-input)', borderRadius: 10, padding: '8px 10px', border: '1px solid rgba(var(--brand-1-rgb),0.2)', transition: 'border-color 0.15s, box-shadow 0.15s', overflow: 'hidden' };
+const inputField: React.CSSProperties = { flex: 1, background: 'none', color: 'var(--text-primary)', fontSize: 16, fontWeight: 600, width: 0 };
+const inputUnit: React.CSSProperties = { color: 'rgba(var(--brand-1-rgb),0.5)', fontSize: 11, marginLeft: 4, flexShrink: 0, display: 'inline-block', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+const inputUnitBtn: React.CSSProperties = { color: 'rgba(var(--brand-1-rgb),0.85)', fontSize: 10, fontWeight: 800, letterSpacing: 0.4, marginLeft: 4, flexShrink: 0, background: 'rgba(var(--brand-1-rgb),0.14)', border: '1px solid rgba(var(--brand-1-rgb),0.35)', borderRadius: 6, padding: '4px 7px', textTransform: 'uppercase' };
+// Boutons − / + rapides pour le poids : zone d'action groupée avec le
+// bouton valider côté droit de la carte (Léo tient son téléphone de la
+// main droite pendant une série).
+const weightStepBtn: React.CSSProperties = { width: 22, height: 22, borderRadius: 7, flexShrink: 0, background: 'rgba(var(--brand-1-rgb),0.14)', border: '1px solid rgba(var(--brand-1-rgb),0.32)', color: 'var(--brand-1)', fontSize: 14, fontWeight: 800, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 };
+// Agrandi (42→44) pour une cible tactile plus fiable à une main en fin de série.
+const validateBtn: React.CSSProperties = { width: 44, height: 44, borderRadius: 12, color: '#fff', fontSize: 17, fontWeight: 800, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s, box-shadow 0.2s, transform 0.1s' };

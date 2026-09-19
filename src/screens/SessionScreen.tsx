@@ -3,7 +3,9 @@ import { useWorkoutStore } from '../store/workoutStore';
 import { getWorkout, getProgressionWeek } from '../data/workouts';
 import { getNextStep } from '../utils/supersets';
 import { ExerciseCard } from '../components/ExerciseCard';
+import { ExerciseCardClassic } from '../components/ExerciseCardClassic';
 import { InlineRestBar } from '../components/InlineRestBar';
+import { InlineRestBarClassic } from '../components/InlineRestBarClassic';
 import { StatsPanel } from '../components/StatsPanel';
 import { BodyDiagram } from '../components/BodyDiagram';
 import { ConfettiBurst } from '../components/ConfettiBurst';
@@ -54,6 +56,11 @@ const setExerciseNameOverride = useWorkoutStore((s) => s.setExerciseNameOverride
 const weightUnit = useWorkoutStore((s) => s.weightUnit);
 const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
 const weightUnitToggleStyle = useWorkoutStore((s) => s.weightUnitToggleStyle);
+// Réglages → Personnalisation → Style de l'interface : l'ancien style garde
+// ses propres composants, copiés tels quels (…Classic).
+const isNewStyle = useWorkoutStore((s) => s.uiStyle) !== 'classique';
+const Card = isNewStyle ? ExerciseCard : ExerciseCardClassic;
+const RestBar = isNewStyle ? InlineRestBar : InlineRestBarClassic;
 const addSet = useWorkoutStore((s) => s.addSet);
 const abandonSession = useWorkoutStore((s) => s.abandonSession);
 const sessionPausedAt = useWorkoutStore((s) => s.sessionPausedAt);
@@ -579,7 +586,7 @@ const restBarLabel = nextInfo.exercise
 const restBarNote = !stayingSameExercise ? nextInfo.exercise?.notes : undefined;
 
 const restBarNode = timerIsRunning ? (
-<InlineRestBar
+<RestBar
 secondsLeft={secondsLeft}
 formattedTime={formattedTime}
 progress={progress}
@@ -595,7 +602,7 @@ onTogglePause={handleToggleRestPause}
 ) : null;
 
 return (
-<div className="screen-ambient" style={{ ...container, flexDirection: isWide ? 'row' : 'column' }}>
+<div className={isNewStyle ? 'session-v2' : 'screen-ambient'} style={{ ...container, flexDirection: isWide ? 'row' : 'column' }}>
 {confettiBurst && <ConfettiBurst style={ultraAnimationStyle} />}
 {prBanner && (
 <div style={prBannerStyle} className={ultraAnimationsEnabled ? 'ultra-pop-glow' : 'fade-in'}>
@@ -608,6 +615,90 @@ return (
 )}
 {sessionTab === 'exercise' && (
         <div style={isWide ? mainArea : { display: 'contents' }}>
+{isNewStyle ? (
+<div className="sv2-header">
+<div className="sv2-header-row">
+<div style={{ flex: 1, minWidth: 0 }}>
+<p className="sv2-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{workout.name}</p>
+<p style={{ color: 'var(--h-muted)', fontSize: 12, marginTop: 3 }}>Sem. {currentWeek} · RIR {weekData.rir.replace('RIR ', '')}</p>
+</div>
+{/* Réglages rapides : les mêmes qu'avant, regroupés dans une pilule. */}
+<div className="sv2-quick" role="group" aria-label="Réglages rapides">
+<button onClick={() => setThemeMode(theme === 'dark' ? 'light' : 'dark')} title="Mode clair / sombre" aria-label="Mode clair / sombre">
+{theme === 'dark' ? <IconMoon size={16} /> : <IconSun size={16} />}
+</button>
+<button onClick={() => setBeepEnabled(!beepEnabled)} className={beepEnabled ? undefined : 'off'} aria-pressed={beepEnabled} title={beepEnabled ? 'Bip de fin de repos activé' : 'Bip de fin de repos coupé'}>
+<IconBell size={16} />
+</button>
+<button onClick={() => setHapticsEnabled(!hapticsEnabled)} className={hapticsEnabled ? undefined : 'off'} aria-pressed={hapticsEnabled} title={hapticsEnabled ? 'Vibrations activées' : 'Vibrations coupées'}>
+<IconVibrate size={16} />
+</button>
+<button onClick={() => setWakeLockEnabled(!wakeLockEnabled)} className={wakeLockEnabled ? undefined : 'off'} aria-pressed={wakeLockEnabled} title={wakeLockEnabled ? 'Écran maintenu allumé' : "Écran peut s'éteindre"}>
+<IconLightbulb size={16} />
+</button>
+<div style={{ position: 'relative' }}>
+<button
+onClick={() => {
+if (weightUnitToggleStyle === 'menu') {
+setShowUnitMenu((v) => !v);
+} else {
+const next = weightUnit === 'kg' ? 'lbs' : 'kg';
+setWeightUnit(next);
+if (unitToastTimeoutRef.current) clearTimeout(unitToastTimeoutRef.current);
+setUnitToast(next === 'kg' ? 'Unité : Kilogrammes sélectionné' : 'Unité : Livres sélectionné');
+unitToastTimeoutRef.current = setTimeout(() => setUnitToast(null), 1400);
+}
+}}
+style={{ fontSize: 10, fontWeight: 800, width: 36 }}
+title={weightUnit === 'kg' ? "Unité : kilogrammes — toucher pour passer en livres" : "Unité : livres — toucher pour passer en kilogrammes"}
+>
+{weightUnitLabel(weightUnit).toUpperCase()}
+</button>
+{weightUnitToggleStyle === 'menu' && showUnitMenu && (
+<>
+<div onClick={() => setShowUnitMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+<div className="fade-in" style={{ position: 'absolute', top: 38, right: 0, zIndex: 50, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 4, minWidth: 150, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+<button
+onClick={() => { setWeightUnit('kg'); setShowUnitMenu(false); }}
+style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 10px', background: 'transparent', border: 'none', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer' }}
+>
+<span>Kilogrammes (kg)</span>
+{weightUnit === 'kg' && <span style={{ color: 'var(--brand-1)', fontWeight: 700 }}>✓</span>}
+</button>
+<button
+onClick={() => { setWeightUnit('lbs'); setShowUnitMenu(false); }}
+style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 10px', background: 'transparent', border: 'none', borderRadius: 6, color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer' }}
+>
+<span>Livres (lbs)</span>
+{weightUnit === 'lbs' && <span style={{ color: 'var(--brand-1)', fontWeight: 700 }}>✓</span>}
+</button>
+</div>
+</>
+)}
+{weightUnitToggleStyle !== 'menu' && unitToast && (
+<div className="fade-in" style={{ position: 'absolute', top: 38, right: 0, zIndex: 50, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '6px 12px', color: 'var(--text-primary)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+{unitToast}
+</div>
+)}
+</div>
+</div>
+<button onClick={onOpenSettings} className="sv2-round" title="Réglages (sans quitter la séance)" aria-label="Réglages"><IconSettings size={17} /></button>
+</div>
+{/* Progression : un segment par exercice, à la largeur de son nombre de séries. */}
+<div className="sv2-prog">
+<strong>{completedSets}<i> / {totalSets} séries</i></strong>
+<div className="sv2-segs">
+{exercises.map((ex) => {
+const entries = session.exerciseProgress[ex.id] ?? [];
+const n = entries.length || ex.sets;
+const doneN = entries.filter((e) => e.completed).length;
+return <div key={ex.id} style={{ flex: n }}><i style={{ width: `${Math.min(100, (doneN / n) * 100)}%` }} /></div>;
+})}
+</div>
+</div>
+</div>
+) : (
+<>
 <div style={headerBar}>
 <div style={{ flex: 1, minWidth: 0 }}>
 <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800, lineHeight: '20px', letterSpacing: -0.3 }}>{workout.name}</p>
@@ -700,6 +791,8 @@ style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
 )}
 </div>
 </div>
+</>
+)}
 
 <div style={scrollArea}>
 <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 16px 80px' }}>
@@ -786,7 +879,7 @@ const exIdx = exercises.indexOf(exercise);
 const isRestTarget = exercise.id === restBarTargetExerciseId;
 const displayExercise = session.exerciseNameOverrides?.[exercise.id] ? { ...exercise, name: session.exerciseNameOverrides[exercise.id] } : exercise;
 return (
-<ExerciseCard
+<Card
 key={exercise.id}
 exercise={displayExercise}
 setEntries={session.exerciseProgress[exercise.id] ?? []}
@@ -816,7 +909,7 @@ const exIdx = exercises.indexOf(exercise);
 const isRestTarget = exercise.id === restBarTargetExerciseId;
 const displayExercise = session.exerciseNameOverrides?.[exercise.id] ? { ...exercise, name: session.exerciseNameOverrides[exercise.id] } : exercise;
 return (
-<ExerciseCard
+<Card
 key={exercise.id}
 exercise={displayExercise}
 setEntries={session.exerciseProgress[exercise.id] ?? []}
