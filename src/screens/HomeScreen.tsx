@@ -585,12 +585,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   })();
 
   const weeklyGoalSection = homeSections.weeklyGoal && (() => {
-    const now = Date.now();
-    const sessionsThisWeek = history.filter((e) => now - e.date < 7 * 86400000).length;
-    const goalReached = sessionsThisWeek >= weeklySessionGoal;
     const goalColor = blockColor('weeklyGoal', 'var(--brand-1)');
-    // Les 7 derniers jours, aujourd'hui en dernier : la même fenêtre glissante
-    // que le compteur au-dessus, pour que les deux disent toujours la même chose.
+    // Les 7 derniers jours, aujourd'hui en dernier. Le compteur ci-dessous
+    // compte exactement ces jours-là (voir sessionsThisWeek plus bas) : les
+    // deux doivent toujours dire la même chose, donc une seule fenêtre.
     const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
     const days = Array.from({ length: 7 }, (_, i) => {
       const dayStart = startOfToday.getTime() - (6 - i) * 86400000;
@@ -603,6 +601,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
         today: i === 6,
       };
     });
+    const sessionsThisWeek = days.filter((d) => d.done).length;
+    const goalReached = sessionsThisWeek >= weeklySessionGoal;
     return (
       <div key="weeklyGoal" className="home-stack">
       <div className="glass-card home-card" style={homeSectionColors.weeklyGoal ? { borderColor: goalColor } : undefined}>
