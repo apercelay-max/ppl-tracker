@@ -20,7 +20,7 @@
 // triceps et 0,5 pour les épaules.
 
 import { BUILT_IN_PROGRAMS } from '../data/programs';
-import { LEGACY_LEGS_WORKOUTS } from '../data/legacyWorkouts';
+import { LEGACY_LEGS_WORKOUTS, LEGACY_LEGS_V3_WORKOUTS } from '../data/legacyWorkouts';
 import { findCatalogExercise } from './catalogMatch';
 
 /** Poids d'un muscle synergiste dans le décompte des séries effectives. */
@@ -84,7 +84,7 @@ for (const program of BUILT_IN_PROGRAMS) {
     }
   }
 }
-for (const workout of LEGACY_LEGS_WORKOUTS) {
+for (const workout of [...LEGACY_LEGS_WORKOUTS, ...LEGACY_LEGS_V3_WORKOUTS]) {
   for (const ex of workout.exercises) {
     if (!EXERCISE_INDEX[ex.id]) {
       EXERCISE_INDEX[ex.id] = { name: ex.name, muscleGroup: ex.muscleGroup };
