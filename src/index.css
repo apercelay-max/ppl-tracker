@@ -726,7 +726,7 @@ button { cursor: pointer; }
    autres écrans gardent leur verre et leur halo, seul l'accueil passe à des
    surfaces pleines, une seule couleur d'accent (--brand-1, donc celle choisie
    dans Réglages) et des chiffres en police condensée. */
-.home-v2, .session-v2, .sv2-tokens {
+.home-v2, .session-v2, .app-v2, .sv2-tokens {
   --h-bg: #0C0E0D;
   --h-surface: #151917;
   --h-raised: #1C2120;
@@ -753,8 +753,8 @@ button { cursor: pointer; }
   color: var(--h-text);
   font-variant-numeric: tabular-nums;
 }
-.home-v2, .session-v2 { background: var(--h-bg); }
-[data-theme="light"] .home-v2, [data-theme="light"] .session-v2, [data-theme="light"] .sv2-tokens {
+.home-v2, .session-v2, .app-v2 { background: var(--h-bg); }
+[data-theme="light"] .home-v2, [data-theme="light"] .session-v2, [data-theme="light"] .app-v2, [data-theme="light"] .sv2-tokens {
   --h-bg: #F2F3EF;
   --h-surface: #FFFFFF;
   --h-raised: #EEF0EB;
@@ -768,7 +768,7 @@ button { cursor: pointer; }
   --h-bad: #C0392B;
   --h-off: #E0E3DC;
 }
-[data-theme="dark"][data-amoled="on"] .home-v2, [data-theme="dark"][data-amoled="on"] .session-v2, [data-theme="dark"][data-amoled="on"] .sv2-tokens {
+[data-theme="dark"][data-amoled="on"] .home-v2, [data-theme="dark"][data-amoled="on"] .session-v2, [data-theme="dark"][data-amoled="on"] .app-v2, [data-theme="dark"][data-amoled="on"] .sv2-tokens {
   --h-bg: #000000;
   --h-surface: #0B0B0B;
   --h-raised: #151515;
@@ -776,36 +776,36 @@ button { cursor: pointer; }
   --h-hero-line: #2A2A2A;
   --h-off: #222222;
 }
-[data-contrast="high"] .home-v2, [data-contrast="high"] .session-v2, [data-contrast="high"] .sv2-tokens {
+[data-contrast="high"] .home-v2, [data-contrast="high"] .session-v2, [data-contrast="high"] .app-v2, [data-contrast="high"] .sv2-tokens {
   --h-line: #4C4C5E;
   --h-hero-line: #6A6A86;
   --h-muted: var(--text-muted);
   --h-text2: var(--text-secondary);
 }
-[data-theme="light"][data-contrast="high"] .home-v2, [data-theme="light"][data-contrast="high"] .session-v2, [data-theme="light"][data-contrast="high"] .sv2-tokens {
+[data-theme="light"][data-contrast="high"] .home-v2, [data-theme="light"][data-contrast="high"] .session-v2, [data-theme="light"][data-contrast="high"] .app-v2, [data-theme="light"][data-contrast="high"] .sv2-tokens {
   --h-line: #ADADC4;
   --h-hero-line: #8080A0;
 }
 
 /* Cartes : pleines, sans flou ni ombre. :root remonte la spécificité au-dessus
    des variantes teintées (.glass-gold…) et des règles de thème clair. */
-:root .home-v2 .glass-card, :root .session-v2 .glass-card, :root .sv2-tokens .glass-card {
+:root .home-v2 .glass-card, :root .session-v2 .glass-card, :root .app-v2 .glass-card, :root .sv2-tokens .glass-card {
   background: var(--h-surface);
   border: 1px solid var(--h-line);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
 }
-:root .home-v2 .glass-card.glass-gold, :root .session-v2 .glass-card.glass-gold, :root .sv2-tokens .glass-card.glass-gold  { background: var(--h-surface); border-color: rgba(232,163,61,0.38); }
-:root .home-v2 .glass-card.glass-green, :root .session-v2 .glass-card.glass-green, :root .sv2-tokens .glass-card.glass-green { background: var(--h-surface); border-color: rgba(108,203,148,0.34); }
-:root .home-v2 .glass-card.glass-red, :root .session-v2 .glass-card.glass-red, :root .sv2-tokens .glass-card.glass-red   { background: var(--h-surface); border-color: rgba(var(--brand-1-rgb),0.45); }
-:root .home-v2 .glass-card.glass-blue, :root .session-v2 .glass-card.glass-blue, :root .sv2-tokens .glass-card.glass-blue  { background: var(--h-surface); border-color: rgba(110,124,242,0.38); }
-:root .home-v2 .glass-tile, :root .session-v2 .glass-tile, :root .sv2-tokens .glass-tile {
+:root .home-v2 .glass-card.glass-gold, :root .session-v2 .glass-card.glass-gold, :root .app-v2 .glass-card.glass-gold, :root .sv2-tokens .glass-card.glass-gold  { background: var(--h-surface); border-color: rgba(232,163,61,0.38); }
+:root .home-v2 .glass-card.glass-green, :root .session-v2 .glass-card.glass-green, :root .app-v2 .glass-card.glass-green, :root .sv2-tokens .glass-card.glass-green { background: var(--h-surface); border-color: rgba(108,203,148,0.34); }
+:root .home-v2 .glass-card.glass-red, :root .session-v2 .glass-card.glass-red, :root .app-v2 .glass-card.glass-red, :root .sv2-tokens .glass-card.glass-red   { background: var(--h-surface); border-color: rgba(var(--brand-1-rgb),0.45); }
+:root .home-v2 .glass-card.glass-blue, :root .session-v2 .glass-card.glass-blue, :root .app-v2 .glass-card.glass-blue, :root .sv2-tokens .glass-card.glass-blue  { background: var(--h-surface); border-color: rgba(110,124,242,0.38); }
+:root .home-v2 .glass-tile, :root .session-v2 .glass-tile, :root .app-v2 .glass-tile, :root .sv2-tokens .glass-tile {
   background: transparent;
   border: 1px solid var(--h-line);
   box-shadow: none;
 }
-:root .home-v2 .glass-icon, :root .session-v2 .glass-icon, :root .sv2-tokens .glass-icon {
+:root .home-v2 .glass-icon, :root .session-v2 .glass-icon, :root .app-v2 .glass-icon, :root .sv2-tokens .glass-icon {
   background: var(--h-surface);
   border-color: var(--h-line);
   color: var(--h-text);
@@ -970,3 +970,20 @@ button { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .sv2-rest-bar > i, .sv2-segs > div > i, .sv2-validate { transition: none; }
 }
+
+/* Les panneaux plein écran (catalogue, programmes) remettent des fonds pleins :
+   dans le nouveau style ils reprennent la surface de la palette, sinon on
+   retomberait sur le gris violacé de l'ancien thème. */
+.app-v2 .solid-surfaces, .session-v2 .solid-surfaces, .home-v2 .solid-surfaces {
+  --bg-card: var(--h-surface);
+  --bg-surface: var(--h-surface);
+}
+
+/* ─── Avant la séance : même traitement que la séance du jour sur l'accueil ─ */
+.intro-hero { display: flex; flex-direction: column; gap: 14px; margin-bottom: 22px; }
+.intro-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.intro-stat { border: 1px solid var(--h-line); border-radius: 18px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.intro-stat b { font-family: var(--h-cond); font-size: 28px; font-weight: 700; line-height: 1; color: var(--h-text); }
+.intro-stat span { font-size: 9.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--h-muted); text-align: center; }
+.intro-focus-btn { display: flex; align-items: center; gap: 6px; align-self: flex-start; font-size: 13px; font-weight: 600; color: var(--h-text2); }
+.intro-focus { font-size: 13px; line-height: 1.5; color: var(--h-text2); border-top: 1px solid var(--h-line); padding-top: 12px; margin: 0; }

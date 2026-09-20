@@ -3,6 +3,7 @@ import { IconArrowLeft, IconBook } from '../components/Icons';
 import { GlassIcon } from '../components/GlassIcon';
 import { ExerciseCatalog } from '../components/ExerciseCatalog';
 import { ProgrammesPanel } from '../components/ProgrammesPanel';
+import { useScreenClass } from '../hooks/useScreenClass';
 
 interface CatalogueScreenProps { onBack: () => void; }
 
@@ -17,10 +18,11 @@ interface CatalogueScreenProps { onBack: () => void; }
 type Tab = 'exercices' | 'programmes';
 
 export const CatalogueScreen: React.FC<CatalogueScreenProps> = ({ onBack }) => {
+const screenClass = useScreenClass();
   const [tab, setTab] = useState<Tab>('exercices');
 
   return (
-    <div className="screen-ambient" style={container}>
+    <div className={screenClass} style={container}>
       <div style={scroll}>
         <div style={headerRow}>
           <button onClick={onBack} className="glass-icon" style={backBtn} aria-label="Retour"><IconArrowLeft size={17} /></button>

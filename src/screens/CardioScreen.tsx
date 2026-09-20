@@ -4,6 +4,7 @@ import { IconActivity, IconArrowLeft, IconBike, IconClose } from '../components/
 import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore, CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import type { CardioActivityType, CardioStats } from '../data/types';
+import { useScreenClass } from '../hooks/useScreenClass';
 
 interface CardioScreenProps { onBack: () => void; onStartActivity?: (mode: CardioActivityType) => void; }
 
@@ -26,6 +27,7 @@ const formatCardioDate = (ts: number): string => {
 };
 
 export const CardioScreen: React.FC<CardioScreenProps> = ({ onBack, onStartActivity }) => {
+const screenClass = useScreenClass();
   const cardioHistory = useWorkoutStore((s) => s.cardioHistory);
   const addCardioEntry = useWorkoutStore((s) => s.addCardioEntry);
   const deleteCardioEntry = useWorkoutStore((s) => s.deleteCardioEntry);
@@ -48,7 +50,7 @@ export const CardioScreen: React.FC<CardioScreenProps> = ({ onBack, onStartActiv
   const weekCalories = weekEntries.reduce((sum, e) => sum + e.calories, 0);
 
   return (
-    <div className="screen-ambient" style={container}>
+    <div className={screenClass} style={container}>
       <div style={scroll}>
 
         <div style={headerRow}>

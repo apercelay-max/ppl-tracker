@@ -7,6 +7,7 @@ import type { HistoryEntry } from '../data/types';
 import { EmptyState } from '../components/EmptyState';
 import { IconArrowLeft, IconCalendar, IconClose, IconDumbbell, IconSearch, IconZap } from '../components/Icons';
 import { GlassIcon } from '../components/GlassIcon';
+import { useScreenClass } from '../hooks/useScreenClass';
 
 interface HistoryScreenProps { onBack: () => void; }
 
@@ -112,6 +113,7 @@ const MonthCalendar: React.FC<{ history: HistoryEntry[] }> = ({ history }) => {
 // L'historique est déjà stocké du plus récent au plus ancien (voir
 // finishSession dans workoutStore.ts) — pas besoin de re-trier ici.
 export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
+const screenClass = useScreenClass();
   const history = useWorkoutStore((s) => s.history);
   const weightUnit = useWorkoutStore((s) => s.weightUnit);
   const [query, setQuery] = useState('');
@@ -137,7 +139,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
   });
 
   return (
-    <div className="screen-ambient" style={container}>
+    <div className={screenClass} style={container}>
       <div style={scroll}>
 
         <div style={headerRow}>

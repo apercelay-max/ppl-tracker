@@ -5,6 +5,7 @@ import { getNextStep } from '../utils/supersets';
 import { ExerciseCard } from '../components/ExerciseCard';
 import { ExerciseCardClassic } from '../components/ExerciseCardClassic';
 import { InlineRestBar } from '../components/InlineRestBar';
+import { useScreenClass } from '../hooks/useScreenClass';
 import { InlineRestBarClassic } from '../components/InlineRestBarClassic';
 import { StatsPanel } from '../components/StatsPanel';
 import { BodyDiagram } from '../components/BodyDiagram';
@@ -1043,9 +1044,10 @@ running: boolean;
 onToggleRunning: () => void;
 onFinish: () => void;
 }> = ({ seconds, running, onToggleRunning, onFinish }) => {
+const screenClass = useScreenClass();
 const isDone = seconds === 0;
 return (
-<div className="screen-ambient" style={completeScreen}>
+<div className={screenClass} style={completeScreen}>
 <div style={{ maxWidth: 380, width: '100%', textAlign: 'center' }}>
 <div style={deloadBadge}><span style={{ display: 'inline-flex' }}><IconWind size={40} color="#4CAF50" /></span></div>
 <h2 style={{ color: 'var(--text-primary)', fontSize: 22, fontWeight: 800, marginBottom: 6, letterSpacing: -0.5 }}>
@@ -1106,6 +1108,7 @@ const [note, setNote] = useState('');
 const [sharing, setSharing] = useState(false);
 const weightUnit = useWorkoutStore((s) => s.weightUnit);
 const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
+const screenClass = useScreenClass();
 // Grosse pluie de confettis à l'arrivée sur l'écran de fin, uniquement en
 // mode "Ultra animations" — se retire tout seul après ~2.2s.
 const [showConfetti, setShowConfetti] = useState(ultraAnimationsEnabled);
@@ -1197,7 +1200,7 @@ setSharing(false);
 };
 
 return (
-<div className="screen-ambient" style={completeScreen}>
+<div className={screenClass} style={completeScreen}>
 {showConfetti && <ConfettiBurst count={40} style={ultraAnimationStyle} />}
 <div style={{ maxWidth: 400, width: '100%' }}>
 <div style={{ textAlign: 'center', marginBottom: 28 }}>

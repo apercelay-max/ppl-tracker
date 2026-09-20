@@ -5,6 +5,7 @@ import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore } from '../store/workoutStore';
 import { ALL_EXERCISES, getMaxWeightEver, computeTonnage, bucketByWeek } from '../utils/training';
 import { BADGE_CATEGORIES, computeBadgeProgress } from '../data/badges';
+import { useScreenClass } from '../hooks/useScreenClass';
 
 interface ProfilScreenProps { onBack: () => void; }
 
@@ -12,6 +13,7 @@ const formatDate = (ts: number): string =>
   new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
 export const ProfilScreen: React.FC<ProfilScreenProps> = ({ onBack }) => {
+const screenClass = useScreenClass();
   const history = useWorkoutStore((s) => s.history);
   const weeklySessionGoal = useWorkoutStore((s) => s.weeklySessionGoal);
   const currentWeek = useWorkoutStore((s) => s.currentWeek);
@@ -58,7 +60,7 @@ export const ProfilScreen: React.FC<ProfilScreenProps> = ({ onBack }) => {
   };
 
   return (
-    <div className="screen-ambient" style={container}>
+    <div className={screenClass} style={container}>
       <div style={scroll}>
 
         <div style={headerRow}>

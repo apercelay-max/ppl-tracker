@@ -4,6 +4,7 @@ import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore } from '../store/workoutStore';
 import { MiniLineChart } from '../components/MiniLineChart';
 import { MassUnit } from '../data/types';
+import { useScreenClass } from '../hooks/useScreenClass';
 
 interface PoidsScreenProps { onBack: () => void; }
 
@@ -40,6 +41,7 @@ const UnitToggle: React.FC<{ value: MassUnit; onChange: (u: MassUnit) => void }>
 );
 
 export const PoidsScreen: React.FC<PoidsScreenProps> = ({ onBack }) => {
+const screenClass = useScreenClass();
   const bodyWeightHistory = useWorkoutStore((s) => s.bodyWeightHistory);
   const addBodyWeightEntry = useWorkoutStore((s) => s.addBodyWeightEntry);
   const deleteBodyWeightEntry = useWorkoutStore((s) => s.deleteBodyWeightEntry);
@@ -73,7 +75,7 @@ export const PoidsScreen: React.FC<PoidsScreenProps> = ({ onBack }) => {
   const last = bodyWeightHistory[0];
 
   return (
-    <div className="screen-ambient" style={container}>
+    <div className={screenClass} style={container}>
       <div style={scroll}>
 
         <div style={headerRow}>

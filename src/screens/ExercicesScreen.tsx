@@ -6,6 +6,7 @@ import { ALL_EXERCISES, ALL_MUSCLE_GROUPS, getExerciseWeightHistory, getMaxWeigh
 import { solvePlates, describePlates } from '../utils/plates';
 import { usesBarbell } from '../utils/gymAdapt';
 import { MiniLineChart } from '../components/MiniLineChart';
+import { useScreenClass } from '../hooks/useScreenClass';
 
 interface ExercicesScreenProps { onBack: () => void; }
 
@@ -94,6 +95,7 @@ const RpeLoadPanel: React.FC<{ e1rm: number; exercise: { id: string; name: strin
 };
 
 export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
+const screenClass = useScreenClass();
   const history = useWorkoutStore((s) => s.history);
   const [openId, setOpenId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -117,7 +119,7 @@ export const ExercicesScreen: React.FC<ExercicesScreenProps> = ({ onBack }) => {
     .filter((g) => g.exercises.length > 0);
 
   return (
-    <div className="screen-ambient" style={container}>
+    <div className={screenClass} style={container}>
       <div style={scroll}>
 
         <div style={headerRow}>

@@ -6,6 +6,7 @@ import { useGpsTrack } from '../hooks/useGpsTrack';
 import type { CardioActivityType, CardioStats } from '../data/types';
 import { IconArrowLeft, IconBike, IconCheck, IconWalk, IconRun } from '../components/Icons';
 import { GlassIcon } from '../components/GlassIcon';
+import { useScreenClass } from '../hooks/useScreenClass';
 
 /**
  * Écran d'activité cardio en direct. Même squelette pour les trois modes
@@ -48,6 +49,7 @@ const avg = (a: Acc): number | undefined => (a.n ? Math.round(a.sum / a.n) : und
 const EMPTY_ACC: Acc = { sum: 0, n: 0, max: 0 };
 
 export const ActivityScreen: React.FC<ActivityScreenProps> = ({ mode, onBack }) => {
+const screenClass = useScreenClass();
   const meta = MODES[mode] ?? MODES.autre;
   const usesGps = mode === 'marche' || mode === 'course';
   const addCardioEntry = useWorkoutStore((s) => s.addCardioEntry);
@@ -169,7 +171,7 @@ export const ActivityScreen: React.FC<ActivityScreenProps> = ({ mode, onBack }) 
   }, [bike.status, bike.deviceName]);
 
   return (
-    <div className="screen-ambient" style={container}>
+    <div className={screenClass} style={container}>
       <div style={scroll}>
 
         <div style={headerRow}>

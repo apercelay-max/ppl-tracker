@@ -4,6 +4,7 @@ import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore } from '../store/workoutStore';
 import { BodyDiagram } from '../components/BodyDiagram';
 import { getBodyIntensityFromHistory } from '../utils/training';
+import { useScreenClass } from '../hooks/useScreenClass';
 
 interface BodyScreenProps { onBack: () => void; }
 
@@ -13,12 +14,13 @@ interface BodyScreenProps { onBack: () => void; }
 const LOOKBACK_DAYS = 9;
 
 export const BodyScreen: React.FC<BodyScreenProps> = ({ onBack }) => {
+const screenClass = useScreenClass();
   const history = useWorkoutStore((s) => s.history);
   const intensity = getBodyIntensityFromHistory(history, LOOKBACK_DAYS);
   const hasData = Object.keys(intensity).length > 0;
 
   return (
-    <div className="screen-ambient" style={container}>
+    <div className={screenClass} style={container}>
       <div style={scroll}>
 
         <div style={headerRow}>

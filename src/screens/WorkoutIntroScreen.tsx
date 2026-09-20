@@ -10,6 +10,7 @@ import { ExerciseCardClassic } from '../components/ExerciseCardClassic';
 import { SessionAdaptSheet } from '../components/SessionAdaptSheet';
 import { GymPickerSheet } from '../components/GymPickerSheet';
 import type { GymProfile, SessionAdaptation } from '../utils/gymAdapt';
+import { useScreenClass } from '../hooks/useScreenClass';
 
 interface WorkoutIntroScreenProps {
 dayId: string;
@@ -57,10 +58,14 @@ Array.from({ length: count }, () => ({ weight: '', reps: '', completed: false })
 // ne touchent jamais l'historique/le store réel. On ferme en tapant le
 // fond, la croix, ou en glissant la petite barre du haut vers le bas.
 export const WorkoutIntroScreen: React.FC<WorkoutIntroScreenProps> = ({ dayId, onBack, onStart }) => {
+const screenClass = useScreenClass();
 const history = useWorkoutStore((s) => s.history);
 const currentWeek = useWorkoutStore((s) => s.currentWeek);
 const uiStyle = useWorkoutStore((s) => s.uiStyle);
 const PreviewCard = uiStyle === 'classique' ? ExerciseCardClassic : ExerciseCard;
+// Objectif du coach : replié par défaut dans le nouveau style (c'est un
+// paragraphe de plusieurs lignes, pas une accroche).
+const [focusOpen, setFocusOpen] = useState(false);
 const workout = getWorkout(dayId);
 const [detailExercise, setDetailExercise] = useState<Exercise | null>(null);
 const [previewEntries, setPreviewEntries] = useState<SetEntry[]>([]);
@@ -195,13 +200,14 @@ const unrecoveredGroups = getMuscleRecoveryStatus(history).filter(
 );
 
 return (
-<div className="screen-ambient" style={container}>
+<div className={screenClass} style={container}>
 <div style={scroll}>
 <div style={headerRow}>
 <button onClick={onBack} className="glass-icon" style={backBtn}>←</button>
 <span style={{ ...typeBadge, background: `${accent}20`, color: accent }}>{typeLabel} · J{workout.dayNumber}</span>
 </div>
 
+{uiStyle === 'classique' ? (
 <div style={{ ...heroCard, borderColor: `${accent}40` }}>
 <h1 style={{ color: 'var(--text-primary)', fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>{workout.name}</h1>
 <p style={{ color: accent, fontSize: 13, fontWeight: 700, marginTop: 4 }}>{workout.focus}</p>
@@ -221,6 +227,35 @@ return (
 </div>
 </div>
 </div>
+) : (
+/* Nouveau style : le nom de la séance en grand, les muscles en étiquettes,
+   les trois chiffres en tuiles, et l'objectif du coach replié — c'est un
+   paragraphe, pas un titre. */
+<section className="intro-hero">
+<div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+<h1 className="home-hero-title">{workout.name}</h1>
+<div className="home-chips">
+{workout.muscleGroups.split(/\s*[/,·+]\s*/).map((g) => g.trim()).filter(Boolean).map((g) => (
+<span key={g}>{g}</span>
+))}
+</div>
+</div>
+<div className="intro-stats">
+<div className="intro-stat"><b>{workout.exercises.length}</b><span>Exercices</span></div>
+<div className="intro-stat"><b>{totalSets}</b><span>Séries</span></div>
+<div className="intro-stat"><b>{workout.estimatedDuration.replace('≈ ', '')}</b><span>Durée</span></div>
+</div>
+{workout.focus && (
+<>
+<button onClick={() => setFocusOpen((v) => !v)} className="intro-focus-btn" aria-expanded={focusOpen}>
+{focusOpen ? "Masquer l'objectif" : 'Objectif de la séance'}
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ transform: focusOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}><polyline points="6 9 12 15 18 9" /></svg>
+</button>
+{focusOpen && <p className="intro-focus">{workout.focus}</p>}
+</>
+)}
+</section>
+)}
 
 {unrecoveredGroups.length > 0 && (
 <div style={recoveryWarning}>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { useScreenClass } from '../hooks/useScreenClass';
 
 interface AuthScreenProps {
   onBack: () => void;
@@ -8,6 +9,7 @@ interface AuthScreenProps {
 type Mode = 'login' | 'signup' | 'forgot' | 'reset';
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack }) => {
+const screenClass = useScreenClass();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -103,7 +105,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack }) => {
   };
 
   return (
-    <div className="screen-ambient" style={container}>
+    <div className={screenClass} style={container}>
       <div style={scroll}>
         <div style={headerRow}>
           <button onClick={onBack} className="glass-icon" style={backBtn} aria-label="Retour">←</button>

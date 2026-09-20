@@ -20,6 +20,7 @@ import type { CardioActivityType, NavTabKey } from '../data/types';
 import type { VoiceVerbosity } from '../store/workoutStore';
 import { isVoiceSupported, primeVoice, speak, stopVoice } from '../utils/voiceCoach';
 import { IconActivity, IconArrowRight, IconBarChart, IconBounce, IconCalendar, IconCheck, IconClose, IconDownload, IconDumbbell, IconFireworks, IconHome, IconMonitor, IconMoon, IconPalette, IconPartyPopper, IconRefreshCw, IconRotateCcw, IconSave, IconScale, IconSearch, IconSparkles, IconSun, IconTarget, IconUpload, IconUser } from '../components/Icons';
+import { useScreenClass } from '../hooks/useScreenClass';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -184,6 +185,7 @@ return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-di
 };
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ initialCategory, onBack, onOpenAccount, onRestartQuiz, syncStatus, lastSyncedAt }) => {
+const screenClass = useScreenClass();
 const { user, loading: authLoading } = useAuth();
 const handleSignOut = () => { supabase?.auth.signOut(); };
 const accentTheme = useWorkoutStore((s) => s.accentTheme);
@@ -490,7 +492,7 @@ return (
 };
 
 return (
-<div className="screen-ambient" style={container}>
+<div className={screenClass} style={container}>
 <div style={isLandscape ? landscapeRow : undefined}>
 {isLandscape && (
 <div style={landscapeSidebar}>

@@ -6,6 +6,7 @@ import { BodyDiagram } from '../components/BodyDiagram';
 import { EmptyState } from '../components/EmptyState';
 import { IconActivity, IconArrowLeft, IconDumbbell, IconMedal, IconTarget, IconTrophy } from '../components/Icons';
 import { GlassIcon } from '../components/GlassIcon';
+import { useScreenClass } from '../hooks/useScreenClass';
 
 interface ObjectivesScreenProps { onBack: () => void; }
 
@@ -19,6 +20,7 @@ const MUSCLE_ALERT_THRESHOLD_DAYS = 9;
 const BODY_WINDOWS = [MUSCLE_ALERT_THRESHOLD_DAYS, 30];
 
 export const ObjectivesScreen: React.FC<ObjectivesScreenProps> = ({ onBack }) => {
+const screenClass = useScreenClass();
   const history = useWorkoutStore((s) => s.history);
   const weeklySessionGoal = useWorkoutStore((s) => s.weeklySessionGoal);
   const [bodyWindowDays, setBodyWindowDays] = useState<number>(MUSCLE_ALERT_THRESHOLD_DAYS);
@@ -64,7 +66,7 @@ export const ObjectivesScreen: React.FC<ObjectivesScreenProps> = ({ onBack }) =>
   const hasBodyData = Object.keys(bodyIntensity).length > 0;
 
   return (
-    <div className="screen-ambient" style={container}>
+    <div className={screenClass} style={container}>
       <div style={scroll}>
 
         <div style={headerRow}>

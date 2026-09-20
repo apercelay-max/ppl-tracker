@@ -4,6 +4,7 @@ import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getWorkout } from '../data/workouts';
 import { HistoryEntry } from '../data/types';
+import { useScreenClass } from '../hooks/useScreenClass';
 import {
   bucketByWeek, computeLoadStatus, computeTonnage, WeekBucket,
   ALL_EXERCISES, getExerciseWeightHistory, getMuscleGroupVolume,
@@ -307,6 +308,7 @@ const EffectiveSetsChart: React.FC<{ history: HistoryEntry[] }> = ({ history }) 
 };
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onBack }) => {
+const screenClass = useScreenClass();
   const history = useWorkoutStore((s) => s.history);
   const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
 
@@ -318,7 +320,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onBack }) => {
   const totalMinutes = Math.round(history.reduce((sum, e) => sum + e.durationMs, 0) / 60000);
 
   return (
-    <div className="screen-ambient" style={container}>
+    <div className={screenClass} style={container}>
       <div style={{ ...scroll, paddingBottom: navBarEnabled ? 112 : 40 }}>
         <div style={headerRow}>
           <button onClick={onBack} className="glass-icon" style={backBtn}><IconArrowLeft size={17} /></button>

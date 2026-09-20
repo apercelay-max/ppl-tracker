@@ -17,6 +17,7 @@ import {
   sendChatMessage, writeCachedBrief, writeChat, writeStoredApiKey,
 } from '../utils/coachAi';
 import type { CachedBrief, ChatNewProgram, ChatProposal, ChatState } from '../utils/coachAi';
+import { useScreenClass } from '../hooks/useScreenClass';
 
 interface CoachScreenProps { onBack: () => void; }
 
@@ -49,6 +50,7 @@ const formatWhen = (ts: number): string => {
 };
 
 export const CoachScreen: React.FC<CoachScreenProps> = ({ onBack }) => {
+const screenClass = useScreenClass();
   const history = useWorkoutStore((s) => s.history);
   const trainingProfile = useWorkoutStore((s) => s.trainingProfile);
   const bodyWeightHistory = useWorkoutStore((s) => s.bodyWeightHistory);
@@ -283,7 +285,7 @@ export const CoachScreen: React.FC<CoachScreenProps> = ({ onBack }) => {
   const digestKo = (digestSizeBytes(digest) / 1024).toFixed(1).replace('.', ',');
 
   return (
-    <div className="screen-ambient" style={container}>
+    <div className={screenClass} style={container}>
       <div style={scroll}>
 
         <div style={headerRow}>
