@@ -475,6 +475,29 @@ finishImport(result, text, file.name);
 reader.readAsText(file);
 };
 
+// Ce que contient chaque catégorie, en valeurs actuelles plutôt qu'en
+// description générique : on voit son programme et son temps de repos sans
+// avoir à ouvrir la catégorie.
+const formatRest = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+const accentLabel = [...ACCENT_PRESETS, ...GYM_PRESETS].find((a) => a.id === accentTheme)?.label
+?? (accentTheme === 'custom' ? 'perso' : accentTheme);
+const CATEGORY_SUMMARY: Record<CategoryId, string> = {
+seance: [
+allPrograms.find((pr) => pr.id === activeProgramId)?.name,
+`repos ${formatRest(defaultRestSeconds)}`,
+weightUnit === 'kg' ? 'kilos' : 'livres',
+].filter(Boolean).join(' · '),
+apparence: [
+THEME_MODES.find((m) => m.id === themeMode)?.label,
+`accent ${String(accentLabel).toLowerCase()}`,
+`style ${uiStyle}`,
+].filter(Boolean).join(' · '),
+objectifs: `${weeklySessionGoal} séances par semaine · ${caloriesPerHour} kcal/h`,
+donnees: syncStatus && syncStatus !== 'idle'
+? SYNC_STATUS_META[syncStatus].label
+: 'Export, import, sauvegarde, quiz de démarrage.',
+};
+
 // Petit composant de tête de catégorie, réutilisé pour chacune des 4 classes.
 const CategoryHeader: React.FC<{ id: CategoryId }> = ({ id }) => {
 const meta = CATEGORY_META[id];
@@ -484,7 +507,7 @@ return (
 <meta.Icon size={18} />
 <div style={{ flex: 1, textAlign: 'left' }}>
 <p style={categoryHeaderLabel}>{meta.label}</p>
-<p style={categoryHeaderDesc}>{meta.desc}</p>
+<p style={categoryHeaderDesc}>{CATEGORY_SUMMARY[id] || meta.desc}</p>
 </div>
 <span style={{ color: 'var(--text-dim)', fontSize: 12, transform: collapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.15s' }}>▾</span>
 </button>
@@ -524,6 +547,57 @@ background: !collapsedCategories[id] ? 'var(--bg-elevated)' : 'transparent',
 </div>
 </div>
 
+{/* Recherche — filtre les 4 catégories ci-dessous par mot-clé. */}
+<div style={settingsSearchWrap}>
+<IconSearch size={14} color="var(--text-dim)" />
+<input
+value={settingsQuery}
+onChange={(e) => setSettingsQuery(e.target.value)}
+placeholder="Rechercher un réglage (ex: repos, couleur, export...)"
+style={settingsSearchInput}
+/>
+{settingsQuery !== '' && (
+<button onClick={() => setSettingsQuery('')} style={settingsSearchClear}><IconClose size={14} /></button>
+)}
+</div>
+
+{/* Onglets rapides (téléphone / écran vertical uniquement) — une
+seule catégorie affichée à la fois, pas besoin de scroller pour
+la trouver. Masqués pendant une recherche (tout reste visible). */}
+{!isLandscape && normalizedQuery === '' && (
+<div style={portraitTabsRow} role="tablist">
+{CATEGORY_ORDER.map((id) => (
+<button
+key={id}
+onClick={() => setActiveTab(id)}
+role="tab"
+aria-selected={activeTab === id}
+style={{
+...portraitTabBtn,
+background: activeTab === id ? 'var(--bg-base)' : 'transparent',
+color: activeTab === id ? 'var(--text-primary)' : 'var(--text-dim)',
+boxShadow: activeTab === id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
+}}
+>
+{React.createElement(CATEGORY_META[id].Icon, { size: 15 })}
+<span style={{ fontSize: 10, fontWeight: 700 }}>{CATEGORY_META[id].label}</span>
+</button>
+))}
+</div>
+)}
+
+{normalizedQuery !== '' && visibleCategoryCount === 0 && (
+<p style={{ color: 'var(--text-dim)', fontSize: 12, textAlign: 'center', padding: '24px 0' }}>
+Aucune catégorie ne correspond à "{settingsQuery}".
+</p>
+)}
+
+{/* ═══ Catégorie : Séance (programme, repos, minuteur, muscles) ═══ */}
+{shouldShowCategory('seance') && (
+<div style={categoryWrapper} ref={(el) => { categoryRefs.current.seance = el; }}>
+<CategoryHeader id="seance" />
+{isBodyVisible('seance') && (
+<div style={categoryBody}>
 {/* Unité de poids */}
 <p style={subLabel}>UNITÉ DE POIDS</p>
 <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
@@ -566,54 +640,6 @@ color: weightUnitToggleStyle === opt.id ? '#fff' : 'var(--text-muted)',
 ))}
 </div>
 
-{/* Recherche — filtre les 4 catégories ci-dessous par mot-clé. */}
-<div style={settingsSearchWrap}>
-<IconSearch size={14} color="var(--text-dim)" />
-<input
-value={settingsQuery}
-onChange={(e) => setSettingsQuery(e.target.value)}
-placeholder="Rechercher un réglage (ex: repos, couleur, export...)"
-style={settingsSearchInput}
-/>
-{settingsQuery !== '' && (
-<button onClick={() => setSettingsQuery('')} style={settingsSearchClear}><IconClose size={14} /></button>
-)}
-</div>
-
-{/* Onglets rapides (téléphone / écran vertical uniquement) — une
-seule catégorie affichée à la fois, pas besoin de scroller pour
-la trouver. Masqués pendant une recherche (tout reste visible). */}
-{!isLandscape && normalizedQuery === '' && (
-<div style={portraitTabsRow}>
-{CATEGORY_ORDER.map((id) => (
-<button
-key={id}
-onClick={() => setActiveTab(id)}
-style={{
-...portraitTabBtn,
-background: activeTab === id ? 'var(--brand-1)' : 'var(--bg-elevated)',
-color: activeTab === id ? '#fff' : 'var(--text-muted)',
-}}
->
-{React.createElement(CATEGORY_META[id].Icon, { size: 15 })}
-<span style={{ fontSize: 10, fontWeight: 700 }}>{CATEGORY_META[id].label}</span>
-</button>
-))}
-</div>
-)}
-
-{normalizedQuery !== '' && visibleCategoryCount === 0 && (
-<p style={{ color: 'var(--text-dim)', fontSize: 12, textAlign: 'center', padding: '24px 0' }}>
-Aucune catégorie ne correspond à "{settingsQuery}".
-</p>
-)}
-
-{/* ═══ Catégorie : Séance (programme, repos, minuteur, muscles) ═══ */}
-{shouldShowCategory('seance') && (
-<div style={categoryWrapper} ref={(el) => { categoryRefs.current.seance = el; }}>
-<CategoryHeader id="seance" />
-{isBodyVisible('seance') && (
-<div style={categoryBody}>
 {/* Programme actif */}
 <p style={subLabel}>PROGRAMME D'ENTRAÎNEMENT</p>
 <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 12, lineHeight: '15px' }}>
@@ -1716,11 +1742,13 @@ padding: '10px 4px', borderRadius: 12, cursor: 'pointer',
 // une seule catégorie à la fois (façon barre d'onglets), au lieu de tout
 // empiler et devoir scroller pour retrouver une section.
 const portraitTabsRow: React.CSSProperties = {
-display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto',
+display: 'flex', gap: 3, marginBottom: 16, padding: 3,
+background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 14,
 };
 const portraitTabBtn: React.CSSProperties = {
 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-padding: '9px 10px', borderRadius: 12, cursor: 'pointer', flex: 1, minWidth: 64,
+padding: '9px 6px', borderRadius: 11, cursor: 'pointer', flex: 1, minWidth: 0,
+transition: 'background 0.15s ease, color 0.15s ease',
 };
 const headerRow: React.CSSProperties = {
 display: 'flex', alignItems: 'center', gap: 14,
@@ -1748,7 +1776,9 @@ background: 'var(--bg-higher)', border: '1px solid var(--border-strong)',
 color: 'var(--text-dim)', fontSize: 11, cursor: 'pointer',
 display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
-const subLabel: React.CSSProperties = { color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 12 };
+// Les titres de section sont la seule structure d'une page aussi longue :
+// assez lisibles pour être balayés du pouce, sans devenir des titres criards.
+const subLabel: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: 11.5, fontWeight: 700, letterSpacing: 1.1, marginBottom: 12 };
 // Bandeau explicatif affiché en haut de la catégorie Apparence quand le
 // mode simplifié est actif (voir Réglages avancés ci-dessus).
 const simplicityBanner: React.CSSProperties = {
