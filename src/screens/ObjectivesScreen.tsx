@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
-import { getMuscleGroupsStatus, getMuscleRecoveryStatus, getRecoveryRegionStatus, getMaxWeightEver, ALL_EXERCISES, getBodyIntensityFromHistory } from '../utils/training';
+import { getMuscleGroupsStatus, getMuscleRecoveryStatus, getRecoveryRegionStatus, getMaxWeightEver, getAllExercises, getBodyIntensityFromHistory } from '../utils/training';
 import type { BodyRegionKey } from '../utils/training';
 import { BodyDiagram } from '../components/BodyDiagram';
 import { EmptyState } from '../components/EmptyState';
@@ -56,7 +56,7 @@ const screenClass = useScreenClass();
   }
   const hasRecoveryRegions = Object.keys(recoveryRegionStatus).length > 0;
 
-  const records = ALL_EXERCISES
+  const records = getAllExercises(history)
     .map((ex) => ({ ...ex, max: getMaxWeightEver(history, ex.id) }))
     .filter((r) => r.max > 0)
     .sort((a, b) => b.max - a.max)

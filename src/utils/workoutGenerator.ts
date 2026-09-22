@@ -182,8 +182,14 @@ const eligibleFor = (group: string, prefs: GeneratorPrefs): CatalogExercise[] =>
     prefs.equipment.includes(ex.equipment) ||
     ex.equipment === 'Poids du corps';
 
+  // Mouvements trop techniques ou traumatisants pour quelqu'un qui n'a jamais
+  // fait de muscu, quel que soit le niveau inscrit dans le catalogue.
+  const tooHardForBeginner = (ex: CatalogExercise) =>
+    prefs.level === 'Débutant' &&
+    /dips\s*\(?\s*version|dips aux barres|buste penché|\blest|pull through|larry scott|fente bulgare|soulevé de terre|squat (bulgare|sauté)|pistol/i.test(`${ex.name} ${ex.id}`);
+
   const base = EXERCISE_CATALOG.filter((ex) =>
-    ex.group === group && !prefs.excludedIds.includes(ex.id) && equipOk(ex)
+    ex.group === group && !prefs.excludedIds.includes(ex.id) && equipOk(ex) && !tooHardForBeginner(ex)
   );
 
   for (let rank = LEVEL_RANK[prefs.level]; rank <= 3; rank++) {

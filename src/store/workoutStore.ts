@@ -77,7 +77,7 @@ export type BeepTone = 'doux' | 'classique' | 'urgent' | 'melodique' | 'cloche';
  *  contexte et les encouragements. Au bout de trois séances la plupart des gens
  *  passent en 'court' — d'où le réglage. */
 export type VoiceVerbosity = 'court' | 'complet';
-export type UiStyle = 'nouveau' | 'classique';
+export type UiStyle = 'nouveau' | 'classique' | 'sport';
 let audioCtx: AudioContext | null = null;
 
 interface BeepNote { freq: number; delay: number; dur: number; }
@@ -314,9 +314,10 @@ activeGymId: string;
 // Affichage de l'aide au chargement des disques : c'est une préférence
 // d'affichage, elle vaut pour toutes les salles.
 plateHelperEnabled: boolean;
-// Style de l'accueil et de l'écran de séance : « nouveau » (surfaces pleines,
-// chiffres condensés, saisie au pouce) ou « classique » (verre et halo, le
-// design d'avant septembre 2026). Réglages → Personnalisation.
+// Style de l'interface : « nouveau » (surfaces pleines, chiffres condensés,
+// saisie au pouce), « classique » (verre et halo, le design d'avant septembre
+// 2026) ou « sport » (noir, dense en chiffres, façon montre de sport).
+// Réglages → Apparence.
 uiStyle: UiStyle;
 // Ancien réglage unique, conservé le temps de la migration des sauvegardes.
 gymProfile: GymProfile;
@@ -378,6 +379,7 @@ setExerciseNameOverride: (exerciseId: string, name: string | null) => void;
 toggleSupersetRest: (groupId: string, disabled: boolean) => void;
 addSet: (exerciseId: string) => void;
 finishSession: () => void;
+  deleteHistoryEntry: (id: string) => void;
 abandonSession: () => void;
 // Pause de la SÉANCE (à ne pas confondre avec pauseTimer, qui ne gèle que le
 // minuteur de repos). Quand on reprend, on décale session.startTime de la
@@ -882,6 +884,15 @@ session: { ...session, startTime: session.startTime + paused },
 sessionPausedAt: null,
 });
 if (timer.isPaused) get().resumeTimer();
+},
+
+deleteHistoryEntry: (id) => {
+  const { history, totalSessionsCompleted } = get();
+  if (!history.some((h) => h.id === id)) return;
+  set({
+    history: history.filter((h) => h.id !== id),
+    totalSessionsCompleted: Math.max(0, totalSessionsCompleted - 1),
+  });
 },
 
 abandonSession: () => {

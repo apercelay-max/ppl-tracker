@@ -1,5 +1,5 @@
 import { WorkoutDay } from './types';
-import { WORKOUTS } from './workouts';
+import { WORKOUTS, registerBuiltInWorkouts } from './workouts';
 import { PPL_DEBUTANT_WORKOUTS, FULL_BODY_WORKOUTS, FORCE_5X5_WORKOUTS, WRIST_CONSOLIDATION_WORKOUTS } from './extraPrograms';
 import { CATALOG_PROGRAMS } from './catalogPrograms';
 import { APP_LIBRARY_PROGRAMS } from './appLibraryPrograms';
@@ -140,3 +140,28 @@ export const getAllPrograms = (customPrograms: Program[] = []): Program[] => [
 
 export const getProgram = (id: string, customPrograms: Program[] = []): Program =>
   getAllPrograms(customPrograms).find((p) => p.id === id) ?? STRICT_V10_PROGRAM;
+
+/**
+ * Accent et libellé (PUSH/PULL/LEGS…) d'une séance, quel que soit le
+ * programme d'où elle vient (bibliothèque, catalogue, généré, importé).
+ * Sans ça, l'Historique/le Dashboard/l'intro de séance affichaient l'id brut
+ * ("ppl6-legs-b") pour tout programme autre que Strict, qui seul avait ses
+ * séances codées en dur dans ces écrans.
+ */
+export const getDayMeta = (
+  dayId: string,
+  customPrograms: Program[] = []
+): { accent: string; typeLabel: string } => {
+  for (const program of getAllPrograms(customPrograms)) {
+    if (program.workouts.some((w) => w.id === dayId)) {
+      return {
+        accent: program.dayAccents[dayId] ?? '#7a7a90',
+        typeLabel: program.dayTypeLabels[dayId] ?? '',
+      };
+    }
+  }
+  return { accent: '#7a7a90', typeLabel: '' };
+};
+
+// Les séances des programmes intégrés doivent être retrouvables par getWorkout().
+registerBuiltInWorkouts(BUILT_IN_PROGRAMS.flatMap((p) => p.workouts));

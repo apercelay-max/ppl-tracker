@@ -3,7 +3,7 @@ import { DataIcon } from '../components/DataIcon';
 import { IconArrowLeft, IconTrophy, IconUser } from '../components/Icons';
 import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore } from '../store/workoutStore';
-import { ALL_EXERCISES, getMaxWeightEver, computeTonnage, bucketByWeek } from '../utils/training';
+import { getAllExercises, getMaxWeightEver, computeTonnage, bucketByWeek } from '../utils/training';
 import { BADGE_CATEGORIES, computeBadgeProgress } from '../data/badges';
 import { useScreenClass } from '../hooks/useScreenClass';
 
@@ -29,7 +29,7 @@ const screenClass = useScreenClass();
   const totalHours = Math.floor(totalMinutes / 60);
   const remMinutes = totalMinutes % 60;
 
-  const records = ALL_EXERCISES
+  const records = getAllExercises(history)
     .map((ex) => ({ ...ex, max: getMaxWeightEver(history, ex.id) }))
     .filter((r) => r.max > 0)
     .sort((a, b) => b.max - a.max);

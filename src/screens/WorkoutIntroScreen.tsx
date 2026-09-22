@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { IconClose, IconVolume, IconVolumeOff } from '../components/Icons';
 import { isVoiceSupported, primeVoice, speak, stopVoice } from '../utils/voiceCoach';
 import { getWorkout } from '../data/workouts';
+import { getDayMeta } from '../data/programs';
 import { Exercise, SetEntry } from '../data/types';
 import { getMuscleRecoveryStatus } from '../utils/training';
 import { useWorkoutStore } from '../store/workoutStore';
@@ -20,29 +21,6 @@ onBack: () => void;
 onStart: (adaptation?: SessionAdaptation | null, gymId?: string, passageGym?: GymProfile | null) => void;
 }
 
-// Couleurs/labels d'accent par séance, tous programmes confondus (Strict V11
-// + programmes additionnels de extraPrograms.ts). Un id absent ici retombe
-// simplement sur un gris neutre (voir accent/typeLabel plus bas) — jamais de
-// crash, mais on préfère les avoir tous pour un rendu cohérent partout.
-const DAY_ACCENT: Record<string, string> = {
-'pull-a': '#7c6fcd', 'push-a': '#e03030', 'legs-a': '#e8a020',
-'pull-b': '#6a5fc0', 'push-b': '#cc2828', 'legs-b': '#d09018',
-'pplb-pull': '#7c6fcd', 'pplb-push': '#e03030', 'pplb-legs': '#e8a020',
-'fb-a': '#2563eb', 'fb-b': '#16a34a', 'fb-c': '#ea580c',
-'f5x5-a': '#e03030', 'f5x5-b': '#7c6fcd',
-'poignet-lundi': '#e8a020', 'poignet-mardi': '#2563eb', 'poignet-mercredi': '#16a34a',
-'poignet-jeudi': '#2563eb', 'poignet-vendredi': '#7c6fcd',
-};
-const DAY_TYPE_LABEL: Record<string, string> = {
-'pull-a': 'PULL', 'push-a': 'PUSH', 'legs-a': 'LEGS',
-'pull-b': 'PULL', 'push-b': 'PUSH', 'legs-b': 'LEGS',
-'pplb-pull': 'PULL', 'pplb-push': 'PUSH', 'pplb-legs': 'LEGS',
-'fb-a': 'FULL A', 'fb-b': 'FULL B', 'fb-c': 'FULL C',
-'f5x5-a': 'FORCE A', 'f5x5-b': 'FORCE B',
-'poignet-lundi': 'JAMBES', 'poignet-mardi': 'VÉLO', 'poignet-mercredi': 'JAMBES+GAINAGE',
-'poignet-jeudi': 'VÉLO', 'poignet-vendredi': 'FULL BODY',
-};
-
 const CLOSE_DRAG_THRESHOLD = 90; // px glissés vers le bas pour fermer la fiche
 const SHEET_TRANSITION = 'transform 260ms cubic-bezier(0.32, 0.72, 0, 1)';
 
@@ -60,6 +38,7 @@ Array.from({ length: count }, () => ({ weight: '', reps: '', completed: false })
 export const WorkoutIntroScreen: React.FC<WorkoutIntroScreenProps> = ({ dayId, onBack, onStart }) => {
 const screenClass = useScreenClass();
 const history = useWorkoutStore((s) => s.history);
+const customPrograms = useWorkoutStore((s) => s.customPrograms);
 const currentWeek = useWorkoutStore((s) => s.currentWeek);
 const uiStyle = useWorkoutStore((s) => s.uiStyle);
 const PreviewCard = uiStyle === 'classique' ? ExerciseCardClassic : ExerciseCard;
@@ -188,8 +167,7 @@ setPreviewEntries((arr) => [...arr, { weight: '', reps: '', completed: false }])
 
 if (!workout) return null;
 
-const accent = DAY_ACCENT[dayId] ?? '#7a7a90';
-const typeLabel = DAY_TYPE_LABEL[dayId] ?? '';
+const { accent, typeLabel } = getDayMeta(dayId, customPrograms);
 const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
 
 // Groupes musculaires du programme du jour encore en récupération (voir
@@ -316,7 +294,7 @@ onTouchStart={onHandleTouchStart}
 <button onClick={closeSheet} style={closeBtn}><IconClose size={14} /></button>
 </div>
 
-<div className={uiStyle === 'classique' ? undefined : 'sv2-tokens'}>
+<div className={uiStyle === 'classique' ? undefined : uiStyle === 'sport' ? 'sv2-tokens ui-sport' : 'sv2-tokens'}>
 <PreviewCard
 exercise={detailExercise}
 setEntries={previewEntries}

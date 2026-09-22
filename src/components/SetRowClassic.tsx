@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { IconCheck } from './Icons';
 import { SetEntry } from '../data/types';
 import { useWorkoutStore, useActiveGym } from '../store/workoutStore';
-import { formatWeightForDisplay, parseWeightInputToKg, weightUnitLabel } from '../utils/weight';
+import { formatWeightForDisplay, parseWeightInputToKg, weightUnitLabel, cleanWeightInput, cleanRepsInput, isValidSetInput } from '../utils/weight';
 import { solvePlates, nearestAchievable, describePlates, formatKg } from '../utils/plates';
 import type { CoachTip } from '../utils/coach';
 
@@ -56,7 +56,7 @@ export const SetRowClassic: React.FC<SetRowProps> = ({
 }) => {
   const weightUnit = useWorkoutStore((s) => s.weightUnit);
   const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
-  const [weight, setWeight] = useState(formatWeightForDisplay(entry.weight || defaultWeight || '', weightUnit));
+  const [weight, setWeight] = useState(formatWeightForDisplay(entry.weight || defaultWeight || (lastTime && lastTime.completed && lastTime.reps !== '—' ? lastTime.weight : '') || '', weightUnit));
   const [reps, setReps] = useState(entry.reps || '');
   // Ne déclenche onWeightStart qu'une fois par série active (reset dès
   // qu'on quitte la série active, ex. après validation ou passage suivant).
@@ -68,7 +68,7 @@ export const SetRowClassic: React.FC<SetRowProps> = ({
 
   useEffect(() => {
     if (!entry.completed) {
-      setWeight(formatWeightForDisplay(entry.weight || defaultWeight || '', weightUnit));
+      setWeight(formatWeightForDisplay(entry.weight || defaultWeight || (lastTime && lastTime.completed && lastTime.reps !== '—' ? lastTime.weight : '') || '', weightUnit));
       setReps(entry.reps || '');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,8 +101,9 @@ export const SetRowClassic: React.FC<SetRowProps> = ({
   };
 
   const handleWeightChange = (value: string) => {
-    setWeight(value);
-    if (value.trim() !== '') maybeFireWeightStart();
+    const cleaned = cleanWeightInput(value);
+    setWeight(cleaned);
+    if (cleaned.trim() !== '') maybeFireWeightStart();
   };
 
   // Boutons − / + à côté du champ poids : évite d'ouvrir le clavier pour un
@@ -117,7 +118,8 @@ export const SetRowClassic: React.FC<SetRowProps> = ({
     maybeFireWeightStart();
   };
 
-  const handleValidate = () => { if (!reps) return; onComplete({ weight: parseWeightInputToKg(weight, weightUnit), reps, completed: true }); };
+  const setIsValid = isValidSetInput(weight, reps, weightUnit);
+  const handleValidate = () => { if (!setIsValid) return; onComplete({ weight: parseWeightInputToKg(weight, weightUnit), reps, completed: true }); };
 
   // ── Validation « mains libres » (secousse du téléphone) ────────────────
   // Le champ reps peut être vide : dans ce cas on prend le bas de la
@@ -140,7 +142,7 @@ export const SetRowClassic: React.FC<SetRowProps> = ({
     if (!isCurrent || entry.completed) return;
     const range = parseTargetRange(targetReps);
     const effectiveReps = reps || (range ? String(range[0]) : '');
-    if (!effectiveReps) return;
+    if (!isValidSetInput(weight, effectiveReps, weightUnit)) return;
     onComplete({ weight: parseWeightInputToKg(weight, weightUnit), reps: effectiveReps, completed: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [validateSignal]);
@@ -302,7 +304,7 @@ export const SetRowClassic: React.FC<SetRowProps> = ({
           title={`+ ${weightStep} ${weightUnitLabel(weightUnit)}`}>+</button>
         <div className="input-field" style={inputWrapper}>
           <input style={inputField} type="text" inputMode="numeric" value={reps}
-            onChange={(e) => setReps(e.target.value)} placeholder="Reps" onFocus={(e) => e.target.select()}
+            onChange={(e) => setReps(cleanRepsInput(e.target.value))} placeholder="Reps" onFocus={(e) => e.target.select()}
             onKeyDown={(e) => e.key === 'Enter' && handleValidate()} />
           <span style={inputUnit}>{targetReps}</span>
         </div>
@@ -314,7 +316,7 @@ export const SetRowClassic: React.FC<SetRowProps> = ({
           backgroundSize: isLivePR ? '300% 300%' : undefined,
           cursor: reps ? 'pointer' : 'not-allowed',
           boxShadow: isLivePR ? undefined : (reps ? '0 4px 14px rgba(var(--brand-1-rgb),0.35)' : 'none'),
-        }} onClick={handleValidate} disabled={!reps} title={isLivePR ? 'Nouveau record en vue !' : undefined}><IconCheck size={14} /></button>
+        }} onClick={handleValidate} disabled={!setIsValid} title={isLivePR ? 'Nouveau record en vue !' : undefined}><IconCheck size={14} /></button>
       </div>
       {coachHint && (
         <p style={{ ...coachHintText, color: COACH_TONE_COLOR[coachHint.tone] }}>

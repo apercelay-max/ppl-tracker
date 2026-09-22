@@ -23,17 +23,18 @@
 // Chaque constante porte sa source : si un jour tu changes un chiffre,
 // tu sais ce que tu contredis.
 
+import { isPerformedSet } from './weight';
 import type { HistoryEntry, SetEntry, WorkoutDay } from '../data/types';
 import { computeTonnage, parseRepRange, detectPlateaus, getEffectiveWeeklySets } from './training';
 
 export const COACH_LIMITS = {
   /** Séries effectives / muscle / semaine — sous ce seuil, c'est trop peu pour progresser. (NSCA, Lloyd 2014) */
   volumeMin: 4,
-  /** Zone optimale basse / haute pour un ado. (NSCA, Lloyd 2014) */
+  /** Zone optimale basse / haute. (NSCA, Lloyd 2014) */
   volumeGoodMin: 8,
   volumeGoodMax: 12,
   /** Au-delà : sur-volume, risque de tendinopathie de traction. (NSCA, Lloyd 2014) */
-  volumeMax: 14,
+  volumeMax: 20,
   /** Baisse de tonnage qui compte comme une vraie chute de performance. */
   perfDropPct: 10,
   /** Ajustement de charge quand on est ≥2 reps sous la fourchette. (Helms) */
@@ -127,7 +128,7 @@ export const getSetCoaching = (
   // ── Sous la fourchette de ≥2 reps → on allège tout de suite (Helms) ──
   if (reps <= range.min - COACH_LIMITS.repsGapToAct) {
     if (!hasWeight) {
-      return { text: `${head} pour ${range.min} minimum. Réduis l'amplitude de charge ou repose-toi plus longtemps.`, tone: 'down' };
+      return { text: `${head} pour ${range.min} minimum. Réduis la charge ou repose-toi plus longtemps.`, tone: 'down' };
     }
     let target = roundTo(weight * (1 - COACH_LIMITS.loadDownPct / 100), incrementKg, 'down');
     if (target >= weight) target = weight - incrementKg;
@@ -185,7 +186,7 @@ const agoLabel = (ts: number): string => {
 };
 
 const countCompletedSets = (entry: HistoryEntry): number =>
-  Object.values(entry.exerciseProgress).reduce((sum, sets) => sum + sets.filter((s) => s.completed).length, 0);
+  Object.values(entry.exerciseProgress).reduce((sum, sets) => sum + sets.filter(isPerformedSet).length, 0);
 
 const tonnageOf = (entry: HistoryEntry): number => entry.tonnage ?? computeTonnage(entry.exerciseProgress);
 
@@ -254,11 +255,13 @@ export const getCoachBrief = (
 
   // 1. Sur-volume : le seul cas où continuer comme ça abîme quelque chose.
   const volume = getEffectiveWeeklySets(history, 1);
-  const overloaded = volume.find((v) => v.perWeek > COACH_LIMITS.volumeMax);
+  // Séries DIRECTES uniquement : les muscles synergistes (épaules sur un développé)
+  // ne sont pas du volume dédié, et le repère est le même que sur le Dashboard (10–20).
+  const overloaded = volume.find((v) => v.directPerWeek > COACH_LIMITS.volumeMax);
   if (overloaded) {
     return {
       recap,
-      focus: `Trop de volume sur ${overloaded.group.toLowerCase()} : ${overloaded.perWeek} séries cette semaine, ${COACH_LIMITS.volumeMax} est le plafond à ton âge.`,
+      focus: `Trop de volume sur ${overloaded.group.toLowerCase()} : ${overloaded.directPerWeek} séries directes cette semaine, au-delà de ${COACH_LIMITS.volumeMax} la récupération ne suit plus.`,
       action: `Coupe une série d'isolation sur ce groupe aujourd'hui.`,
       tone: 'warn',
     };

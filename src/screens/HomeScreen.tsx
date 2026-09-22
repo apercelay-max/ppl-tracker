@@ -1,3 +1,4 @@
+import { isPerformedSet } from '../utils/weight';
 import React, { useEffect, useState } from 'react';
 import { DataIcon } from '../components/DataIcon';
 import { MESOCYCLE_WEEKS, getProgressionWeek, getWorkout } from '../data/workouts';
@@ -7,7 +8,7 @@ import type { HomeSectionKey } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
 import { HOME_SECTION_META } from '../data/homeSectionMeta';
 import {
-  getMuscleGroupsStatus, getMuscleRecoverySummary, bucketByWeek, computeLoadStatus,
+  getMuscleGroupsStatus, getMuscleRecoverySummary, getMuscleRecoveryStatus, getRecoveryPct, bucketByWeek, computeLoadStatus,
   computeTonnage, getMostRecentPersonalRecord, getFeaturedExerciseProgress,
   detectPlateaus as getPlateaus,
 } from '../utils/training';
@@ -121,6 +122,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const addCardioEntry = useWorkoutStore((s) => s.addCardioEntry);
   const deleteCardioEntry = useWorkoutStore((s) => s.deleteCardioEntry);
   const weeklySessionGoal = useWorkoutStore((s) => s.weeklySessionGoal);
+  // Style « Sport pro » (Réglages → Apparence) : même accueil, rhabillé, avec
+  // en plus le bloc de chiffres de la semaine (voir sportSummary plus bas).
+  const isSport = useWorkoutStore((s) => s.uiStyle) === 'sport';
   // ── Binôme ──
   const { state: binome } = useBinome();
   const [nudging, setNudging] = useState(false);
@@ -658,7 +662,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
       </div>
       <div className="home-hero-foot">
         <button className="home-start" style={homeSectionColors.nextSession ? { background: nextColor } : undefined} onClick={() => onSelectDay(nextWorkout.id)}>
-          {playIcon}Commencer la séance
+          {playIcon}{isSport ? 'GO' : 'Commencer la séance'}
         </button>
         <span className="home-hero-last">{lastSessionLine}</span>
       </div>
@@ -669,7 +673,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const lastSessionSection = homeSections.lastSession && lastEntry && (() => {
     const lastWorkoutMeta = getWorkout(lastEntry.dayId);
     const tonnage = lastEntry.tonnage ?? computeTonnage(lastEntry.exerciseProgress);
-    const setsCount = Object.values(lastEntry.exerciseProgress).reduce((sum, sets) => sum + sets.filter((s) => s.completed).length, 0);
+    const setsCount = Object.values(lastEntry.exerciseProgress).reduce((sum, sets) => sum + sets.filter(isPerformedSet).length, 0);
     const durationMin = Math.round(lastEntry.durationMs / 60000);
     const accent = activeProgram.dayAccents[lastEntry.dayId] ?? FALLBACK_ACCENT;
     return (
@@ -845,6 +849,90 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     </div>
   );
 
+  // ── Style « Sport pro » : les chiffres de la semaine d'un coup d'œil ─────
+  // Uniquement des valeurs que l'app calcule déjà (tonnage par semaine,
+  // récupération par muscle), rien d'estimé en plus. Fenêtres glissantes de
+  // 7 jours, comme l'objectif hebdo.
+  const sportSummary = (() => {
+    if (history.length === 0) return null;
+    const weeks = bucketByWeek(history, 8); // plus ancien → plus récent
+    const thisW = weeks[weeks.length - 1];
+    const prevW = weeks[weeks.length - 2];
+    const sessionsDelta = thisW.sessionCount - prevW.sessionCount;
+    const tonnagePct = prevW.tonnage > 0 ? Math.round(((thisW.tonnage - prevW.tonnage) / prevW.tonnage) * 100) : null;
+    const maxTonnage = Math.max(1, ...weeks.map((w) => w.tonnage));
+    const formatT = (kg: number) => (kg >= 1000 ? (kg / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) : String(Math.round(kg)));
+    const tUnit = thisW.tonnage >= 1000 ? 't' : 'kg';
+    // Durée moyenne des 4 dernières semaines, comparée aux 4 d'avant.
+    const DAY = 86400000;
+    const now = Date.now();
+    const avgMin = (from: number, to: number) => {
+      const xs = history.filter((h) => now - h.date >= from * DAY && now - h.date < to * DAY && h.durationMs > 0);
+      return xs.length ? Math.round(xs.reduce((a, h) => a + h.durationMs, 0) / xs.length / 60000) : null;
+    };
+    const avgNow = avgMin(0, 28);
+    const avgBefore = avgMin(28, 56);
+    const recovery = getMuscleRecoveryStatus(history)
+      .filter((m) => m.hoursSince !== null)
+      // Les groupes sont stockés en capitales (« DOS — FINITION ») : on les
+      // remet en casse de phrase pour une liste qui se lit.
+      .map((m) => ({ group: m.group.charAt(0) + m.group.slice(1).toLowerCase(), pct: getRecoveryPct(m) }))
+      .sort((a, b) => a.pct - b.pct)
+      .slice(0, 4);
+    const pctColor = (p: number) => (p >= 0.8 ? 'var(--h-good)' : p >= 0.5 ? 'var(--h-warn)' : 'var(--h-bad)');
+    const delta = (v: number | null, suffix: string, betterWhenUp = true) => {
+      if (v === null || v === 0) return <span className="sp-delta">= S-1</span>;
+      const good = betterWhenUp ? v > 0 : v < 0;
+      return <span className={`sp-delta ${good ? 'up' : 'down'}`}>{v > 0 ? '▲' : '▼'} {Math.abs(v)}{suffix}</span>;
+    };
+    return (
+      <section className="sp-summary" aria-label="Chiffres de la semaine" style={{ marginBottom: 16 }}>
+        <div className="sp-stats">
+          <div>
+            <span className="sp-lbl">Semaine</span>
+            <span><span className="sp-num">{thisW.sessionCount}</span><span className="sp-unit">/{weeklySessionGoal}</span></span>
+            {delta(sessionsDelta, ' vs S-1')}
+          </div>
+          <div>
+            <span className="sp-lbl">Tonnage</span>
+            <span><span className="sp-num">{formatT(thisW.tonnage)}</span><span className="sp-unit">{tUnit}</span></span>
+            {delta(tonnagePct, ' %')}
+          </div>
+          <div>
+            <span className="sp-lbl">Durée moy.</span>
+            <span><span className="sp-num">{avgNow ?? '—'}</span>{avgNow !== null && <span className="sp-unit">min</span>}</span>
+            {avgNow !== null && avgBefore !== null ? delta(avgNow - avgBefore, ' min', false) : <span className="sp-delta">4 sem.</span>}
+          </div>
+        </div>
+        <div className="sp-band">
+          <div className="sp-band-head"><span className="sp-lbl">Charge · 8 semaines</span><span className="sp-delta">{formatT(thisW.tonnage)} {tUnit}</span></div>
+          <div className="sp-bars" role="img" aria-label={`Tonnage des 8 dernières semaines, de ${formatT(weeks[0].tonnage)} à ${formatT(thisW.tonnage)}`}>
+            {weeks.map((w, i) => (
+              <div key={i} className={i === weeks.length - 1 ? 'on' : undefined} style={{ height: `${Math.max(3, Math.round((w.tonnage / maxTonnage) * 100))}%` }} title={`${w.label} : ${Math.round(w.tonnage)} kg`} />
+            ))}
+          </div>
+          <div className="sp-axis" aria-hidden="true">
+            {weeks.map((w, i) => <span key={i} className={i === weeks.length - 1 ? 'on' : undefined}>{i === weeks.length - 1 ? 'S' : `S-${weeks.length - 1 - i}`}</span>)}
+          </div>
+        </div>
+        {recovery.length > 0 && (
+          <div className="sp-band">
+            <div className="sp-band-head"><span className="sp-lbl">Récupération</span><span className="sp-lbl">{recovery.length === 1 ? 'Groupe travaillé' : 'Les moins reposés'}</span></div>
+            <div className="sp-rows">
+              {recovery.map((m) => (
+                <div key={m.group} className="sp-row">
+                  <span>{m.group}</span>
+                  <div className="sp-track"><i style={{ width: `${Math.round(m.pct * 100)}%`, background: pctColor(m.pct) }} /></div>
+                  <span className="v">{Math.round(m.pct * 100)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+    );
+  })();
+
   const SECTION_MAP: Record<string, React.ReactNode> = {
     coach: coachSection,
     cycle: cycleSection,
@@ -906,7 +994,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   };
 
   return (
-    <div className="home-v2" style={container}>
+    <div className={isSport ? 'home-v2 ui-sport' : 'home-v2'} style={container}>
       <div style={{ ...scroll, maxWidth: wideLayout ? 1180 : 560, paddingBottom: navBarEnabled ? 112 : 80 }}>
 
         {/* Header */}
@@ -916,6 +1004,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
               <span className="home-eyebrow">{todayLabel}</span>
               <h1 className="home-title">PPL Tracker</h1>
               <p className="home-small" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeProgram.focusLabel}</p>
+              {isSport && history.length > 0 && (
+                <span className="sp-chip" style={{ marginTop: 4 }}>
+                  <i style={{ background: recoveryColor, boxShadow: `0 0 8px ${recoveryColor}` }} />Récup {Math.round(averagePct * 100)} %
+                </span>
+              )}
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               {homeEditMode ? (
@@ -971,12 +1064,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
           </div>
         </div>
 
+        {isSport && sportSummary}
+
         {(() => {
           // Récupération musculaire — même règle que les blocs promus : elle
           // reste consultable sous « Tout voir », et ne s'invite dans la partie
           // simple que quand un groupe n'est pas encore récupéré. Sans séance
           // dans l'historique elle n'a rien à calculer, donc rien à afficher.
-          const recoveryBlock = history.length > 0 && (sectionsExpanded || !!needsRecovery) && (
+          const recoveryBlock = !isSport && history.length > 0 && (sectionsExpanded || !!needsRecovery) && (
             <div key="recovery" className="glass-card home-card">
               <span className="home-eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconBattery size={13} />Récupération</span>
               <div className="home-big">

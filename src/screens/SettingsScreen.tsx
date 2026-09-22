@@ -1182,6 +1182,7 @@ boxShadow: themeMode === m.id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
 {([
 { id: 'nouveau', label: 'Nouveau', hint: 'Surfaces pleines, gros chiffres' },
 { id: 'classique', label: 'Classique', hint: 'Verre et halo de couleur' },
+{ id: 'sport', label: 'Sport pro', hint: 'Noir, dense en chiffres' },
 ] as const).map((opt) => (
 <button
 key={opt.id}
@@ -1673,9 +1674,8 @@ Objectif, niveau, matériel, blessures — et un nouveau programme construit pou
 <p style={{ ...subLabel, marginTop: 4 }}>COMPTE</p>
 {!isSupabaseConfigured ? (
 <p style={{ color: 'var(--text-dim)', fontSize: 11, lineHeight: '16px' }}>
-Pas encore configuré. Il manque les variables d'environnement Supabase côté Vercel
-(VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY) — à ajouter dans Project Settings → Environment
-Variables, avec les valeurs de Settings → API du projet Supabase, puis redéployer.
+La synchronisation entre appareils n'est pas disponible pour le moment. Tes données restent
+enregistrées sur cet appareil : pense à faire une sauvegarde depuis « Données ».
 </p>
 ) : authLoading ? (
 <p style={{ color: 'var(--text-dim)', fontSize: 12 }}>Vérification de la session...</p>

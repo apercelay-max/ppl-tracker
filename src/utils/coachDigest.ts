@@ -17,6 +17,7 @@
 // Aucun appel réseau ici, aucune dépendance au store : une fonction pure,
 // qu'on peut appeler dans un test avec un historique fabriqué.
 
+import { isPerformedSet } from './weight';
 import type { BodyWeightEntry, HistoryEntry, WorkoutDay } from '../data/types';
 import type { CoachNewProgram, CoachProgramView, CoachProposal } from './coachPatch';
 import type { TrainingProfile } from './onboardingQuiz';
@@ -273,7 +274,7 @@ const numericReps = (reps: string): number | null => {
 const tonnageOf = (entry: HistoryEntry): number => entry.tonnage ?? computeTonnage(entry.exerciseProgress);
 
 const countCompletedSets = (entry: HistoryEntry): number =>
-  Object.values(entry.exerciseProgress).reduce((sum, sets) => sum + sets.filter((s) => s.completed).length, 0);
+  Object.values(entry.exerciseProgress).reduce((sum, sets) => sum + sets.filter(isPerformedSet).length, 0);
 
 /**
  * Où se situe la dernière série faite par rapport à la fourchette visée.

@@ -671,6 +671,14 @@ const ALL_KNOWN_WORKOUTS: WorkoutDay[] = [
 // chargement de l'appli et à chaque import — permet à getWorkout() de les
 // retrouver sans dépendance circulaire vers le store.
 export const CUSTOM_WORKOUTS: WorkoutDay[] = [];
+// Séances des programmes intégrés de la bibliothèque et du catalogue
+// (programs.ts les enregistre au chargement, pour éviter un import circulaire).
+export const EXTRA_BUILT_IN_WORKOUTS: WorkoutDay[] = [];
+export const registerBuiltInWorkouts = (days: WorkoutDay[]) => {
+  for (const d of days) {
+    if (!EXTRA_BUILT_IN_WORKOUTS.some((w) => w.id === d.id)) EXTRA_BUILT_IN_WORKOUTS.push(d);
+  }
+};
 export const setCustomWorkouts = (days: WorkoutDay[]) => {
   CUSTOM_WORKOUTS.length = 0;
   CUSTOM_WORKOUTS.push(...days);
@@ -695,7 +703,9 @@ export const getSessionWorkoutOverride = (): WorkoutDay | null => SESSION_WORKOU
 
 /** Séance telle qu'elle est écrite dans le programme, sans adaptation. */
 export const getBaseWorkout = (id: string): WorkoutDay | undefined =>
-  ALL_KNOWN_WORKOUTS.find((w) => w.id === id) ?? CUSTOM_WORKOUTS.find((w) => w.id === id);
+  ALL_KNOWN_WORKOUTS.find((w) => w.id === id)
+  ?? EXTRA_BUILT_IN_WORKOUTS.find((w) => w.id === id)
+  ?? CUSTOM_WORKOUTS.find((w) => w.id === id);
 
 export const getWorkout = (id: string): WorkoutDay | undefined =>
   (SESSION_WORKOUT_OVERRIDE && SESSION_WORKOUT_OVERRIDE.id === id ? SESSION_WORKOUT_OVERRIDE : undefined)

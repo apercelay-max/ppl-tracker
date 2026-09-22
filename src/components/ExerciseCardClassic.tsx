@@ -78,11 +78,11 @@ export const ExerciseCardClassic: React.FC<ExerciseCardProps> = ({
   if (lastBestSet && currentBestSet) {
     const diffKg = currentBestSet.weight - lastBestSet.weight;
     if (Math.abs(diffKg) < 0.01) {
-      exerciseDeltaLabel = 'Meme charge que la derniere fois (' + lastBestSet.reps + ' reps)';
+      exerciseDeltaLabel = 'Même charge que la dernière fois (' + lastBestSet.reps + ' reps)';
     } else {
       const sign = diffKg > 0 ? '+' : '-';
       const diffDisplay = formatWeightForDisplay(Math.abs(diffKg).toFixed(2), weightUnit);
-      exerciseDeltaLabel = sign + diffDisplay + ' ' + weightUnitLabel(weightUnit) + ' vs derniere fois';
+      exerciseDeltaLabel = sign + diffDisplay + ' ' + weightUnitLabel(weightUnit) + ' vs dernière fois';
     }
   } else if (lastBestSet) {
     const lastDisplay = formatWeightForDisplay(String(lastBestSet.weight), weightUnit);

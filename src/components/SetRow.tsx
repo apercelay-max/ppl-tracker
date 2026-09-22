@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { IconCheck } from './Icons';
 import { SetEntry } from '../data/types';
 import { useWorkoutStore, useActiveGym } from '../store/workoutStore';
-import { formatWeightForDisplay, parseWeightInputToKg, weightUnitLabel } from '../utils/weight';
+import { formatWeightForDisplay, parseWeightInputToKg, weightUnitLabel, cleanWeightInput, cleanRepsInput, isValidSetInput } from '../utils/weight';
 import { solvePlates, nearestAchievable, describePlates, formatKg } from '../utils/plates';
 import type { CoachTip } from '../utils/coach';
 
@@ -54,7 +54,7 @@ export const SetRow: React.FC<SetRowProps> = ({
 }) => {
   const weightUnit = useWorkoutStore((s) => s.weightUnit);
   const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
-  const [weight, setWeight] = useState(formatWeightForDisplay(entry.weight || defaultWeight || '', weightUnit));
+  const [weight, setWeight] = useState(formatWeightForDisplay(entry.weight || defaultWeight || (lastTime && lastTime.completed && lastTime.reps !== '—' ? lastTime.weight : '') || '', weightUnit));
   const [reps, setReps] = useState(entry.reps || '');
   // Ne déclenche onWeightStart qu'une fois par série active (reset dès
   // qu'on quitte la série active, ex. après validation ou passage suivant).
@@ -66,7 +66,7 @@ export const SetRow: React.FC<SetRowProps> = ({
 
   useEffect(() => {
     if (!entry.completed) {
-      setWeight(formatWeightForDisplay(entry.weight || defaultWeight || '', weightUnit));
+      setWeight(formatWeightForDisplay(entry.weight || defaultWeight || (lastTime && lastTime.completed && lastTime.reps !== '—' ? lastTime.weight : '') || '', weightUnit));
       setReps(entry.reps || '');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -99,8 +99,9 @@ export const SetRow: React.FC<SetRowProps> = ({
   };
 
   const handleWeightChange = (value: string) => {
-    setWeight(value);
-    if (value.trim() !== '') maybeFireWeightStart();
+    const cleaned = cleanWeightInput(value);
+    setWeight(cleaned);
+    if (cleaned.trim() !== '') maybeFireWeightStart();
   };
 
   // Boutons − / + à côté du champ poids : évite d'ouvrir le clavier pour un
@@ -115,7 +116,8 @@ export const SetRow: React.FC<SetRowProps> = ({
     maybeFireWeightStart();
   };
 
-  const handleValidate = () => { if (!reps) return; onComplete({ weight: parseWeightInputToKg(weight, weightUnit), reps, completed: true }); };
+  const setIsValid = isValidSetInput(weight, reps, weightUnit);
+  const handleValidate = () => { if (!setIsValid) return; onComplete({ weight: parseWeightInputToKg(weight, weightUnit), reps, completed: true }); };
 
   // ── Validation « mains libres » (secousse du téléphone) ────────────────
   // Le champ reps peut être vide : dans ce cas on prend le bas de la
@@ -138,7 +140,7 @@ export const SetRow: React.FC<SetRowProps> = ({
     if (!isCurrent || entry.completed) return;
     const range = parseTargetRange(targetReps);
     const effectiveReps = reps || (range ? String(range[0]) : '');
-    if (!effectiveReps) return;
+    if (!isValidSetInput(weight, effectiveReps, weightUnit)) return;
     onComplete({ weight: parseWeightInputToKg(weight, weightUnit), reps: effectiveReps, completed: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [validateSignal]);
@@ -304,7 +306,7 @@ export const SetRow: React.FC<SetRowProps> = ({
           <div className="sv2-stepper">
             <span className="sv2-stepper-label"><label htmlFor={`sv2-reps-${setNumber}`}>Reps</label></span>
             <input id={`sv2-reps-${setNumber}`} type="text" inputMode="numeric" value={reps}
-              onChange={(e) => setReps(e.target.value)} placeholder="–" onFocus={(e) => e.target.select()}
+              onChange={(e) => setReps(cleanRepsInput(e.target.value))} placeholder="–" onFocus={(e) => e.target.select()}
               onKeyDown={(e) => e.key === 'Enter' && handleValidate()} />
             <div className="sv2-stepper-btns">
               <button type="button" onClick={() => handleRepsStep(-1)} aria-label="Une rep de moins">−</button>
@@ -314,7 +316,7 @@ export const SetRow: React.FC<SetRowProps> = ({
         </div>
         <button
           className={'sv2-validate' + (isLivePR ? ' validate-btn-pr' : '')}
-          onClick={handleValidate} disabled={!reps}
+          onClick={handleValidate} disabled={!setIsValid}
           title={isLivePR ? 'Nouveau record en vue !' : undefined}
         >
           <IconCheck size={18} />

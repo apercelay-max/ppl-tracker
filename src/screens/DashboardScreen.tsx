@@ -1,26 +1,19 @@
+import { isPerformedSet } from '../utils/weight';
 import React, { useState } from 'react';
 import { IconArrowLeft, IconBarChart } from '../components/Icons';
 import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getWorkout } from '../data/workouts';
+import { getDayMeta } from '../data/programs';
 import { HistoryEntry } from '../data/types';
 import { useScreenClass } from '../hooks/useScreenClass';
 import {
   bucketByWeek, computeLoadStatus, computeTonnage, WeekBucket,
-  ALL_EXERCISES, getExerciseWeightHistory, getMuscleGroupVolume,
+  getAllExercises, getExerciseWeightHistory, getMuscleGroupVolume,
   getEffectiveWeeklySets, EFFECTIVE_SETS_MIN, EFFECTIVE_SETS_MAX,
 } from '../utils/training';
 
 interface DashboardScreenProps { onBack: () => void; }
-
-const DAY_ACCENT: Record<string, string> = {
-  'pull-a': '#7c6fcd', 'push-a': '#e03030', 'legs-a': '#e8a020',
-  'pull-b': '#6a5fc0', 'push-b': '#cc2828', 'legs-b': '#d09018',
-};
-const DAY_TYPE_LABEL: Record<string, string> = {
-  'pull-a': 'PULL', 'push-a': 'PUSH', 'legs-a': 'LEGS',
-  'pull-b': 'PULL', 'push-b': 'PUSH', 'legs-b': 'LEGS',
-};
 
 const formatDate = (ts: number): string => {
   const diffDays = Math.floor((Date.now() - ts) / 86400000);
@@ -87,7 +80,7 @@ const WeeklyBarChart: React.FC<{
 // à deux endroits différents.
 
 const ProgressionChart: React.FC<{ history: HistoryEntry[] }> = ({ history }) => {
-  const [exerciseId, setExerciseId] = useState(ALL_EXERCISES[0]?.id ?? '');
+  const [exerciseId, setExerciseId] = useState(() => getAllExercises(history).find((e) => getExerciseWeightHistory(history, e.id).length > 0)?.id ?? getAllExercises(history)[0]?.id ?? '');
   const points = getExerciseWeightHistory(history, exerciseId);
 
   const CHART_W = 300;
@@ -165,7 +158,7 @@ const ProgressionChart: React.FC<{ history: HistoryEntry[] }> = ({ history }) =>
         onChange={(e) => setExerciseId(e.target.value)}
         style={exerciseSelect}
       >
-        {ALL_EXERCISES.map((ex) => (
+        {getAllExercises(history).map((ex) => (
           <option key={ex.id} value={ex.id}>{ex.name}</option>
         ))}
       </select>
@@ -414,10 +407,10 @@ const statusColor = (level: 'up' | 'stable' | 'down' | 'spike'): string => {
 
 const SessionRow: React.FC<{ entry: HistoryEntry }> = ({ entry }) => {
   const workout = getWorkout(entry.dayId);
-  const accent = DAY_ACCENT[entry.dayId] ?? '#7a7a90';
-  const typeLabel = DAY_TYPE_LABEL[entry.dayId] ?? '';
+  const customPrograms = useWorkoutStore((s) => s.customPrograms);
+  const { accent, typeLabel } = getDayMeta(entry.dayId, customPrograms);
   const durationMin = Math.round(entry.durationMs / 60000);
-  const setsCompleted = Object.values(entry.exerciseProgress).flat().filter((s) => s.completed).length;
+  const setsCompleted = Object.values(entry.exerciseProgress).flat().filter(isPerformedSet).length;
 
   return (
     <div style={sessionRow}>

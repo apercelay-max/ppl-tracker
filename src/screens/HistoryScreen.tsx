@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getWorkout } from '../data/workouts';
+import { getDayMeta } from '../data/programs';
 import { computeTonnage } from '../utils/training';
+import { isPerformedSet } from '../utils/weight';
 import { formatWeightForDisplay, weightUnitLabel } from '../utils/weight';
 import type { HistoryEntry } from '../data/types';
 import { EmptyState } from '../components/EmptyState';
@@ -11,17 +13,10 @@ import { useScreenClass } from '../hooks/useScreenClass';
 
 interface HistoryScreenProps { onBack: () => void; }
 
-const DAY_ACCENT: Record<string, string> = {
-  'pull-a': '#7c6fcd', 'push-a': '#e03030', 'legs-a': '#e8a020',
-  'pull-b': '#6a5fc0', 'push-b': '#cc2828', 'legs-b': '#d09018',
-};
-const DAY_TYPE_LABEL: Record<string, string> = {
-  'pull-a': 'PULL', 'push-a': 'PUSH', 'legs-a': 'LEGS',
-  'pull-b': 'PULL', 'push-b': 'PUSH', 'legs-b': 'LEGS',
-};
-
+const startOfDay = (ts: number): number => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); };
 const formatDate = (ts: number): string => {
-  const diffDays = Math.floor((Date.now() - ts) / 86400000);
+  // Jours calendaires (et non tranches de 24 h) : une séance d'hier 21 h n'est pas « aujourd'hui ».
+  const diffDays = Math.round((startOfDay(Date.now()) - startOfDay(ts)) / 86400000);
   if (diffDays <= 0) return "Aujourd'hui";
   if (diffDays === 1) return 'Hier';
   if (diffDays < 7) return `Il y a ${diffDays} j`;
@@ -45,6 +40,7 @@ const normalize = (s: string): string =>
 // ici pour que tout ce qui touche à "quand j'ai fait quoi" soit regroupé
 // dans Historique plutôt qu'éparpillé entre deux écrans.
 const MonthCalendar: React.FC<{ history: HistoryEntry[] }> = ({ history }) => {
+  const customPrograms = useWorkoutStore((s) => s.customPrograms);
   const [monthOffset, setMonthOffset] = useState(0); // 0 = mois en cours, négatif = mois précédents
   const now = new Date();
   const viewDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
@@ -87,7 +83,7 @@ const MonthCalendar: React.FC<{ history: HistoryEntry[] }> = ({ history }) => {
         {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
           const sessions = sessionsByDay[day];
           const isToday = monthOffset === 0 && day === now.getDate();
-          const accent = sessions ? (DAY_ACCENT[sessions[0].dayId] ?? '#7a7a90') : undefined;
+          const accent = sessions ? getDayMeta(sessions[0].dayId, customPrograms).accent : undefined;
           return (
             <div
               key={day}
@@ -116,6 +112,9 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack }) => {
 const screenClass = useScreenClass();
   const history = useWorkoutStore((s) => s.history);
   const weightUnit = useWorkoutStore((s) => s.weightUnit);
+  const deleteHistoryEntry = useWorkoutStore((s) => s.deleteHistoryEntry);
+  const customPrograms = useWorkoutStore((s) => s.customPrograms);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [dayFilter, setDayFilter] = useState<DayTypeFilter>('all');
 
@@ -208,14 +207,19 @@ const screenClass = useScreenClass();
             )}
             {filteredHistory.map((entry) => {
               const workout = getWorkout(entry.dayId);
-              const accent = DAY_ACCENT[entry.dayId] ?? 'var(--brand-1)';
+              const isOpen = openId === entry.id;
+              const dayMeta = getDayMeta(entry.dayId, customPrograms);
+              const accent = dayMeta.accent !== '#7a7a90' ? dayMeta.accent : 'var(--brand-1)';
               const tonnage = entry.tonnage ?? computeTonnage(entry.exerciseProgress);
               const minutes = Math.round(entry.durationMs / 60000);
               return (
-                <div key={entry.id} style={{ ...row, borderLeft: `3px solid ${accent}` }}>
+                <div key={entry.id} style={{ ...row, borderLeft: `3px solid ${accent}`, cursor: 'pointer' }}
+                  role="button" tabIndex={0} aria-expanded={isOpen}
+                  onClick={() => setOpenId(isOpen ? null : entry.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenId(isOpen ? null : entry.id); } }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <p style={{ color: accent, fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>{DAY_TYPE_LABEL[entry.dayId] ?? ''}</p>
+                      <p style={{ color: accent, fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>{dayMeta.typeLabel}</p>
                       <p style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 800, marginTop: 2 }}>{workout?.name ?? entry.dayId}</p>
                     </div>
                     <p style={{ color: 'var(--text-dim)', fontSize: 11, whiteSpace: 'nowrap' }}>{formatDate(entry.date)}</p>
@@ -229,6 +233,27 @@ const screenClass = useScreenClass();
                     <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 8, lineHeight: '17px', fontStyle: 'italic' }}>
                       "{entry.note}"
                     </p>
+                  )}
+                  {isOpen && (
+                    <div style={{ marginTop: 12, borderTop: '1px solid var(--border-subtle)', paddingTop: 10 }} onClick={(e) => e.stopPropagation()}>
+                      {Object.entries(entry.exerciseProgress).map(([exId, sets]) => {
+                        const done = sets.filter(isPerformedSet);
+                        if (done.length === 0) return null;
+                        const name = entry.exerciseNameOverrides?.[exId] ?? workout?.exercises.find((e) => e.id === exId)?.name ?? exId;
+                        return (
+                          <div key={exId} style={{ marginBottom: 8 }}>
+                            <p style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700 }}>{name}</p>
+                            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>
+                              {done.map((s) => `${s.weight ? formatWeightForDisplay(s.weight, weightUnit).replace('.', ',') + ' ' + weightUnitLabel(weightUnit) : 'PDC'} × ${s.reps}`).join('  ·  ')}
+                            </p>
+                          </div>
+                        );
+                      })}
+                      <button
+                        onClick={() => { if (window.confirm('Supprimer cette séance de l\'historique ? Cette action est définitive.')) { deleteHistoryEntry(entry.id); setOpenId(null); } }}
+                        style={{ marginTop: 4, padding: '8px 12px', borderRadius: 10, border: '1px solid var(--border-strong)', background: 'transparent', color: '#e03030', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}
+                      >Supprimer cette séance</button>
+                    </div>
                   )}
                 </div>
               );

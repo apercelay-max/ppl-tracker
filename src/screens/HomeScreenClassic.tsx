@@ -1,5 +1,6 @@
 // Version « classique » de l'accueil, gardée à l'identique pour le réglage
 // Style de l'interface → Classique. Le style actuel est dans HomeScreen.tsx.
+import { isPerformedSet } from '../utils/weight';
 import React, { useEffect, useRef, useState } from 'react';
 import { DataIcon } from '../components/DataIcon';
 import { MESOCYCLE_WEEKS, getProgressionWeek, getWorkout } from '../data/workouts';
@@ -635,7 +636,7 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onSelectDay, onOp
   const lastSessionSection = homeSections.lastSession && lastEntry && (() => {
     const lastWorkoutMeta = getWorkout(lastEntry.dayId);
     const tonnage = lastEntry.tonnage ?? computeTonnage(lastEntry.exerciseProgress);
-    const setsCount = Object.values(lastEntry.exerciseProgress).reduce((sum, sets) => sum + sets.filter((s) => s.completed).length, 0);
+    const setsCount = Object.values(lastEntry.exerciseProgress).reduce((sum, sets) => sum + sets.filter(isPerformedSet).length, 0);
     const durationMin = Math.round(lastEntry.durationMs / 60000);
     const accent = activeProgram.dayAccents[lastEntry.dayId] ?? FALLBACK_ACCENT;
     return (

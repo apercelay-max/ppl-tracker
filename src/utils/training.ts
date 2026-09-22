@@ -1,5 +1,6 @@
+import { isPerformedSet } from './weight';
 import { ExerciseProgress, HistoryEntry, SetEntry, WorkoutDay } from '../data/types';
-import { WORKOUTS } from '../data/workouts';
+import { WORKOUTS, getBaseWorkout } from '../data/workouts';
 import { primaryGroupOf, resolveExerciseMuscles, volumeGroupOf } from './muscleMap';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -185,6 +186,36 @@ export const ALL_EXERCISES = WORKOUTS.flatMap((w) => w.exercises).reduce(
 );
 
 /**
+ * Exercices connus pour un historique donné : ceux du programme Strict, plus
+ * tous ceux réellement faits, quel que soit le programme d'où ils viennent
+ * (bibliothèque, catalogue, importés). Sans ça, records, progression et 1RM
+ * restaient vides dès qu'on suivait un autre programme que Strict.
+ */
+const allExercisesCache = new WeakMap<HistoryEntry[], { id: string; name: string; muscleGroup: string }[]>();
+export const getAllExercises = (history: HistoryEntry[]): { id: string; name: string; muscleGroup: string }[] => {
+  const cached = allExercisesCache.get(history);
+  if (cached) return cached;
+  // Dès qu'il y a de l'historique, on ne garde des exercices Strict que ceux
+  // réellement faits (sinon la liste est noyée d'exercices d'un programme
+  // qu'on ne suit pas).
+  const done = new Set<string>();
+  for (const entry of history) for (const id of Object.keys(entry.exerciseProgress)) done.add(id);
+  const list = history.length === 0 ? [...ALL_EXERCISES] : ALL_EXERCISES.filter((e) => done.has(e.id));
+  const seen = new Set(list.map((e) => e.id));
+  for (const entry of history) {
+    const workout = getBaseWorkout(entry.dayId);
+    if (!workout) continue;
+    for (const ex of workout.exercises) {
+      if (seen.has(ex.id) || !entry.exerciseProgress[ex.id]) continue;
+      seen.add(ex.id);
+      list.push({ id: ex.id, name: ex.name, muscleGroup: ex.muscleGroup });
+    }
+  }
+  allExercisesCache.set(history, list);
+  return list;
+};
+
+/**
  * Historique du poids max (numérique) soulevé sur un exercice donné,
  * du plus ancien au plus récent (prêt pour un graphique). Ignore les
  * séries au poids du corps ("PDC") ou non numériques — seule la charge
@@ -319,7 +350,7 @@ export const getMostRecentPersonalRecord = (history: HistoryEntry[]): PersonalRe
 
       const previousMax = runningMax[exerciseId] ?? 0;
       if (previousMax > 0 && entryMax > previousMax) {
-        const exerciseName = ALL_EXERCISES.find((e) => e.id === exerciseId)?.name ?? exerciseId;
+        const exerciseName = getAllExercises(history).find((e) => e.id === exerciseId)?.name ?? exerciseId;
         lastPR = { exerciseId, exerciseName, weight: entryMax, previousMax, date: entry.date };
       }
       if (entryMax > previousMax) runningMax[exerciseId] = entryMax;
@@ -357,7 +388,7 @@ export const getFeaturedExerciseProgress = (
   const recentCutoff = Date.now() - recentDays * 86400000;
   let best: FeaturedExerciseProgress | null = null;
 
-  for (const ex of ALL_EXERCISES) {
+  for (const ex of getAllExercises(history)) {
     const windowed = getExerciseE1RMHistory(history, ex.id).filter((p) => p.date >= cutoff);
     if (windowed.length < 2) continue;
     const last = windowed[windowed.length - 1];
@@ -413,7 +444,7 @@ export const detectPlateaus = (
   const recentCutoff = now - recentDays * 86400000;
   const out: PlateauExercise[] = [];
 
-  for (const ex of ALL_EXERCISES) {
+  for (const ex of getAllExercises(history)) {
     const points = getExerciseE1RMHistory(history, ex.id);
     if (points.length < minSessions) continue;
 
@@ -744,7 +775,7 @@ export const getBodyIntensityFromHistory = (history: HistoryEntry[], days = 9): 
     for (const [exId, sets] of Object.entries(entry.exerciseProgress)) {
       const group = primaryGroupOf(exId);
       if (!group) continue;
-      const completedCount = sets.filter((s) => s.completed).length;
+      const completedCount = sets.filter(isPerformedSet).length;
       if (completedCount > 0) setsByGroup[group] = (setsByGroup[group] ?? 0) + completedCount;
     }
   }
@@ -830,7 +861,7 @@ export const getEffectiveWeeklySets = (history: HistoryEntry[], weeks = 1): Effe
   for (const entry of history) {
     if (entry.date < cutoff) continue;
     for (const [exId, sets] of Object.entries(entry.exerciseProgress)) {
-      const done = sets.filter((s) => s.completed).length;
+      const done = sets.filter(isPerformedSet).length;
       if (done === 0) continue;
       const overrideName = entry.exerciseNameOverrides?.[exId];
       // Un exercice peut créditer deux fois le même groupe une fois les alias

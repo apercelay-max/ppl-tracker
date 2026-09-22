@@ -83,7 +83,7 @@ const screenClass = useScreenClass();
           <GlassIcon size={38} accent><IconScale size={19} /></GlassIcon>
           <div>
             <h1 style={title}>Poids</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Fonctionnalité en essai — dis-moi ce que t'en penses</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Suis l'évolution de ton poids de corps</p>
           </div>
         </div>
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { IconArrowLeft, IconClose, IconDumbbell, IconSearch } from '../components/Icons';
 import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore } from '../store/workoutStore';
-import { ALL_EXERCISES, ALL_MUSCLE_GROUPS, getExerciseWeightHistory, getMaxWeightEver, getExerciseE1RMHistory, getMaxE1RMEver, loadForRpe, percentOf1RM, rpeToRir } from '../utils/training';
+import { getAllExercises, ALL_MUSCLE_GROUPS, getExerciseWeightHistory, getMaxWeightEver, getExerciseE1RMHistory, getMaxE1RMEver, loadForRpe, percentOf1RM, rpeToRir } from '../utils/training';
 import { solvePlates, describePlates } from '../utils/plates';
 import { usesBarbell } from '../utils/gymAdapt';
 import { MiniLineChart } from '../components/MiniLineChart';
@@ -109,10 +109,15 @@ const screenClass = useScreenClass();
   const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
   const normalizedQuery = normalize(query.trim());
 
-  const groups = ALL_MUSCLE_GROUPS
+  const knownExercises = getAllExercises(history);
+  const groupNames = [
+    ...ALL_MUSCLE_GROUPS,
+    ...Array.from(new Set(knownExercises.map((e) => e.muscleGroup))).filter((g) => !ALL_MUSCLE_GROUPS.includes(g)),
+  ];
+  const groups = groupNames
     .map((group) => ({
       group,
-      exercises: ALL_EXERCISES.filter((ex) =>
+      exercises: knownExercises.filter((ex) =>
         ex.muscleGroup === group && (normalizedQuery === '' || normalize(ex.name).includes(normalizedQuery))
       ),
     }))

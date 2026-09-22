@@ -987,3 +987,120 @@ button { cursor: pointer; }
 .intro-stat span { font-size: 9.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--h-muted); text-align: center; }
 .intro-focus-btn { display: flex; align-items: center; gap: 6px; align-self: flex-start; font-size: 13px; font-weight: 600; color: var(--h-text2); }
 .intro-focus { font-size: 13px; line-height: 1.5; color: var(--h-text2); border-top: 1px solid var(--h-line); padding-top: 12px; margin: 0; }
+
+/* ─── Style « Sport pro » ───────────────────────────────────────────────── */
+/* Même structure que le nouveau style (.home-v2, .session-v2, .app-v2), qu'on
+   rhabille : noir profond, filets fins plutôt que des cartes, chiffres en
+   Barlow serré, étiquettes en chasse fixe façon cadran de montre. Sombre
+   quel que soit le thème choisi — c'est un cadran, pas une page. La barre du
+   bas et les boutons raccourcis ne sont pas touchés. */
+.ui-sport,
+[data-theme="light"] .ui-sport,
+[data-theme="light"][data-contrast="high"] .ui-sport {
+  --h-bg: #050607;
+  --h-surface: #0D0F12;
+  --h-raised: #14171B;
+  --h-line: #1D2126;
+  --h-hero-line: #2A2F36;
+  --h-text: #F2F4F7;
+  --h-text2: #B4BAC2;
+  --h-muted: #7A818C;
+  --h-good: #3DDC97;
+  --h-warn: #FFB020;
+  --h-bad: #FF4D5E;
+  --h-off: #1D2126;
+  --h-cond: 'Barlow', 'Arial Narrow', system-ui, sans-serif;
+  --sp-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --text-primary: #F2F4F7;
+  --text-secondary: #B4BAC2;
+  --text-muted: #7A818C;
+  --text-dim: #6A717B;
+  --text-micro: #4A5059;
+  --grad: var(--brand-1);
+  color-scheme: dark;
+}
+[data-contrast="high"] .ui-sport { --h-line: #3A404A; --h-hero-line: #55606C; --h-muted: #A3AAB4; }
+
+/* Formes : angles serrés partout (les styles en ligne des écrans fixent
+   souvent un arrondi, d'où le !important limité à ce style). */
+.ui-sport .glass-card, .ui-sport .sv2-card, .ui-sport .home-hero, .ui-sport .home-card,
+.ui-sport .sv2-rest, .ui-sport .intro-stat, .ui-sport .glass-tile { border-radius: 12px !important; }
+.ui-sport .sv2-stepper { border-radius: 10px; }
+.ui-sport .home-chips span, .ui-sport .sv2-pills span { border-radius: 6px; }
+
+/* Étiquettes en chasse fixe, chiffres serrés */
+.ui-sport .home-eyebrow, .ui-sport .sv2-eyebrow, .ui-sport .sp-lbl,
+.ui-sport .sv2-stepper-label, .ui-sport .intro-stat span {
+  font-family: var(--sp-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--h-muted);
+}
+.ui-sport .home-title, .ui-sport .sv2-title { font-family: var(--h-cond); font-weight: 800; letter-spacing: 0.02em; }
+.ui-sport .home-hero-title { font-family: var(--h-cond); font-weight: 800; font-size: clamp(34px, 10vw, 44px); line-height: 0.95; letter-spacing: 0.01em; }
+.ui-sport .home-wide .home-hero-title { font-size: clamp(56px, 6vw, 88px); }
+.ui-sport .sv2-card-name { font-family: var(--h-cond); font-weight: 800; font-size: 24px; line-height: 1.05; }
+.ui-sport .home-big b, .ui-sport .sv2-rest-clock, .ui-sport .sv2-stepper input, .ui-sport .intro-stat b,
+.ui-sport .sv2-set .n, .ui-sport .sv2-prog strong { font-family: var(--h-cond); font-weight: 700; letter-spacing: -0.01em; }
+.ui-sport .home-small, .ui-sport .sv2-set .t, .ui-sport .sv2-hint, .ui-sport .sv2-prog strong i { font-family: var(--sp-mono); font-size: 11px; }
+
+/* La séance du jour : un bandeau d'accent à gauche, bouton GO compact */
+.ui-sport .home-hero { position: relative; overflow: hidden; padding: 16px; gap: 12px; }
+.ui-sport .home-hero::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--brand-1); }
+.ui-sport .home-start, .ui-sport .sv2-validate, .ui-sport .sv2-rest-skip {
+  border-radius: 10px; background: var(--brand-1); color: #0A0503;
+  font-family: var(--h-cond); font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+  box-shadow: 0 0 24px rgba(var(--brand-1-rgb), 0.35);
+}
+.ui-sport .sv2-validate:disabled { background: var(--h-raised); color: var(--h-muted); box-shadow: none; }
+.ui-sport .sv2-validate.validate-btn-pr { color: #1a0f00; }
+.ui-sport .sv2-rest.over .sv2-rest-skip { background: var(--h-good); color: #03140C; box-shadow: none; }
+.ui-sport .home-start { height: 50px; }
+
+/* Barres et jauges : plates, accent unique */
+.ui-sport .sv2-segs > div > i, .ui-sport .sv2-rest-bar > i { background: var(--brand-1); box-shadow: 0 0 10px rgba(var(--brand-1-rgb), 0.4); }
+.ui-sport .sv2-stepper-btns button, .ui-sport .sv2-rest-ctrls button, .ui-sport .sv2-secondary button { border-radius: 8px; }
+.ui-sport .sv2-pills span.key { border-color: var(--brand-1); }
+
+/* Bloc de chiffres propre au style (accueil) */
+.sp-summary { display: flex; flex-direction: column; }
+.sp-chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 6px; background: var(--h-surface); border: 1px solid var(--h-line); font-family: var(--sp-mono); font-size: 11px; font-weight: 600; color: var(--h-text2); align-self: flex-start; }
+.sp-chip i { width: 6px; height: 6px; border-radius: 50%; }
+.sp-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--h-line); border-bottom: 1px solid var(--h-line); }
+.sp-stats > div { padding: 12px 8px 12px 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sp-stats > div + div { border-left: 1px solid var(--h-line); padding-left: 12px; }
+.sp-num { font-family: var(--h-cond); font-weight: 700; font-size: 28px; line-height: 1; letter-spacing: -0.01em; color: var(--h-text); }
+.sp-unit { font-family: var(--sp-mono); font-size: 11px; font-weight: 600; color: var(--h-muted); margin-left: 3px; }
+.sp-delta { font-family: var(--sp-mono); font-size: 11px; font-weight: 700; color: var(--h-muted); }
+.sp-delta.up { color: var(--h-good); } .sp-delta.down { color: var(--h-bad); }
+.sp-band { padding: 14px 0; border-bottom: 1px solid var(--h-line); display: flex; flex-direction: column; gap: 10px; }
+.sp-band-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.sp-bars { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; align-items: end; height: 72px; }
+.sp-bars > div { background: var(--h-hero-line); border-radius: 3px 3px 0 0; min-height: 2px; }
+.sp-bars > div.on { background: var(--brand-1); box-shadow: 0 0 14px rgba(var(--brand-1-rgb), 0.4); }
+.sp-axis { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+.sp-axis span { font-family: var(--sp-mono); font-size: 9px; color: var(--h-muted); text-align: center; }
+.sp-axis span.on { color: var(--h-text); }
+.sp-rows { display: flex; flex-direction: column; gap: 8px; }
+.sp-row { display: grid; grid-template-columns: minmax(0, 96px) 1fr 34px; gap: 10px; align-items: center; }
+.sp-row > span:first-child { font-size: 12.5px; color: var(--h-text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-track { height: 5px; border-radius: 3px; background: var(--h-line); overflow: hidden; }
+.sp-track > i { display: block; height: 100%; border-radius: 3px; }
+.sp-row .v { font-family: var(--sp-mono); font-size: 11px; font-weight: 600; text-align: right; color: var(--h-text2); }
+
+/* Séance : bandeau de chiffres en direct + repos en anneau */
+.sp-live { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--h-line); }
+.sp-live > div { padding: 8px 0 2px 10px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sp-live > div:first-child { padding-left: 0; }
+.sp-live > div + div { border-left: 1px solid var(--h-line); }
+.sp-live .sp-num { font-size: 22px; }
+.sp-rest { display: grid; grid-template-columns: 112px 1fr; gap: 14px; align-items: center; }
+.sp-ring { position: relative; width: 112px; height: 112px; }
+.sp-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
+.sp-ring > div { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.sp-ring .sp-num { font-size: 30px; }
+/* Séance du jour en Sport pro : infos à gauche, bouton GO compact à droite */
+.ui-sport .home-hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+.ui-sport .home-hero-foot { flex-direction: column; align-items: flex-end; gap: 6px; }
+.ui-sport .home-start { width: auto; min-width: 80px; padding: 0 18px; font-size: 18px; }
+.ui-sport .home-hero-last { display: none; }
+.ui-sport .home-wide .home-hero { min-height: 0; }
+.ui-sport .sv2-rest.sp-rest { display: grid; align-items: center; justify-items: stretch; padding: 14px; }
+.ui-sport .home-title { font-size: 24px; white-space: nowrap; }

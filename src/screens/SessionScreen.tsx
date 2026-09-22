@@ -1,3 +1,4 @@
+import { isPerformedSet } from '../utils/weight';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getWorkout, getProgressionWeek } from '../data/workouts';
@@ -6,6 +7,7 @@ import { ExerciseCard } from '../components/ExerciseCard';
 import { ExerciseCardClassic } from '../components/ExerciseCardClassic';
 import { InlineRestBar } from '../components/InlineRestBar';
 import { useScreenClass } from '../hooks/useScreenClass';
+import { SportLiveStats } from '../components/SportLiveStats';
 import { InlineRestBarClassic } from '../components/InlineRestBarClassic';
 import { StatsPanel } from '../components/StatsPanel';
 import { BodyDiagram } from '../components/BodyDiagram';
@@ -59,11 +61,14 @@ const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
 const weightUnitToggleStyle = useWorkoutStore((s) => s.weightUnitToggleStyle);
 // Réglages → Personnalisation → Style de l'interface : l'ancien style garde
 // ses propres composants, copiés tels quels (…Classic).
-const isNewStyle = useWorkoutStore((s) => s.uiStyle) !== 'classique';
+const uiStyle = useWorkoutStore((s) => s.uiStyle);
+const isNewStyle = uiStyle !== 'classique';
+const isSport = uiStyle === 'sport';
 const Card = isNewStyle ? ExerciseCard : ExerciseCardClassic;
 const RestBar = isNewStyle ? InlineRestBar : InlineRestBarClassic;
 const addSet = useWorkoutStore((s) => s.addSet);
 const abandonSession = useWorkoutStore((s) => s.abandonSession);
+const finishSession = useWorkoutStore((s) => s.finishSession);
 const sessionPausedAt = useWorkoutStore((s) => s.sessionPausedAt);
 const pauseSession = useWorkoutStore((s) => s.pauseSession);
 const resumeSession = useWorkoutStore((s) => s.resumeSession);
@@ -224,6 +229,18 @@ useEffect(() => {
 const h = () => setIsWide(window.innerWidth >= 700);
 window.addEventListener('resize', h);
 return () => window.removeEventListener('resize', h);
+}, []);
+
+// Rechargement pile après la dernière série : tout est validé mais la séance
+// n'a pas été clôturée (l'écran de retour au calme n'est pas persisté). On la
+// termine et l'enregistre au lieu de laisser un écran sans issue.
+useEffect(() => {
+  const st = useWorkoutStore.getState();
+  const cur = st.session;
+  if (!cur || cur.dayId !== dayId || cur.isComplete) return;
+  const all = Object.values(cur.exerciseProgress).flat();
+  if (all.length > 0 && all.every((x) => x.completed)) st.finishSession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 }, []);
 
 // Une séance oubliée en arrière-plan (téléphone verrouillé, appli quittée
@@ -547,7 +564,18 @@ return { exercise: exercises[step.exerciseIndex], setNumber: step.setIndex + 1 }
 const nextInfo = getNextInfo();
 
 const handleAbandon = () => {
-if (window.confirm('Abandonner la séance ?')) { abandonSession(); onBack(); }
+  const performed = Object.values(session.exerciseProgress).flat().filter(isPerformedSet).length;
+  if (performed > 0) {
+    // Ne pas perdre l'heure de saisie sur un tap accidentel : on propose d'abord d'enregistrer.
+    if (window.confirm(`Terminer la séance et enregistrer tes ${performed} séries déjà faites ?\n\nOK = terminer et enregistrer\nAnnuler = autres options`)) {
+      finishSession();
+      return;
+    }
+    if (!window.confirm('Abandonner SANS enregistrer ? Les séries faites seront perdues.')) return;
+    abandonSession(); onBack();
+    return;
+  }
+  if (window.confirm('Abandonner la séance ?')) { abandonSession(); onBack(); }
 };
 
 const totalSets = exercises.reduce((sum, ex) => sum + (session.exerciseProgress[ex.id]?.length ?? ex.sets), 0);
@@ -603,7 +631,7 @@ onTogglePause={handleToggleRestPause}
 ) : null;
 
 return (
-<div className={isNewStyle ? 'session-v2' : 'screen-ambient'} style={{ ...container, flexDirection: isWide ? 'row' : 'column' }}>
+<div className={isSport ? 'session-v2 ui-sport' : isNewStyle ? 'session-v2' : 'screen-ambient'} style={{ ...container, flexDirection: isWide ? 'row' : 'column' }}>
 {confettiBurst && <ConfettiBurst style={ultraAnimationStyle} />}
 {prBanner && (
 <div style={prBannerStyle} className={ultraAnimationsEnabled ? 'ultra-pop-glow' : 'fade-in'}>
@@ -697,6 +725,9 @@ return <div key={ex.id} style={{ flex: n }}><i style={{ width: `${Math.min(100, 
 })}
 </div>
 </div>
+{isSport && (
+<SportLiveStats startTime={session.startTime} pausedAt={sessionPausedAt} exerciseProgress={session.exerciseProgress} dayId={session.dayId} history={history} />
+)}
 </div>
 ) : (
 <>
@@ -823,7 +854,7 @@ devient incompréhensible. */}
 )}
 {lastSessionNote && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
 <div className="glass-card" style={lastNoteBanner}>
-<p style={lastNoteLabel}>Note de la derniere fois</p>
+<p style={lastNoteLabel}>Note de la dernière fois</p>
 <p style={lastNoteText}>{lastSessionNote}</p>
 </div>
 )}
@@ -1167,7 +1198,7 @@ if (sharing) return;
 setSharing(true);
 try {
 const completedSetsCount = Object.values(session.exerciseProgress).reduce(
-(sum, sets) => sum + sets.filter((s) => s.completed).length,
+(sum, sets) => sum + sets.filter(isPerformedSet).length,
 0
 );
 const tonnageDisplayShare = weightUnit === 'lbs' ? Math.round(kgToLbs(tonnage)) : tonnage;
