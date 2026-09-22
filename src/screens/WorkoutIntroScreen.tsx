@@ -294,7 +294,7 @@ onTouchStart={onHandleTouchStart}
 <button onClick={closeSheet} style={closeBtn}><IconClose size={14} /></button>
 </div>
 
-<div className={uiStyle === 'classique' ? undefined : uiStyle === 'sport' ? 'sv2-tokens ui-sport' : 'sv2-tokens'}>
+<div className={uiStyle === 'classique' ? undefined : uiStyle === 'sport' ? 'sv2-tokens ui-sport' : uiStyle === 'epure' ? 'sv2-tokens ui-epure' : 'sv2-tokens'}>
 <PreviewCard
 exercise={detailExercise}
 setEntries={previewEntries}

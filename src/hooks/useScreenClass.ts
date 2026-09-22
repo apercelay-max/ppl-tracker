@@ -8,8 +8,12 @@ import { useWorkoutStore } from '../store/workoutStore';
  *  - « nouveau »  : .app-v2, fond plein et cartes pleines (même palette que
  *    l'accueil et l'écran de séance) ;
  *  - « sport »    : .app-v2 + .ui-sport, la même structure habillée en noir,
- *    chiffres serrés et étiquettes façon montre de sport.
+ *    chiffres serrés et étiquettes façon montre de sport ;
+ *  - « epure »    : .app-v2 + .ui-epure, noir et blanc, sans cartes ni cadres.
  * Les deux classes sont définies dans index.css.
  */
 export const useScreenClass = (): string =>
-  useWorkoutStore((s) => (s.uiStyle === 'classique' ? 'screen-ambient' : s.uiStyle === 'sport' ? 'app-v2 ui-sport' : 'app-v2'));
+  useWorkoutStore((s) => (s.uiStyle === 'classique' ? 'screen-ambient'
+    : s.uiStyle === 'sport' ? 'app-v2 ui-sport'
+    : s.uiStyle === 'epure' ? 'app-v2 ui-epure'
+    : 'app-v2'));

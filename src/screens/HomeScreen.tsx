@@ -124,7 +124,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   const weeklySessionGoal = useWorkoutStore((s) => s.weeklySessionGoal);
   // Style « Sport pro » (Réglages → Apparence) : même accueil, rhabillé, avec
   // en plus le bloc de chiffres de la semaine (voir sportSummary plus bas).
-  const isSport = useWorkoutStore((s) => s.uiStyle) === 'sport';
+  const uiStyle = useWorkoutStore((s) => s.uiStyle);
+  const isSport = uiStyle === 'sport';
+  // Style « Épuré » : même accueil, sans cadres, avec une courte liste de
+  // chiffres à la place des cartes de récupération (voir epureSummary).
+  const isEpure = uiStyle === 'epure';
   // ── Binôme ──
   const { state: binome } = useBinome();
   const [nudging, setNudging] = useState(false);
@@ -933,6 +937,35 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     );
   })();
 
+  // ── Style « Épuré » : quatre lignes, rien de plus ─────────────────────────
+  // Les mêmes chiffres que l'objectif hebdo, la récupération et le dernier
+  // record, en liste plutôt qu'en cartes.
+  const epureSummary = (() => {
+    if (history.length === 0) return null;
+    const weekSessions = history.filter((e) => Date.now() - e.date < 7 * 86400000).length;
+    const weekTonnage = bucketByWeek(history, 1)[0]?.tonnage ?? 0;
+    const pr = getMostRecentPersonalRecord(history);
+    return (
+      <section className="ep-list" aria-label="Résumé de la semaine">
+        <div className="ep-item">
+          <span>Cette semaine</span>
+          <b>
+            <span className="ep-dots" aria-hidden="true">
+              {Array.from({ length: weeklySessionGoal }, (_, i) => <i key={i} className={i < weekSessions ? 'on' : undefined} />)}
+            </span>
+            {weekSessions} sur {weeklySessionGoal}
+          </b>
+        </div>
+        <div className="ep-item"><span>Récupération</span><b>{Math.round(averagePct * 100)} %</b></div>
+        <div className="ep-item">
+          <span>Tonnage de la semaine</span>
+          <b>{weekTonnage >= 1000 ? `${(weekTonnage / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} t` : `${Math.round(weekTonnage)} kg`}</b>
+        </div>
+        {pr && <div className="ep-item"><span>Dernier record</span><b>{pr.exerciseName} · {pr.weight} kg</b></div>}
+      </section>
+    );
+  })();
+
   const SECTION_MAP: Record<string, React.ReactNode> = {
     coach: coachSection,
     cycle: cycleSection,
@@ -994,7 +1027,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   };
 
   return (
-    <div className={isSport ? 'home-v2 ui-sport' : 'home-v2'} style={container}>
+    <div className={isSport ? 'home-v2 ui-sport' : isEpure ? 'home-v2 ui-epure' : 'home-v2'} style={container}>
       <div style={{ ...scroll, maxWidth: wideLayout ? 1180 : 560, paddingBottom: navBarEnabled ? 112 : 80 }}>
 
         {/* Header */}
@@ -1065,13 +1098,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
         </div>
 
         {isSport && sportSummary}
+        {isEpure && epureSummary}
 
         {(() => {
           // Récupération musculaire — même règle que les blocs promus : elle
           // reste consultable sous « Tout voir », et ne s'invite dans la partie
           // simple que quand un groupe n'est pas encore récupéré. Sans séance
           // dans l'historique elle n'a rien à calculer, donc rien à afficher.
-          const recoveryBlock = !isSport && history.length > 0 && (sectionsExpanded || !!needsRecovery) && (
+          const recoveryBlock = !isSport && !isEpure && history.length > 0 && (sectionsExpanded || !!needsRecovery) && (
             <div key="recovery" className="glass-card home-card">
               <span className="home-eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconBattery size={13} />Récupération</span>
               <div className="home-big">

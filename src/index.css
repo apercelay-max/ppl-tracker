@@ -1104,3 +1104,120 @@ button { cursor: pointer; }
 .ui-sport .home-wide .home-hero { min-height: 0; }
 .ui-sport .sv2-rest.sp-rest { display: grid; align-items: center; justify-items: stretch; padding: 14px; }
 .ui-sport .home-title { font-size: 24px; white-space: nowrap; }
+
+/* ─── Style « Épuré » ───────────────────────────────────────────────────── */
+/* Même structure que le nouveau style, avec le moins possible : pas de
+   cartes ni de cadres (de l'espace et un filet), une seule police (celle du
+   système), des chiffres en graisse fine, du noir et blanc. L'accent de l'app
+   ne marque que ce qui est en cours. Suit le thème clair / sombre. La barre
+   du bas et les boutons raccourcis ne sont pas touchés. */
+[data-theme="light"] .ui-epure {
+  --h-bg: #FFFFFF;
+  --h-surface: #FFFFFF;
+  --h-raised: #F2F2F2;
+  --h-line: #EBEBEB;
+  --h-hero-line: #EBEBEB;
+  --h-text: #111111;
+  --h-text2: #474747;
+  --h-muted: #737373;
+  --h-good: #2E7D4F;
+  --h-warn: #A35F00;
+  --h-bad: #C62828;
+  --h-off: #E6E6E6;
+}
+[data-theme="dark"] .ui-epure {
+  --h-bg: #0C0C0C;
+  --h-surface: #0C0C0C;
+  --h-raised: #1A1A1A;
+  --h-line: #222222;
+  --h-hero-line: #222222;
+  --h-text: #EDEDED;
+  --h-text2: #B5B5B5;
+  --h-muted: #8C8C8C;
+  --h-good: #5CC98A;
+  --h-warn: #E0A040;
+  --h-bad: #F06060;
+  --h-off: #262626;
+}
+.ui-epure {
+  --h-cond: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  --grad: var(--h-text);
+}
+[data-contrast="high"] .ui-epure { --h-muted: var(--text-muted); --h-line: var(--border-strong); }
+
+/* Plus de cartes : un filet au-dessus de chaque bloc, et c'est tout. */
+:root .ui-epure .glass-card[class],
+:root .ui-epure .glass-tile[class] {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--h-line);
+  box-shadow: none;
+  border-radius: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+:root .ui-epure .glass-tile[class] { border-top: 0; }
+.ui-epure .exercise-active { animation: none; }
+
+/* Typo : une seule famille, hiérarchie par la taille et la graisse. */
+.ui-epure .home-eyebrow, .ui-epure .sv2-eyebrow, .ui-epure .sv2-stepper-label {
+  text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 400; color: var(--h-muted);
+}
+.ui-epure .home-title, .ui-epure .sv2-title { font-family: var(--h-cond); font-size: 17px; font-weight: 600; text-transform: none; letter-spacing: -0.01em; }
+.ui-epure .home-hero-title { font-weight: 300; text-transform: none; font-size: clamp(40px, 12vw, 48px); letter-spacing: -0.035em; line-height: 1; }
+.ui-epure .home-wide .home-hero-title { font-size: clamp(56px, 6vw, 84px); }
+.ui-epure .sv2-card-name { font-family: var(--h-cond); font-weight: 400; text-transform: none; font-size: 24px; letter-spacing: -0.02em; line-height: 1.15; }
+.ui-epure .home-big b, .ui-epure .sv2-rest-clock, .ui-epure .sv2-stepper input, .ui-epure .intro-stat b {
+  font-family: var(--h-cond); font-weight: 250; letter-spacing: -0.03em;
+}
+.ui-epure .sv2-set .n, .ui-epure .sv2-prog strong { font-family: var(--h-cond); font-weight: 500; }
+
+/* Étiquettes : du texte séparé par des points, pas des pastilles. */
+.ui-epure .home-chips, .ui-epure .sv2-pills { gap: 0; }
+.ui-epure .home-chips span, .ui-epure .sv2-pills span { border: 0; padding: 0; border-radius: 0; font-size: 14px; color: var(--h-muted); }
+.ui-epure .home-chips span + span::before, .ui-epure .sv2-pills span + span::before { content: "·"; margin: 0 7px; color: var(--h-muted); }
+.ui-epure .sv2-pills span.key { color: var(--h-text); font-weight: 500; }
+.ui-epure .sv2-pills span.good { color: var(--h-good); }
+
+/* Boutons : un seul bouton principal, noir (blanc en sombre), sans ombre. */
+.ui-epure .home-start, .ui-epure .sv2-validate, .ui-epure .sv2-rest-skip {
+  background: var(--h-text); color: var(--h-bg); box-shadow: none; border-radius: 999px; font-weight: 600;
+}
+.ui-epure .sv2-validate:disabled { background: var(--h-raised); color: var(--h-muted); }
+.ui-epure .sv2-validate.validate-btn-pr { color: #1a0f00; }
+.ui-epure .home-start { width: auto; align-self: flex-start; padding: 0 26px; height: 48px; }
+.ui-epure .home-hero-last { text-align: left; }
+.ui-epure .sv2-secondary button, .ui-epure .sv2-rest-ctrls button { border: 0; background: var(--h-raised); }
+.ui-epure .sv2-switch { border: 0; background: var(--h-raised); color: var(--h-text); }
+.ui-epure .sv2-edit { border: 0; text-decoration: underline; text-underline-offset: 3px; padding: 4px 0; }
+
+/* Saisie : de très grands chiffres fins, pas de boîte autour. */
+.ui-epure .sv2-stepper { border: 0; background: transparent; padding: 0; align-items: flex-start; }
+.ui-epure .sv2-stepper input { text-align: left; font-size: 60px; }
+.ui-epure .sv2-stepper-btns button { background: var(--h-raised); }
+
+/* Progression et repos : des lignes fines. */
+.ui-epure .sv2-segs { gap: 2px; }
+.ui-epure .sv2-segs > div { height: 2px; border-radius: 0; }
+.ui-epure .sv2-segs > div > i { background: var(--brand-1); box-shadow: none; }
+.ui-epure .sv2-setbar > div { height: 2px; }
+.ui-epure .sv2-rest { background: transparent; border: 0; padding: 12px 0; align-items: flex-start; }
+.ui-epure .sv2-rest-clock { font-size: 96px; }
+.ui-epure .sv2-rest-bar { height: 2px; border-radius: 0; }
+.ui-epure .sv2-rest-bar > i { background: var(--h-text); border-radius: 0; }
+.ui-epure .sv2-rest.over .sv2-rest-bar > i { background: var(--h-good); }
+.ui-epure .sv2-rest-next { text-align: left; }
+.ui-epure .home-days > div > i { height: 3px; }
+.ui-epure .home-bar { height: 2px; }
+
+/* Liste de l'accueil */
+.ep-list { display: flex; flex-direction: column; margin-bottom: 20px; }
+.ep-item { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 15px 0; border-top: 1px solid var(--h-line); font-size: 15px; }
+.ep-item:last-child { border-bottom: 1px solid var(--h-line); }
+.ep-item > span { color: var(--h-text2); }
+.ep-item > b { font-weight: 500; color: var(--h-text); text-align: right; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ep-dots { display: inline-flex; gap: 5px; margin-right: 8px; vertical-align: 1px; }
+.ep-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--h-off); }
+.ep-dots i.on { background: var(--h-text); }
+.ep-item > span { flex-shrink: 0; }
+.ui-epure .home-big i { font-family: var(--h-cond); font-weight: 300; }

@@ -490,7 +490,7 @@ weightUnit === 'kg' ? 'kilos' : 'livres',
 apparence: [
 THEME_MODES.find((m) => m.id === themeMode)?.label,
 `accent ${String(accentLabel).toLowerCase()}`,
-`style ${uiStyle}`,
+`style ${uiStyle === 'epure' ? 'épuré' : uiStyle}`,
 ].filter(Boolean).join(' · '),
 objectifs: `${weeklySessionGoal} séances par semaine · ${caloriesPerHour} kcal/h`,
 donnees: syncStatus && syncStatus !== 'idle'
@@ -1183,6 +1183,7 @@ boxShadow: themeMode === m.id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
 { id: 'nouveau', label: 'Nouveau', hint: 'Surfaces pleines, gros chiffres' },
 { id: 'classique', label: 'Classique', hint: 'Verre et halo de couleur' },
 { id: 'sport', label: 'Sport pro', hint: 'Noir, dense en chiffres' },
+{ id: 'epure', label: 'Épuré', hint: 'Noir et blanc, sans cadres' },
 ] as const).map((opt) => (
 <button
 key={opt.id}

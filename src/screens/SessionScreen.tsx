@@ -64,6 +64,7 @@ const weightUnitToggleStyle = useWorkoutStore((s) => s.weightUnitToggleStyle);
 const uiStyle = useWorkoutStore((s) => s.uiStyle);
 const isNewStyle = uiStyle !== 'classique';
 const isSport = uiStyle === 'sport';
+const isEpure = uiStyle === 'epure';
 const Card = isNewStyle ? ExerciseCard : ExerciseCardClassic;
 const RestBar = isNewStyle ? InlineRestBar : InlineRestBarClassic;
 const addSet = useWorkoutStore((s) => s.addSet);
@@ -631,7 +632,7 @@ onTogglePause={handleToggleRestPause}
 ) : null;
 
 return (
-<div className={isSport ? 'session-v2 ui-sport' : isNewStyle ? 'session-v2' : 'screen-ambient'} style={{ ...container, flexDirection: isWide ? 'row' : 'column' }}>
+<div className={isSport ? 'session-v2 ui-sport' : isEpure ? 'session-v2 ui-epure' : isNewStyle ? 'session-v2' : 'screen-ambient'} style={{ ...container, flexDirection: isWide ? 'row' : 'column' }}>
 {confettiBurst && <ConfettiBurst style={ultraAnimationStyle} />}
 {prBanner && (
 <div style={prBannerStyle} className={ultraAnimationsEnabled ? 'ultra-pop-glow' : 'fade-in'}>

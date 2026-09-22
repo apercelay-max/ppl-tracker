@@ -77,7 +77,7 @@ export type BeepTone = 'doux' | 'classique' | 'urgent' | 'melodique' | 'cloche';
  *  contexte et les encouragements. Au bout de trois séances la plupart des gens
  *  passent en 'court' — d'où le réglage. */
 export type VoiceVerbosity = 'court' | 'complet';
-export type UiStyle = 'nouveau' | 'classique' | 'sport';
+export type UiStyle = 'nouveau' | 'classique' | 'sport' | 'epure';
 let audioCtx: AudioContext | null = null;
 
 interface BeepNote { freq: number; delay: number; dur: number; }
@@ -316,7 +316,8 @@ activeGymId: string;
 plateHelperEnabled: boolean;
 // Style de l'interface : « nouveau » (surfaces pleines, chiffres condensés,
 // saisie au pouce), « classique » (verre et halo, le design d'avant septembre
-// 2026) ou « sport » (noir, dense en chiffres, façon montre de sport).
+// 2026), « sport » (noir, dense en chiffres, façon montre de sport) ou
+// « epure » (noir et blanc, sans cadres, une seule police).
 // Réglages → Apparence.
 uiStyle: UiStyle;
 // Ancien réglage unique, conservé le temps de la migration des sauvegardes.
