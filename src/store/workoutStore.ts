@@ -888,11 +888,15 @@ if (timer.isPaused) get().resumeTimer();
 },
 
 deleteHistoryEntry: (id) => {
-  const { history, totalSessionsCompleted } = get();
-  if (!history.some((h) => h.id === id)) return;
+  const { history, totalSessionsCompleted, cycleDoneIds } = get();
+  const entry = history.find((h) => h.id === id);
+  if (!entry) return;
   set({
     history: history.filter((h) => h.id !== id),
     totalSessionsCompleted: Math.max(0, totalSessionsCompleted - 1),
+    // Sinon la séance reste cochée « faite » dans la rotation du cycle
+    // (accueil) alors que son historique n'existe plus.
+    cycleDoneIds: cycleDoneIds.filter((d) => d !== entry.dayId),
   });
 },
 
