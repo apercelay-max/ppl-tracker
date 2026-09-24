@@ -25,7 +25,7 @@
 
 import { isPerformedSet } from './weight';
 import type { HistoryEntry, SetEntry, WorkoutDay } from '../data/types';
-import { computeTonnage, parseRepRange, detectPlateaus, getEffectiveWeeklySets } from './training';
+import { computeTonnage, parseRepRange, detectPlateaus, getEffectiveWeeklySets, suggestNextLoad } from './training';
 
 export const COACH_LIMITS = {
   /** Séries effectives / muscle / semaine — sous ce seuil, c'est trop peu pour progresser. (NSCA, Lloyd 2014) */
@@ -164,6 +164,45 @@ export const getSetCoaching = (
   }
 
   return null;
+};
+
+/**
+ * Conseil de départ pour la toute première série d'un exercice sans
+ * historique : rien à comparer, donc on aide à trouver la bonne charge.
+ * (RIR, matrice de Helms & Tuchscherer.)
+ */
+export const getStarterCoaching = (): CoachTip => ({
+  text: 'Commence léger pour trouver ta charge : vise ~2 reps en réserve.',
+  tone: 'hold',
+});
+
+/**
+ * « La prochaine fois » : ce qu'il faut viser à la prochaine séance sur un
+ * exercice, lu sur les séries qu'on vient de faire. Réutilise la règle de
+ * double progression de `suggestNextLoad` (pas de seconde règle ici), donc
+ * ça marche dès la première séance : la séance du jour tient lieu d'historique.
+ *
+ * Renvoie null si rien de chiffré n'est exploitable (aucune série faite,
+ * poids du corps, fourchette de reps illisible).
+ */
+export const getNextTimeSuggestion = (
+  sets: SetEntry[],
+  targetReps: string,
+  plannedSets: number,
+  incrementKg: number,
+  formatKg: (kg: number) => string
+): CoachTip | null => {
+  const range = parseRepRange(targetReps);
+  if (!range || !isFinite(incrementKg) || incrementKg <= 0) return null;
+  const suggestion = suggestNextLoad(sets.filter(isPerformedSet), targetReps, plannedSets, incrementKg);
+  if (!suggestion) return null;
+  const weight = Math.round(suggestion.weight * 100) / 100;
+  if (suggestion.kind === 'up') {
+    // On repart du bas de la fourchette avec la charge plus lourde.
+    return { text: `essaie ${formatKg(weight)} × ${range.min}`, tone: 'up' };
+  }
+  const goal = suggestion.kind === 'down' ? range.min : range.max;
+  return { text: `garde ${formatKg(weight)}, vise ${goal} reps`, tone: 'hold' };
 };
 
 // ─── Récap d'accueil ───────────────────────────────────────────────────────

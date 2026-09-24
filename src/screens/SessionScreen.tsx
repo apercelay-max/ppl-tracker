@@ -1,6 +1,6 @@
 import { isPerformedSet } from '../utils/weight';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { useWorkoutStore } from '../store/workoutStore';
+import { useWorkoutStore, useActiveGym } from '../store/workoutStore';
 import { getWorkout, getProgressionWeek } from '../data/workouts';
 import { getNextStep } from '../utils/supersets';
 import { ExerciseCard } from '../components/ExerciseCard';
@@ -17,7 +17,9 @@ import { SessionStatsBig } from '../components/SessionStatsBig';
 import { SessionProgramme } from '../components/SessionProgramme';
 import { SessionRestBig } from '../components/SessionRestBig';
 import { buildSessionRecapImage, shareOrDownloadRecapImage } from '../utils/shareImage';
-import { weightUnitLabel, kgToLbs } from '../utils/weight';
+import { weightUnitLabel, kgToLbs, formatWeightForDisplay } from '../utils/weight';
+import { getNextTimeSuggestion } from '../utils/coach';
+import { usesBarbell } from '../utils/gymAdapt';
 import { IconActivity, IconBell, IconClock, IconClose, IconDumbbell, IconFlame, IconLightbulb, IconMoon, IconPlate, IconScale, IconSettings, IconShare, IconSun, IconTarget, IconThumbsUp, IconTrendingUp, IconTrophy, IconUtensils, IconVibrate, IconWind } from '../components/Icons';
 import { useRestTimer } from '../hooks/useRestTimer';
 import { useShakeToValidate } from '../hooks/useShakeToValidate';
@@ -1141,6 +1143,7 @@ const [sharing, setSharing] = useState(false);
 const weightUnit = useWorkoutStore((s) => s.weightUnit);
 const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
 const screenClass = useScreenClass();
+const gym = useActiveGym();
 // Grosse pluie de confettis à l'arrivée sur l'écran de fin, uniquement en
 // mode "Ultra animations" — se retire tout seul après ~2.2s.
 const [showConfetti, setShowConfetti] = useState(ultraAnimationsEnabled);
@@ -1187,6 +1190,23 @@ if (pct > 0.1) return { icon: <IconThumbsUp size={20} color="#e8a020" />, title:
 return { icon: <IconTarget size={20} color="#4CAF50" />, title: 'Exécution parfaite !', detail: 'Toutes les séries dans la plage cible. +2.5 kg envisageable la semaine prochaine.', color: '#4CAF50' };
 };
 const rec = getRec();
+
+// « La prochaine fois » : une suggestion par exercice fait, tirée de la
+// séance qui vient de finir (marche donc dès la toute première séance).
+const nextTime = workout.exercises.flatMap((ex) => {
+const sets = session.exerciseProgress[ex.id] ?? [];
+if (!sets.some(isPerformedSet)) return [];
+const barType = usesBarbell(ex);
+const incrementKg = barType === 'Barre' || barType === 'Barre EZ'
+? Math.min(...gym.plates) * 2
+: gym.otherIncrementKg;
+const tip = getNextTimeSuggestion(
+sets, ex.targetReps, ex.sets,
+isFinite(incrementKg) ? incrementKg : gym.otherIncrementKg,
+(kg) => `${formatWeightForDisplay(String(kg), weightUnit).replace('.', ',')} ${weightUnitLabel(weightUnit)}`
+);
+return tip ? [{ id: ex.id, name: (session as { exerciseNameOverrides?: Record<string, string> }).exerciseNameOverrides?.[ex.id] ?? ex.name, tip }] : [];
+});
 
 const handleSelectRpe = (value: number) => {
 setRpe(value);
@@ -1298,6 +1318,19 @@ vs ta 1ère {workout.name} ({comparison.first.tonnage} kg) :{' '}
 </strong>
 </p>
 )}
+</div>
+)}
+
+{nextTime.length > 0 && (
+<div style={progressionCard}>
+<p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 10 }}>
+LA PROCHAINE FOIS
+</p>
+{nextTime.map((n, i) => (
+<p key={n.id} style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: '19px', marginBottom: i < nextTime.length - 1 ? 6 : 0 }}>
+<strong style={{ color: 'var(--text-primary)' }}>{n.name}</strong> : <span style={{ color: n.tip.tone === 'up' ? '#4CAF50' : 'var(--text-muted)', fontWeight: n.tip.tone === 'up' ? 700 : 400 }}>{n.tip.text}</span>
+</p>
+))}
 </div>
 )}
 

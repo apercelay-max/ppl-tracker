@@ -9,7 +9,7 @@ import { ExerciseAnimation } from './ExerciseAnimation';
 import { useWorkoutStore, useActiveGym } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
 import { getLastExerciseSets, getMaxWeightEver, suggestNextLoad } from '../utils/training';
-import { getSetCoaching } from '../utils/coach';
+import { getSetCoaching, getStarterCoaching } from '../utils/coach';
 import { formatWeightForDisplay, weightUnitLabel } from '../utils/weight';
 import { usesBarbell } from '../utils/gymAdapt';
 
@@ -133,7 +133,9 @@ export const ExerciseCardClassic: React.FC<ExerciseCardProps> = ({
         // formatWeightForDisplay garde le point parce qu'il sert aussi aux champs
         // de saisie, où la virgule serait rejetée.
         (kg) => `${formatWeightForDisplay(String(kg), weightUnit).replace('.', ',')} ${weightUnitLabel(weightUnit)}`
-      )
+      ) ??
+      // Première série d'un exercice jamais fait : conseil de départ.
+      (completedCount === 0 && (!lastTimeSets || lastTimeSets.length === 0) ? getStarterCoaching() : null)
     : null;
   // La série qui reçoit le conseil : la première pas encore faite. Pendant le
   // repos elle n'est pas encore « courante », d'où l'index calculé à part.
