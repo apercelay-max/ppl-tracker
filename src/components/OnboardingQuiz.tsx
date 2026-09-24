@@ -123,6 +123,8 @@ const STEPS = [
   'organisation', 'lieu', 'materiel', 'priorites', 'sensible', 'toi', 'reglages', 'recap',
 ] as const;
 type StepId = typeof STEPS[number];
+// Parcours « Démarrer vite » : 4 questions, le reste prend les valeurs par défaut.
+const QUICK_STEPS: readonly StepId[] = ['intro', 'objectif', 'experience', 'frequence', 'lieu', 'recap'];
 
 const SORE_ZONES: SoreZone[] = ['epaule', 'coude-poignet', 'lombaires', 'genou'];
 
@@ -137,13 +139,15 @@ export const OnboardingQuiz: React.FC<OnboardingQuizProps> = ({ initialProfile, 
   const bodyWeightHistory = useWorkoutStore((s) => s.bodyWeightHistory);
 
   const [stepIndex, setStepIndex] = useState(0);
+  const [quick, setQuick] = useState(false);
   const [draft, setDraft] = useState<Draft>(() => emptyDraft(initialProfile));
   // La graine change à chaque « Proposer d'autres exercices » : mêmes réponses,
   // autre tirage dans le catalogue.
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1_000_000) + 1);
   const [activate, setActivate] = useState(true);
 
-  const step: StepId = STEPS[stepIndex];
+  const steps: readonly StepId[] = quick ? QUICK_STEPS : STEPS;
+  const step: StepId = steps[stepIndex];
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
 
@@ -167,7 +171,7 @@ export const OnboardingQuiz: React.FC<OnboardingQuizProps> = ({ initialProfile, 
     }
   };
 
-  const goNext = () => setStepIndex((i) => Math.min(i + 1, STEPS.length - 1));
+  const goNext = () => setStepIndex((i) => Math.min(i + 1, steps.length - 1));
   const goBack = () => setStepIndex((i) => Math.max(i - 1, 0));
 
   // Choisir un lieu remet le matériel sur le préréglage correspondant :
@@ -199,7 +203,11 @@ export const OnboardingQuiz: React.FC<OnboardingQuizProps> = ({ initialProfile, 
     onClose();
   };
 
-  const progress = (stepIndex / (STEPS.length - 1)) * 100;
+  const startQuick = () => { setQuick(true); goNext(); };
+  // Depuis le récap rapide : on rouvre les questions sautées (à partir de « forme »).
+  const refine = () => { setQuick(false); setStepIndex(STEPS.indexOf('forme')); };
+
+  const progress = (stepIndex / (steps.length - 1)) * 100;
   const hello = draft.firstName.trim() !== '' ? `, ${draft.firstName.trim()}` : '';
 
   return (
@@ -211,7 +219,7 @@ export const OnboardingQuiz: React.FC<OnboardingQuizProps> = ({ initialProfile, 
             <div style={{ ...progressFill, width: `${progress}%` }} />
           </div>
           <div style={headerRow}>
-            <span style={stepCounter}>Étape {stepIndex + 1} / {STEPS.length}</span>
+            <span style={stepCounter}>Étape {stepIndex + 1} / {steps.length}</span>
             {canDismiss && (
               <button onClick={onClose} style={dismissBtn} aria-label="Fermer le quiz">
                 <IconClose size={14} />
@@ -247,6 +255,7 @@ export const OnboardingQuiz: React.FC<OnboardingQuizProps> = ({ initialProfile, 
                 un programme de coach ni une méthode commerciale : c'est une trame classique, à ajuster
                 selon ton ressenti.
               </p>
+              <button onClick={goNext} style={secondaryBtn}>Personnaliser à fond</button>
               {!canDismiss && (
                 <button onClick={skipQuiz} style={skipBtn}>
                   Passer le quiz et garder le programme par défaut
@@ -696,6 +705,9 @@ export const OnboardingQuiz: React.FC<OnboardingQuizProps> = ({ initialProfile, 
               >
                 Proposer d'autres exercices
               </button>
+              {quick && (
+                <button onClick={refine} style={secondaryBtn}>Affiner mes réponses</button>
+              )}
               <p style={honestNote}>{result.program.source}</p>
             </Step>
           )}
@@ -710,6 +722,8 @@ export const OnboardingQuiz: React.FC<OnboardingQuizProps> = ({ initialProfile, 
           )}
           {step === 'recap' ? (
             <button onClick={finish} style={primaryBtn}>C'est parti, j'enregistre</button>
+          ) : step === 'intro' ? (
+            <button onClick={startQuick} style={primaryBtn}>Démarrer vite</button>
           ) : (
             <button
               onClick={goNext}
