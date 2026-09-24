@@ -57,7 +57,15 @@ export const SetRowClassic: React.FC<SetRowProps> = ({
   const weightUnit = useWorkoutStore((s) => s.weightUnit);
   const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
   const [weight, setWeight] = useState(formatWeightForDisplay(entry.weight || defaultWeight || (lastTime && lastTime.completed && lastTime.reps !== '—' ? lastTime.weight : '') || '', weightUnit));
-  const [reps, setReps] = useState(entry.reps || '');
+  // Reps pré-remplies (série pas encore validée, rien saisi) : celles de la
+  // dernière fois, sinon le bas de la fourchette cible. Modifiable, et le
+  // select() au focus permet de retaper directement par-dessus.
+  const defaultReps = () => {
+    if (lastTime && lastTime.completed && lastTime.reps !== '—' && lastTime.reps) return lastTime.reps;
+    const range = parseTargetRange(targetReps);
+    return range ? String(range[0]) : '';
+  };
+  const [reps, setReps] = useState(entry.reps || defaultReps());
   // Ne déclenche onWeightStart qu'une fois par série active (reset dès
   // qu'on quitte la série active, ex. après validation ou passage suivant).
   const weightStartFiredRef = useRef(false);
@@ -69,7 +77,7 @@ export const SetRowClassic: React.FC<SetRowProps> = ({
   useEffect(() => {
     if (!entry.completed) {
       setWeight(formatWeightForDisplay(entry.weight || defaultWeight || (lastTime && lastTime.completed && lastTime.reps !== '—' ? lastTime.weight : '') || '', weightUnit));
-      setReps(entry.reps || '');
+      setReps(entry.reps || defaultReps());
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.completed, entry.weight, entry.reps, defaultWeight]);
