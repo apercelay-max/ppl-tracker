@@ -15,6 +15,7 @@ import {
 import { getCoachBrief, getNutritionAdvice } from '../utils/coach';
 import type { CoachTone } from '../utils/coach';
 import type { CardioActivityType } from '../data/types';
+import { WeeklyRecapCard } from '../components/WeeklyRecapCard';
 import { refreshBinome, useBinome } from '../hooks/useBinome';
 import { markNudgesSeen, sendNudge } from '../lib/binome';
 import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconGauge, IconLightbulb, IconMoon, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
@@ -97,9 +98,9 @@ const WIDGET_PICKER_ICONS: Record<HomeSectionKey, React.ReactNode> = {
   plateau: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3.5 17a9 9 0 1 1 17 0" /><path d="m12 13 4-3.5" /><circle cx="12" cy="14" r="1.4" /></svg>,
 };
 
-interface HomeScreenProps { onSelectDay: (dayId: string) => void; onOpenDashboard: () => void; onOpenSettings: () => void; }
+interface HomeScreenProps { onSelectDay: (dayId: string) => void; onOpenDashboard: () => void; onOpenSettings: () => void; onOpenSettingsCategory?: (category: 'donnees') => void; }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashboard, onOpenSettings }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashboard, onOpenSettings, onOpenSettingsCategory }) => {
   const currentWeek = useWorkoutStore((s) => s.currentWeek);
   const setCurrentWeek = useWorkoutStore((s) => s.setCurrentWeek);
   // Semaine mémorisée à l'ouverture de cet écran, pour pouvoir y revenir
@@ -592,6 +593,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
     );
   })();
 
+  // Invitation à former un binôme : seulement si le compte est connecté (sinon
+  // le bouton mènerait à un écran qui demande d'abord de se connecter). Le
+  // binôme se gère dans Réglages → « Données & compte ».
+  const binomeInviteCard = binome?.connecte && !binome.en_binome && (
+    <div className="glass-card home-card">
+      <span className="home-eyebrow">Binôme</span>
+      <p style={{ color: 'var(--h-text)', fontSize: 14, fontWeight: 700 }}>S'entraîner avec un pote</p>
+      <p className="home-small">Voyez vos semaines côte à côte et relancez-vous quand l'un lâche.</p>
+      <button onClick={() => (onOpenSettingsCategory ? onOpenSettingsCategory('donnees') : onOpenSettings())} style={nudgeBtn}>Inviter un pote</button>
+    </div>
+  );
+
   const weeklyGoalSection = homeSections.weeklyGoal && (() => {
     const now = Date.now();
     const sessionsThisWeek = history.filter((e) => now - e.date < 7 * 86400000).length;
@@ -630,7 +643,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
           {goalReached ? 'Objectif atteint' : `Encore ${weeklySessionGoal - sessionsThisWeek} pour l'objectif`}
         </p>
       </div>
+      <WeeklyRecapCard history={history} weeklySessionGoal={weeklySessionGoal} />
       {binomeCard}
+      {binomeInviteCard}
       </div>
     );
   })();

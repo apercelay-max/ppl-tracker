@@ -206,9 +206,9 @@ const handleOpenDashboard = () => {
 setView('dashboard');
 };
 
-const handleOpenSettings = () => {
+const handleOpenSettings = (category?: SettingsCategory) => {
 setSettingsReturnView(view);
-setSettingsInitialCategory(undefined);
+setSettingsInitialCategory(category);
 setView('settings');
 };
 
@@ -239,7 +239,7 @@ let screen;
 if (view === 'intro' && selectedDayId) {
 screen = <WorkoutIntroScreen dayId={selectedDayId} onBack={handleBack} onStart={handleStartWorkout} />;
 } else if (view === 'session' && selectedDayId) {
-screen = <SessionScreen dayId={selectedDayId} onBack={handleBack} onOpenSettings={handleOpenSettings} />;
+screen = <SessionScreen dayId={selectedDayId} onBack={handleBack} onOpenSettings={() => handleOpenSettings()} />;
 } else if (view === 'dashboard') {
 screen = <DashboardScreen onBack={handleBack} />;
 } else if (view === 'objectifs') {
@@ -279,7 +279,7 @@ lastSyncedAt={sync.lastSyncedAt}
 {
   // Réglages → Personnalisation → Style de l'interface.
   const Home = uiStyle === 'classique' ? HomeScreenClassic : HomeScreen;
-  screen = <Home onSelectDay={handleSelectDay} onOpenDashboard={handleOpenDashboard} onOpenSettings={handleOpenSettings} />;
+  screen = <Home onSelectDay={handleSelectDay} onOpenDashboard={handleOpenDashboard} onOpenSettings={() => handleOpenSettings()} onOpenSettingsCategory={handleOpenSettings} />;
 }
 }
 
