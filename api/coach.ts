@@ -76,6 +76,17 @@ const API_REVISION = '2026-05-20';
  */
 const DEFAULT_MODEL = 'gemini-3.5-flash';
 
+/**
+ * Modèles de secours, essayés dans l'ordre quand le modèle principal répond
+ * « forte demande » (503), surcharge (500) ou quota par minute (429), ou qu'il
+ * ne répond pas à temps. Surchargeable par `GEMINI_FALLBACK_MODELS` (noms
+ * séparés par des virgules).
+ */
+const DEFAULT_FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+
+/** Statuts pour lesquels changer de modèle a une chance de régler le problème. */
+const RETRYABLE_STATUS = new Set([429, 500, 503]);
+
 /** Au-delà, ce n'est plus un digest : c'est quelqu'un qui pousse l'historique
  *  brut (ou n'importe quoi d'autre) dans la fonction. Un digest normal fait
  *  2 à 4 Ko. */
@@ -89,7 +100,7 @@ const MAX_QUESTION_CHARS = 500;
 
 /** Délai avant abandon. Une fonction Vercel gratuite a une limite d'exécution
  *  courte : mieux vaut couper nous-mêmes et rendre un message clair. */
-const TIMEOUT_MS = 20_000;
+const TIMEOUT_MS = 12_000;
 
 // ─── Prompt système ────────────────────────────────────────────────────────
 //
@@ -570,7 +581,10 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
     );
     return;
   }
-  const model = env('GEMINI_MODEL') || DEFAULT_MODEL;
+  const primaryModel = env('GEMINI_MODEL') || DEFAULT_MODEL;
+  const fallbackModels = (env('GEMINI_FALLBACK_MODELS')?.split(',').map(m => m.trim()).filter(Boolean)
+    ?? DEFAULT_FALLBACK_MODELS).filter(m => m !== primaryModel);
+  const models = [primaryModel, ...fallbackModels];
 
   // ── Construction de la requête ──
   const digestJson = JSON.stringify(body.digest);
@@ -601,7 +615,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
   }
 
   const payload: Record<string, unknown> = {
-    model,
+    model: primaryModel,
     input,
     generation_config: {
       // Bas mais pas nul : on veut des formulations naturelles, pas de la
@@ -628,33 +642,46 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
     payload.response_format = { type: 'text', mime_type: 'application/json', schema: CHAT_SCHEMA };
   }
 
-  // ── Appel ──
-  const controller = new AbortController();
-  const timer: ReturnType<typeof setTimeout> = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
-  let upstream: Response;
-  try {
-    upstream = await fetch(GEMINI_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-        'Api-Revision': API_REVISION,
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-  } catch (error) {
+  // ── Appel, avec bascule sur un modèle de secours en cas de forte demande ──
+  let upstream: Response | undefined;
+  let model = primaryModel;
+  let timedOut = false;
+  for (let i = 0; i < models.length; i++) {
+    model = models[i];
+    payload.model = model;
+    const last = i === models.length - 1;
+    const controller = new AbortController();
+    const timer: ReturnType<typeof setTimeout> = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      upstream = await fetch(GEMINI_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+          'Api-Revision': API_REVISION,
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      clearTimeout(timer);
+      upstream = undefined;
+      timedOut = (error as { name?: string })?.name === 'AbortError';
+      if (last) break;
+      continue;
+    }
     clearTimeout(timer);
-    const aborted = (error as { name?: string })?.name === 'AbortError';
-    if (aborted) {
+    if (upstream.ok || last || !RETRYABLE_STATUS.has(upstream.status)) break;
+  }
+
+  if (!upstream) {
+    if (timedOut) {
       fail(res, 504, 'DELAI_DEPASSE', 'Le coach IA met trop de temps à répondre. Réessaie dans un instant.');
       return;
     }
     fail(res, 502, 'ERREUR_MODELE', 'Impossible de joindre le coach IA. Vérifie ta connexion et réessaie.');
     return;
   }
-  clearTimeout(timer);
 
   // ── Erreurs renvoyées par Google ──
   if (!upstream.ok) {
