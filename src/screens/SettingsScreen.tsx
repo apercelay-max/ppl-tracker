@@ -11,6 +11,7 @@ import { parseImportedFile, parseExcelWorkbook } from '../utils/importParser';
 import type { ImportResult } from '../utils/importParser';
 import { buildHistoryImport, detectHistorySource, SOURCE_LABEL } from '../utils/historyImport';
 import { historyToCsv } from '../utils/historyExport';
+import { saveBackup, listBackups, restoreBackup, markExported, getLastExportAt, type BackupMeta } from '../lib/localBackups';
 import { useAuth } from '../hooks/useAuth';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import type { SyncStatus } from '../hooks/useCloudSync';
@@ -282,6 +283,9 @@ const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
 const toggleDay = (id: string) => setExpandedDays((d) => ({ ...d, [id]: !d[id] }));
 const importInputRef = useRef<HTMLInputElement>(null);
 const [importMsg, setImportMsg] = useState<string | null>(null);
+const [backups, setBackups] = useState<BackupMeta[]>([]);
+const [lastExportAt, setLastExportAt] = useState<number | null>(() => getLastExportAt());
+useEffect(() => { void listBackups().then(setBackups); }, []);
 const [pushStatus, setPushStatus] = useState<'idle' | 'requesting' | 'enabled' | 'denied' | 'unsupported' | 'error'>('idle');
 const enablePushNotifications = async () => {
   if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -414,6 +418,8 @@ a.href = url;
 a.download = `ppl-tracker-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
 a.click();
 URL.revokeObjectURL(url);
+markExported();
+setLastExportAt(Date.now());
 };
 
 // Historique en CSV (colonnes de Strong) : lisible par un tableur et par les
@@ -427,6 +433,8 @@ a.href = url;
 a.download = `ppl-tracker-historique-${new Date().toISOString().slice(0, 10)}.csv`;
 a.click();
 URL.revokeObjectURL(url);
+markExported();
+setLastExportAt(Date.now());
 };
 
 // Export CSV de Strong, Hevy ou Fitbod (ou de PPL Tracker) : on reprend les
@@ -445,10 +453,22 @@ const ok = window.confirm(
 );
 if (!ok) return;
 const r = importHistory(result.program, result.entries);
+setTimeout(() => { void listBackups().then(setBackups); }, 800);
 const parts = [`${r.added} séance(s) ajoutée(s) depuis ${SOURCE_LABEL[result.source]}`];
 if (r.duplicates) parts.push(`${r.duplicates} déjà présente(s)`);
-if (r.dropped) parts.push(`${r.dropped} plus ancienne(s) non gardée(s) (l'historique est limité aux 500 dernières séances)`);
+if (r.dropped) parts.push(`${r.dropped} plus ancienne(s) non gardée(s) (l'historique est limité aux 1 500 dernières séances)`);
 setImportMsg(parts.join(' · ') + '.');
+};
+
+const daysAgo = (t: number) => Math.floor((Date.now() - t) / 86400000);
+const agoLabel = (t: number) => { const d = daysAgo(t); return d <= 0 ? "aujourd'hui" : d === 1 ? 'hier' : `il y a ${d} jours`; };
+const exportStale = history.length > 0 && (lastExportAt === null || daysAgo(lastExportAt) >= 30);
+
+const handleRestoreBackup = async (b: BackupMeta) => {
+const when = new Date(b.savedAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+if (!window.confirm(`Revenir à la copie du ${when} (${b.sessions} séance(s)) ? Ce qui est enregistré maintenant sera lui aussi gardé en copie, tu pourras y revenir.`)) return;
+const ok = await restoreBackup(b.id);
+if (!ok) setImportMsg("Impossible de restaurer cette copie de secours.");
 };
 
 // Traite le résultat du parseur (texte, CSV, JSON ou Excel) une fois
@@ -465,8 +485,11 @@ const ok = window.confirm(
 'Ce fichier est une sauvegarde PPL Tracker. L\'importer va remplacer toutes tes données actuelles (séances, historique, réglages...) par celles du fichier. Continuer ?'
 );
 if (!ok) return;
+// Copie de l'état actuel avant de l'écraser : la restauration reste réversible.
+void saveBackup('safety', 'Avant restauration d\'une sauvegarde').then(() => {
 localStorage.setItem('ppl-tracker-store', rawText);
 window.location.reload();
+});
 return;
 }
 
@@ -533,7 +556,9 @@ THEME_MODES.find((m) => m.id === themeMode)?.label,
 `style ${uiStyle === 'epure' ? 'épuré' : uiStyle}`,
 ].filter(Boolean).join(' · '),
 objectifs: `${weeklySessionGoal} séances par semaine · ${caloriesPerHour} kcal/h`,
-donnees: syncStatus && syncStatus !== 'idle'
+donnees: exportStale
+? (lastExportAt === null ? 'Jamais exporté : pense à faire une sauvegarde.' : `Dernier export ${agoLabel(lastExportAt)} : pense à sauvegarder.`)
+: syncStatus && syncStatus !== 'idle'
 ? SYNC_STATUS_META[syncStatus].label
 : 'Export, import, sauvegarde, quiz de démarrage.',
 };
@@ -1690,6 +1715,32 @@ e.target.value = '';
 </div>
 {importMsg && (
 <p style={{ color: '#f5a623', fontSize: 11, marginBottom: 20, lineHeight: '15px' }}>{importMsg}</p>
+)}
+
+<p style={{ color: exportStale ? '#f5a623' : 'var(--text-dim)', fontSize: 11, marginBottom: 16, lineHeight: '15px' }}>
+{lastExportAt === null ? 'Dernier export : jamais.' : `Dernier export : ${agoLabel(lastExportAt)}.`}
+{exportStale ? ' Un export de temps en temps met tes séances à l\'abri si tu perds ton téléphone.' : ''}
+</p>
+
+<p style={subLabel}>COPIES DE SECOURS</p>
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+Une copie est prise automatiquement chaque semaine, et juste avant toute action qui remplace tes données (restauration, cloud, import).
+Elles restent sur cet appareil : elles corrigent une fausse manœuvre, pas la perte du téléphone.
+</p>
+{backups.length === 0 ? (
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 20 }}>Aucune copie pour l'instant.</p>
+) : (
+<div style={{ marginBottom: 20 }}>
+{backups.slice(0, 6).map((b) => (
+<div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderTop: '1px solid var(--border-subtle)' }}>
+<div style={{ flex: 1, minWidth: 0 }}>
+<p style={{ color: 'var(--text-primary)', fontSize: 12, fontWeight: 700 }}>{b.reason}</p>
+<p style={{ color: 'var(--text-dim)', fontSize: 11 }}>{new Date(b.savedAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · {b.sessions} séance(s)</p>
+</div>
+<button onClick={() => handleRestoreBackup(b)} style={{ ...restBtn, padding: '8px 12px' }}>Restaurer</button>
+</div>
+))}
+</div>
 )}
 
 {/* Quiz de démarrage — rejouable à tout moment. Rangé ici, à côté du

@@ -8,7 +8,17 @@
 // statique comme celui-ci ne peut pas connaître leurs noms à l'avance. On ne
 // pré-cache donc rien — on met en cache ce qui est demandé, au fur et à
 // mesure, avec deux stratégies selon la nature de la requête.
-const CACHE = 'ppl-v2';
+const CACHE = 'ppl-v3';
+// En salle le réseau « traîne » souvent : sans limite, fetch() attend parfois
+// des dizaines de secondes avant d'échouer, et l'app reste blanche alors que
+// sa copie en cache est prête. Au-delà de ce délai, on sert le cache.
+const NETWORK_TIMEOUT_MS = 3000;
+
+const withTimeout = (promise, ms) =>
+  new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('timeout')), ms);
+    promise.then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
+  });
 const SHELL = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
@@ -42,8 +52,8 @@ self.addEventListener('fetch', (e) => {
   if (url.pathname.startsWith('/assets/')) {
     e.respondWith(
       caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy));
+        // Une 404/500 mise en cache resterait servie à vie (le nom est haché).
+        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
         return res;
       }))
     );
@@ -54,13 +64,12 @@ self.addEventListener('fetch', (e) => {
   // pour ne pas servir une version périmée après un déploiement, cache en
   // secours quand il n'y a pas de réseau.
   e.respondWith(
-    fetch(req)
+    withTimeout(fetch(req), NETWORK_TIMEOUT_MS)
       .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy));
+        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
         return res;
       })
-      .catch(() => caches.match(req).then((hit) => hit || caches.match('/index.html')))
+      .catch(() => caches.match(req).then((hit) => hit || (req.mode === 'navigate' ? caches.match('/index.html') : undefined) || Response.error()))
   );
 });
 

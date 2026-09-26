@@ -21,6 +21,7 @@ import { NavBar } from './components/NavBar';
 import type { NavView } from './components/NavBar';
 import { SplashScreen } from './components/SplashScreen';
 import { SyncConflictModal } from './components/SyncConflictModal';
+import { maybeAutoBackup } from './lib/localBackups';
 import { OnboardingQuiz } from './components/OnboardingQuiz';
 import { useWorkoutStore } from './store/workoutStore';
 import { useCloudSync } from './hooks/useCloudSync';
@@ -92,6 +93,12 @@ useBinomeSync();
 // l'onglet — il faut peut-être d'abord se connecter — puis retiré de la barre
 // d'adresse, sinon un rechargement rejouerait l'acceptation. On ouvre les
 // Réglages sur « Données & compte », où l'invitation attend.
+// Copie de secours hebdomadaire, un peu après le démarrage pour ne rien ralentir.
+useEffect(() => {
+const t = setTimeout(() => { void maybeAutoBackup(); }, 8000);
+return () => clearTimeout(t);
+}, []);
+
 useEffect(() => {
 const code = readInviteCodeFromUrl();
 if (!code) return;

@@ -1,12 +1,20 @@
 {
+  "id": "/",
   "name": "PPL Tracker",
   "short_name": "PPL",
-  "description": "Push Pull Legs workout tracker",
+  "description": "Suivi de musculation Push Pull Legs : séances, historique, progression.",
+  "lang": "fr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0d0d0f",
   "theme_color": "#e03030",
+  "categories": [
+    "health",
+    "fitness",
+    "sports"
+  ],
   "icons": [
     {
       "src": "/apple-touch-icon.png",

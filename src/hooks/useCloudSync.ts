@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from './useAuth';
 import { useWorkoutStore } from '../store/workoutStore';
+import { saveBackup } from '../lib/localBackups';
 import { fetchRemoteData, pushRemoteData, getLocalSnapshot, applyRemoteSnapshot } from '../lib/sync';
 
 export type SyncStatus = 'idle' | 'checking' | 'conflict' | 'syncing' | 'synced' | 'error';
@@ -76,7 +77,11 @@ export function useCloudSync() {
     if (!user) return;
     setStatus('checking');
     const remote = await fetchRemoteData(user.id);
-    if (remote) applyRemoteSnapshot(remote.data);
+    if (remote) {
+      // Les données de cet appareil vont être remplacées : on en garde une copie.
+      await saveBackup('safety', 'Avant remplacement par les données du cloud');
+      applyRemoteSnapshot(remote.data);
+    }
     localStorage.setItem(RESOLVED_KEY, user.id);
     setConflict(null);
     setStatus('synced');

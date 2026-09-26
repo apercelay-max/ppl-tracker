@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { saveBackup } from '../lib/localBackups';
 import { WorkoutSession, ExerciseProgress, SetEntry, HistoryEntry, TimerState, CardioActivityType, CardioEntry, CardioStats, BodyWeightEntry, NavTabKey } from '../data/types';
 import { getWorkout, getBaseWorkout, setCustomWorkouts, setSessionWorkoutOverride, MESOCYCLE_WEEKS } from '../data/workouts';
 import { applyAdaptation, passageAsGym, PASSAGE_GYM_ID, type Gym, type GymProfile, type SessionAdaptation } from '../utils/gymAdapt';
@@ -260,10 +261,12 @@ const makeDefaultGym = (name = 'Ma salle'): Gym => ({
  * Nombre de séances gardées dans l'historique local.
  * C'était 50 — soit environ trois mois à quatre séances par semaine, après
  * quoi les plus anciennes disparaissaient définitivement, sans prévenir.
- * 500 couvre plus de deux ans ; à ~2 ko l'entrée, ça reste sous le mégaoctet,
- * loin de la limite du stockage local.
+ * Passé à 500 (deux ans), puis à 1500 pour qu'un import depuis Strong ou Hevy
+ * ne perde pas les premières années : ~1,5 ko l'entrée, soit 2 à 3 Mo au
+ * plafond, sous le quota du stockage local (~5 Mo) mais pas négligeable pour
+ * la synchro cloud, qui envoie l'état entier.
  */
-const HISTORY_LIMIT = 500;
+const HISTORY_LIMIT = 1500;
 
 interface WorkoutStore {
 session: WorkoutSession | null;
@@ -1200,6 +1203,7 @@ return { customPrograms };
 },
 
 importHistory: (program, entries) => {
+void saveBackup('safety', "Avant import d'historique");
 const { history, customPrograms } = get();
 const known = new Set(history.map((h) => h.id));
 const fresh = entries.filter((e) => !known.has(e.id));
