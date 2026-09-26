@@ -9,6 +9,8 @@ import { WORKOUTS } from '../data/workouts';
 import { getAllPrograms } from '../data/programs';
 import { parseImportedFile, parseExcelWorkbook } from '../utils/importParser';
 import type { ImportResult } from '../utils/importParser';
+import { buildHistoryImport, detectHistorySource, SOURCE_LABEL } from '../utils/historyImport';
+import { historyToCsv } from '../utils/historyExport';
 import { useAuth } from '../hooks/useAuth';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import type { SyncStatus } from '../hooks/useCloudSync';
@@ -212,6 +214,8 @@ const setIconSize = useWorkoutStore((s) => s.setIconSize);
 const defaultRestSeconds = useWorkoutStore((s) => s.defaultRestSeconds);
 const setDefaultRestSeconds = useWorkoutStore((s) => s.setDefaultRestSeconds);
 const weightUnit = useWorkoutStore((s) => s.weightUnit);
+const importHistory = useWorkoutStore((s) => s.importHistory);
+const history = useWorkoutStore((s) => s.history);
 const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
 const weightUnitToggleStyle = useWorkoutStore((s) => s.weightUnitToggleStyle);
 const setWeightUnitToggleStyle = useWorkoutStore((s) => s.setWeightUnitToggleStyle);
@@ -412,6 +416,41 @@ a.click();
 URL.revokeObjectURL(url);
 };
 
+// Historique en CSV (colonnes de Strong) : lisible par un tableur et par les
+// autres apps de musculation, et réimportable tel quel ici.
+const handleExportCsv = () => {
+if (history.length === 0) { setImportMsg('Rien à exporter : aucune séance dans ton historique.'); return; }
+const blob = new Blob(['\uFEFF' + historyToCsv(history)], { type: 'text/csv;charset=utf-8' });
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+a.href = url;
+a.download = `ppl-tracker-historique-${new Date().toISOString().slice(0, 10)}.csv`;
+a.click();
+URL.revokeObjectURL(url);
+};
+
+// Export CSV de Strong, Hevy ou Fitbod (ou de PPL Tracker) : on reprend les
+// séances déjà faites. Rien n'est remplacé, et réimporter le même fichier
+// n'ajoute pas de doublons.
+const finishHistoryImport = (text: string, filename: string) => {
+const result = buildHistoryImport(text, { assumedUnit: weightUnit });
+if ('error' in result) { setImportMsg(`Import impossible — ${result.error}`); return; }
+const fmt = (t: number) => new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+const unitLine = result.unitKnown
+? ''
+: `\n\n${SOURCE_LABEL[result.source]} n'indique pas l'unité dans son export : les poids sont lus en ${weightUnit === 'kg' ? 'kilos' : 'livres'} (ton réglage actuel). Si ce n'est pas le bon, annule et change l'unité dans Réglages → Séance.`;
+const warmupLine = result.warmupsSkipped ? `\n${result.warmupsSkipped} série(s) d'échauffement ignorée(s).` : '';
+const ok = window.confirm(
+`${SOURCE_LABEL[result.source]} — ${result.entries.length} séance(s), ${result.setsImported} série(s), du ${fmt(result.firstDate)} au ${fmt(result.lastDate)} (fichier "${filename}").${warmupLine}${unitLine}\n\nAjouter ces séances à ton historique ? Tes données actuelles ne sont pas touchées.`
+);
+if (!ok) return;
+const r = importHistory(result.program, result.entries);
+const parts = [`${r.added} séance(s) ajoutée(s) depuis ${SOURCE_LABEL[result.source]}`];
+if (r.duplicates) parts.push(`${r.duplicates} déjà présente(s)`);
+if (r.dropped) parts.push(`${r.dropped} plus ancienne(s) non gardée(s) (l'historique est limité aux 500 dernières séances)`);
+setImportMsg(parts.join(' · ') + '.');
+};
+
 // Traite le résultat du parseur (texte, CSV, JSON ou Excel) une fois
 // obtenu — proposition de restauration pour une sauvegarde PPL Tracker,
 // ou proposition d'ajout d'un nouveau programme sans toucher aux
@@ -469,6 +508,7 @@ return;
 const reader = new FileReader();
 reader.onload = () => {
 const text = String(reader.result ?? '');
+if (detectHistorySource(text)) { finishHistoryImport(text, file.name); return; }
 const result = parseImportedFile(file.name, text);
 finishImport(result, text, file.name);
 };
@@ -1628,11 +1668,13 @@ Réglage des kcal/h utilisées pour estimer les calories brûlées lors d'une ac
 <div style={categoryBody}>
 <p style={subLabel}>SAUVEGARDE</p>
 <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
-Exporter : télécharge tout ton historique et tes réglages. Importer : restaure une sauvegarde PPL Tracker,
-ou analyse n'importe quel autre fichier (Excel, CSV, JSON, texte) pour en faire un nouveau programme.
+Exporter : télécharge tout ton historique et tes réglages (JSON), ou tes séances seules en CSV. Importer : reprend l'historique
+d'un export Strong, Hevy ou Fitbod (CSV), restaure une sauvegarde PPL Tracker, ou analyse un autre fichier (Excel, CSV, JSON, texte)
+pour en faire un nouveau programme.
 </p>
 <div style={{ display: 'flex', gap: 8, marginBottom: importMsg ? 8 : 20 }}>
 <button onClick={handleExport} style={{ ...restBtn, flex: 1, padding: '12px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><IconDownload size={14} /> Exporter</button>
+<button onClick={handleExportCsv} style={{ ...restBtn, flex: 1, padding: '12px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><IconDownload size={14} /> CSV</button>
 <button onClick={() => importInputRef.current?.click()} style={{ ...restBtn, flex: 1, padding: '12px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><IconUpload size={14} /> Importer</button>
 <input
 ref={importInputRef}

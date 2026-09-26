@@ -447,6 +447,8 @@ addBodyWeightEntry: (weightKg: number) => void;
 deleteBodyWeightEntry: (id: string) => void;
 setActiveProgram: (id: string) => void;
 addCustomProgram: (program: Program) => void;
+// Reprend des séances venues d'une autre app (voir utils/historyImport.ts).
+importHistory: (program: Program, entries: HistoryEntry[]) => { added: number; duplicates: number; dropped: number };
 // Remplace le programme de même id s'il existe, sinon l'ajoute. Sert au
 // programme « ajusté par le coach », qui garde un id stable d'une
 // validation à l'autre : avec addCustomProgram on empilerait des copies, et
@@ -1195,6 +1197,41 @@ const customPrograms = [...state.customPrograms, program];
 syncCustomWorkoutsRegistry(customPrograms);
 return { customPrograms };
 });
+},
+
+importHistory: (program, entries) => {
+const { history, customPrograms } = get();
+const known = new Set(history.map((h) => h.id));
+const fresh = entries.filter((e) => !known.has(e.id));
+const merged = [...history, ...fresh].sort((a, b) => b.date - a.date);
+const kept = merged.slice(0, HISTORY_LIMIT);
+// Le programme support fusionne avec celui d'un import précédent : sinon
+// une séance importée la semaine dernière perdrait son jour et son nom.
+const existing = customPrograms.find((p) => p.id === program.id);
+const days = new Map((existing?.workouts ?? []).map((w) => [w.id, w] as const));
+for (const w of program.workouts) {
+const old = days.get(w.id);
+if (!old) { days.set(w.id, w); continue; }
+const exs = new Map(old.exercises.map((e) => [e.id, e] as const));
+for (const e of w.exercises) {
+const prev = exs.get(e.id);
+exs.set(e.id, prev ? { ...prev, sets: Math.max(prev.sets, e.sets) } : e);
+}
+days.set(w.id, { ...old, exercises: [...exs.values()] });
+}
+const workouts = [...days.values()];
+const mergedProgram: Program = {
+...program,
+workouts,
+dayAccents: { ...program.dayAccents, ...(existing?.dayAccents ?? {}) },
+dayTypeLabels: { ...program.dayTypeLabels, ...(existing?.dayTypeLabels ?? {}) },
+};
+get().upsertCustomProgram(mergedProgram);
+set((state) => ({
+history: kept,
+totalSessionsCompleted: state.totalSessionsCompleted + fresh.length,
+}));
+return { added: fresh.length, duplicates: entries.length - fresh.length, dropped: merged.length - kept.length };
 },
 
 upsertCustomProgram: (program) => {
