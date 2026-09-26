@@ -23,6 +23,8 @@ import { SplashScreen } from './components/SplashScreen';
 import { SyncConflictModal } from './components/SyncConflictModal';
 import { maybeAutoBackup } from './lib/localBackups';
 import { OnboardingQuiz } from './components/OnboardingQuiz';
+import { WhatsNewSheet } from './components/WhatsNewSheet';
+import { CHANGELOG, type ChangelogEntry } from './data/changelog';
 import { useWorkoutStore } from './store/workoutStore';
 import { useCloudSync } from './hooks/useCloudSync';
 import { useVoiceCoach } from './hooks/useVoiceCoach';
@@ -40,6 +42,7 @@ type View =
 // Durée d'affichage du splash "PPL" au démarrage, avant le fondu de sortie
 // (voir .splash-fade dans index.css). Volontairement court pour ne pas
 // ralentir l'ouverture de l'appli à chaque fois.
+const NEWS_SEEN_KEY = 'ppl-news-seen';
 const SPLASH_VISIBLE_MS = 1100;
 const SPLASH_FADE_MS = 350;
 
@@ -117,6 +120,30 @@ const fadeTimer = setTimeout(() => setSplashFading(true), SPLASH_VISIBLE_MS);
 const hideTimer = setTimeout(() => setSplashVisible(false), SPLASH_VISIBLE_MS + SPLASH_FADE_MS);
 return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer); };
 }, []);
+
+// Nouveautés : après le splash, une seule fois par mise à jour. Un tout
+// nouvel utilisateur (quiz pas encore fait) n'a rien à « rattraper » : on
+// note simplement que tout est vu.
+const [news, setNews] = useState<ChangelogEntry[]>([]);
+useEffect(() => {
+if (splashVisible || !CHANGELOG.length) return;
+try {
+if (!hasCompletedOnboarding) {
+localStorage.setItem(NEWS_SEEN_KEY, CHANGELOG[0].id);
+return;
+}
+const seen = localStorage.getItem(NEWS_SEEN_KEY);
+if (seen === CHANGELOG[0].id) return;
+const idx = seen ? CHANGELOG.findIndex((e) => e.id === seen) : -1;
+const unseen = idx === -1 ? CHANGELOG.slice(0, 3) : CHANGELOG.slice(0, idx);
+if (seen === null && unseen.length === 0) return;
+setNews(unseen.slice(0, 3));
+} catch { /* stockage indisponible : pas de nouveautés, tant pis */ }
+}, [splashVisible, hasCompletedOnboarding]);
+const closeNews = () => {
+try { localStorage.setItem(NEWS_SEEN_KEY, CHANGELOG[0].id); } catch { /* ignoré */ }
+setNews([]);
+};
 
 useEffect(() => {
 document.documentElement.setAttribute('data-theme', theme);
@@ -330,6 +357,7 @@ canDismiss={quizOpen}
 onClose={() => setQuizOpen(false)}
 />
 )}
+{news.length > 0 && <WhatsNewSheet entries={news} onClose={closeNews} />}
 {sync.status === 'conflict' && sync.conflict && (
 <SyncConflictModal
 remoteUpdatedAt={sync.conflict.remoteUpdatedAt}
