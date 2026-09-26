@@ -8,10 +8,11 @@ import type { HomeSectionKey } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
 import { HOME_SECTION_META } from '../data/homeSectionMeta';
 import {
-  getMuscleGroupsStatus, getMuscleRecoverySummary, getMuscleRecoveryStatus, getRecoveryPct, bucketByWeek, computeLoadStatus,
+  getMuscleGroupsStatus, getMuscleRecoverySummary, getMuscleRecoveryStatus, getRecoveryPct, bucketByWeek,
   computeTonnage, getMostRecentPersonalRecord, getFeaturedExerciseProgress,
   detectPlateaus as getPlateaus,
 } from '../utils/training';
+import { computeTrainingStatus, STATUS_LABEL } from '../utils/trainingStatus';
 import { getCoachBrief, getNutritionAdvice } from '../utils/coach';
 import type { CoachTone } from '../utils/coach';
 import type { CardioActivityType } from '../data/types';
@@ -225,7 +226,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
   // Compare la charge de la semaine en cours à la moyenne des semaines
   // précédentes — voir computeLoadStatus (utils/training.ts). Renvoie null
   // si pas assez de données plutôt que d'inventer un statut.
-  const loadStatus = computeLoadStatus(bucketByWeek(history));
+  // Même statut que le Dashboard (voir utils/trainingStatus.ts), pas de carte à part.
+  const trainingStatus = React.useMemo(() => computeTrainingStatus(history, cardioHistory), [history, cardioHistory]);
+  const loadStatus = trainingStatus.status === 'none'
+    ? null
+    : { level: trainingStatus.status === 'overreaching' ? 'spike' : 'ok', label: `Statut : ${STATUS_LABEL[trainingStatus.status]}`, detail: trainingStatus.detail };
 
   const cycleColor = blockColor('cycle', 'var(--brand-1)');
   // Le suivi "semaine / RIR / objectif" (mésocycle 11 semaines) est propre

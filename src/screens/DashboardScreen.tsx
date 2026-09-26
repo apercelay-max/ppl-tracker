@@ -8,10 +8,14 @@ import { getDayMeta } from '../data/programs';
 import { HistoryEntry } from '../data/types';
 import { useScreenClass } from '../hooks/useScreenClass';
 import {
-  bucketByWeek, computeLoadStatus, computeTonnage, WeekBucket,
+  bucketByWeek, computeTonnage, WeekBucket,
   getAllExercises, getExerciseWeightHistory, getMuscleGroupVolume,
   getEffectiveWeeklySets, EFFECTIVE_SETS_MIN, EFFECTIVE_SETS_MAX,
 } from '../utils/training';
+import {
+  computeTrainingStatus, computeReadiness, weeklyLoads, STATUS_LABEL, READINESS_LABEL,
+  type TrainingStatus, type TrainingStatusKey, type Readiness, type ReadinessLevel, type LoadZone,
+} from '../utils/trainingStatus';
 
 interface DashboardScreenProps { onBack: () => void; }
 
@@ -300,13 +304,106 @@ const EffectiveSetsChart: React.FC<{ history: HistoryEntry[] }> = ({ history }) 
   );
 };
 
+// ─── Statut d'entraînement & aptitude (voir utils/trainingStatus.ts) ─────────
+const STATUS_COLOR: Record<TrainingStatusKey, string> = {
+  productive: '#4CAF50', maintaining: '#5560cc', peaking: '#e8a020', recovery: '#3b9ad9',
+  unproductive: '#f5a623', overreaching: '#e03030', detraining: '#7a7a90', none: '#7a7a90',
+};
+const READINESS_COLOR: Record<ReadinessLevel, string> = { excellent: '#4CAF50', high: '#8bc34a', moderate: '#f5a623', low: '#e03030' };
+const ZONE_LABEL: Record<LoadZone, string> = { low: 'Basse', optimal: 'Optimale', high: 'Élevée', veryHigh: 'Très élevée' };
+
+// Jauge de charge aiguë : la bande claire est la zone optimale (0,8 à 1,3 × ta charge habituelle).
+const LoadGauge: React.FC<{ status: TrainingStatus; color: string }> = ({ status, color }) => {
+  if (!status.optimalRange || status.chronicLoad <= 0) return null;
+  const top = Math.max(status.optimalRange.max * 1.25, status.acuteLoad * 1.05, 1);
+  const pct = (v: number) => `${Math.min(100, (v / top) * 100)}%`;
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'var(--bg-elevated)' }}>
+        <div style={{ position: 'absolute', left: pct(status.optimalRange.min), width: `calc(${pct(status.optimalRange.max)} - ${pct(status.optimalRange.min)})`, top: 0, bottom: 0, background: 'rgba(76,175,80,0.28)', borderRadius: 4 }} />
+        <div style={{ position: 'absolute', left: 0, width: pct(status.acuteLoad), top: 2, bottom: 2, background: color, borderRadius: 4 }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+        <span style={axisLabel}>0</span>
+        <span style={axisLabel}>zone optimale {status.optimalRange.min}–{status.optimalRange.max}</span>
+      </div>
+    </div>
+  );
+};
+
+const TrainingStatusCard: React.FC<{ status: TrainingStatus }> = ({ status }) => {
+  const color = STATUS_COLOR[status.status];
+  return (
+    <div style={{ ...statusCard, borderColor: color + '40' }}>
+      <p style={sectionLabel}>STATUT D'ENTRAÎNEMENT</p>
+      <p style={{ fontSize: 20, fontWeight: 800, color, marginBottom: 4 }}>{STATUS_LABEL[status.status]}</p>
+      <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px' }}>{status.detail}</p>
+      {status.status !== 'none' && (
+        <>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <div style={miniStat}>
+              <span style={miniValue}>{status.acuteLoad}</span>
+              <span style={statLabel}>CHARGE AIGUË 7 J</span>
+            </div>
+            <div style={miniStat}>
+              <span style={miniValue}>{status.chronicLoad}</span>
+              <span style={statLabel}>HABITUELLE / SEM.</span>
+            </div>
+            <div style={miniStat}>
+              <span style={{ ...miniValue, color }}>{status.zone ? ZONE_LABEL[status.zone] : '–'}</span>
+              <span style={statLabel}>ZONE{status.ratio !== null ? ` · ×${status.ratio}` : ''}</span>
+            </div>
+          </div>
+          <LoadGauge status={status} color={color} />
+        </>
+      )}
+      {status.loadEstimated && status.status !== 'none' && (
+        <p style={{ color: 'var(--text-dim)', fontSize: 10.5, marginTop: 10, lineHeight: '15px' }}>
+          Une partie de la charge est estimée (RPE ou durée manquants). Note ton ressenti à la fin des séances pour l'affiner.
+        </p>
+      )}
+    </div>
+  );
+};
+
+const ReadinessCard: React.FC<{ readiness: Readiness }> = ({ readiness }) => {
+  const color = READINESS_COLOR[readiness.level];
+  return (
+    <div style={chartCard}>
+      <p style={sectionLabel}>APTITUDE À L'ENTRAÎNEMENT</p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ width: 56, height: 56, borderRadius: 28, border: `4px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <span style={{ color: 'var(--text-primary)', fontSize: 18, fontWeight: 800 }}>{readiness.score}</span>
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ color, fontSize: 16, fontWeight: 800 }}>{READINESS_LABEL[readiness.level]}</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 11.5, lineHeight: '16px', marginTop: 2 }}>
+            {readiness.factors.length ? `Pèse dans le score : ${readiness.factors.join(', ')}.` : 'Rien ne freine ta forme aujourd\'hui.'}
+          </p>
+        </div>
+      </div>
+      {readiness.missing.length > 0 && (
+        <p style={{ color: 'var(--text-dim)', fontSize: 10.5, marginTop: 10, lineHeight: '15px' }}>
+          Score calculé sans {readiness.missing.join(' ni ')} : il s'affinera quand l'app pourra lire Apple Santé ou Garmin Connect.
+        </p>
+      )}
+    </div>
+  );
+};
+
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onBack }) => {
 const screenClass = useScreenClass();
   const history = useWorkoutStore((s) => s.history);
   const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
 
+  const cardioHistory = useWorkoutStore((s) => s.cardioHistory);
+
   const buckets = bucketByWeek(history, 8);
-  const status = computeLoadStatus(buckets);
+  // Charge par semaine avec estimation quand le RPE manque, et cardio compris :
+  // sans ça, les séances importées ou sans RPE comptaient pour zéro.
+  const loadByWeek = React.useMemo(() => weeklyLoads(history, cardioHistory, 8), [history, cardioHistory]);
+  const trainingStatus = React.useMemo(() => computeTrainingStatus(history, cardioHistory), [history, cardioHistory]);
+  const readiness = React.useMemo(() => computeReadiness(history, trainingStatus), [history, trainingStatus]);
 
   const totalSessions = history.length;
   const totalTonnage = history.reduce((sum, e) => sum + (e.tonnage ?? computeTonnage(e.exerciseProgress)), 0);
@@ -349,24 +446,13 @@ const screenClass = useScreenClass();
               </div>
             </div>
 
-            {/* Statut de charge */}
-            <div style={{ ...statusCard, borderColor: status ? statusColor(status.level) + '40' : 'var(--border)' }}>
-              {status ? (
-                <>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: statusColor(status.level), marginBottom: 4 }}>{status.label}</p>
-                  <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px' }}>{status.detail}</p>
-                </>
-              ) : (
-                <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px' }}>
-                  Note ton ressenti (RPE) à la fin de tes prochaines séances pour voir apparaître ton statut de charge ici.
-                </p>
-              )}
-            </div>
+            <TrainingStatusCard status={trainingStatus} />
+            <ReadinessCard readiness={readiness} />
 
             {/* Charge d'entraînement hebdo */}
             <div style={chartCard}>
               <p style={sectionLabel}>CHARGE D'ENTRAÎNEMENT / SEMAINE</p>
-              <WeeklyBarChart buckets={buckets} valueFn={(b) => b.trainingLoad} color="var(--brand-1)" />
+              <WeeklyBarChart buckets={buckets} valueFn={(b) => loadByWeek[b.weeksAgo] ?? 0} color="var(--brand-1)" />
             </div>
 
             {/* Tonnage hebdo */}
@@ -396,13 +482,6 @@ const screenClass = useScreenClass();
       </div>
     </div>
   );
-};
-
-const statusColor = (level: 'up' | 'stable' | 'down' | 'spike'): string => {
-  if (level === 'spike') return '#f5a623';
-  if (level === 'up') return '#5560cc';
-  if (level === 'down') return '#7a7a90';
-  return '#4CAF50';
 };
 
 const SessionRow: React.FC<{ entry: HistoryEntry }> = ({ entry }) => {
@@ -487,6 +566,8 @@ const statusCard: React.CSSProperties = {
   background: 'var(--bg-card)', borderRadius: 16, padding: 14, marginBottom: 16,
   border: '1px solid var(--border-mid)',
 };
+const miniStat: React.CSSProperties = { flex: 1, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 };
+const miniValue: React.CSSProperties = { color: 'var(--text-primary)', fontSize: 16, fontWeight: 800 };
 const chartCard: React.CSSProperties = {
   background: 'var(--bg-card)', borderRadius: 16, padding: 14, marginBottom: 12,
   border: '1px solid var(--border-mid)',

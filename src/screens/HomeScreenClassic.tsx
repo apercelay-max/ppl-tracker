@@ -10,10 +10,11 @@ import type { HomeSectionKey } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
 import { HOME_SECTION_META } from '../data/homeSectionMeta';
 import {
-  getMuscleGroupsStatus, getMuscleRecoverySummary, bucketByWeek, computeLoadStatus,
+  getMuscleGroupsStatus, getMuscleRecoverySummary, bucketByWeek,
   computeTonnage, getMostRecentPersonalRecord, getFeaturedExerciseProgress,
   detectPlateaus as getPlateaus,
 } from '../utils/training';
+import { computeTrainingStatus, STATUS_LABEL } from '../utils/trainingStatus';
 import { getCoachBrief, getNutritionAdvice } from '../utils/coach';
 import type { CoachTone } from '../utils/coach';
 import type { CardioActivityType } from '../data/types';
@@ -203,7 +204,11 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onSelectDay, onOp
   // Compare la charge de la semaine en cours à la moyenne des semaines
   // précédentes — voir computeLoadStatus (utils/training.ts). Renvoie null
   // si pas assez de données plutôt que d'inventer un statut.
-  const loadStatus = computeLoadStatus(bucketByWeek(history));
+  // Même statut que le Dashboard (voir utils/trainingStatus.ts), pas de carte à part.
+  const trainingStatus = React.useMemo(() => computeTrainingStatus(history, cardioHistory), [history, cardioHistory]);
+  const loadStatus = trainingStatus.status === 'none'
+    ? null
+    : { level: trainingStatus.status === 'overreaching' ? 'spike' : 'ok', label: `Statut : ${STATUS_LABEL[trainingStatus.status]}`, detail: trainingStatus.detail };
 
   // ── Effet holographique du titre ─────────────────────────────────────────
   // Le dégradé animé (.titre-irise) bouge déjà tout seul en boucle. On
