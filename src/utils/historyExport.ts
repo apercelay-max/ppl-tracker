@@ -1,5 +1,6 @@
 import type { HistoryEntry } from '../data/types';
 import { getWorkout } from '../data/workouts';
+import { isPerformedSet } from './weight';
 
 // Export CSV de l'historique, au format de Strong (colonnes identiques) : les
 // autres apps (Hevy, Strong, tableurs) savent le lire, et PPL Tracker aussi —
@@ -34,7 +35,7 @@ export const historyToCsv = (history: HistoryEntry[]): string => {
       const exName = entry.exerciseNameOverrides?.[exId] ?? workout?.exercises.find((e) => e.id === exId)?.name ?? exId;
       let order = 0;
       for (const s of sets) {
-        if (!s.completed) continue;
+        if (!isPerformedSet(s)) continue;
         order++;
         const timed = /\ss?$|sec/i.test(s.reps) && !/^\d+$/.test(s.reps);
         const secs = timed ? parseInt(s.reps, 10) : 0;
