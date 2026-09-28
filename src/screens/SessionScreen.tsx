@@ -1126,7 +1126,7 @@ const RPE_LABELS: Record<number, string> = {
 
 const CompletionScreen: React.FC<{
 workout: NonNullable<ReturnType<typeof getWorkout>>;
-session: { startTime: number; exerciseProgress: ExerciseProgress; dayId: string; isComplete: boolean; currentExerciseIndex: number; currentSetIndex: number };
+session: { startTime: number; exerciseProgress: ExerciseProgress; dayId: string; isComplete: boolean; currentExerciseIndex: number; currentSetIndex: number; disabledSupersetGroupIds?: string[] };
 onBack: () => void;
 history: HistoryEntry[];
 }> = ({ workout, session, onBack, history }) => {
