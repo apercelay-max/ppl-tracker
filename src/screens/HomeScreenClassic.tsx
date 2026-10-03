@@ -105,9 +105,10 @@ const WIDGET_PICKER_ICONS: Record<HomeSectionKey, React.ReactNode> = {
   plateau: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3.5 17a9 9 0 1 1 17 0" /><path d="m12 13 4-3.5" /><circle cx="12" cy="14" r="1.4" /></svg>,
 };
 
-interface HomeScreenProps { onSelectDay: (dayId: string) => void; onOpenDashboard: () => void; onOpenSettings: () => void; }
+interface HomeScreenProps { onOpenSummary?: () => void; onSelectDay: (dayId: string) => void; onOpenDashboard: () => void; onOpenSettings: () => void; }
 
-export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashboard, onOpenSettings }) => {
+export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectDay, onOpenDashboard, onOpenSettings }) => {
+  const firstName = useWorkoutStore((s) => s.trainingProfile?.firstName?.trim());
   const currentWeek = useWorkoutStore((s) => s.currentWeek);
   const setCurrentWeek = useWorkoutStore((s) => s.setCurrentWeek);
   // Semaine mémorisée à l'ouverture de cet écran, pour pouvoir y revenir
@@ -905,6 +906,9 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onSelectDay, onOp
                   }}
                 >PPL Tracker</h1>
               </div>
+              {firstName && onOpenSummary && (
+                <button onClick={onOpenSummary} style={{ all: 'unset', cursor: 'pointer', color: 'var(--text-primary)', fontSize: 14, fontWeight: 700, marginTop: 2, display: 'block' }}>Bonjour {firstName} ›</button>
+              )}
               <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>{activeProgram.focusLabel}</p>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>

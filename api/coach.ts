@@ -24,6 +24,7 @@
 
 import type {
   CoachAiBrief,
+  CoachAiDaily,
   CoachAiErrorCode,
   CoachAiMode,
   CoachAiPoint,
@@ -237,6 +238,18 @@ const BRIEF_SCHEMA = {
   required: ['resume', 'points', 'encouragement'],
 } as const;
 
+const DAILY_SCHEMA = {
+  type: 'object',
+  properties: {
+    resume: { type: 'string' },
+    semaine: { type: 'string' },
+    seance: { type: 'string' },
+    poids: { type: 'string' },
+    conseil: { type: 'string' },
+  },
+  required: ['resume', 'semaine', 'seance', 'poids', 'conseil'],
+} as const;
+
 // ─── Schéma de sortie du mode « chat » ─────────────────────────────────────
 //
 // Le texte de la réponse ET, éventuellement, une proposition de modification
@@ -423,6 +436,22 @@ const parseBrief = (text: string): CoachAiBrief | null => {
   };
 };
 
+const parseDaily = (text: string): CoachAiDaily | null => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  const raw = parsed as Record<string, unknown>;
+  const str = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
+  const daily = {
+    resume: str(raw.resume), semaine: str(raw.semaine), seance: str(raw.seance),
+    poids: str(raw.poids), conseil: str(raw.conseil),
+  };
+  return daily.resume && daily.semaine && daily.seance ? daily : null;
+};
+
 /**
  * Réponse du mode « chat » : du texte, et parfois une proposition de
  * modification du programme. Si le modèle a répondu en texte brut malgré le
@@ -526,15 +555,19 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
   // ── Validation ──
   const body = (req.body ?? {}) as {
     mode?: unknown; digest?: unknown; question?: unknown; apiKey?: unknown; previousInteractionId?: unknown;
-    program?: unknown; catalog?: unknown;
+    program?: unknown; catalog?: unknown; daily?: unknown;
   };
   const mode = body.mode as CoachAiMode | undefined;
-  if (mode !== 'brief' && mode !== 'chat') {
-    fail(res, 400, 'REQUETE_INVALIDE', 'Le champ « mode » doit valoir « brief » ou « chat ».');
+  if (mode !== 'brief' && mode !== 'chat' && mode !== 'daily') {
+    fail(res, 400, 'REQUETE_INVALIDE', 'Le champ « mode » doit valoir « brief », « chat » ou « daily ».');
     return;
   }
   if (!body.digest || typeof body.digest !== 'object') {
     fail(res, 400, 'REQUETE_INVALIDE', 'Le résumé d’entraînement (« digest ») est absent.');
+    return;
+  }
+  if (mode === 'daily' && (!body.daily || typeof body.daily !== 'object')) {
+    fail(res, 400, 'REQUETE_INVALIDE', 'Le contexte du jour (« daily ») est absent.');
     return;
   }
   let question = '';
@@ -593,6 +626,15 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
     input = `Voici le résumé d'entraînement (chiffres déjà calculés par l'application) :\n${digestJson}\n\n`
       + 'Rédige le bilan : un résumé d\'une phrase, puis 2 à 3 points classés par priorité, puis une phrase d\'encouragement honnête. '
       + 'Ne cite que des chiffres présents dans ce résumé.';
+  } else if (mode === 'daily') {
+    input = `Résumé d'entraînement (chiffres déjà calculés par l'application) :\n${digestJson}\n\n`
+      + `Contexte d'aujourd'hui, avec la séance conseillée et les charges déjà choisies par l'application :\n${JSON.stringify(body.daily)}\n\n`
+      + 'Rédige le résumé du jour, en texte brut (pas de markdown), avec ces champs : '
+      + '"resume" (2 phrases, tu l\'accueilles par son prénom s\'il est présent), '
+      + '"semaine" (2 phrases sur les stats de la semaine : séances faites, objectif, tonnage comparé à la semaine précédente), '
+      + '"seance" (1 à 2 phrases : pourquoi cette séance aujourd\'hui, d\'après le temps de récupération), '
+      + '"poids" (1 à 2 phrases sur les charges conseillées ; cite uniquement les "suggestedKg" fournis, ne calcule aucune charge), '
+      + '"conseil" (1 conseil concret pour aujourd\'hui). Ne cite que des chiffres présents dans ces données.';
   } else if (continuing) {
     // Suite de conversation : le digest et les consignes sont déjà dans
     // l'échange que Google a gardé. Les renvoyer coûterait des jetons à
@@ -626,7 +668,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
       // Mesuré sur un vrai digest : 1 460 jetons de réflexion pour 469 de
       // texte. À 900, la réponse revenait coupée en plein JSON
       // (`status: "incomplete"`), donc impossible à relire → « réponse vide ».
-      max_output_tokens: mode === 'brief' ? 4000 : 5000,
+      max_output_tokens: mode === 'chat' ? 5000 : 4000,
     },
   };
   if (continuing) {
@@ -638,6 +680,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
   }
   if (mode === 'brief') {
     payload.response_format = { type: 'text', mime_type: 'application/json', schema: BRIEF_SCHEMA };
+  } else if (mode === 'daily') {
+    payload.response_format = { type: 'text', mime_type: 'application/json', schema: DAILY_SCHEMA };
   } else {
     payload.response_format = { type: 'text', mime_type: 'application/json', schema: CHAT_SCHEMA };
   }
@@ -749,6 +793,17 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
       ok: true, mode: 'chat', model, reponse, proposition, nouveauProgramme,
       interactionId: typeof interactionId === 'string' ? interactionId : undefined,
     };
+    res.status(200).json(answer);
+    return;
+  }
+
+  if (mode === 'daily') {
+    const daily = parseDaily(text);
+    if (!daily) {
+      fail(res, 502, 'REPONSE_VIDE', 'Le résumé du jour est revenu incomplet. Réessaie.');
+      return;
+    }
+    const answer: CoachAiResponse = { ok: true, mode: 'daily', model, daily };
     res.status(200).json(answer);
     return;
   }

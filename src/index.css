@@ -537,40 +537,34 @@ button { cursor: pointer; }
   box-shadow: 0 10px 26px rgba(0,0,0,0.4);
 }
 
-/* ─── Écran de démarrage (splash "PPL") ─────────────────────────────────── */
-@keyframes splashBadgePop {
-  0% { transform: scale(0.4) rotate(-8deg); opacity: 0; }
-  60% { transform: scale(1.08) rotate(2deg); }
-  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+/* ─── Écran de démarrage : fond noir, « Bonjour <prénom> », un point tombe ── */
+@keyframes splashTextIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-@keyframes splashLetterIn {
-  0% { transform: translateY(28px) scale(0.7); opacity: 0; }
+@keyframes splashDotFall {
+  0% { transform: translateY(-70vh) scale(1); opacity: 1; }
+  62% { transform: translateY(0) scale(1); }
+  74% { transform: translateY(-0.28em) scale(0.9, 1.1); }
+  86% { transform: translateY(0) scale(1.35, 0.7); }
   100% { transform: translateY(0) scale(1); opacity: 1; }
 }
-@keyframes splashSubFade {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
+.splash-screen { animation: none; }
+.splash-hello, .splash-name { display: inline-block; animation: splashTextIn 0.5s ease 0.25s both; }
+.splash-name { animation-delay: 0.4s; margin-left: 0.28em; }
+.splash-dot {
+  position: absolute; left: 50%; width: 0.24em; height: 0.24em; margin-left: -0.12em;
+  border-radius: 50%; background: var(--brand-1, #ff4d4d);
+  box-shadow: 0 0 14px rgba(var(--brand-1-rgb, 255, 77, 77), 0.9);
+  animation: splashDotFall 0.95s cubic-bezier(0.55, 0, 0.9, 0.4) 0.9s both;
 }
-.splash-screen {
-  animation: fadeIn 0.2s ease both;
-}
-.splash-badge {
-  animation: splashBadgePop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-.splash-letter {
-  display: inline-block;
-  animation: splashLetterIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-.splash-sub {
-  animation: splashSubFade 0.4s ease 0.4s both;
-}
-.splash-fade {
-  animation: splashFadeOut 0.35s ease forwards;
-  pointer-events: none;
-}
+.splash-fade { animation: splashFadeOut 0.45s ease forwards; pointer-events: none; }
 @keyframes splashFadeOut {
   from { opacity: 1; }
   to { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .splash-hello, .splash-name, .splash-dot { animation: none; }
 }
 
 /* ─── Ultra animations (réglage optionnel, Réglages → Personnalisation) ──── */

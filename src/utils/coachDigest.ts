@@ -186,7 +186,7 @@ export interface CoachDigestInput {
 // ici, du côté client, et api/coach.ts les importe en `import type` : une
 // seule définition, et aucun code serveur embarqué dans le bundle.
 
-export type CoachAiMode = 'brief' | 'chat';
+export type CoachAiMode = 'brief' | 'chat' | 'daily';
 
 export interface CoachAiRequest {
   mode: CoachAiMode;
@@ -204,11 +204,43 @@ export interface CoachAiRequest {
    *  précédent, renvoyé par l'API. C'est Google qui garde l'historique — on
    *  ne réexpédie donc ni les messages passés ni le digest à chaque tour. */
   previousInteractionId?: string;
+  /** Contexte du résumé du jour, mode « daily » seulement. */
+  daily?: DailyContext;
   /** Clé d'API saisie dans l'appli (Coach → Clé d'API). Quand elle est là,
    *  elle prime sur celle du serveur : c'est un geste explicite de
    *  l'utilisateur, il doit voir son effet. Sinon, le serveur utilise la
    *  sienne (variable d'environnement GEMINI_API_KEY sur Vercel). */
   apiKey?: string;
+}
+
+/** Ce que l'appli a déjà calculé pour le résumé du jour : le modèle le
+ *  commente, il ne recalcule rien (charges comprises). */
+export interface DailyContext {
+  firstName?: string;
+  /** Jour de la semaine, ex. « samedi ». */
+  weekday: string;
+  week: {
+    sessions: number;
+    goal?: number;
+    tonnageKg: number;
+    previousTonnageKg: number;
+  };
+  /** Séance conseillée aujourd'hui. */
+  session?: {
+    name: string;
+    focus?: string;
+    exercises: Array<{ name: string; sets: number; reps: string; suggestedKg?: number; advice?: string }>;
+  };
+  hoursSinceLastSession?: number;
+}
+
+/** Résumé du jour rédigé par le modèle (mode « daily »). */
+export interface CoachAiDaily {
+  resume: string;
+  semaine: string;
+  seance: string;
+  poids: string;
+  conseil: string;
 }
 
 export type CoachAiPriority = 'haute' | 'moyenne' | 'basse';
@@ -250,6 +282,7 @@ export type CoachAiErrorCode =
 
 export type CoachAiResponse =
   | { ok: true; mode: 'brief'; model: string; brief: CoachAiBrief }
+  | { ok: true; mode: 'daily'; model: string; daily: CoachAiDaily }
   | {
       ok: true; mode: 'chat'; model: string; reponse: string; interactionId?: string;
       /** Modification de programme suggérée. BRUTE : rien n'est validé à ce

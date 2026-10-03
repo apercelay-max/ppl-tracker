@@ -20,6 +20,8 @@ import { AuthScreen } from './screens/AuthScreen';
 import { NavBar } from './components/NavBar';
 import type { NavView } from './components/NavBar';
 import { SplashScreen } from './components/SplashScreen';
+import { DailySummarySheet } from './components/DailySummarySheet';
+import { useDailyBrief } from './hooks/useDailyBrief';
 import { SyncConflictModal } from './components/SyncConflictModal';
 import { maybeAutoBackup } from './lib/localBackups';
 import { OnboardingQuiz } from './components/OnboardingQuiz';
@@ -43,8 +45,8 @@ type View =
 // (voir .splash-fade dans index.css). Volontairement court pour ne pas
 // ralentir l'ouverture de l'appli à chaque fois.
 const NEWS_SEEN_KEY = 'ppl-news-seen';
-const SPLASH_VISIBLE_MS = 1100;
-const SPLASH_FADE_MS = 350;
+const SPLASH_VISIBLE_MS = 2300;
+const SPLASH_FADE_MS = 450;
 
 export default function App() {
 const [view, setView] = useState<View>('home');
@@ -80,6 +82,9 @@ const uiStyle = useWorkoutStore((s) => s.uiStyle);
 const hasCompletedOnboarding = useWorkoutStore((s) => s.hasCompletedOnboarding);
 const trainingProfile = useWorkoutStore((s) => s.trainingProfile);
 const [quizOpen, setQuizOpen] = useState(false);
+// Résumé du jour (Gemini) : préparé en arrière-plan dès l'ouverture, affiché
+// en touchant le prénom sur l'accueil.
+const [summaryOpen, setSummaryOpen] = useState(false);
 
 // Synchro cloud (Supabase) — se met en route toute seule dès qu'un
 // utilisateur est connecté (voir hooks/useCloudSync.ts). Le modal de
@@ -115,6 +120,7 @@ setView('settings');
 // ── Splash de démarrage ("PPL" en grand + icône) ────────────────────────
 const [splashVisible, setSplashVisible] = useState(true);
 const [splashFading, setSplashFading] = useState(false);
+const dailyBrief = useDailyBrief(hasCompletedOnboarding);
 useEffect(() => {
 const fadeTimer = setTimeout(() => setSplashFading(true), SPLASH_VISIBLE_MS);
 const hideTimer = setTimeout(() => setSplashVisible(false), SPLASH_VISIBLE_MS + SPLASH_FADE_MS);
@@ -313,7 +319,7 @@ lastSyncedAt={sync.lastSyncedAt}
 {
   // Réglages → Personnalisation → Style de l'interface.
   const Home = uiStyle === 'classique' ? HomeScreenClassic : HomeScreen;
-  screen = <Home onSelectDay={handleSelectDay} onOpenDashboard={handleOpenDashboard} onOpenSettings={() => handleOpenSettings()} onOpenSettingsCategory={handleOpenSettings} />;
+  screen = <Home onOpenSummary={() => setSummaryOpen(true)} onSelectDay={handleSelectDay} onOpenDashboard={handleOpenDashboard} onOpenSettings={() => handleOpenSettings()} onOpenSettingsCategory={handleOpenSettings} />;
 }
 }
 
@@ -349,7 +355,10 @@ onStartSession={handleStartFromNav}
 hasSessionInProgress={!!session && !session.isComplete}
 />
 )}
-{splashVisible && <SplashScreen fadingOut={splashFading} />}
+{summaryOpen && (
+<DailySummarySheet firstName={trainingProfile?.firstName} state={dailyBrief} onClose={() => setSummaryOpen(false)} />
+)}
+{splashVisible && <SplashScreen fadingOut={splashFading} firstName={trainingProfile?.firstName} />}
 {(!hasCompletedOnboarding || quizOpen) && (
 <OnboardingQuiz
 initialProfile={trainingProfile}

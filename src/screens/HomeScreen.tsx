@@ -99,9 +99,10 @@ const WIDGET_PICKER_ICONS: Record<HomeSectionKey, React.ReactNode> = {
   plateau: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3.5 17a9 9 0 1 1 17 0" /><path d="m12 13 4-3.5" /><circle cx="12" cy="14" r="1.4" /></svg>,
 };
 
-interface HomeScreenProps { onSelectDay: (dayId: string) => void; onOpenDashboard: () => void; onOpenSettings: () => void; onOpenSettingsCategory?: (category: 'donnees') => void; }
+interface HomeScreenProps { onOpenSummary?: () => void; onSelectDay: (dayId: string) => void; onOpenDashboard: () => void; onOpenSettings: () => void; onOpenSettingsCategory?: (category: 'donnees') => void; }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashboard, onOpenSettings, onOpenSettingsCategory }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectDay, onOpenDashboard, onOpenSettings, onOpenSettingsCategory }) => {
+  const firstName = useWorkoutStore((s) => s.trainingProfile?.firstName?.trim());
   const currentWeek = useWorkoutStore((s) => s.currentWeek);
   const setCurrentWeek = useWorkoutStore((s) => s.setCurrentWeek);
   // Semaine mémorisée à l'ouverture de cet écran, pour pouvoir y revenir
@@ -1055,7 +1056,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
           <div style={logoRow}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
               <span className="home-eyebrow">{todayLabel}</span>
-              <h1 className="home-title">PPL Tracker</h1>
+              {firstName && onOpenSummary ? (
+                <h1 className="home-title">
+                  <button onClick={onOpenSummary} aria-label="Ouvrir le résumé du jour" style={greetingBtn}>Bonjour {firstName}</button>
+                </h1>
+              ) : (
+                <h1 className="home-title">PPL Tracker</h1>
+              )}
               <p className="home-small" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeProgram.focusLabel}</p>
               {isSport && history.length > 0 && (
                 <span className="sp-chip" style={{ marginTop: 4 }}>
@@ -1329,6 +1336,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectDay, onOpenDashb
 // dans index.css : c'est lui qui donne quelque chose à filtrer au verre des cartes.
 const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto' };
 const scroll: React.CSSProperties = { maxWidth: 480, margin: '0 auto', padding: '0 16px 80px' };
+const greetingBtn: React.CSSProperties = { all: 'inherit', cursor: 'pointer', textAlign: 'left', padding: 0 };
+
 const headerSection: React.CSSProperties = {
   paddingTop: 'max(24px, env(safe-area-inset-top))',
   marginBottom: 20,

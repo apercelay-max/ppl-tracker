@@ -1,73 +1,71 @@
 import React from 'react';
-import { IconPMark } from './Icons';
 
 interface SplashScreenProps {
   fadingOut: boolean;
+  firstName?: string;
 }
 
-// Écran de démarrage : "PPL" en grand + le logo, affiché une fraction de
-// seconde à l'ouverture de l'appli avant l'écran d'accueil. Pur CSS (voir
-// .splash-letter / .splash-badge / .splash-fade dans index.css) — aucune
-// dépendance externe, donc ça reste instantané même hors-ligne.
-export const SplashScreen: React.FC<SplashScreenProps> = ({ fadingOut }) => {
+const MARK = /[̀-ͯ]/;
+
+// Cherche la lettre qui portera le point : la première lettre à point ou à
+// accent du prénom (i, j, é, è, ï…), sinon le « j » de « Bonjour ».
+const findTarget = (name: string): { word: 'hello' | 'name'; index: number } => {
+  for (let i = 0; i < name.length; i++) {
+    const c = name[i];
+    if (/[ij]/i.test(c) && c === c.toLowerCase()) return { word: 'name', index: i };
+    if (MARK.test(c.normalize('NFD').slice(1))) return { word: 'name', index: i };
+  }
+  return { word: 'hello', index: 'Bonjour'.indexOf('j') };
+};
+
+// Une lettre, avec son point/accent remplacé par le point animé quand c'est la cible.
+const Letter: React.FC<{ char: string; target: boolean }> = ({ char, target }) => {
+  if (!target) return <>{char}</>;
+  const base = char.normalize('NFD')[0];
+  const accented = char.normalize('NFD').length > 1;
+  const glyph = accented ? base : base === 'i' ? 'ı' : base === 'j' ? 'ȷ' : base;
+  return (
+    <span style={{ position: 'relative', display: 'inline-block' }}>
+      {glyph}
+      <i className="splash-dot" style={{ top: accented ? '-0.02em' : '0.1em' }} />
+    </span>
+  );
+};
+
+const Word: React.FC<{ text: string; targetIndex: number }> = ({ text, targetIndex }) => (
+  <>
+    {Array.from(text).map((ch, i) => <Letter key={i} char={ch} target={i === targetIndex} />)}
+  </>
+);
+
+// Écran de démarrage : tout noir, « Bonjour » + le prénom en haut, puis un
+// petit point tombe sur l'accent (ou le point d'un i/j) avant que l'écran
+// d'accueil n'apparaisse en fondu. Pur CSS, instantané même hors-ligne.
+export const SplashScreen: React.FC<SplashScreenProps> = ({ fadingOut, firstName }) => {
+  const name = (firstName ?? '').trim();
+  const target = findTarget(name);
   return (
     <div className={`splash-screen${fadingOut ? ' splash-fade' : ''}`} style={wrapper}>
-      <div className="splash-badge" style={badge}>
-        <IconPMark size={38} color="#ffffff" />
-      </div>
-      <div style={lettersRow}>
-        {['P', 'P', 'L'].map((letter, i) => (
-          <span
-            key={i}
-            className="splash-letter titre-irise"
-            style={{ ...letterStyle, animationDelay: `${i * 0.09}s` }}
-          >
-            {letter}
+      <h1 style={title}>
+        <span className="splash-hello">
+          <Word text="Bonjour" targetIndex={target.word === 'hello' ? target.index : -1} />
+        </span>
+        {name && (
+          <span className="splash-name">
+            <Word text={name} targetIndex={target.word === 'name' ? target.index : -1} />
           </span>
-        ))}
-      </div>
-      <p className="splash-sub" style={subStyle}>Tracker</p>
+        )}
+      </h1>
     </div>
   );
 };
 
 const wrapper: React.CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  zIndex: 999,
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  background: 'var(--bg-base)',
-  gap: 4,
+  position: 'fixed', inset: 0, zIndex: 999, background: '#000',
+  display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start',
+  padding: 'calc(env(safe-area-inset-top, 0px) + 36px) 20px 0',
 };
 
-const badge: React.CSSProperties = {
-  width: 64, height: 64, borderRadius: 'var(--icon-radius)',
-  background: 'linear-gradient(135deg, var(--brand-1), var(--brand-2))',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  boxShadow: '0 8px 28px rgba(var(--brand-1-rgb), 0.4)',
-  marginBottom: 18,
-};
-
-const lettersRow: React.CSSProperties = {
-  display: 'flex',
-  gap: 2,
-};
-
-const letterStyle: React.CSSProperties = {
-  fontSize: 64,
-  fontWeight: 900,
-  letterSpacing: -2,
-  lineHeight: 1,
-};
-
-const subStyle: React.CSSProperties = {
-  color: 'var(--text-dim)',
-  fontSize: 13,
-  fontWeight: 700,
-  letterSpacing: 4,
-  textTransform: 'uppercase',
-  marginTop: 6,
+const title: React.CSSProperties = {
+  color: '#fff', fontSize: 34, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.1, margin: 0,
 };
