@@ -45,7 +45,7 @@ type View =
 // (voir .splash-fade dans index.css). Volontairement court pour ne pas
 // ralentir l'ouverture de l'appli à chaque fois.
 const NEWS_SEEN_KEY = 'ppl-news-seen';
-const SPLASH_VISIBLE_MS = 3500;
+const SPLASH_VISIBLE_MS = 2600;
 const SPLASH_FADE_MS = 450;
 
 export default function App() {

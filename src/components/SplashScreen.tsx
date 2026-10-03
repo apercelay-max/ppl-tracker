@@ -46,9 +46,9 @@ const Word: React.FC<{ text: string; targetIndex: number; dotRef: DotRef }> = ({
 // (ou le point d'un i/j) du prénom. « Bonjour <prénom> » se révèle alors en
 // haut, puis l'accueil apparaît en fondu. Le trajet est mesuré sur l'écran
 // réel (Web Animations), pour tomber pile sur la lettre quelle que soit la taille.
-const PPL_HOLD_MS = 1000;
-const GROW_MS = 450;
-const TRAVEL_MS = 1050;
+const PPL_HOLD_MS = 700;
+const GROW_MS = 300;
+const TRAVEL_MS = 750;
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ fadingOut, firstName }) => {
   const name = (firstName ?? '').trim();

@@ -556,7 +556,7 @@ button { cursor: pointer; }
 @keyframes splashTextIn { from { color: transparent; } to { color: #fff; } }
 @keyframes splashDotShow { from { opacity: 0; } to { opacity: 1; } }
 .splash-screen { animation: none; }
-.splash-ppl { animation: splashPplMorph 0.45s cubic-bezier(0.6, 0, 0.4, 1) 0.95s both; }
+.splash-ppl { animation: splashPplMorph 0.3s cubic-bezier(0.6, 0, 0.4, 1) 0.65s both; }
 .splash-badge { animation: splashBadgePop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 .splash-letter { display: inline-block; animation: splashLetterIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 .splash-sub { animation: splashSubFade 0.4s ease 0.4s both; }
@@ -569,13 +569,13 @@ button { cursor: pointer; }
 }
 /* Le texte reste transparent tant que le point n'est pas posé ; le point du
    texte (la cible) apparaît à l'arrivée du point volant. */
-.splash-hello, .splash-name { display: inline-block; color: transparent; animation: splashTextIn 0.5s ease 2.5s both; }
+.splash-hello, .splash-name { display: inline-block; color: transparent; animation: splashTextIn 0.5s ease 1.75s both; }
 .splash-name { margin-left: 0.28em; }
 .splash-dot {
   position: absolute; left: 50%; width: 0.24em; height: 0.24em; margin-left: -0.12em;
   border-radius: 50%; background: var(--brand-1, #ff4d4d);
   box-shadow: 0 0 14px rgba(var(--brand-1-rgb, 255, 77, 77), 0.9);
-  opacity: 0; animation: splashDotShow 0.01s linear 2.5s both;
+  opacity: 0; animation: splashDotShow 0.01s linear 1.75s both;
 }
 .splash-fade { animation: splashFadeOut 0.45s ease forwards; pointer-events: none; }
 @keyframes splashFadeOut {

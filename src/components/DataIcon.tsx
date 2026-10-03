@@ -2,6 +2,7 @@ import React from 'react';
 import {
   IconBike, IconWalk, IconRun, IconZap, IconBiceps, IconFlame,
   IconScale, IconTrophy, IconActivity, IconClock, IconPlate, IconBook,
+  IconSun, IconMoon, IconCalendar, IconHeart, IconGauge, IconHome, IconStar,
 } from './Icons';
 
 /**
@@ -12,7 +13,8 @@ import {
  */
 export type DataIconName =
   | 'bike' | 'walk' | 'run' | 'other'
-  | 'biceps' | 'flame' | 'scale' | 'trophy' | 'clock' | 'plate' | 'book';
+  | 'biceps' | 'flame' | 'scale' | 'trophy' | 'clock' | 'plate' | 'book'
+  | 'sun' | 'moon' | 'calendar' | 'heart' | 'activity' | 'gauge' | 'home' | 'star';
 
 const MAP: Record<DataIconName, React.FC<{ size?: number; color?: string }>> = {
   bike: IconBike,
@@ -26,6 +28,14 @@ const MAP: Record<DataIconName, React.FC<{ size?: number; color?: string }>> = {
   clock: IconClock,
   plate: IconPlate,
   book: IconBook,
+  sun: IconSun,
+  moon: IconMoon,
+  calendar: IconCalendar,
+  heart: IconHeart,
+  activity: IconActivity,
+  gauge: IconGauge,
+  home: IconHome,
+  star: IconStar,
 };
 
 export const DataIcon: React.FC<{ name: string; size?: number; color?: string }> = ({ name, size = 16, color }) => {

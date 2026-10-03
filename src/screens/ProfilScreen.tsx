@@ -22,6 +22,7 @@ const screenClass = useScreenClass();
   const totalCardioSessions = useWorkoutStore((s) => s.totalCardioSessions);
   const bestWeekStreak = useWorkoutStore((s) => s.bestWeekStreak);
   const bodyWeightHistory = useWorkoutStore((s) => s.bodyWeightHistory);
+  const cardioHistory = useWorkoutStore((s) => s.cardioHistory);
 
   const totalSessions = history.length;
   const totalTonnage = history.reduce((sum, e) => sum + (e.tonnage ?? computeTonnage(e.exerciseProgress)), 0);
@@ -58,6 +59,14 @@ const screenClass = useScreenClass();
     tonnage: totalTonnage,
     duration: totalHours,
     variety: getAllExercises(history).length,
+    earlyBird: history.filter((e) => new Date(e.date).getHours() < 7).length,
+    nightOwl: history.filter((e) => new Date(e.date).getHours() >= 21).length,
+    weekend: history.filter((e) => [0, 6].includes(new Date(e.date).getDay())).length,
+    cardioCalories: Math.round(cardioHistory.reduce((sum, e) => sum + e.calories, 0)),
+    cardioVariety: new Set(cardioHistory.map((e) => e.type)).size,
+    marathon: history.filter((e) => e.durationMs >= 75 * 60000).length,
+    gyms: new Set(history.map((e) => e.gymId).filter(Boolean)).size,
+    journal: history.filter((e) => e.note?.trim()).length,
   };
 
   return (

@@ -9,7 +9,9 @@
 // derrière l'icône dans le médaillon (voir components/BadgeMedallion.tsx),
 // pour que chaque badge ait une identité visuelle propre.
 
-export type BadgeMotif = 'rays' | 'spikes' | 'track' | 'dots' | 'starburst' | 'hex' | 'rings' | 'diamonds';
+export type BadgeMotif =
+  | 'rays' | 'spikes' | 'track' | 'dots' | 'starburst' | 'hex' | 'rings' | 'diamonds'
+  | 'sunrise' | 'stars' | 'grid' | 'pulse' | 'quad' | 'bars' | 'pins' | 'lines';
 
 export interface BadgeTierDef {
   threshold: number;
@@ -127,6 +129,103 @@ export const BADGE_CATEGORIES: BadgeCategoryDef[] = [
       { threshold: 10, label: 'Explorateur' },
       { threshold: 20, label: 'Polyvalent' },
       { threshold: 30, label: 'Encyclopédie du mouvement' },
+    ],
+  },
+  {
+    id: 'earlyBird',
+    icon: 'sun',
+    motif: 'sunrise',
+    title: 'Séances matinales (avant 7h)',
+    unitLabel: (n) => `${n} séance${n > 1 ? 's' : ''} avant 7h`,
+    tiers: [
+      { threshold: 5, label: 'Lève-tôt occasionnel' },
+      { threshold: 15, label: 'Habitué du réveil' },
+      { threshold: 40, label: 'Moine du matin' },
+    ],
+  },
+  {
+    id: 'nightOwl',
+    icon: 'moon',
+    motif: 'stars',
+    title: 'Séances nocturnes (après 21h)',
+    unitLabel: (n) => `${n} séance${n > 1 ? 's' : ''} après 21h`,
+    tiers: [
+      { threshold: 5, label: 'Oiseau de nuit occasionnel' },
+      { threshold: 15, label: 'Noctambule' },
+      { threshold: 40, label: 'Insomniaque de la fonte' },
+    ],
+  },
+  {
+    id: 'weekend',
+    icon: 'calendar',
+    motif: 'grid',
+    title: 'Séances le week-end',
+    unitLabel: (n) => `${n} séance${n > 1 ? 's' : ''} le week-end`,
+    tiers: [
+      { threshold: 10, label: 'Guerrier du week-end' },
+      { threshold: 30, label: 'Week-ends sacrés' },
+      { threshold: 60, label: 'Jamais de pause' },
+    ],
+  },
+  {
+    id: 'cardioCalories',
+    icon: 'heart',
+    motif: 'pulse',
+    title: 'Calories cardio brûlées',
+    unitLabel: (n) => `${n.toLocaleString('fr-FR')} kcal brûlées en cardio`,
+    tiers: [
+      { threshold: 1000, label: 'Premières calories' },
+      { threshold: 5000, label: 'Brûleur régulier' },
+      { threshold: 15000, label: 'Fournaise' },
+      { threshold: 40000, label: 'Moteur thermique' },
+    ],
+  },
+  {
+    id: 'cardioVariety',
+    icon: 'activity',
+    motif: 'quad',
+    title: 'Types de cardio essayés',
+    unitLabel: (n) => `${n} type${n > 1 ? 's' : ''} de cardio différent${n > 1 ? 's' : ''}`,
+    tiers: [
+      { threshold: 2, label: 'Touche-à-tout' },
+      { threshold: 3, label: 'Polyvalent cardio' },
+      { threshold: 4, label: 'Expert multi-sport' },
+    ],
+  },
+  {
+    id: 'marathon',
+    icon: 'gauge',
+    motif: 'bars',
+    title: 'Longues séances (75 min et +)',
+    unitLabel: (n) => `${n} séance${n > 1 ? 's' : ''} de 75 min ou plus`,
+    tiers: [
+      { threshold: 5, label: 'Séances marathon' },
+      { threshold: 15, label: 'Habitué des longues séances' },
+      { threshold: 40, label: 'Ultra-endurant' },
+    ],
+  },
+  {
+    id: 'gyms',
+    icon: 'home',
+    motif: 'pins',
+    title: 'Salles différentes',
+    unitLabel: (n) => `${n} salle${n > 1 ? 's' : ''} différente${n > 1 ? 's' : ''} fréquentée${n > 1 ? 's' : ''}`,
+    tiers: [
+      { threshold: 2, label: 'Globe-trotter' },
+      { threshold: 4, label: 'Habitué de plusieurs salles' },
+      { threshold: 6, label: 'Nomade de la fonte' },
+    ],
+  },
+  {
+    id: 'journal',
+    icon: 'star',
+    motif: 'lines',
+    title: 'Notes de séance',
+    unitLabel: (n) => `${n} séance${n > 1 ? 's' : ''} avec une note écrite`,
+    tiers: [
+      { threshold: 5, label: 'Premières notes' },
+      { threshold: 20, label: 'Carnet assidu' },
+      { threshold: 50, label: 'Journal complet' },
     ],
   },
 ];
