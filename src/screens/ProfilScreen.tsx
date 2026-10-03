@@ -1,9 +1,9 @@
 import React from 'react';
-import { DataIcon } from '../components/DataIcon';
+import { BadgeMedallion } from '../components/BadgeMedallion';
 import { IconArrowLeft, IconTrophy, IconUser } from '../components/Icons';
 import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore } from '../store/workoutStore';
-import { getAllExercises, getMaxWeightEver, computeTonnage, bucketByWeek } from '../utils/training';
+import { getAllExercises, getMaxWeightEver, computeTonnage, bucketByWeek, countPersonalRecords } from '../utils/training';
 import { BADGE_CATEGORIES, computeBadgeProgress } from '../data/badges';
 import { useScreenClass } from '../hooks/useScreenClass';
 
@@ -48,15 +48,16 @@ const screenClass = useScreenClass();
   // toute première séance jamais enregistrée.
   const firstSession = history.length > 0 ? history[history.length - 1] : null;
 
-  // Valeurs réelles associées à chaque catégorie de badge — voir
-  // data/badges.ts. `records` utilise un compteur binaire (0 ou 1) car il
-  // n'y a qu'un seul palier pour cette catégorie.
+  // Valeurs réelles associées à chaque catégorie de badge — voir data/badges.ts.
   const badgeValues: Record<string, number> = {
     sessions: totalSessionsCompleted,
     streak: bestWeekStreak,
     cardio: totalCardioSessions,
     bodyweight: bodyWeightHistory.length,
-    records: topRecord ? 1 : 0,
+    records: countPersonalRecords(history),
+    tonnage: totalTonnage,
+    duration: totalHours,
+    variety: getAllExercises(history).length,
   };
 
   return (
@@ -137,31 +138,29 @@ const screenClass = useScreenClass();
             {badgesEnabled && (
               <>
                 <p style={{ ...sectionLabel, marginTop: 20 }}>BADGES</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={badgeGrid}>
                   {BADGE_CATEGORIES.map((cat) => {
                     const progress = computeBadgeProgress(cat, badgeValues[cat.id] ?? 0);
+                    const unlocked = !!progress.currentTier;
                     return (
-                      <div key={cat.id} style={badgeCard}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ display: 'inline-flex', opacity: progress.currentTier ? 1 : 0.35, color: progress.currentTier ? 'var(--brand-1)' : 'var(--text-dim)' }}><DataIcon name={cat.icon} size={22} /></span>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 800 }}>
-                              {progress.currentTier ? progress.currentTier.label : cat.title}
-                            </p>
-                            <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>
-                              {cat.unitLabel(progress.value)}
-                              {progress.nextTier ? ` · prochain : ${progress.nextTier.label} (${progress.nextTier.threshold})` : progress.currentTier ? ' · tous les paliers atteints' : ''}
-                            </p>
-                          </div>
-                        </div>
-                        {progress.nextTier && (
-                          <div style={{ height: 5, borderRadius: 3, background: 'var(--bg-elevated)', overflow: 'hidden', marginTop: 8 }}>
+                      <div key={cat.id} style={badgeCell}>
+                        <BadgeMedallion icon={cat.icon} motif={cat.motif} tierIndex={progress.currentTierIndex} size={56} />
+                        <p style={{ color: unlocked ? 'var(--text-secondary)' : 'var(--text-dim)', fontSize: 11, fontWeight: 800, marginTop: 8, lineHeight: '14px' }}>
+                          {unlocked ? progress.currentTier!.label : cat.title}
+                        </p>
+                        <p style={{ color: 'var(--text-dim)', fontSize: 10, marginTop: 2, lineHeight: '13px' }}>
+                          {cat.unitLabel(progress.value)}
+                        </p>
+                        {progress.nextTier ? (
+                          <div style={{ width: '100%', height: 4, borderRadius: 3, background: 'var(--bg-elevated)', overflow: 'hidden', marginTop: 6 }}>
                             <div style={{
                               height: '100%', borderRadius: 3, background: 'var(--brand-1)',
                               width: `${Math.round(progress.progressToNext * 100)}%`, transition: 'width 0.3s',
                             }} />
                           </div>
-                        )}
+                        ) : unlocked ? (
+                          <p style={{ color: 'var(--brand-1)', fontSize: 9, fontWeight: 700, marginTop: 4 }}>Tous les paliers atteints</p>
+                        ) : null}
                       </div>
                     );
                   })}
@@ -193,9 +192,13 @@ const card: React.CSSProperties = {
   background: 'var(--bg-card)', borderRadius: 14, padding: 16,
   border: '1px solid var(--border-mid)',
 };
-const badgeCard: React.CSSProperties = {
-  background: 'var(--bg-card)', borderRadius: 14, padding: '12px 14px',
+const badgeGrid: React.CSSProperties = {
+  display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10,
+};
+const badgeCell: React.CSSProperties = {
+  background: 'var(--bg-card)', borderRadius: 14, padding: '14px 8px',
   border: '1px solid var(--border-mid)',
+  display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
 };
 const statBlock: React.CSSProperties = {
   flex: 1, background: 'var(--bg-surface)', border: '1px solid var(--border)',

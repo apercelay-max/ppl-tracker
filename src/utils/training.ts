@@ -360,6 +360,36 @@ export const getMostRecentPersonalRecord = (history: HistoryEntry[]): PersonalRe
   return lastPR;
 };
 
+/**
+ * Nombre total de records personnels battus, tous exercices confondus —
+ * même définition que getMostRecentPersonalRecord, mais compte chaque
+ * dépassement au lieu de ne garder que le dernier.
+ */
+export const countPersonalRecords = (history: HistoryEntry[]): number => {
+  const chronological = [...history].reverse();
+  const runningMax: Record<string, number> = {};
+  let count = 0;
+
+  for (const entry of chronological) {
+    for (const [exerciseId, sets] of Object.entries(entry.exerciseProgress)) {
+      if (wasSubstituted(entry, exerciseId)) continue;
+      let entryMax = 0;
+      for (const s of sets) {
+        if (!s.completed) continue;
+        const w = parseFloat(s.weight);
+        if (!isNaN(w) && w > entryMax) entryMax = w;
+      }
+      if (entryMax <= 0) continue;
+
+      const previousMax = runningMax[exerciseId] ?? 0;
+      if (previousMax > 0 && entryMax > previousMax) count++;
+      if (entryMax > previousMax) runningMax[exerciseId] = entryMax;
+    }
+  }
+
+  return count;
+};
+
 export interface FeaturedExerciseProgress {
   exerciseId: string;
   exerciseName: string;
