@@ -49,6 +49,7 @@ const Word: React.FC<{ text: string; targetIndex: number; dotRef: DotRef }> = ({
 const PPL_HOLD_MS = 700;
 const GROW_MS = 300;
 const TRAVEL_MS = 750;
+const SQUASH_MS = 260;
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ fadingOut, firstName }) => {
   const name = (firstName ?? '').trim();
@@ -66,11 +67,16 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ fadingOut, firstName
     const dy = r.top + r.height / 2 - window.innerHeight / 2;
     const size = fly.offsetWidth || 20;
     const end = r.width / size;
-    const total = GROW_MS + TRAVEL_MS;
+    const total = GROW_MS + TRAVEL_MS + SQUASH_MS;
+    const arrive = (GROW_MS + TRAVEL_MS) / total;
     const anim = fly.animate(
       [
         { transform: 'translate(0px, 0px) scale(0)', offset: 0, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)' },
-        { transform: 'translate(0px, 0px) scale(1)', offset: GROW_MS / total, easing: 'cubic-bezier(0.7, 0, 0.3, 1)' },
+        // Départ très doux, grosse accélération, puis freinage net : un faux effet de gravité.
+        { transform: 'translate(0px, 0px) scale(1)', offset: GROW_MS / total, easing: 'cubic-bezier(0.9, 0, 0.1, 1)' },
+        // Arrivée : le point s'écrase légèrement en touchant la lettre…
+        { transform: `translate(${dx}px, ${dy + r.height * 0.22}px) scale(${end * 1.45}, ${end * 0.6})`, offset: arrive, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.4)' },
+        // …puis reprend sa forme.
         { transform: `translate(${dx}px, ${dy}px) scale(${end})`, offset: 1 },
       ],
       { duration: total, delay: PPL_HOLD_MS, fill: 'both' }
