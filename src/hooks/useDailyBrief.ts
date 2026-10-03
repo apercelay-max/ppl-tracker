@@ -35,13 +35,14 @@ export const useDailyBrief = (enabled: boolean): DailyBriefState => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
+  const retried = useRef(false);
 
   const program = getProgram(activeProgramId, customPrograms);
   const plan = buildDailyPlan({
     history, program, cycleDoneIds, weeklySessionGoal, firstName: trainingProfile?.firstName,
   });
 
-  const generate = useCallback(async () => {
+  const generate: () => Promise<void> = useCallback(async () => {
     if (inFlight.current) return;
     inFlight.current = true;
     setLoading(true);
@@ -62,6 +63,12 @@ export const useDailyBrief = (enabled: boolean): DailyBriefState => {
       writeCachedDaily(fresh);
     } else if (!response.ok) {
       setError(response.message);
+      // Tous les modèles étaient occupés (le serveur a déjà essayé les modèles
+      // de secours) : une seule nouvelle tentative, un peu plus tard.
+      if (!retried.current && response.code !== 'CLE_MANQUANTE' && response.code !== 'CLE_INVALIDE') {
+        retried.current = true;
+        setTimeout(() => { void generate(); }, 20_000);
+      }
     }
     setLoading(false);
     inFlight.current = false;
