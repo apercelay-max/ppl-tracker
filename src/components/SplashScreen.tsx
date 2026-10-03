@@ -67,5 +67,5 @@ const wrapper: React.CSSProperties = {
 };
 
 const title: React.CSSProperties = {
-  color: '#fff', fontSize: 34, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.1, margin: 0,
+  fontSize: 34, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.1, margin: 0,
 };

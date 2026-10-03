@@ -539,24 +539,24 @@ button { cursor: pointer; }
 
 /* ─── Écran de démarrage : fond noir, « Bonjour <prénom> », un point tombe ── */
 @keyframes splashTextIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { color: transparent; }
+  to { color: #fff; }
 }
-@keyframes splashDotFall {
-  0% { transform: translateY(-70vh) scale(1); opacity: 1; }
-  62% { transform: translateY(0) scale(1); }
-  74% { transform: translateY(-0.28em) scale(0.9, 1.1); }
-  86% { transform: translateY(0) scale(1.35, 0.7); }
+@keyframes splashDotRise {
+  0% { transform: translateY(100vh) scale(1); opacity: 1; }
+  70% { transform: translateY(0) scale(1); }
+  82% { transform: translateY(0.12em) scale(1.25, 0.75); }
   100% { transform: translateY(0) scale(1); opacity: 1; }
 }
 .splash-screen { animation: none; }
-.splash-hello, .splash-name { display: inline-block; animation: splashTextIn 0.5s ease 0.25s both; }
-.splash-name { animation-delay: 0.4s; margin-left: 0.28em; }
+/* Le texte est transparent au début (seul le point est visible), puis se révèle quand le point arrive. */
+.splash-hello, .splash-name { display: inline-block; color: transparent; animation: splashTextIn 0.5s ease 1.3s both; }
+.splash-name { margin-left: 0.28em; }
 .splash-dot {
   position: absolute; left: 50%; width: 0.24em; height: 0.24em; margin-left: -0.12em;
   border-radius: 50%; background: var(--brand-1, #ff4d4d);
   box-shadow: 0 0 14px rgba(var(--brand-1-rgb, 255, 77, 77), 0.9);
-  animation: splashDotFall 0.95s cubic-bezier(0.55, 0, 0.9, 0.4) 0.9s both;
+  animation: splashDotRise 1.3s cubic-bezier(0.3, 0.1, 0.4, 1) 0.3s both;
 }
 .splash-fade { animation: splashFadeOut 0.45s ease forwards; pointer-events: none; }
 @keyframes splashFadeOut {
@@ -564,7 +564,8 @@ button { cursor: pointer; }
   to { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .splash-hello, .splash-name, .splash-dot { animation: none; }
+  .splash-hello, .splash-name { animation: none; color: #fff; }
+  .splash-dot { animation: none; }
 }
 
 /* ─── Ultra animations (réglage optionnel, Réglages → Personnalisation) ──── */
