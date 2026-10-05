@@ -77,6 +77,14 @@ export const buildDailyPlan = (input: {
   const buckets = bucketByWeek(history, 2); // plus ancien → plus récent
   const current = buckets[1];
   const previous = buckets[0];
+  // `sessions` doit compter la semaine calendaire (lundi → aujourd'hui), pas
+  // la fenêtre glissante de `bucketByWeek` (7×24h depuis l'instant présent) :
+  // c'est ce même calcul calendaire que components/DailySummarySheet.tsx
+  // utilise pour ses pastilles jour par jour, et les deux doivent concorder
+  // (voir PR « weekly-goal-count-window-mismatch » pour le même bug ailleurs).
+  const now = new Date();
+  const mondayThisWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)).getTime();
+  const sessionsThisWeek = history.filter((e) => e.date >= mondayThisWeek).length;
 
   const next = program.workouts.find((w) => !cycleDoneIds.includes(w.id)) ?? program.workouts[0];
   const exercises: DailyPlanExercise[] = (next?.exercises ?? []).map((ex) => {
@@ -96,7 +104,7 @@ export const buildDailyPlan = (input: {
     firstName: firstName?.trim() || undefined,
     weekday: new Date().toLocaleDateString('fr-FR', { weekday: 'long' }),
     week: {
-      sessions: current?.sessionCount ?? 0,
+      sessions: sessionsThisWeek,
       goal: weeklySessionGoal,
       tonnageKg: Math.round(current?.tonnage ?? 0),
       previousTonnageKg: Math.round(previous?.tonnage ?? 0),
