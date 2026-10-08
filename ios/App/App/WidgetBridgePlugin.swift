@@ -12,9 +12,18 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "WidgetBridge"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "setData", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "consumePendingLink", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "updateWorkout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endWorkout", returnType: CAPPluginReturnPromise),
     ]
+
+    // Quand Siri lance une action, l'appli passe au premier plan : on prévient le web tout de suite
+    // (au démarrage à froid, c'est le web qui vient lire le lien lui-même, voir consumePendingLink).
+    public override func load() {
+        NotificationCenter.default.addObserver(forName: .pplPendingLink, object: nil, queue: .main) { [weak self] _ in
+            self?.notifyListeners("pendingLink", data: [:])
+        }
+    }
 
     static let appGroup = "group.com.ppltracker.app"
     static let dataKey = "widgetData"
@@ -35,6 +44,17 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         // Sans ça, iOS garde l'ancien affichage jusqu'à sa prochaine mise à jour planifiée.
         WidgetCenter.shared.reloadAllTimelines()
         call.resolve()
+    }
+
+    // Lien laissé par Siri (« session/pull-a », « view/pro »…). Lu une seule fois : on l'efface.
+    @objc func consumePendingLink(_ call: CAPPluginCall) {
+        guard let defaults = UserDefaults(suiteName: Self.appGroup),
+              let link = defaults.string(forKey: "pendingLink") else {
+            call.resolve([:])
+            return
+        }
+        defaults.removeObject(forKey: "pendingLink")
+        call.resolve(["link": link])
     }
 
     // Démarre la séance en cours sur l'écran verrouillé, ou la met à jour si elle y est déjà

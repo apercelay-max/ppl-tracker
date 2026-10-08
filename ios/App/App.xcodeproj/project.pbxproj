@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0332EAA903D106A2EC71A9E0 /* SiriShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9CB54E55EBF8C1EEDD5641E /* SiriShortcuts.swift */; };
 		0AF312B8DAEA8F3E8DBFEAC7 /* RecoveryWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F47C88219CB87D2F85BCBE8A /* RecoveryWidget.swift */; };
 		1DBD6D9DD9DB28B353909DA6 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4E18559AA6110EC8E86421 /* MainViewController.swift */; };
 		1FAA3A137A6C30E762272BA6 /* PPLWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 061D7B33D64FB7C61F5F34EF /* PPLWidgetBundle.swift */; };
@@ -90,6 +91,7 @@
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		AA4E18559AA6110EC8E86421 /* MainViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
+		B9CB54E55EBF8C1EEDD5641E /* SiriShortcuts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SiriShortcuts.swift; sourceTree = "<group>"; };
 		BBDFD58724ED828DA99893B4 /* LockScreenWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LockScreenWidget.swift; sourceTree = "<group>"; };
 		C3BFBD080C9CCD667790DB41 /* NextSessionWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NextSessionWidget.swift; sourceTree = "<group>"; };
 		D53A7DCA1EBCFCC8FB52A955 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
@@ -176,6 +178,7 @@
 				F7AEA4391D6F60590EBDCC95 /* App.entitlements */,
 				E9C499921F59C291DCF6AFAA /* SubscriptionsPlugin.swift */,
 				7AD4453B638A71A49B519E5A /* PrivacyInfo.xcprivacy */,
+				B9CB54E55EBF8C1EEDD5641E /* SiriShortcuts.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -272,11 +275,12 @@
 			};
 			buildConfigurationList = 504EC2FF1FED79650016851F /* Build configuration list for PBXProject "App" */;
 			compatibilityVersion = "Xcode 8.0";
-			developmentRegion = en;
+			developmentRegion = fr;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				en,
+				fr,
 				Base,
+				en,
 			);
 			mainGroup = 504EC2FB1FED79650016851F;
 			packageReferences = (
@@ -328,6 +332,7 @@
 				1DBD6D9DD9DB28B353909DA6 /* MainViewController.swift in Sources */,
 				25529CDEFB47446D46533FAD /* SubscriptionsPlugin.swift in Sources */,
 				E40A4B96F143D42367CA484B /* WorkoutActivityAttributes.swift in Sources */,
+				0332EAA903D106A2EC71A9E0 /* SiriShortcuts.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -521,6 +526,7 @@
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CAPACITOR_DEBUG = true;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -544,6 +550,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CAPACITOR_DEBUG = false;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

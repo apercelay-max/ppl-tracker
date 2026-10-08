@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import type { PluginListenerHandle } from '@capacitor/core';
 import { getProgram } from '../data/programs';
 import { getWorkout } from '../data/workouts';
 import { getAllExercises, getMuscleGroupsStatus, getMuscleRecoveryStatus, getRecoveryPct } from '../utils/training';
@@ -16,6 +17,8 @@ import { useReferralStore } from './referral';
 // écran verrouillé : tout ce fichier ne fait rien.
 interface WidgetBridgePlugin {
   setData(options: { json: string }): Promise<void>;
+  consumePendingLink(): Promise<{ link?: string }>;
+  addListener(event: 'pendingLink', cb: () => void): Promise<PluginListenerHandle>;
   updateWorkout(options: {
     title: string; exerciseName: string; setNumber: number; setsInExercise: number;
     setsDone: number; setsTotal: number; startTimestamp: number; sessionPaused: boolean;
@@ -266,4 +269,19 @@ export const startWidgetSync = () => {
   // Abonnement ou mois offert qui change : widgets et séance en direct se verrouillent / se déverrouillent.
   useSubscriptionStore.subscribe(() => { schedulePush(); syncWorkoutActivity(); });
   useReferralStore.subscribe(() => { schedulePush(); syncWorkoutActivity(); });
+};
+
+// ─── Liens laissés par Siri ────────────────────────────────────────────────
+// Un raccourci Siri (« Démarre ma séance ») range un lien dans l'App Group puis ouvre l'appli.
+// On le lit au démarrage, quand l'appli revient au premier plan, et dès que le natif nous prévient.
+/** Renvoie le lien en attente (« session/pull-a »), une seule fois, ou null. */
+export const consumePendingLink = async (): Promise<string | null> => {
+  if (Capacitor.getPlatform() !== 'ios') return null;
+  try { return (await WidgetBridge.consumePendingLink()).link ?? null; } catch { return null; }
+};
+
+export const onPendingLink = (cb: () => void): (() => void) => {
+  if (Capacitor.getPlatform() !== 'ios') return () => undefined;
+  const handle = WidgetBridge.addListener('pendingLink', cb);
+  return () => { void handle.then((h) => h.remove()); };
 };

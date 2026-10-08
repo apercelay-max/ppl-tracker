@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { PaywallScreen } from './screens/PaywallScreen';
 import { ProPromptSheet } from './components/ProPromptSheet';
 import { initSubscriptions, subscriptionsAvailable } from './lib/subscriptions';
+import { consumePendingLink, onPendingLink } from './lib/widgetSync';
 import { App as CapacitorApp } from '@capacitor/app';
 import { HomeScreen } from './screens/HomeScreen';
 import { HomeScreenClassic } from './screens/HomeScreenClassic';
@@ -299,7 +300,16 @@ useEffect(() => {
 if (Capacitor.getPlatform() !== 'ios') return;
 void CapacitorApp.getLaunchUrl().then((r) => { if (r?.url) deepLinkRef.current(r.url); });
 const listener = CapacitorApp.addListener('appUrlOpen', (e) => deepLinkRef.current(e.url));
-return () => { void listener.then((h) => h.remove()); };
+// Siri : le raccourci laisse un lien, lu au démarrage, au retour au premier plan, et dès que le natif nous prévient.
+const drainSiri = () => { void consumePendingLink().then((link) => {  if (link) deepLinkRef.current(`ppltracker://${link}`); }); };
+drainSiri();
+const stateListener = CapacitorApp.addListener('appStateChange', (st) => {  if (st.isActive) drainSiri(); });
+const stopPending = onPendingLink(drainSiri);
+return () => {
+void listener.then((h) => h.remove());
+void stateListener.then((h) => h.remove());
+stopPending();
+};
 }, []);
 
 // Écran PPL Pro : on mémorise d'où l'on vient pour que « Retour » y ramène
