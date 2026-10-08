@@ -14,8 +14,13 @@ import { getBinomeState, subscribeBinome } from '../hooks/useBinome';
 // écran verrouillé : tout ce fichier ne fait rien.
 interface WidgetBridgePlugin {
   setData(options: { json: string }): Promise<void>;
-  startRestTimer(options: { endTimestamp: number; totalSeconds: number; title: string; paused: boolean; pausedRemaining: number }): Promise<void>;
-  endRestTimer(): Promise<void>;
+  updateWorkout(options: {
+    title: string; exerciseName: string; setNumber: number; setsInExercise: number;
+    setsDone: number; setsTotal: number; startTimestamp: number; sessionPaused: boolean;
+    restEndTimestamp?: number; restTotalSeconds: number; restPaused: boolean; restPausedRemaining: number;
+    volume: number; unit: string; heartRate?: number;
+  }): Promise<void>;
+  endWorkout(): Promise<void>;
 }
 
 const WidgetBridge = registerPlugin<WidgetBridgePlugin>('WidgetBridge');
@@ -181,38 +186,72 @@ const schedulePush = () => {
   pushTimer = setTimeout(pushData, 800);
 };
 
-// ─── Minuteur de repos sur l'écran verrouillé ──────────────────────────────
-// Reflète le minuteur du store : démarrage, pause, ajout de temps, arrêt.
-// Contrairement aux widgets, ça doit suivre immédiatement (pas d'attente).
-let lastTimerKey = '';
+// ─── Séance en cours sur l'écran verrouillé ─────────────────────────────────
+// Reflète la séance du store : exercice et série en cours, avancement, durée, et le
+// minuteur de repos quand il tourne. Contrairement aux widgets, ça doit suivre
+// immédiatement (pas d'attente) : on compare juste une clé, c'est très léger.
+let lastWorkoutKey = '';
 
-const syncRestTimer = () => {
-  const { timer, session } = useWorkoutStore.getState();
-  const active = timer.isRunning && timer.endTimestamp !== null;
-  const paused = active && !!timer.isPaused;
-  const key = active ? `${timer.endTimestamp}|${paused}|${timer.pausedRemainingSeconds ?? ''}|${timer.totalSeconds}` : 'off';
-  if (key === lastTimerKey) return;
-  lastTimerKey = key;
-  if (!active) {
-    WidgetBridge.endRestTimer().catch(() => undefined);
+const syncWorkoutActivity = () => {
+  const { session, timer, sessionPausedAt } = useWorkoutStore.getState();
+  const workout = session && !session.isComplete ? getWorkout(session.dayId) : undefined;
+  const current = workout?.exercises[session!.currentExerciseIndex];
+  if (!session || !workout || !current) {
+    if (lastWorkoutKey !== 'off') {
+      lastWorkoutKey = 'off';
+      WidgetBridge.endWorkout().catch(() => undefined);
+    }
     return;
   }
-  WidgetBridge.startRestTimer({
-    endTimestamp: timer.endTimestamp as number,
-    totalSeconds: timer.totalSeconds,
-    title: (session && getWorkout(session.dayId)?.name) || 'Séance',
-    paused,
-    pausedRemaining: timer.pausedRemainingSeconds ?? 0,
-  }).catch(() => undefined);
+
+  // Avancement de toute la séance : séries validées sur séries prévues.
+  let setsDone = 0;
+  let setsTotal = 0;
+  let volumeKg = 0;
+  for (const ex of workout.exercises) {
+    const sets = session.exerciseProgress[ex.id];
+    setsTotal += sets?.length ?? ex.sets;
+    for (const x of sets ?? []) {
+      if (!x.completed) continue;
+      setsDone++;
+      const w = parseFloat(x.weight);
+      const r = parseInt(x.reps, 10);
+      if (!isNaN(w) && !isNaN(r)) volumeKg += w * r; // « PDC » ou « AMRAP » : pas de charge chiffrée, on ne compte pas
+    }
+  }
+  const unit = useWorkoutStore.getState().weightUnit;
+  const restActive = timer.isRunning && timer.endTimestamp !== null;
+  const restPaused = restActive && !!timer.isPaused;
+  const payload = {
+    title: workout.name,
+    exerciseName: session.exerciseNameOverrides?.[current.id] ?? current.name,
+    setNumber: Math.min(session.currentSetIndex + 1, session.exerciseProgress[current.id]?.length ?? current.sets),
+    setsInExercise: session.exerciseProgress[current.id]?.length ?? current.sets,
+    setsDone,
+    setsTotal: Math.max(setsTotal, 1),
+    startTimestamp: session.startTime,
+    sessionPaused: sessionPausedAt !== null,
+    restEndTimestamp: restActive ? (timer.endTimestamp as number) : undefined,
+    restTotalSeconds: restActive ? timer.totalSeconds : 0,
+    restPaused,
+    restPausedRemaining: timer.pausedRemainingSeconds ?? 0,
+    volume: Math.round(unit === 'lbs' ? kgToLbs(volumeKg) : volumeKg),
+    unit,
+    // heartRate : à brancher sur HealthKit (Apple Watch / ceinture cardiaque).
+  };
+  const key = JSON.stringify(payload);
+  if (key === lastWorkoutKey) return;
+  lastWorkoutKey = key;
+  WidgetBridge.updateWorkout(payload).catch(() => undefined);
 };
 
 export const startWidgetSync = () => {
   if (Capacitor.getPlatform() !== 'ios') return;
   schedulePush();
-  syncRestTimer();
+  syncWorkoutActivity();
   useWorkoutStore.subscribe(() => {
     schedulePush();
-    syncRestTimer();
+    syncWorkoutActivity();
   });
   // Le binôme est chargé depuis le serveur, après le démarrage de l'appli.
   subscribeBinome(schedulePush);

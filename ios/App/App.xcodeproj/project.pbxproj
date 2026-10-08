@@ -10,11 +10,9 @@
 		0AF312B8DAEA8F3E8DBFEAC7 /* RecoveryWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F47C88219CB87D2F85BCBE8A /* RecoveryWidget.swift */; };
 		1DBD6D9DD9DB28B353909DA6 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4E18559AA6110EC8E86421 /* MainViewController.swift */; };
 		1FAA3A137A6C30E762272BA6 /* PPLWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 061D7B33D64FB7C61F5F34EF /* PPLWidgetBundle.swift */; };
-		21728C940D6ACDF1007D6D3B /* RestTimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCF7C2FC14FB824FEF480C1C /* RestTimerAttributes.swift */; };
 		25529CDEFB47446D46533FAD /* SubscriptionsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9C499921F59C291DCF6AFAA /* SubscriptionsPlugin.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		3A7F542D7BA272B833EDADAF /* LockScreenWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBDFD58724ED828DA99893B4 /* LockScreenWidget.swift */; };
-		3F3C6E56311AA51978E8D3B5 /* RestTimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCF7C2FC14FB824FEF480C1C /* RestTimerAttributes.swift */; };
 		47F0E03669C1B9B9E11A91E0 /* PPLWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0EC8D08CF960EE4FD8E24714 /* PPLWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
@@ -23,17 +21,19 @@
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
+		725B3D6827EDD8C6FEA9153F /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95482E862829B8DDB65B226D /* WorkoutActivityAttributes.swift */; };
 		8CD39AEBEE2FF544C5DF572A /* NextSessionWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3BFBD080C9CCD667790DB41 /* NextSessionWidget.swift */; };
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
 		9B40A7AD26F02C7B83128007 /* BinomeWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED3CE044F0F5E4467829326C /* BinomeWidget.swift */; };
 		9D69B0DB746CC757D395EC36 /* RecordWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = E834A471AFB2AACDB79CE6C6 /* RecordWidget.swift */; };
 		A025BD8B276FF19F3DDA9132 /* ObjectivesWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EB8D7E8981439C2B557145 /* ObjectivesWidget.swift */; };
 		AD8652FF752B1849FADF1632 /* WidgetBridgePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92D7AED5F3F3E3C292A52333 /* WidgetBridgePlugin.swift */; };
-		BFCC6CFF5CD9D0563111D21D /* RestTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 185F97988235B2B3EC148CCD /* RestTimerLiveActivity.swift */; };
+		AEA3BE0C8245D9AAAB97E925 /* WorkoutLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14CE32E74BE02059576FD6CB /* WorkoutLiveActivity.swift */; };
 		C27AB9E17A32B85D481612EE /* CoachWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A8E05642CC778E7E81DAA59 /* CoachWidget.swift */; };
 		C364BE29D6A9F7F90244B0EC /* Shared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 918962BADE61C6F9A6C5B614 /* Shared.swift */; };
 		CD26C384680CFD71E9FD11B8 /* WeightWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4102C360CC94B796C223F3BA /* WeightWidget.swift */; };
 		D4CC05E6C0E97EF6C496A623 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D53A7DCA1EBCFCC8FB52A955 /* Foundation.framework */; };
+		E40A4B96F143D42367CA484B /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95482E862829B8DDB65B226D /* WorkoutActivityAttributes.swift */; };
 		EE28A13156405968DB51E65B /* StreakWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6838EEA16FBC3D60F00F6D8D /* StreakWidget.swift */; };
 /* End PBXBuildFile section */
 
@@ -64,7 +64,7 @@
 /* Begin PBXFileReference section */
 		061D7B33D64FB7C61F5F34EF /* PPLWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PPLWidgetBundle.swift; sourceTree = "<group>"; };
 		0EC8D08CF960EE4FD8E24714 /* PPLWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PPLWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		185F97988235B2B3EC148CCD /* RestTimerLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RestTimerLiveActivity.swift; sourceTree = "<group>"; };
+		14CE32E74BE02059576FD6CB /* WorkoutLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivity.swift; sourceTree = "<group>"; };
 		2A8E05642CC778E7E81DAA59 /* CoachWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CoachWidget.swift; sourceTree = "<group>"; };
 		2F11A81078476D24014339D4 /* PPLTracker.storekit */ = {isa = PBXFileReference; includeInIndex = 1; path = PPLTracker.storekit; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
@@ -82,6 +82,7 @@
 		6838EEA16FBC3D60F00F6D8D /* StreakWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StreakWidget.swift; sourceTree = "<group>"; };
 		918962BADE61C6F9A6C5B614 /* Shared.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Shared.swift; sourceTree = "<group>"; };
 		92D7AED5F3F3E3C292A52333 /* WidgetBridgePlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetBridgePlugin.swift; sourceTree = "<group>"; };
+		95482E862829B8DDB65B226D /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutActivityAttributes.swift; sourceTree = "<group>"; };
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		AA4E18559AA6110EC8E86421 /* MainViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
@@ -89,7 +90,6 @@
 		C3BFBD080C9CCD667790DB41 /* NextSessionWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NextSessionWidget.swift; sourceTree = "<group>"; };
 		D53A7DCA1EBCFCC8FB52A955 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		DAB190C38753069658BF1937 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		DCF7C2FC14FB824FEF480C1C /* RestTimerAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RestTimerAttributes.swift; sourceTree = "<group>"; };
 		E834A471AFB2AACDB79CE6C6 /* RecordWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordWidget.swift; sourceTree = "<group>"; };
 		E9C499921F59C291DCF6AFAA /* SubscriptionsPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubscriptionsPlugin.swift; sourceTree = "<group>"; };
 		ED3CE044F0F5E4467829326C /* BinomeWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BinomeWidget.swift; sourceTree = "<group>"; };
@@ -178,7 +178,7 @@
 		8130B9143358488A85AE461B /* Shared */ = {
 			isa = PBXGroup;
 			children = (
-				DCF7C2FC14FB824FEF480C1C /* RestTimerAttributes.swift */,
+				95482E862829B8DDB65B226D /* WorkoutActivityAttributes.swift */,
 			);
 			name = Shared;
 			path = Shared;
@@ -199,8 +199,8 @@
 				F47C88219CB87D2F85BCBE8A /* RecoveryWidget.swift */,
 				2A8E05642CC778E7E81DAA59 /* CoachWidget.swift */,
 				BBDFD58724ED828DA99893B4 /* LockScreenWidget.swift */,
-				185F97988235B2B3EC148CCD /* RestTimerLiveActivity.swift */,
 				061D7B33D64FB7C61F5F34EF /* PPLWidgetBundle.swift */,
+				14CE32E74BE02059576FD6CB /* WorkoutLiveActivity.swift */,
 			);
 			name = PPLWidget;
 			path = PPLWidget;
@@ -318,8 +318,8 @@
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
 				AD8652FF752B1849FADF1632 /* WidgetBridgePlugin.swift in Sources */,
 				1DBD6D9DD9DB28B353909DA6 /* MainViewController.swift in Sources */,
-				21728C940D6ACDF1007D6D3B /* RestTimerAttributes.swift in Sources */,
 				25529CDEFB47446D46533FAD /* SubscriptionsPlugin.swift in Sources */,
+				E40A4B96F143D42367CA484B /* WorkoutActivityAttributes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -337,9 +337,9 @@
 				0AF312B8DAEA8F3E8DBFEAC7 /* RecoveryWidget.swift in Sources */,
 				C27AB9E17A32B85D481612EE /* CoachWidget.swift in Sources */,
 				3A7F542D7BA272B833EDADAF /* LockScreenWidget.swift in Sources */,
-				BFCC6CFF5CD9D0563111D21D /* RestTimerLiveActivity.swift in Sources */,
 				1FAA3A137A6C30E762272BA6 /* PPLWidgetBundle.swift in Sources */,
-				3F3C6E56311AA51978E8D3B5 /* RestTimerAttributes.swift in Sources */,
+				725B3D6827EDD8C6FEA9153F /* WorkoutActivityAttributes.swift in Sources */,
+				AEA3BE0C8245D9AAAB97E925 /* WorkoutLiveActivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

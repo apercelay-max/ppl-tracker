@@ -70,7 +70,7 @@ chaque ordinateur : tout ce qui doit être partagé va dans ce fichier.
 
 - L'appli web est emballée dans une coque iOS par **Capacitor** (dossier `ios/`) : `npm run ios:sync` construit le
   web et le copie dans le projet, `npm run ios:open` ouvre Xcode. Xcode est nécessaire (Mac uniquement).
-- Widgets (`ios/App/PPLWidget/`), minuteur de repos sur l'écran verrouillé (Live Activity) et liens
+- Widgets (`ios/App/PPLWidget/`), séance en direct sur l’écran verrouillé et la Dynamic Island (Live Activity : exercice, série, repos, volume, durée, cœur) et liens
   `ppltracker://…` : le web envoie un résumé JSON aux widgets via `src/lib/widgetSync.ts` et le plugin natif
   `ios/App/App/WidgetBridgePlugin.swift`, par l'App Group `group.com.ppltracker.app`. Tout champ ajouté au résumé
   doit l'être **en optionnel** dans `PPLWidget/Shared.swift`.

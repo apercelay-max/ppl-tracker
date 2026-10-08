@@ -3,7 +3,7 @@ import WidgetKit
 import ActivityKit
 
 // Pont entre l'appli web et iOS pour deux choses : les widgets (le résumé que
-// l'appli leur envoie, voir src/lib/widgetSync.ts) et le minuteur de repos de
+// l'appli leur envoie, voir src/lib/widgetSync.ts) et le séance en cours sur
 // l'écran verrouillé (Live Activity). L'identifiant de l'App Group doit rester
 // identique dans App.entitlements, PPLWidget.entitlements et Shared.swift.
 @objc(WidgetBridgePlugin)
@@ -12,8 +12,8 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "WidgetBridge"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "setData", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "startRestTimer", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "endRestTimer", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "updateWorkout", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "endWorkout", returnType: CAPPluginReturnPromise),
     ]
 
     static let appGroup = "group.com.ppltracker.app"
@@ -37,21 +37,33 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve()
     }
 
-    // Démarre le minuteur de repos, ou le met à jour s'il tourne déjà (pause,
-    // temps ajouté ou retiré).
-    @objc func startRestTimer(_ call: CAPPluginCall) {
-        guard let end = call.getDouble("endTimestamp"), let total = call.getDouble("totalSeconds") else {
-            call.reject("endTimestamp / totalSeconds manquants")
+    // Démarre la séance en cours sur l'écran verrouillé, ou la met à jour si elle y est déjà
+    // (série validée, exercice suivant, repos lancé, en pause ou terminé).
+    @objc func updateWorkout(_ call: CAPPluginCall) {
+        guard let start = call.getDouble("startTimestamp") else {
+            call.reject("startTimestamp manquant")
             return
         }
-        let state = RestTimerAttributes.ContentState(
-            endDate: Date(timeIntervalSince1970: end / 1000),
-            totalSeconds: total,
-            paused: call.getBool("paused") ?? false,
-            pausedRemaining: call.getDouble("pausedRemaining") ?? 0)
+        var restEnd: Date? = nil
+        if let end = call.getDouble("restEndTimestamp") { restEnd = Date(timeIntervalSince1970: end / 1000) }
+        let state = WorkoutActivityAttributes.ContentState(
+            exerciseName: call.getString("exerciseName") ?? "",
+            setNumber: call.getInt("setNumber") ?? 1,
+            setsInExercise: call.getInt("setsInExercise") ?? 1,
+            setsDone: call.getInt("setsDone") ?? 0,
+            setsTotal: call.getInt("setsTotal") ?? 1,
+            startDate: Date(timeIntervalSince1970: start / 1000),
+            sessionPaused: call.getBool("sessionPaused") ?? false,
+            restEndDate: restEnd,
+            restTotalSeconds: call.getDouble("restTotalSeconds") ?? 0,
+            restPaused: call.getBool("restPaused") ?? false,
+            restPausedRemaining: call.getDouble("restPausedRemaining") ?? 0,
+            volume: call.getDouble("volume") ?? 0,
+            unit: call.getString("unit") ?? "kg",
+            heartRate: call.getInt("heartRate"))
         let content = ActivityContent(state: state, staleDate: nil)
 
-        if let running = Activity<RestTimerAttributes>.activities.first {
+        if let running = Activity<WorkoutActivityAttributes>.activities.first {
             Task { await running.update(content) }
             call.resolve()
             return
@@ -63,17 +75,17 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         }
         do {
             _ = try Activity.request(
-                attributes: RestTimerAttributes(title: call.getString("title") ?? "Séance"),
+                attributes: WorkoutActivityAttributes(title: call.getString("title") ?? "Séance"),
                 content: content)
             call.resolve()
         } catch {
-            call.reject("Minuteur de repos indisponible : \(error.localizedDescription)")
+            call.reject("Séance en direct indisponible : \(error.localizedDescription)")
         }
     }
 
-    @objc func endRestTimer(_ call: CAPPluginCall) {
+    @objc func endWorkout(_ call: CAPPluginCall) {
         Task {
-            for activity in Activity<RestTimerAttributes>.activities {
+            for activity in Activity<WorkoutActivityAttributes>.activities {
                 await activity.end(nil, dismissalPolicy: .immediate)
             }
         }

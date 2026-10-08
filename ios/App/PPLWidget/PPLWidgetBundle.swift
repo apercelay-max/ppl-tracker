@@ -13,6 +13,6 @@ struct PPLWidgets: WidgetBundle {
         PPLRecoveryWidget()
         PPLCoachWidget()
         PPLLockWidget()
-        RestTimerLiveActivity()
+        WorkoutLiveActivity()
     }
 }
