@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
 import { HomeScreen } from './screens/HomeScreen';
 import { HomeScreenClassic } from './screens/HomeScreenClassic';
 import { SessionScreen } from './screens/SessionScreen';
@@ -40,6 +42,9 @@ import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 type View =
 | 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'historique'
 | 'cardio' | 'activite' | 'exercices' | 'catalogue' | 'poids' | 'coach' | 'profil' | 'auth';
+
+// Écrans qu'un widget a le droit d'ouvrir.
+const WIDGET_LINK_VIEWS: View[] = ['home', 'objectifs', 'poids', 'coach', 'profil', 'exercices'];
 
 // Durée d'affichage du splash "PPL" au démarrage, avant le fondu de sortie
 // (voir .splash-fade dans index.css). Volontairement court pour ne pas
@@ -258,6 +263,26 @@ const program = getProgram(state.activeProgramId, state.customPrograms);
 const next = program.workouts.find((w) => !state.cycleDoneIds.includes(w.id)) ?? program.workouts[0];
 if (next) handleSelectDay(next.id);
 };
+
+// Appuyer sur un widget iOS ouvre l'appli par un lien : ppltracker://session/<id>
+// démarre (ou reprend) cette séance, ppltracker://view/<écran> ouvre l'écran.
+// Le gestionnaire est relu à chaque rendu via une référence : l'abonnement,
+// lui, ne se fait qu'une fois.
+const deepLinkRef = useRef<(url: string) => void>(() => {});
+deepLinkRef.current = (url: string) => {
+const [kind, target] = url.replace(/^ppltracker:\/\//, '').split('/');
+if (kind === 'session' && target) {
+handleSelectDay(decodeURIComponent(target));
+} else if (kind === 'view' && (WIDGET_LINK_VIEWS as string[]).includes(target)) {
+setView(target as View);
+}
+};
+useEffect(() => {
+if (Capacitor.getPlatform() !== 'ios') return;
+void CapacitorApp.getLaunchUrl().then((r) => { if (r?.url) deepLinkRef.current(r.url); });
+const listener = CapacitorApp.addListener('appUrlOpen', (e) => deepLinkRef.current(e.url));
+return () => { void listener.then((h) => h.remove()); };
+}, []);
 
 const handleOpenDashboard = () => {
 setView('dashboard');

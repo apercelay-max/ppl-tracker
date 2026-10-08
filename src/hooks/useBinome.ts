@@ -50,6 +50,10 @@ export const refreshBinome = async (): Promise<void> => {
   else set({ loading: false, error: r.message });
 };
 
+/** Lecture / abonnement hors React, pour le widget iOS (voir lib/widgetSync.ts). */
+export const getBinomeState = (): BinomeState | null => useBinomeStore.getState().state;
+export const subscribeBinome = (listener: () => void): (() => void) => useBinomeStore.subscribe(listener);
+
 export const useBinome = () => {
   const state = useBinomeStore((s) => s.state);
   const loading = useBinomeStore((s) => s.loading);

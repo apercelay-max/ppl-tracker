@@ -65,3 +65,15 @@ chaque ordinateur : tout ce qui doit être partagé va dans ce fichier.
   avec un `id` jamais utilisé. Si deux PR ajoutent chacune une entrée, garder les deux.
 - Coach IA : `api/coach.ts` (fonction serverless Vercel, Gemini, avec modèles de secours).
 - Textes de l'interface et commentaires en français ; les commentaires expliquent le *pourquoi*.
+
+## App iOS (branche `app-store`)
+
+- L'appli web est emballée dans une coque iOS par **Capacitor** (dossier `ios/`) : `npm run ios:sync` construit le
+  web et le copie dans le projet, `npm run ios:open` ouvre Xcode. Xcode est nécessaire (Mac uniquement).
+- Widgets (`ios/App/PPLWidget/`), minuteur de repos sur l'écran verrouillé (Live Activity) et liens
+  `ppltracker://…` : le web envoie un résumé JSON aux widgets via `src/lib/widgetSync.ts` et le plugin natif
+  `ios/App/App/WidgetBridgePlugin.swift`, par l'App Group `group.com.ppltracker.app`. Tout champ ajouté au résumé
+  doit l'être **en optionnel** dans `PPLWidget/Shared.swift`.
+- iOS 16.2 minimum. L'identifiant `com.ppltracker.app` et l'App Group sont **provisoires** : à valider avec l'adulte
+  responsable du compte Apple Developer avant toute publication. Aucun certificat ni clé dans le dépôt.
+- Ajouter un fichier Swift ou une cible : le déclarer dans `App.xcodeproj` (via Xcode, ou le gem Ruby `xcodeproj`).

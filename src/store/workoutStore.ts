@@ -499,7 +499,7 @@ setCustomWorkouts(customPrograms.flatMap((p) => p.workouts));
 // hebdo a été atteint, à partir de l'historique réel — même calcul que
 // ProfilScreen.tsx, réutilisé ici pour tenir à jour le record `bestWeekStreak`
 // (badges de régularité) à chaque séance terminée.
-const computeCurrentWeekStreak = (history: HistoryEntry[], weeklySessionGoal: number): number => {
+export const computeCurrentWeekStreak = (history: HistoryEntry[], weeklySessionGoal: number): number => {
 // 52 semaines et non 12 : le dernier palier du badge de régularité est à 26
 // semaines, inatteignable si la série était plafonnée à 12.
 const buckets = bucketByWeek(history, 52);
