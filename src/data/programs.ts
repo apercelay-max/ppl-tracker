@@ -5,7 +5,7 @@ import { CATALOG_PROGRAMS } from './catalogPrograms';
 import { APP_LIBRARY_PROGRAMS } from './appLibraryPrograms';
 
 // ─── Programmes sélectionnables (Réglages → Programme d'entraînement) ─────
-// "Strict V4.0" est le programme historique de l'appli (ex-V10, ex-V11),
+// "Strict V4.3" est le programme historique de l'appli (ex-V10, ex-V11),
 // toujours présent en premier — c'est le programme réellement suivi par
 // Antoine, mis à jour au fil des versions envoyées (V10 → V11 le 19/07/2026,
 // puis V11 → V2.2 « Phase 1 Sèche » le 19/08/2026, puis V2.2 → V2.5 le
@@ -17,7 +17,9 @@ import { APP_LIBRARY_PROGRAMS } from './appLibraryPrograms';
 // déclarée muette (retour à charge pleine + réintroduction de l'antérieur),
 // contrainte matérielle actée (poids du corps + haltères ≤ 25 kg/pièce,
 // volume à 4 séries en compensation), jambes reconduites à l'identique —
-// cf. src/data/workouts.ts pour le détail. Son id reste 'strict-v10'
+// puis V4.0 → V4.2 le 05/10/2026 : latéral en tête (V4.1, 29/09), double
+// progression un cran à la fois (V4.2, 30/09), puis V4.2 → V4.3 le 08/10/2026 :
+// fin de sèche repoussée au 21/10, Sem 12 et 13 — cf. src/data/workouts.ts pour le détail. Son id reste 'strict-v10'
 // pour ne pas casser les réglages déjà enregistrés sur l'appareil. Les autres
 // sont des trames additionnelles, proposées en plus — changer de programme
 // actif ne supprime jamais les autres, ni l'historique déjà enregistré
@@ -37,10 +39,10 @@ export interface Program {
 
 export const STRICT_V10_PROGRAM: Program = {
   id: 'strict-v10',
-  name: 'Strict V4.0',
-  focusLabel: 'Strict V4.0 · Épaules priorité 1 + rééduc. genou',
-  shortDescription: 'Sem 9-11 : épaule muette → retour à charge pleine et réintroduction de l\'antérieur, poids du corps + haltères ≤ 25 kg (volume à 4 séries), jambes en rééducation genou inchangée — 6 séances, fin de Phase 1 — Sèche (16/10).',
-  source: 'Le programme d\'Antoine, mis à jour de V3.2 vers V4.0 le 16/09/2026 (fichier « programme_hypertrophie_PPL_Strict_Phase1_V4.0_S9-S11.xlsx »).',
+  name: 'Strict V4.3',
+  focusLabel: 'Strict V4.3 · Épaules priorité 1 + rééduc. genou',
+  shortDescription: 'Sem 9-13 : épaule muette → retour à charge pleine, deltoïde latéral en tête (18 séries/rotation), poids du corps + haltères ≤ 25 kg, double progression (un cran à la fois), jambes en rééducation genou inchangée — 6 séances, fin de Phase 1 — Sèche (21/10).',
+  source: 'Le programme d\'Antoine, mis à jour de V4.2 vers V4.3 le 08/10/2026 (fichier « programme_hypertrophie_PPL_Strict_Phase1_V4.3_S9-S13.xlsx »).',
   workouts: WORKOUTS,
   // Les clés 'legs-a'/'legs-b' (sans suffixe) sont les anciennes séances
   // Legs V11 (avant le 19/08/2026) ; 'legs-a-v3'/'legs-b-v3' celles de la
