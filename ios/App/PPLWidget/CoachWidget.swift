@@ -2,6 +2,7 @@ import WidgetKit
 import SwiftUI
 
 struct CoachView: View {
+    @Environment(\.widgetFamily) private var family
     let entry: SessionEntry
 
     var body: some View {
@@ -18,19 +19,28 @@ struct CoachView: View {
         VStack(alignment: .leading, spacing: 6) {
             WidgetCaption(text: "COACH", color: purple)
             if let c = d.coach, let recap = c.recap {
-                Text(recap)
-                    .font(.system(size: 13, weight: .semibold)).foregroundColor(.white)
-                    .lineLimit(2).minimumScaleFactor(0.85)
-                if let focus = c.focus, !focus.isEmpty {
-                    Text(focus).font(.system(size: 12)).foregroundColor(.white.opacity(0.7))
+                if family == .systemSmall {
+                    // Petit : seulement le conseil du jour, c'est ce qui sert au moment de s'entraîner.
+                    Spacer(minLength: 0)
+                    Text(c.action?.isEmpty == false ? (c.action ?? recap) : recap)
+                        .font(.system(size: 13, weight: .semibold)).foregroundColor(.white)
+                        .lineLimit(6).minimumScaleFactor(0.8)
+                    Spacer(minLength: 0)
+                } else {
+                    Text(recap)
+                        .font(.system(size: 13, weight: .semibold)).foregroundColor(.white)
                         .lineLimit(2).minimumScaleFactor(0.85)
-                }
-                Spacer(minLength: 0)
-                if let action = c.action, !action.isEmpty {
-                    HStack(alignment: .top, spacing: 6) {
-                        Image(systemName: "arrow.right.circle.fill").foregroundColor(purple).font(.system(size: 13))
-                        Text(action).font(.system(size: 12, weight: .semibold)).foregroundColor(.white)
+                    if let focus = c.focus, !focus.isEmpty {
+                        Text(focus).font(.system(size: 12)).foregroundColor(.white.opacity(0.7))
                             .lineLimit(2).minimumScaleFactor(0.85)
+                    }
+                    Spacer(minLength: 0)
+                    if let action = c.action, !action.isEmpty {
+                        HStack(alignment: .top, spacing: 6) {
+                            Image(systemName: "arrow.right.circle.fill").foregroundColor(purple).font(.system(size: 13))
+                            Text(action).font(.system(size: 12, weight: .semibold)).foregroundColor(.white)
+                                .lineLimit(2).minimumScaleFactor(0.85)
+                        }
                     }
                 }
             } else {
@@ -53,6 +63,6 @@ struct PPLCoachWidget: Widget {
         }
         .configurationDisplayName("Coach du jour")
         .description("Le bilan de ta dernière séance et le conseil du jour.")
-        .supportedFamilies([.systemMedium])
+        .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

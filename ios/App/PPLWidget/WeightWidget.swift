@@ -30,6 +30,7 @@ struct Sparkline: View {
 }
 
 struct WeightView: View {
+    @Environment(\.widgetFamily) private var family
     let entry: SessionEntry
 
     var body: some View {
@@ -40,34 +41,58 @@ struct WeightView: View {
         }
     }
 
+    // Pour une sèche ou une prise de masse, ni la baisse ni la hausse n'est « bonne » en soi : on reste neutre.
+    private func deltaText(_ delta: Double, unit: String) -> String {
+        "\(delta > 0 ? "+" : delta < 0 ? "−" : "")\(fmt(abs(delta))) \(unit) en 30 j"
+    }
+
     @ViewBuilder
     private func content(_ d: WidgetData) -> some View {
         let blue = Color(red: 0.35, green: 0.7, blue: 1.0)
         let unit = d.unit ?? "kg"
         if let bw = d.bodyWeight, let latest = bw.latest {
-            HStack(spacing: 14) {
+            if family == .systemSmall {
                 VStack(alignment: .leading, spacing: 2) {
-                    WidgetCaption(text: "POIDS DE CORPS", color: blue)
+                    WidgetCaption(text: "POIDS", color: blue)
                     Spacer(minLength: 0)
                     Text("\(fmt(latest)) \(unit)")
-                        .font(.system(size: 30, weight: .heavy)).foregroundColor(.white)
+                        .font(.system(size: 28, weight: .heavy)).foregroundColor(.white)
                         .minimumScaleFactor(0.6).lineLimit(1)
                     if let delta = bw.delta {
-                        // Pour une sèche ou une prise de masse, ni la baisse ni la hausse n'est « bonne » en soi : on reste neutre.
-                        Text("\(delta > 0 ? "+" : delta < 0 ? "−" : "")\(fmt(abs(delta))) \(unit) en 30 j")
-                            .font(.footnote.weight(.semibold)).foregroundColor(.white.opacity(0.75))
-                    } else {
-                        Text("Pèse-toi pour voir l'évolution").font(.footnote).foregroundColor(.white.opacity(0.6))
+                        Text(deltaText(delta, unit: unit))
+                            .font(.caption.weight(.semibold)).foregroundColor(.white.opacity(0.75))
+                            .lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                    if let pts = bw.points, pts.count >= 2 {
+                        Sparkline(points: pts, color: blue).frame(height: 26).padding(.top, 6)
                     }
                 }
-                if let pts = bw.points, pts.count >= 2 {
-                    Sparkline(points: pts, color: blue).frame(maxWidth: .infinity).padding(.vertical, 12)
-                } else {
-                    Spacer(minLength: 0)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .widgetBackground()
+            } else {
+                HStack(spacing: 14) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        WidgetCaption(text: "POIDS DE CORPS", color: blue)
+                        Spacer(minLength: 0)
+                        Text("\(fmt(latest)) \(unit)")
+                            .font(.system(size: 30, weight: .heavy)).foregroundColor(.white)
+                            .minimumScaleFactor(0.6).lineLimit(1)
+                        if let delta = bw.delta {
+                            Text(deltaText(delta, unit: unit))
+                                .font(.footnote.weight(.semibold)).foregroundColor(.white.opacity(0.75))
+                        } else {
+                            Text("Pèse-toi pour voir l'évolution").font(.footnote).foregroundColor(.white.opacity(0.6))
+                        }
+                    }
+                    if let pts = bw.points, pts.count >= 2 {
+                        Sparkline(points: pts, color: blue).frame(maxWidth: .infinity).padding(.vertical, 12)
+                    } else {
+                        Spacer(minLength: 0)
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .widgetBackground()
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .widgetBackground()
         } else {
             EmptyWidgetView(message: "Ajoute ton poids dans l'appli pour suivre ta courbe ici.")
         }
@@ -83,6 +108,6 @@ struct PPLWeightWidget: Widget {
         }
         .configurationDisplayName("Poids de corps")
         .description("Ton dernier poids et la courbe des 30 derniers jours.")
-        .supportedFamilies([.systemMedium])
+        .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
