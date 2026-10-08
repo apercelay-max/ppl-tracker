@@ -12,6 +12,7 @@
 
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { webOrigin } from './appUrl';
 
 export type Result<T> = { ok: true; data: T } | { ok: false; message: string };
 
@@ -76,7 +77,7 @@ export const isBinomeAvailable = (): boolean => isSupabaseConfigured && supabase
 /** « 3F9A0C21B7E4 » → « 3F9A-0C21-B7E4 », lisible à voix haute ou à recopier. */
 export const formatCode = (code: string): string => code.replace(/(.{4})(?=.)/g, '$1-');
 
-export const inviteLink = (code: string): string => `${window.location.origin}/?binome=${code}`;
+export const inviteLink = (code: string): string => `${webOrigin()}/?binome=${code}`;
 
 /** Code d'invitation présent dans l'URL d'ouverture, sinon null. */
 export const readInviteCodeFromUrl = (): string | null => {

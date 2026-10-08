@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { webOrigin } from '../lib/appUrl';
+import { formatReferralCode, getPendingReferral, normalizeReferralCode, rememberPendingReferral } from '../lib/referral';
 import { useScreenClass } from '../hooks/useScreenClass';
 
 interface AuthScreenProps {
@@ -16,6 +18,8 @@ const screenClass = useScreenClass();
   const [mode, setMode] = useState<Mode>(initialMode ?? 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // Code de parrainage (facultatif) : prérempli s'il est arrivé par un lien.
+  const [referral, setReferral] = useState(() => { const c = getPendingReferral(); return c ? formatReferralCode(c) : ''; });
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
@@ -45,7 +49,7 @@ const screenClass = useScreenClass();
       setLoading(true);
       try {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin,
+          redirectTo: webOrigin(),
         });
         if (error) { setErrorMsg(error.message); return; }
         setInfoMsg('Email envoyé (si ce compte existe). Vérifie ta boîte de réception et clique sur le lien pour choisir un nouveau mot de passe.');
@@ -86,6 +90,12 @@ const screenClass = useScreenClass();
     setLoading(true);
     try {
       if (mode === 'signup') {
+        if (referral.trim() !== '') {
+          const code = normalizeReferralCode(referral);
+          if (!code) { setErrorMsg('Le code de parrainage doit faire 8 caractères (chiffres 0-9 et lettres A-F).'); return; }
+          // Gardé jusqu'à la première connexion : avec confirmation par e-mail, la personne n'est pas encore connectée ici.
+          rememberPendingReferral(code);
+        }
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) { setErrorMsg(error.message); return; }
         if (data.session) {
@@ -174,6 +184,24 @@ const screenClass = useScreenClass();
                 placeholder="Au moins 6 caractères"
                 style={inputStyle}
               />
+            </>
+          )}
+
+          {mode === 'signup' && (
+            <>
+              <label style={{ ...fieldLabel, marginTop: 14 }}>Code de parrainage (facultatif)</label>
+              <input
+                type="text"
+                value={referral}
+                onChange={(e) => setReferral(e.target.value)}
+                placeholder="Ex. 3F9A-0C21"
+                style={inputStyle}
+                autoCapitalize="characters"
+                autoCorrect="off"
+              />
+              <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 6, lineHeight: '15px' }}>
+                Celui qui t'a invité gagne 1 mois de PPL Pro offert.
+              </p>
             </>
           )}
 

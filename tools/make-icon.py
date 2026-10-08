@@ -127,3 +127,9 @@ out = sys.argv[1] if len(sys.argv) > 1 else "public"
 for size, name in [(512, "icon-512.png"), (192, "icon-192.png"), (180, "apple-touch-icon.png")]:
     icon.resize((size, size), Image.LANCZOS).save(f"{out}/{name}", optimize=True)
     print(f"{name} ({size}px)")
+
+# Icône de l'appli iPhone : 1024 px, SANS canal alpha (l'App Store refuse la transparence).
+# Usage : python3 tools/make-icon.py <dossier> ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
+if len(sys.argv) > 2:
+    icon.convert("RGB").save(sys.argv[2], optimize=True)
+    print(f"{sys.argv[2]} (1024px, sans alpha)")

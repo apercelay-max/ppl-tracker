@@ -274,6 +274,8 @@ export type CoachAiErrorCode =
   | 'CLE_INVALIDE'
   | 'QUOTA_DEPASSE'
   | 'DELAI_DEPASSE'
+  /** L'utilisateur a refusé l'envoi de ses données à Google — détecté côté client. */
+  | 'CONSENTEMENT_REFUSE'
   | 'REPONSE_VIDE'
   /** L'échange précédent n'est plus connu de Google (expiré). Le client
    *  repart d'une conversation neuve, en rejoignant le digest. */

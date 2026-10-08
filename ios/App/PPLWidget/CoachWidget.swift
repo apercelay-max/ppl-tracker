@@ -59,7 +59,7 @@ struct PPLCoachWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
-            CoachView(entry: entry)
+            ProGate(entry: entry) { CoachView(entry: entry) }
         }
         .configurationDisplayName("Coach du jour")
         .description("Le bilan de ta dernière séance et le conseil du jour.")

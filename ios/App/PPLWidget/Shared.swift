@@ -20,6 +20,8 @@ struct RecoveryItem: Codable { var name: String?; var pct: Double?; var hoursRem
 struct CoachInfo: Codable { var recap: String?; var focus: String?; var action: String? }
 
 struct WidgetData: Codable {
+    /// Faux : PPL Pro n'est pas actif, les widgets montrent un écran verrouillé.
+    var pro: Bool?
     var nextName: String?
     var nextDayId: String?
     var dayLabel: String?
@@ -45,6 +47,8 @@ struct WidgetData: Codable {
 struct SessionEntry: TimelineEntry {
     let date: Date
     let data: WidgetData?
+    /// Vrai quand l'appli a envoyé ses données mais que PPL Pro n'est pas actif.
+    var locked: Bool = false
 }
 
 struct Provider: TimelineProvider {
@@ -57,7 +61,7 @@ struct Provider: TimelineProvider {
     // Données d'exemple de la galerie des widgets.
     func placeholder(in context: Context) -> SessionEntry {
         SessionEntry(date: Date(), data: WidgetData(
-            nextName: "Pull A", nextDayId: "pull-a", dayLabel: "Pull · J1", exerciseCount: 7, duration: "~60 min",
+            pro: true, nextName: "Pull A", nextDayId: "pull-a", dayLabel: "Pull · J1", exerciseCount: 7, duration: "~60 min",
             accent: "#7c6fcd", sessionsThisWeek: 2, weeklyGoal: 4,
             weekDays: [false, true, false, true, false, false, false],
             lateMuscles: [LateMuscle(name: "Mollets", daysSince: 12), LateMuscle(name: "Épaules", daysSince: 9), LateMuscle(name: "Biceps", daysSince: 6)],
@@ -76,11 +80,15 @@ struct Provider: TimelineProvider {
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SessionEntry) -> Void) {
-        completion(context.isPreview ? placeholder(in: context) : SessionEntry(date: Date(), data: load()))
+        if context.isPreview { completion(placeholder(in: context)); return }
+        let loaded = load()
+        completion(SessionEntry(date: Date(), data: loaded, locked: loaded?.pro == false))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<SessionEntry>) -> Void) {
-        let entry = SessionEntry(date: Date(), data: load())
+        let loaded = load()
+        // `pro` absent (appli plus ancienne que le widget) : on ne verrouille pas, on n'en sait rien.
+        let entry = SessionEntry(date: Date(), data: loaded, locked: loaded?.pro == false)
         // L'appli demande un rechargement dès que les données changent ; ce
         // rafraîchissement-ci n'est qu'un filet de sécurité (le compteur de la
         // semaine glisse avec le temps même si l'appli reste fermée).
@@ -186,5 +194,31 @@ struct ProgressRing: View {
                 .font(.system(size: 20, weight: .heavy)).foregroundColor(.white)
                 .minimumScaleFactor(0.6)
         }
+    }
+}
+
+// ─── Verrou PPL Pro ──────────────────────────────────────────────────────────
+
+/// Écran affiché à la place du widget quand PPL Pro n'est pas actif. Un appui ouvre l'écran d'offre.
+struct LockedWidgetView: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Image(systemName: "lock.fill").font(.title3).foregroundColor(Color(red: 1.0, green: 0.45, blue: 0.3))
+            Text("PPL Pro").font(.headline).foregroundColor(.white)
+            Text("Débloque les widgets avec PPL Pro.").font(.caption).foregroundColor(.white.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .widgetBackground()
+        .widgetURL(appLink("view/pro"))
+    }
+}
+
+/// Affiche le widget, ou l'écran verrouillé si PPL Pro n'est pas actif.
+struct ProGate<Content: View>: View {
+    let entry: SessionEntry
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        if entry.locked { LockedWidgetView() } else { content() }
     }
 }

@@ -1,6 +1,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { create } from 'zustand';
+import { useReferralStore } from './referral';
 
 // ─── Abonnements PPL Pro (iOS uniquement) ───────────────────────────────────
 // Les achats passent obligatoirement par Apple (achats intégrés) : sur le web
@@ -33,13 +34,15 @@ export const LAUNCH_OFFER = {
   regularPrice: { [PRODUCT_YEARLY]: '14,99 €', [PRODUCT_MONTHLY]: '1,99 €' } as Record<string, string>,
 };
 
-// Textes montrés sur l'écran d'offre. À garder alignés avec ce que Pro verrouille
-// réellement : on ne promet pas ce qui est déjà gratuit.
+// Textes montrés sur l'écran d'offre. Apple exige qu'ils décrivent ce que l'abonnement
+// débloque RÉELLEMENT (règle 3.1.2) : PPL Pro ouvre les extras de l'appli iPhone, et
+// uniquement eux. Toute l'appli de suivi reste gratuite. Si on verrouille autre chose
+// un jour, c'est ici qu'on l'écrit — et seulement une fois que c'est verrouillé.
 export const PRO_BENEFITS: { icon: string; title: string; text: string }[] = [
-  { icon: '🤖', title: 'Coach IA sans limite', text: 'Résumé du jour et conseils personnalisés à chaque séance.' },
-  { icon: '📱', title: 'Widgets et écran verrouillé', text: 'Prochaine séance, série, record, minuteur de repos.' },
-  { icon: '👥', title: 'Binôme', text: 'Suivez vos semaines côte à côte et relancez-vous.' },
-  { icon: '📊', title: 'Stats avancées', text: 'Récupération musculaire, charge d\'entraînement, records.' },
+  { icon: '📱', title: 'Widgets sur l\'écran d\'accueil', text: 'Prochaine séance, série, record, poids, objectifs et récupération, en petit, moyen ou grand.' },
+  { icon: '🏝️', title: 'Séance en direct', text: 'Exercice, repos, volume et durée sur l\'écran verrouillé et dans la Dynamic Island.' },
+  { icon: '🎙️', title: 'Siri et Raccourcis', text: '« Démarre ma séance », « Où j\'en suis cette semaine ? » sans ouvrir l\'appli.' },
+  { icon: '⌚', title: 'Apple Watch', text: 'Valide tes séries et suis ton repos depuis ton poignet.' },
 ];
 
 export type PeriodUnit = 'day' | 'week' | 'month' | 'year';
@@ -101,6 +104,22 @@ const patch = (p: Partial<SubscriptionState>) => useSubscriptionStore.setState(p
 
 /** Vrai tant qu'un abonnement (essai gratuit compris) est actif. */
 export const useIsPro = (): boolean => useSubscriptionStore((s) => s.entitlements.length > 0);
+
+/** Fin du Pro offert par le parrainage (ms), ou null. */
+export const bonusUntilNow = (): number | null => {
+  const until = useReferralStore.getState().state?.bonusUntil ?? null;
+  return until !== null && until > Date.now() ? until : null;
+};
+
+/** Accès aux fonctions Pro : abonnement payant OU mois offert par le parrainage. */
+export const hasProAccess = (): boolean =>
+  useSubscriptionStore.getState().entitlements.length > 0 || bonusUntilNow() !== null;
+
+export const useProAccess = (): boolean => {
+  const paid = useIsPro();
+  const bonusUntil = useReferralStore((s) => s.state?.bonusUntil ?? null);
+  return paid || (bonusUntil !== null && bonusUntil > Date.now());
+};
 
 export const loadProducts = async (): Promise<void> => {
   if (!subscriptionsAvailable()) return;

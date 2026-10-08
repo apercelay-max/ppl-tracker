@@ -41,7 +41,7 @@ export const useDailyBrief = (enabled: boolean): DailyBriefState => {
   const inFlightKey = useRef('');
   // Dernière version de `generate` : la nouvelle tentative différée doit
   // utiliser l'historique du moment, pas celui du rendu qui l'a programmée.
-  const generateRef = useRef<() => Promise<void>>(async () => {});
+  const generateRef = useRef<(auto?: boolean) => Promise<void>>(async () => {});
 
   const program = getProgram(activeProgramId, customPrograms);
   const plan = buildDailyPlan({
@@ -55,7 +55,7 @@ export const useDailyBrief = (enabled: boolean): DailyBriefState => {
     }
   };
 
-  const generate: () => Promise<void> = useCallback(async () => {
+  const generate: (auto?: boolean) => Promise<void> = useCallback(async (auto = false) => {
     const key = `${history.length}|${plan.workoutId ?? ''}|${todayKey()}`;
     if (inFlight.current) {
       // Une séance (ou un nouveau jour) est arrivée pendant un appel : le résumé en
@@ -74,9 +74,11 @@ export const useDailyBrief = (enabled: boolean): DailyBriefState => {
         history, resolveWorkout: getWorkout, profile: trainingProfile, bodyWeightHistory,
         programName: program.name, weeklySessionGoal,
       });
+      // `auto` : préparé tout seul au lancement. Sans accord déjà donné, rien n'est envoyé
+      // (voir askAiConsent) ; la question n'est posée que si la personne appuie sur « Actualiser ».
       const response = await requestCoachAi({
         mode: 'daily', digest, daily: plan.context, apiKey: readStoredApiKey() || undefined,
-      });
+      }, { prompt: !auto });
       if (response.ok && response.mode === 'daily') {
         const fresh: CachedDaily = {
           daily: response.daily, day: todayKey(), sessions: history.length,
@@ -85,6 +87,12 @@ export const useDailyBrief = (enabled: boolean): DailyBriefState => {
         setCached(fresh);
         writeCachedDaily(fresh);
         retried.current = false;
+      } else if (!response.ok && response.code === 'CONSENTEMENT_REFUSE') {
+        // Pas d'accord : ni erreur rouge ni nouvelle tentative, juste une invitation.
+        setError(auto
+          ? 'Le résumé du jour utilise le coach IA. Appuie sur « Actualiser » pour l’activer.'
+          : response.message);
+        retried.current = true;
       } else if (!response.ok) {
         setError(response.message);
         // Tous les modèles étaient occupés (le serveur a déjà essayé les modèles
@@ -104,7 +112,7 @@ export const useDailyBrief = (enabled: boolean): DailyBriefState => {
       inFlight.current = false;
       if (rerunAfter.current) {
         rerunAfter.current = false;
-        void generateRef.current();
+        void generateRef.current(auto);
       }
     }
     // `plan` est recalculé à chaque rendu ; les entrées qui comptent sont listées ci-dessous.
@@ -122,7 +130,7 @@ export const useDailyBrief = (enabled: boolean): DailyBriefState => {
     if (!enabled || upToDate || history.length === 0) return;
     // Nouvelle séance ou nouveau jour : une nouvelle tentative différée redevient permise.
     retried.current = false;
-    void generate();
+    void generate(true);
     // Une seule tentative automatique par changement de séance : pas de boucle si l'appel échoue.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, history.length, plan.workoutId]);

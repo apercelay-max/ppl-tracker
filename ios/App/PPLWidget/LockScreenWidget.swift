@@ -41,7 +41,7 @@ struct PPLLockWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
-            LockScreenView(entry: entry).widgetURL(appLink("session/\(entry.data?.nextDayId ?? "")"))
+            ProGate(entry: entry) { LockScreenView(entry: entry).widgetURL(appLink("session/\(entry.data?.nextDayId ?? "")")) }
         }
         .configurationDisplayName("Écran verrouillé")
         .description("Ta prochaine séance et ta progression de la semaine, sans déverrouiller.")

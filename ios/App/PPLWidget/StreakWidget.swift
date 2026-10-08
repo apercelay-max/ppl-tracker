@@ -75,7 +75,7 @@ struct PPLStreakWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
-            StreakView(entry: entry)
+            ProGate(entry: entry) { StreakView(entry: entry) }
         }
         .configurationDisplayName("Série")
         .description("Le nombre de semaines d'affilée où tu atteins ton objectif.")

@@ -5,16 +5,17 @@ import { useScreenClass } from '../hooks/useScreenClass';
 import {
   LAUNCH_OFFER, PRODUCT_MONTHLY, PRODUCT_YEARLY, PRO_BENEFITS,
   buy, freeTrialLabel, loadProducts, manageSubscription, periodLabel, restorePurchases,
-  subscriptionsAvailable, useIsPro, useSubscriptionStore,
+  bonusUntilNow, subscriptionsAvailable, useIsPro, useSubscriptionStore,
 } from '../lib/subscriptions';
+import { useReferralStore } from '../lib/referral';
 
 interface PaywallScreenProps { onBack: () => void; }
 
 // Pages légales exigées par Apple sur tout écran d'abonnement. Les conditions sont
-// le contrat standard d'Apple. La politique de confidentialité reste à écrire et à
-// publier (adresse à remplacer ici une fois la page en ligne).
+// le contrat standard d'Apple ; la politique de confidentialité est public/confidentialite.html
+// (en ligne dès que la branche est fusionnée dans main).
 const TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
-const PRIVACY_URL = 'https://ppl-tracker-puce.vercel.app/';
+const PRIVACY_URL = 'https://ppl-tracker-puce.vercel.app/confidentialite.html';
 
 const dateLabel = (ms: number) => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -25,6 +26,8 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ onBack }) => {
   const busy = useSubscriptionStore((s) => s.busy);
   const error = useSubscriptionStore((s) => s.error);
   const isPro = useIsPro();
+  useReferralStore((s) => s.state?.bonusUntil); // re-rend quand le mois offert change
+  const bonusUntil = bonusUntilNow();
   const [selected, setSelected] = useState(PRODUCT_YEARLY);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -75,6 +78,13 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ onBack }) => {
             <p style={{ ...muted, margin: 0 }}>{isPro ? 'Tu es abonné' : 'Passe au niveau supérieur'}</p>
           </div>
         </div>
+
+        {bonusUntil && !isPro && (
+          <div style={{ ...card, borderColor: 'var(--brand-1)', marginBottom: 16 }}>
+            <p style={benefitTitle}>🎁 PPL Pro offert jusqu'au {dateLabel(bonusUntil)}</p>
+            <p style={benefitText}>Grâce à tes parrainages. Tu peux t'abonner dès maintenant ou à la fin de ce mois offert.</p>
+          </div>
+        )}
 
         {LAUNCH_OFFER.active && !isPro && (
           <div style={launchBanner}>

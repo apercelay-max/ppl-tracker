@@ -80,7 +80,7 @@ struct PPLBinomeWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
-            BinomeView(entry: entry)
+            ProGate(entry: entry) { BinomeView(entry: entry) }
         }
         .configurationDisplayName("Binôme")
         .description("Où en est ton binôme cette semaine, face à toi.")

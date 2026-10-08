@@ -13,13 +13,17 @@ import { buildHistoryImport, detectHistorySource, SOURCE_LABEL } from '../utils/
 import { historyToCsv } from '../utils/historyExport';
 import { saveBackup, listBackups, restoreBackup, markExported, getLastExportAt, type BackupMeta } from '../lib/localBackups';
 import { useAuth } from '../hooks/useAuth';
-import { useIsPro } from '../lib/subscriptions';
+import { useIsPro, bonusUntilNow } from '../lib/subscriptions';
+import { useReferralStore } from '../lib/referral';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import type { SyncStatus } from '../hooks/useCloudSync';
 import { CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import { motionSensorSupported, requestMotionPermission } from '../hooks/useShakeToValidate';
 import { GymsSettings } from '../components/GymsSettings';
 import { BinomeSettings } from '../components/BinomeSettings';
+import { ReferralSettings } from '../components/ReferralSettings';
+import { DeleteAccountSection } from '../components/DeleteAccountSection';
+import { hasAiConsent, withdrawAiConsent } from '../utils/coachAi';
 import type { CardioActivityType, NavTabKey } from '../data/types';
 import type { VoiceVerbosity } from '../store/workoutStore';
 import { isVoiceSupported, primeVoice, speak, stopVoice } from '../utils/voiceCoach';
@@ -191,9 +195,31 @@ if (diffMin < 60) return `il y a ${diffMin} min`;
 return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 };
 
+// Ligne « Coach IA » : montre si l'envoi du résumé d'entraînement à Google est accepté, et permet de le retirer.
+const AiConsentRow: React.FC = () => {
+  const [on, setOn] = useState(hasAiConsent);
+  if (!on) return null;
+  return (
+    <div style={{ marginTop: 20 }}>
+      <p style={subLabel}>COACH IA</p>
+      <p style={{ color: 'var(--text-dim)', fontSize: 11, lineHeight: '16px', marginBottom: 10 }}>
+        Tu as accepté que le coach IA envoie un résumé de ton entraînement à Google Gemini pour rédiger ses réponses.
+      </p>
+      <button
+        onClick={() => { withdrawAiConsent(); setOn(false); }}
+        style={{ ...restBtn, padding: '12px 8px' }}
+      >
+        Retirer mon accord
+      </button>
+    </div>
+  );
+};
+
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ initialCategory, onBack, onOpenAccount, onRestartQuiz, onOpenPro, syncStatus, lastSyncedAt }) => {
 const screenClass = useScreenClass();
 const isPro = useIsPro();
+useReferralStore((s) => s.state?.bonusUntil);
+const bonusUntil = bonusUntilNow();
 const { user, loading: authLoading } = useAuth();
 const handleSignOut = () => { supabase?.auth.signOut(); };
 const accentTheme = useWorkoutStore((s) => s.accentTheme);
@@ -636,8 +662,8 @@ background: !collapsedCategories[id] ? 'var(--bg-elevated)' : 'transparent',
 <button onClick={onOpenPro} style={proCard}>
 <span style={{ fontSize: 22 }}>⭐</span>
 <div style={{ flex: 1, textAlign: 'left' }}>
-<p style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 800, margin: 0 }}>{isPro ? 'PPL Pro · abonné' : 'Découvrir PPL Pro'}</p>
-<p style={{ color: 'var(--text-dim)', fontSize: 12, margin: '2px 0 0' }}>{isPro ? 'Gérer mon abonnement' : '7 jours gratuits, puis prix de lancement −50 %'}</p>
+<p style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 800, margin: 0 }}>{isPro ? 'PPL Pro · abonné' : bonusUntil ? 'PPL Pro · offert' : 'Découvrir PPL Pro'}</p>
+<p style={{ color: 'var(--text-dim)', fontSize: 12, margin: '2px 0 0' }}>{isPro ? 'Gérer mon abonnement' : bonusUntil ? `Jusqu’au ${new Date(bonusUntil).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}` : '7 jours gratuits, puis prix de lancement −50 %'}</p>
 </div>
 <span style={{ color: 'var(--text-dim)', fontSize: 16 }}>›</span>
 </button>
@@ -1838,6 +1864,15 @@ Se connecter / créer un compte
 {isSupabaseConfigured && !authLoading && (
 <BinomeSettings signedIn={!!user} onOpenAccount={onOpenAccount} />
 )}
+{isSupabaseConfigured && !authLoading && (
+<ReferralSettings signedIn={!!user} onOpenAccount={onOpenAccount} />
+)}
+
+{/* Coach IA : l'accord d'envoi des données à Google se retire ici. */}
+<AiConsentRow />
+
+{/* Suppression du compte : exigée par Apple, visible seulement si on est connecté. */}
+{isSupabaseConfigured && !authLoading && user && <DeleteAccountSection />}
 </div>
 )}
 </div>

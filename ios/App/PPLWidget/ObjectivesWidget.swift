@@ -139,7 +139,7 @@ struct PPLObjectivesWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
-            ObjectivesView(entry: entry)
+            ProGate(entry: entry) { ObjectivesView(entry: entry) }
         }
         .configurationDisplayName("Objectifs")
         .description("Ton objectif de la semaine, tes 7 derniers jours et (en grand) les muscles à travailler.")

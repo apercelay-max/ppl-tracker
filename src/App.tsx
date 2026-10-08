@@ -36,6 +36,8 @@ import { useWorkoutStore } from './store/workoutStore';
 import { useCloudSync } from './hooks/useCloudSync';
 import { useVoiceCoach } from './hooks/useVoiceCoach';
 import { setPendingInvite, useBinomeSync } from './hooks/useBinome';
+import { applyPendingReferral, clearReferralCodeFromUrl, clearReferralState, readReferralCodeFromUrl, refreshReferral, rememberPendingReferral } from './lib/referral';
+import { useAuth } from './hooks/useAuth';
 import { clearInviteCodeFromUrl, readInviteCodeFromUrl } from './lib/binome';
 import type { GymProfile } from './utils/gymAdapt';
 import { getAccent, hexToRgbTriplet } from './data/accents';
@@ -113,6 +115,19 @@ const sync = useCloudSync();
 useVoiceCoach();
 // Binôme : charge l'état et partage chaque séance terminée (voir hooks/useBinome.ts).
 useBinomeSync();
+
+// Parrainage : un lien …/?parrain=CODE range le code (on n'est peut-être pas encore
+// connecté), puis il est utilisé à la première connexion. L'état (mon code, mes
+// filleuls, mon mois offert) se recharge à chaque connexion et s'efface à la déconnexion.
+const { user: referralUser } = useAuth();
+useEffect(() => {
+const fromUrl = readReferralCodeFromUrl();
+if (fromUrl) { rememberPendingReferral(fromUrl); clearReferralCodeFromUrl(); }
+}, []);
+useEffect(() => {
+if (!referralUser) { clearReferralState(); return; }
+void applyPendingReferral().then(() => refreshReferral());
+}, [referralUser?.id]);
 
 // Lien d'invitation (…/?binome=CODE). Le code est rangé pour la durée de
 // l'onglet — il faut peut-être d'abord se connecter — puis retiré de la barre

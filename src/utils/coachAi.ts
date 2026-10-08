@@ -15,7 +15,10 @@ import type {
 import type { CoachPatchOp, CoachProgramView, NewProgramPreview, PatchChange } from './coachPatch';
 import type { Program } from '../data/programs';
 
-export const COACH_AI_ENDPOINT = '/api/coach';
+import { webOrigin } from '../lib/appUrl';
+
+// Adresse complète : dans l'appli iPhone, « /api/coach » seul ne mènerait pas au serveur.
+export const COACH_AI_ENDPOINT = `${webOrigin()}/api/coach`;
 
 // ─── Clé d'API saisie dans l'appli ────────────────────────────────────────
 //
@@ -102,6 +105,34 @@ export const writeCachedBrief = (cached: CachedBrief | null): void => {
  *  pouvoir afficher sa taille sans rien envoyer. */
 export const digestFromStore = (input: CoachDigestInput): CoachDigest => buildCoachDigest(input);
 
+// ─── Accord avant d'envoyer des données à une IA tierce ────────────────────
+// Le coach IA transmet un RÉSUMÉ de l'entraînement (prénom s'il est renseigné,
+// exercices, charges, séries, poids de corps) à Google Gemini. Apple (règle
+// 5.1.2) comme le RGPD veulent que la personne le sache et dise oui AVANT le
+// premier envoi. L'accord est mémorisé sur l'appareil ; le retirer redemande.
+const CONSENT_KEY = 'ppl-ai-consent';
+
+export const hasAiConsent = (): boolean => {
+  try { return localStorage.getItem(CONSENT_KEY) === 'oui'; } catch { return false; }
+};
+
+export const withdrawAiConsent = (): void => {
+  try { localStorage.removeItem(CONSENT_KEY); } catch { /* rien à retirer */ }
+};
+
+const askAiConsent = (prompt: boolean): boolean => {
+  if (hasAiConsent()) return true;
+  // Appel automatique (résumé du jour préparé au lancement) : on n'envoie RIEN et on ne
+  // dérange pas. La question n'est posée qu'après un geste de la personne.
+  if (!prompt) return false;
+  const ok = window.confirm(
+    'Coach IA : pour te répondre, un résumé de ton entraînement (ton prénom s’il est renseigné, tes exercices, charges, séries et ton poids) est envoyé à Google Gemini, qui rédige la réponse. ' +
+    'Rien n’est envoyé sans cet accord, et ton e-mail n’est jamais transmis. Tu peux le retirer à tout moment dans Réglages > Données.\n\nAccepter l’envoi ?'
+  );
+  if (ok) { try { localStorage.setItem(CONSENT_KEY, 'oui'); } catch { /* accord valable pour cette fois seulement */ } }
+  return ok;
+};
+
 const networkError = (message: string): CoachAiResponse => ({ ok: false, code: 'RESEAU', message });
 
 /** Délai maximal côté appli : le serveur essaie jusqu'à trois modèles de 12 s
@@ -109,7 +140,13 @@ const networkError = (message: string): CoachAiResponse => ({ ok: false, code: '
  *  resterait sur « Analyse en cours… » pour toujours. */
 const CLIENT_TIMEOUT_MS = 50_000;
 
-export const requestCoachAi = async (request: CoachAiRequest): Promise<CoachAiResponse> => {
+export const requestCoachAi = async (
+  request: CoachAiRequest,
+  options: { prompt?: boolean } = {},
+): Promise<CoachAiResponse> => {
+  if (!askAiConsent(options.prompt !== false)) {
+    return { ok: false, code: 'CONSENTEMENT_REFUSE', message: 'Le coach IA a besoin de ton accord pour envoyer ton résumé d’entraînement à Google. Ton coach local, lui, marche sans rien envoyer.' };
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
   try {

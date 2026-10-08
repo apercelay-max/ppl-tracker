@@ -80,7 +80,7 @@ struct PPLRecoveryWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
-            RecoveryView(entry: entry)
+            ProGate(entry: entry) { RecoveryView(entry: entry) }
         }
         .configurationDisplayName("Récupération")
         .description("Où en est chaque muscle de sa récupération : lesquels sont prêts, lesquels non.")

@@ -43,6 +43,7 @@ import type { CoachNewProgram, CoachProgramView, CoachProposal } from '../src/ut
 
 interface ApiRequest {
   method?: string;
+  headers?: Record<string, string | string[] | undefined>;
   /** Vercel parse déjà le JSON quand Content-Type: application/json. */
   body?: unknown;
 }
@@ -545,7 +546,24 @@ const parseChat = (
 
 // ─── Handler ───────────────────────────────────────────────────────────────
 
+// L'appli iPhone (Capacitor) appelle cette fonction depuis une autre origine que le site :
+// sans ces en-têtes le navigateur embarqué bloque la réponse. Liste fermée, pas « * » :
+// seules l'appli et le site lui-même ont le droit de lire la réponse.
+const ALLOWED_ORIGINS = new Set(['capacitor://localhost', 'ionic://localhost']);
+
 export default async function handler(req: ApiRequest, res: ApiResponse): Promise<void> {
+  const origin = typeof req.headers?.origin === 'string' ? req.headers.origin : '';
+  if (ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  }
+  if (req.method === 'OPTIONS') {
+    res.status(204).json(null);
+    return;
+  }
+
   // Ce n'est pas une ressource à mettre en cache : le digest change à chaque
   // séance, et un bilan périmé serait faux.
   res.setHeader('Cache-Control', 'no-store');

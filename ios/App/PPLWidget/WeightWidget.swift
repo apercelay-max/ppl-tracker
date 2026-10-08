@@ -104,7 +104,7 @@ struct PPLWeightWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
-            WeightView(entry: entry)
+            ProGate(entry: entry) { WeightView(entry: entry) }
         }
         .configurationDisplayName("Poids de corps")
         .description("Ton dernier poids et la courbe des 30 derniers jours.")

@@ -77,7 +77,7 @@ struct PPLRecordWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
-            RecordView(entry: entry)
+            ProGate(entry: entry) { RecordView(entry: entry) }
         }
         .configurationDisplayName("Dernier record")
         .description("Ton dernier poids record, avec l'exercice et la date.")

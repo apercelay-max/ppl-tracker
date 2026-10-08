@@ -6,6 +6,8 @@ import { getCoachBrief } from '../utils/coach';
 import { kgToLbs } from '../utils/weight';
 import { computeCurrentWeekStreak, useWorkoutStore } from '../store/workoutStore';
 import { getBinomeState, subscribeBinome } from '../hooks/useBinome';
+import { hasProAccess, useSubscriptionStore } from './subscriptions';
+import { useReferralStore } from './referral';
 
 // Pont vers les widgets iOS et le minuteur de repos de l'écran verrouillé
 // (WidgetBridgePlugin.swift). Les widgets sont de petits programmes séparés
@@ -32,6 +34,8 @@ const DAY_MS = 86400000;
 // WidgetData (ios/App/PPLWidget/Shared.swift) en optionnel, sinon un widget
 // plus ancien que l'appli (ou l'inverse) cesserait d'afficher quoi que ce soit.
 interface WidgetPayload {
+  // Faux = widgets verrouillés (« Débloque avec PPL Pro »). PPL Pro et le mois offert du parrainage l'ouvrent.
+  pro: boolean;
   nextName: string;
   nextDayId: string;
   dayLabel: string;
@@ -136,6 +140,7 @@ const buildPayload = (): WidgetPayload | null => {
   const brief = getCoachBrief(s.history, getWorkout);
 
   return {
+    pro: hasProAccess(),
     nextName: next.name,
     nextDayId: next.id,
     dayLabel: [program.dayTypeLabels[next.id], `J${next.dayNumber}`].filter(Boolean).join(' · '),
@@ -164,6 +169,8 @@ const buildPayload = (): WidgetPayload | null => {
 let lastSent = '';
 
 const pushData = () => {
+  // Tant que l'état de l'abonnement n'est pas lu, « non Pro » serait faux : les widgets afficheraient « verrouillé » à tort.
+  if (!useSubscriptionStore.getState().ready) return;
   const payload = buildPayload();
   if (!payload) return;
   // updatedAt change à chaque appel : on le retire pour ne renvoyer que si le
@@ -194,7 +201,8 @@ let lastWorkoutKey = '';
 
 const syncWorkoutActivity = () => {
   const { session, timer, sessionPausedAt } = useWorkoutStore.getState();
-  const workout = session && !session.isComplete ? getWorkout(session.dayId) : undefined;
+  // La séance en direct fait partie de PPL Pro.
+  const workout = session && !session.isComplete && hasProAccess() ? getWorkout(session.dayId) : undefined;
   const current = workout?.exercises[session!.currentExerciseIndex];
   if (!session || !workout || !current) {
     if (lastWorkoutKey !== 'off') {
@@ -255,4 +263,7 @@ export const startWidgetSync = () => {
   });
   // Le binôme est chargé depuis le serveur, après le démarrage de l'appli.
   subscribeBinome(schedulePush);
+  // Abonnement ou mois offert qui change : widgets et séance en direct se verrouillent / se déverrouillent.
+  useSubscriptionStore.subscribe(() => { schedulePush(); syncWorkoutActivity(); });
+  useReferralStore.subscribe(() => { schedulePush(); syncWorkoutActivity(); });
 };

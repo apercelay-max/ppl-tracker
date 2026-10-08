@@ -54,7 +54,7 @@ struct PPLWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
-            NextSessionView(entry: entry)
+            ProGate(entry: entry) { NextSessionView(entry: entry) }
         }
         .configurationDisplayName("Prochaine séance")
         .description("Ta prochaine séance et ta progression de la semaine. Un appui la démarre.")
