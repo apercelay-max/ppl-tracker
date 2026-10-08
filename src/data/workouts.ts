@@ -2,16 +2,18 @@ import { WorkoutDay, ProgressionWeek } from './types';
 import { PPL_DEBUTANT_WORKOUTS, FULL_BODY_WORKOUTS, FORCE_5X5_WORKOUTS, WRIST_CONSOLIDATION_WORKOUTS } from './extraPrograms';
 import { LEGACY_LEGS_WORKOUTS, LEGACY_LEGS_V3_WORKOUTS } from './legacyWorkouts';
 
-// ─── Mésocycle Phase 1 — Sèche (31/07 → 16/10/2026) ─────────────────────────
-// 11 semaines, deload + diet break en semaine 6. Sem 7-11 repris de l'onglet
+// ─── Mésocycle Phase 1 — Sèche (31/07 → 21/10/2026) ─────────────────────────
+// 13 semaines (V4.3 : fin de sèche repoussée du 16 au 21/10), deload + diet break en semaine 6. Sem 7-11 repris de l'onglet
 // « Récap + Progression » du fichier V3.0 (30/08/2026) : le bloc unique
 // « Sem 7-10 » de la V2.5 est éclaté en Reprise (S7-S8) / Charge (S9-S10)
 // pour coller au RIR réellement prescrit par type de mouvement. Les chiffres
 // Sem 9-11 ci-dessous ont été reconstruits le 16/09/2026 depuis le fichier
 // V4.0 (les projections V3.0 correspondantes, caduques, sont remplacées), puis
 // mis à jour le 05/10/2026 vers la V4.2 (V4.1 du 29/09 : plus de latéral ;
-// V4.2 du 30/09 : règle de double progression, un cran à la fois).
-export const MESOCYCLE_WEEKS = 11;
+// V4.2 du 30/09 : règle de double progression, un cran à la fois), puis le
+// 08/10/2026 vers la V4.3 (fin de sèche au 21/10 : Sem 12 et 13 ajoutées, dates
+// des semaines recalées sur la cadence réelle de ≈ 6,3 jours par rotation).
+export const MESOCYCLE_WEEKS = 13;
 
 export const PROGRESSION_WEEKS: ProgressionWeek[] = [
   {
@@ -46,34 +48,46 @@ export const PROGRESSION_WEEKS: ProgressionWeek[] = [
   },
   {
     label: 'Sem. 9',
-    phase: 'CHARGE 1 (V4.2) — 25/09→01/10',
+    phase: 'CHARGE 1 (V4.3) — ≈21/09→27/09',
     rir: 'RIR 2 poly · 1-2 isolations épaules/pecs · 1 isolations bras',
     objective: "Épaule déclarée MUETTE le 14/09 (condition d'entrée V3.1 remplie) : retour à la charge pleine sur le postérieur, réintégration du latéral en 3 doses/semaine et réintroduction prudente de l'antérieur (développé-écarté, élévations frontales en toute fin de séance, RIR haut). Recalibrage des charges après 4 semaines de pause/reprise — semaine de test, pas de charge maximale. Contrainte matérielle actée : poids du corps en priorité, haltères plafonnées à 25 kg/pièce ; le volume (4 séries sur les exercices prioritaires à faible coût de fatigue) remplace la charge comme variable de progression. Genou : rééducation pure reconduite à l'identique, aucun calendrier, seul le seuil de douleur <3/10 encadre chaque série.",
   },
   {
     label: 'Sem. 10',
-    phase: 'CHARGE 2 (V4.2) — 02/10→08/10',
+    phase: 'CHARGE 2 (V4.3) — ≈28/09→03/10',
     rir: 'RIR 1-2 poly · 1 isolations épaules/pecs · 0-1 isolations bras',
     objective: "Pic de volume. V4.2 (30/09) : double progression — une charge n'est validée que si CHAQUE série atteint ses reps cibles ; validée → +1 cran (3 kg la paire d'haltères, 1 cran de pile, 5 kg de gilet), jamais 2 ; non validée → même charge, +1 rep sur les séries manquées. Face pull : passage à hauteur de visage (contre hauteur de poitrine en Sem 9) si la Sem 9 est indolore. Push B : pompes prise large et élévations frontales retirées, remplacées par des élévations latérales à la poulie basse (V4.1, 29/09). Genou : identique à Sem 9, aucun changement tant que le seuil de douleur n'est pas franchi.",
   },
   {
     label: 'Sem. 11',
-    phase: 'PIC — fin de sèche (V4.2) — 09/10→16/10',
+    phase: 'PIC — entrée dans le pic (V4.3) — 04/10→≈09/10',
     rir: 'RIR 1 poly · 0-1 isolations épaules/pecs · 0 isolations bras',
-    objective: "Dernière semaine avant la Phase 2 — Maintenance (17/10). Techniques d'intensification concentrées ici uniquement (partiels en position étirée en premier choix, drop set sur le triceps) — aucune sur les tractions, les dips ni le bas du corps. Le pic se fait par le RIR 0 et la dernière série, plus par un saut de charge décidé d'avance (V4.2). Nouveautés V4.1 : élévations latérales debout ajoutées au Pull A (3 séries) et 5ᵉ série au Push A — le latéral devient le premier muscle du programme (18 séries/rotation). Fourchettes de reps resserrées. Genou : toujours piloté par le seuil de douleur, sans lien avec ce calendrier — deux séances consécutives indolores ouvriraient l'étape 2 du protocole (non déclenchée au 14/09).",
+    objective: "Entrée dans le pic (V4.3 : la sèche court désormais jusqu'au 21/10, Sem 12 et 13 à suivre). Techniques d'intensification concentrées ici uniquement (partiels en position étirée en premier choix, drop set sur le triceps) — aucune sur les tractions, les dips ni le bas du corps. Le pic se fait par le RIR 0 et la dernière série, plus par un saut de charge décidé d'avance (V4.2). Nouveautés V4.1 : élévations latérales debout ajoutées au Pull A (3 séries) et 5ᵉ série au Push A — le latéral devient le premier muscle du programme (18 séries/rotation). Fourchettes de reps resserrées. Genou : toujours piloté par le seuil de douleur, sans lien avec ce calendrier — deux séances consécutives indolores ouvriraient l'étape 2 du protocole (non déclenchée au 14/09).",
+  },
+  {
+    label: 'Sem. 12',
+    phase: 'PIC TENU (V4.3) — ≈10/10→≈15/10',
+    rir: 'RIR 1 poly · 0-1 isolations épaules/pecs · 0 isolations bras',
+    objective: "Charges et cibles recalculées par formule depuis la Sem 11 : semaine validée (CHAQUE série à sa cible) → +1 cran et cibles -2 reps (-1 au développé-écarté et à la poulie basse) ; non validée → même charge, +1 rep sur chaque série manquée ; série 1 sous 70 % de sa cible → -1 cran. Gilet et poids du corps : charge reconduite, cible = reps réelles +1. Techniques de la Sem 11 reconduites sur la dernière série seulement (partiels en position étirée, drop set triceps), sauf sur un exercice dont la charge monte d'un cran la même semaine : une seule variable à la fois. Jambes : rééducation genou reconduite à l'identique.",
+  },
+  {
+    label: 'Sem. 13',
+    phase: 'DERNIÈRE SEMAINE DE DÉFICIT (V4.3) — ≈16/10→21/10',
+    rir: 'RIR 1 poly · 0-1 isolations épaules/pecs · 0 isolations bras',
+    objective: "Pic tenu, mêmes règles que la Sem 12 (calcul depuis la Sem 12). Bilan le matin du 21/10 : dernier jour de déficit, puis maintenance du 22 au 28/10 et prise de masse lean le 29/10/2026. Si la moyenne mobile 7 jours du poids est ≤ 70,9 kg avant le 21/10, bilan anticipé ; si les reps chutent de 15 % à charge égale sur deux séances de suite, bilan immédiat.",
   },
 ];
 
-// Semaine du mésocycle (1-11) → index de phase dans PROGRESSION_WEEKS.
-const WEEK_TO_PHASE_INDEX = [0, 0, 0, 1, 2, 3, 4, 4, 5, 6, 7];
+// Semaine du mésocycle (1-13) → index de phase dans PROGRESSION_WEEKS.
+const WEEK_TO_PHASE_INDEX = [0, 0, 0, 1, 2, 3, 4, 4, 5, 6, 7, 8, 9];
 
-/** Phase du mésocycle correspondant à la semaine donnée (bornée 1 → 11). */
+/** Phase du mésocycle correspondant à la semaine donnée (bornée 1 → 13). */
 export const getProgressionWeek = (week: number): ProgressionWeek => {
   const w = Math.min(MESOCYCLE_WEEKS, Math.max(1, Math.round(week)));
   return PROGRESSION_WEEKS[WEEK_TO_PHASE_INDEX[w - 1]];
 };
 
-// ─── Les 6 séances PPL Strict V4.2 ──────────────────────────────────────────
+// ─── Les 6 séances PPL Strict V4.3 ──────────────────────────────────────────
 // Programme actif de l'appli. V4.0 intégrée le 16/09/2026 (fichier
 // « programme_hypertrophie_PPL_Strict_Phase1_V4.0_S9-S11.xlsx »), puis mise à
 // jour le 05/10/2026 vers « …_V4.2_S9-S11.xlsx » :
@@ -85,9 +99,16 @@ export const getProgressionWeek = (week: number): ProgressionWeek => {
 //  · V4.2 (30/09) — double progression : plus de saut de charge écrit
 //    d'avance, un cran à la fois et seulement si TOUTES les séries atteignent
 //    leurs reps. Les charges Sem 10-11 ont été recalculées sur les reps réelles.
-//  Les defaultWeight ci-dessous sont les charges de la SEM 11 (prochaine
-//  semaine à faire au 05/10), telles que calculées dans le fichier V4.2.
-// Couvre Sem 9-11, fin de Phase 1 — Sèche (25/09 → 16/10/2026).
+//  · V4.3 (06/10, intégrée le 08/10) — fin de sèche repoussée au 21/10 : Sem 12
+//    et 13 ajoutées (charges et cibles calculées par formule dans le fichier
+//    « …_V4.3_S9-S13.xlsx »), mêmes exercices et mêmes séries qu'en V4.2.
+//  Les defaultWeight ci-dessous sont les charges de la PROCHAINE semaine à
+//  faire pour chaque séance au 08/10 : Sem 12 pour Pull A, Push A et Pull B
+//  (déjà faites en Sem 11), Sem 11 pour Push B. Elles se mettent à jour à la
+//  main à chaque semaine, le défaut du programme passant avant la dernière
+//  charge saisie. Les cibles de Sem 12 sont ajoutées à targetReps, celles de
+//  Sem 13 dépendent des reps réellement faites en Sem 12.
+// Couvre Sem 9-13, fin de Phase 1 — Sèche (≈21/09 → 21/10/2026).
 //
 // CE QUI DÉCLENCHE CETTE VERSION (14/09/2026, trois consignes d'Antoine) :
 //
@@ -151,65 +172,65 @@ export const WORKOUTS: WorkoutDay[] = [
         name: 'Oiseau haltères poitrine appuyée (banc 30°)',
         muscleGroup: 'DELTOÏDE POSTÉRIEUR',
         sets: 4,
-        targetReps: '12-15 · S11 : 10-12',
+        targetReps: '12-15 · S11 : 10-12 · S12 : 10/9/8/8',
         restSeconds: 120,
         restMode: 'normal',
         isSuperset: false,
-        defaultWeight: '23',
+        defaultWeight: '26',
         essential: true,
-        notes: "★ Priorité 1 avec le latéral : retour à charge pleine, le deltoïde postérieur n'a jamais été douloureux. Passe à 4 séries (exercice ouvrant de la rotation). Charge remontée de 14 → 20 kg (Sem 9) → 23 kg (Sem 10-11), niveau V3.0 d'avant la pause. Poitrine calée sur le dossier à 30° : zéro élan. Vigilance : ne pas laisser l'humérus monter au-dessus du plan des épaules en fin de course, ce qui basculerait le travail sur le latéral. S11 : partiels en position étirée sur la dernière série (5 reps sur le tiers bas après l'échec). Sem 9 : 20 kg, RIR 1-2. Tempo 2-1-1. V4.2 (30/09) : Sem 9 validée (17/16/14/12 pour 15/14/13/12 au RIR prescrit) → 23 kg en Sem 11 confirmé. Si la série 1 sort au-dessus de 15 en Sem 9, le fichier dit de monter sans attendre ; ici la charge de travail à saisir est 23 kg.",
+        notes: "★ Priorité 1 avec le latéral : retour à charge pleine, le deltoïde postérieur n'a jamais été douloureux. Passe à 4 séries (exercice ouvrant de la rotation). Charge remontée de 14 → 20 kg (Sem 9) → 23 kg (Sem 10-11), niveau V3.0 d'avant la pause. Poitrine calée sur le dossier à 30° : zéro élan. Vigilance : ne pas laisser l'humérus monter au-dessus du plan des épaules en fin de course, ce qui basculerait le travail sur le latéral. S11 : partiels en position étirée sur la dernière série (5 reps sur le tiers bas après l'échec). Sem 9 : 20 kg, RIR 1-2. Tempo 2-1-1. V4.2 (30/09) : Sem 9 validée (17/16/14/12 pour 15/14/13/12 au RIR prescrit) → 23 kg en Sem 11 confirmé. Si la série 1 sort au-dessus de 15 en Sem 9, le fichier dit de monter sans attendre ; ici la charge de travail à saisir est 23 kg. V4.3 (06/10) : Sem 12 : 26 kg (+1 cran, Sem 11 validée à 23 kg), cibles 10/9/8/8 ; Sem 13 calculée depuis la Sem 12.",
       },
       {
         id: 'pull-a-9',
         name: 'Élévations latérales haltères debout',
         muscleGroup: 'DELTOÏDE LATÉRAL',
         sets: 3,
-        targetReps: '12-15',
+        targetReps: '12-15 · S12 : 13/12/11',
         restSeconds: 90,
         restMode: 'normal',
         isSuperset: false,
-        defaultWeight: '20',
+        defaultWeight: '23',
         essential: false,
-        notes: "NOUVEAU en V4.1 (29/09/2026), à partir de la SEM 11 seulement (la Sem 10 du Pull A a été faite à Los Angeles). 4ᵉ dose de latéral de la rotation, placée juste après l'oiseau pour respecter la priorité 1 : muscle par muscle, le latéral était dernier du haut du corps en volume effectif alors qu'il porte ta priorité 1. Haltères plutôt que poulie (la poulie unilatérale coûte 10 min contre 8 et aurait porté le Pull A à 69-72 min). Sem 11 : 20 kg en 12-15, RIR 0-1, partiels sur la moitié basse d'amplitude après l'échec sur la dernière série. Si la série 1 dépasse 15 répétitions : +3 kg dès la séance suivante. ★ Dose ajoutée en V4.1 : c'est la PREMIÈRE à sortir si l'épaule parle. Mains jamais au-dessus du plan des épaules, pouce légèrement plus haut que l'auriculaire. Tempo 2-1-1.",
+        notes: "NOUVEAU en V4.1 (29/09/2026), à partir de la SEM 11 seulement (la Sem 10 du Pull A a été faite à Los Angeles). 4ᵉ dose de latéral de la rotation, placée juste après l'oiseau pour respecter la priorité 1 : muscle par muscle, le latéral était dernier du haut du corps en volume effectif alors qu'il porte ta priorité 1. Haltères plutôt que poulie (la poulie unilatérale coûte 10 min contre 8 et aurait porté le Pull A à 69-72 min). Sem 11 : 20 kg en 12-15, RIR 0-1, partiels sur la moitié basse d'amplitude après l'échec sur la dernière série. Si la série 1 dépasse 15 répétitions : +3 kg dès la séance suivante. ★ Dose ajoutée en V4.1 : c'est la PREMIÈRE à sortir si l'épaule parle. Mains jamais au-dessus du plan des épaules, pouce légèrement plus haut que l'auriculaire. Tempo 2-1-1. V4.3 (06/10) : Sem 12 : 23 kg (+1 cran), cibles 13/12/11 ; Sem 13 depuis la Sem 12.",
       },
       {
         id: 'pull-a-1',
         name: 'Tractions pronation lestées (barre) prise large',
         muscleGroup: 'DOS',
         sets: 3,
-        targetReps: '6-10',
+        targetReps: '6-10 · S12 : 13/10/10',
         restSeconds: 180,
         restMode: 'normal',
         isSuperset: false,
-        defaultWeight: 'PDC+5',
+        defaultWeight: 'PDC',
         essential: true,
-        notes: "Priorité 4 mais placé tôt : le biceps doit être frais. Reste à 3 séries — coût de fatigue le plus élevé du programme, gilet plein (PDC+10, plus aucune marge de lestage). La progression passe par les reps puis par le tempo excentrique en S11 (3-0-1 → 5-0-1), pas par la charge. Objectif de fin de phase : 3×10 propres en pronation large à PDC+10. Épaule muette : aucune restriction, mais garde l'amorce scapulaire avant de tirer plutôt que la suspension passive. Sem 9-10 : PDC+10, RIR 2. Tempo 3-0-1 (S11 : 5-0-1). V4.2 (30/09) : Sem 9 (11/10/8 pour 10/9/8) validée → en Sem 11 le lest monte d'UN cran seulement : PDC+5 (pas PDC+10, deux crans d'un coup après une Sem 10 sautée). Tempo 3-0-1 maintenu : le 5 s excentrique est abandonné pour ne faire bouger qu'une variable.",
+        notes: "Priorité 4 mais placé tôt : le biceps doit être frais. Reste à 3 séries — coût de fatigue le plus élevé du programme, gilet plein (PDC+10, plus aucune marge de lestage). La progression passe par les reps puis par le tempo excentrique en S11 (3-0-1 → 5-0-1), pas par la charge. Objectif de fin de phase : 3×10 propres en pronation large à PDC+10. Épaule muette : aucune restriction, mais garde l'amorce scapulaire avant de tirer plutôt que la suspension passive. Sem 9-10 : PDC+10, RIR 2. Tempo 3-0-1 (S11 : 5-0-1). V4.2 (30/09) : Sem 9 (11/10/8 pour 10/9/8) validée → en Sem 11 le lest monte d'UN cran seulement : PDC+5 (pas PDC+10, deux crans d'un coup après une Sem 10 sautée). Tempo 3-0-1 maintenu : le 5 s excentrique est abandonné pour ne faire bouger qu'une variable. V4.3 (06/10) : Sem 12 : PDC (gilet reconduit, cible = reps réelles +1) 13/10/10 ; le fichier V4.3 remplace le PDC+5 de la V4.2.",
       },
       {
         id: 'pull-a-2',
         name: 'Curl marteau haltères',
         muscleGroup: 'BICEPS',
         sets: 4,
-        targetReps: '12-15 · S11 : 10-12',
+        targetReps: '12-15 · S11 : 10-12 · S12 : 12/13/11/8',
         restSeconds: 120,
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '32',
         essential: true,
-        notes: "★ Priorité 2. Passe à 4 séries. Charge remontée par paliers de 3 kg depuis les 28 kg de la pause jusqu'aux 38 kg de la V3.0 : Sem 9 = 32 kg, Sem 10 = 35 kg, Sem 11 = 38 kg (19 kg/haltère, sous le plafond de 25 kg). Coude au corps, humérus vertical : le deltoïde antérieur n'intervient pas, exercice de bras le plus neutre pour l'épaule. S11 : partiels en position étirée sur la dernière série. Sem 9 : 32 kg, RIR 1. Tempo 2-0-1. V4.2 (30/09) : Sem 9 NON validée (11/12/11/10 pour 15/14/13/12) → en Sem 11 on RESTE à 32 kg (et non 38). Objectif : +1 rep par série, soit 12/13/12/11 au RIR 0 + partiels étirés sur la dernière série.",
+        notes: "★ Priorité 2. Passe à 4 séries. Charge remontée par paliers de 3 kg depuis les 28 kg de la pause jusqu'aux 38 kg de la V3.0 : Sem 9 = 32 kg, Sem 10 = 35 kg, Sem 11 = 38 kg (19 kg/haltère, sous le plafond de 25 kg). Coude au corps, humérus vertical : le deltoïde antérieur n'intervient pas, exercice de bras le plus neutre pour l'épaule. S11 : partiels en position étirée sur la dernière série. Sem 9 : 32 kg, RIR 1. Tempo 2-0-1. V4.2 (30/09) : Sem 9 NON validée (11/12/11/10 pour 15/14/13/12) → en Sem 11 on RESTE à 32 kg (et non 38). Objectif : +1 rep par série, soit 12/13/12/11 au RIR 0 + partiels étirés sur la dernière série. V4.3 (06/10) : Sem 12 : 32 kg maintenus (Sem 11 non validée), cibles 12/13/11/8.",
       },
       {
         id: 'pull-a-3',
         name: 'Curl inversé barre EZ (avant-bras)',
         muscleGroup: 'AVANT-BRAS / BRACHIAL',
         sets: 3,
-        targetReps: "15-20 · S11 : 16-20",
+        targetReps: "15-20 · S11 : 16-20 · S12 : 17/16/16",
         restSeconds: 120,
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '10',
         essential: false,
-        notes: "Reste à 3 séries : l'avant-bras encaisse déjà les 12 séries de traction de la rotation. Charge = disques ajoutés, barre non comptée (barre EZ = 8 kg à vide). Sem 9 : 14 kg, Sem 10 : 16 kg, Sem 11 : 18 kg. Repère V3.0 : 15-17 kg en 12-15. Même position d'épaule que le curl marteau, humérus vertical et immobile : aucun risque attendu. Sem 9 : RIR 1. Tempo 2-0-1. V4.2 (30/09) : Sem 9 à 10 kg de disques → 20/15/15 pour 20/19/18, non validée → en Sem 11 on RESTE à 10 kg (et non 18). Objectif 20/16/16 au RIR 0.",
+        notes: "Reste à 3 séries : l'avant-bras encaisse déjà les 12 séries de traction de la rotation. Charge = disques ajoutés, barre non comptée (barre EZ = 8 kg à vide). Sem 9 : 14 kg, Sem 10 : 16 kg, Sem 11 : 18 kg. Repère V3.0 : 15-17 kg en 12-15. Même position d'épaule que le curl marteau, humérus vertical et immobile : aucun risque attendu. Sem 9 : RIR 1. Tempo 2-0-1. V4.2 (30/09) : Sem 9 à 10 kg de disques → 20/15/15 pour 20/19/18, non validée → en Sem 11 on RESTE à 10 kg (et non 18). Objectif 20/16/16 au RIR 0. V4.3 (06/10) : Sem 12 : 10 kg de disques maintenus, cibles 17/16/16.",
       },
       {
         id: 'pull-a-4',
@@ -240,26 +261,26 @@ export const WORKOUTS: WorkoutDay[] = [
         name: 'Élévations latérales haltères (debout)',
         muscleGroup: 'DELTOÏDE LATÉRAL',
         sets: 5,
-        targetReps: '15-20 (S9) · 12-15 (S10-11)',
+        targetReps: '15-20 (S9) · 12-15 (S10-11) · S12 : 13/12/11/10/10',
         restSeconds: 120,
         restMode: 'normal',
         isSuperset: false,
-        defaultWeight: '20',
+        defaultWeight: '23',
         essential: true,
-        notes: "★ Priorité 1. Dose principale du latéral, passe à 4 séries, en ouverture de séance. Charge remontée depuis les 14 kg de la reprise vers les 23 kg de la V3.0 : Sem 9 = 17 kg, Sem 10 = 20 kg, Sem 11 = 23 kg. Debout : léger élan toléré en fin de série (contrairement à la version assise du Jour 5). ★ Point de vigilance n°1 de la reprise : ne monte pas les mains au-dessus du plan des épaules et garde le pouce légèrement plus haut que l'auriculaire (rotation externe) — c'est l'abduction + rotation interne au-delà de 90° qui referme l'espace sous-acromial. S11 : partiels sur la moitié basse d'amplitude après l'échec. Sem 9 : 17 kg, RIR 1-2. Tempo 2-1-1. V4.1 : 5 séries en Sem 11 (4 en Sem 9-10) — le latéral passe de 11 à 18 séries par rotation ; la 5ᵉ série est la 2ᵉ à sortir si l'épaule parle. V4.2 (30/09) : la Sem 10 à Los Angeles (40 lbs ≈ 18,1 kg → 23/19/16/17 pour un plafond à 15) valide la charge → +1 cran = 20 kg en Sem 11, PAS 23 kg (2 crans d'un coup, +27 %).",
+        notes: "★ Priorité 1. Dose principale du latéral, passe à 4 séries, en ouverture de séance. Charge remontée depuis les 14 kg de la reprise vers les 23 kg de la V3.0 : Sem 9 = 17 kg, Sem 10 = 20 kg, Sem 11 = 23 kg. Debout : léger élan toléré en fin de série (contrairement à la version assise du Jour 5). ★ Point de vigilance n°1 de la reprise : ne monte pas les mains au-dessus du plan des épaules et garde le pouce légèrement plus haut que l'auriculaire (rotation externe) — c'est l'abduction + rotation interne au-delà de 90° qui referme l'espace sous-acromial. S11 : partiels sur la moitié basse d'amplitude après l'échec. Sem 9 : 17 kg, RIR 1-2. Tempo 2-1-1. V4.1 : 5 séries en Sem 11 (4 en Sem 9-10) — le latéral passe de 11 à 18 séries par rotation ; la 5ᵉ série est la 2ᵉ à sortir si l'épaule parle. V4.2 (30/09) : la Sem 10 à Los Angeles (40 lbs ≈ 18,1 kg → 23/19/16/17 pour un plafond à 15) valide la charge → +1 cran = 20 kg en Sem 11, PAS 23 kg (2 crans d'un coup, +27 %). V4.3 (06/10) : Sem 12 : 23 kg (+1 cran), cibles 13/12/11/10/10.",
       },
       {
         id: 'push-a-7',
         name: 'Développé-écarté haltères (fly press), banc plat',
         muscleGroup: 'PECS',
         sets: 4,
-        targetReps: '10-12 · S11 : 8-10',
+        targetReps: '10-12 · S11 : 8-10 · S12 : 9/8/7/7',
         restSeconds: 150,
         restMode: 'normal',
         isSuperset: false,
-        defaultWeight: '44',
+        defaultWeight: '47',
         essential: true,
-        notes: "★ Priorité 3, NOUVEAU en V4.0 — exercice demandé par toi. Hybride développé/écarté (coudes semi-fléchis, arc de cercle) : conserve la tension du pec en position allongée sans imposer au deltoïde antérieur l'étirement bras ouverts de l'écarté strict, qui lui reste dehors. Remplace à la fois le développé couché haltères (hors plafond 25 kg/haltère) et les écartés. ★ Point de vigilance n°2 : 1ʳᵉ charge directe du deltoïde antérieur depuis le 10/09 — série 1 de Sem 9 prudente, tu arrêtes si ça parle. En bas, les coudes ne descendent pas sous le plan du tronc. Douleur > 3/10 ou gêne le lendemain → l'exercice sort. Sem 9 : 35 kg (17,5 kg/haltère). Sem 10-11 : 38 kg. Plafond 25 kg/haltère = 50 kg total. RIR 1-2. Tempo 3-1-1. V4.2 (30/09) : Sem 10 (90 lbs ≈ 40,8 kg → 17/15/13/14) validée largement → 44 kg en Sem 11 (1 cran au-dessus de 41 ; la V4.1 prévoyait 38 kg, soit une baisse : corrigé). Plafond de 50 kg respecté.",
+        notes: "★ Priorité 3, NOUVEAU en V4.0 — exercice demandé par toi. Hybride développé/écarté (coudes semi-fléchis, arc de cercle) : conserve la tension du pec en position allongée sans imposer au deltoïde antérieur l'étirement bras ouverts de l'écarté strict, qui lui reste dehors. Remplace à la fois le développé couché haltères (hors plafond 25 kg/haltère) et les écartés. ★ Point de vigilance n°2 : 1ʳᵉ charge directe du deltoïde antérieur depuis le 10/09 — série 1 de Sem 9 prudente, tu arrêtes si ça parle. En bas, les coudes ne descendent pas sous le plan du tronc. Douleur > 3/10 ou gêne le lendemain → l'exercice sort. Sem 9 : 35 kg (17,5 kg/haltère). Sem 10-11 : 38 kg. Plafond 25 kg/haltère = 50 kg total. RIR 1-2. Tempo 3-1-1. V4.2 (30/09) : Sem 10 (90 lbs ≈ 40,8 kg → 17/15/13/14) validée largement → 44 kg en Sem 11 (1 cran au-dessus de 41 ; la V4.1 prévoyait 38 kg, soit une baisse : corrigé). Plafond de 50 kg respecté. V4.3 (06/10) : Sem 12 : 47 kg (+1 cran), cibles 9/8/7/7.",
       },
       {
         id: 'push-a-2',
@@ -279,26 +300,26 @@ export const WORKOUTS: WorkoutDay[] = [
         name: 'Pompes sur poignées / haltères (amplitude complète)',
         muscleGroup: 'PECS',
         sets: 3,
-        targetReps: '12-20 (S9) · 12-15 (S10-11)',
+        targetReps: '12-20 (S9) · 12-15 (S10-11) · S12 : 21/17/16',
         restSeconds: 120,
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: 'PDC+5',
         essential: false,
-        notes: "Conservé de la V3.1. Les poignées laissent la poitrine descendre sous le niveau des mains : seule façon d'obtenir un vrai étirement du pec au poids du corps. Position d'étirement du deltoïde antérieur, moins agressive que le dip (mains fixées au sol, amplitude autolimitée). Gilet ajouté dès Sem 10 (repère Sem 7 : 30/25/22, largement au-dessus de la cible). Si 3×20 sortent encore avec le gilet en S11, augmente la hauteur des poignées plutôt que les reps. Sem 9 : PDC, RIR 1-2. Tempo 3-1-1. V4.2 (30/09) : Sem 10 en PDC → 20/19/16 pour 15/14/13, validée → Sem 11 : PDC+5 (1 cran), pas PDC+10 comme prévu en V4.0.",
+        notes: "Conservé de la V3.1. Les poignées laissent la poitrine descendre sous le niveau des mains : seule façon d'obtenir un vrai étirement du pec au poids du corps. Position d'étirement du deltoïde antérieur, moins agressive que le dip (mains fixées au sol, amplitude autolimitée). Gilet ajouté dès Sem 10 (repère Sem 7 : 30/25/22, largement au-dessus de la cible). Si 3×20 sortent encore avec le gilet en S11, augmente la hauteur des poignées plutôt que les reps. Sem 9 : PDC, RIR 1-2. Tempo 3-1-1. V4.2 (30/09) : Sem 10 en PDC → 20/19/16 pour 15/14/13, validée → Sem 11 : PDC+5 (1 cran), pas PDC+10 comme prévu en V4.0. V4.3 (06/10) : Sem 12 : PDC+5 reconduit, cibles 21/17/16 (reps S11 +1).",
       },
       {
         id: 'push-a-1',
         name: 'Extension triceps corde poulie haute',
         muscleGroup: 'TRICEPS',
         sets: 4,
-        targetReps: '12-15 · S11 : 10-12',
+        targetReps: '12-15 · S11 : 10-12 · S12 : 10/9/8/8',
         restSeconds: 120,
         restMode: 'normal',
         isSuperset: false,
-        defaultWeight: '17',
+        defaultWeight: '20',
         essential: true,
-        notes: "★ Priorité 2, mais placé en fin de séance et non en tête : un triceps pré-fatigué transformerait l'échec des dips/pompes en échec du triceps. La contrepartie est un RIR plus bas plutôt qu'une charge lourde. Passe à 4 séries. Coudes verrouillés au corps, humérus vertical et immobile — zéro implication du deltoïde. Écarter la corde en fin de course pour le chef latéral. S11 : drop set unique (-30 % de charge, jusqu'à l'échec). Sem 9 : 26 kg, RIR 1. Sem 10 : 28 kg. Sem 11 : 30 kg. Tempo 2-0-1. V4.2 (30/09) : Sem 10 non faite. Sem 9 à 15 kg → 15/15/15/14, validée → Sem 11 : 17 kg (1 cran de pile). ⚠ Si les 15 kg de Sem 9 venaient d'une autre poulie que celle de la maison, recale sur ta pile maison.",
+        notes: "★ Priorité 2, mais placé en fin de séance et non en tête : un triceps pré-fatigué transformerait l'échec des dips/pompes en échec du triceps. La contrepartie est un RIR plus bas plutôt qu'une charge lourde. Passe à 4 séries. Coudes verrouillés au corps, humérus vertical et immobile — zéro implication du deltoïde. Écarter la corde en fin de course pour le chef latéral. S11 : drop set unique (-30 % de charge, jusqu'à l'échec). Sem 9 : 26 kg, RIR 1. Sem 10 : 28 kg. Sem 11 : 30 kg. Tempo 2-0-1. V4.2 (30/09) : Sem 10 non faite. Sem 9 à 15 kg → 15/15/15/14, validée → Sem 11 : 17 kg (1 cran de pile). ⚠ Si les 15 kg de Sem 9 venaient d'une autre poulie que celle de la maison, recale sur ta pile maison. V4.3 (06/10) : Sem 12 : 20 kg (+1 cran), cibles 10/9/8/8.",
       },
     ],
   },
@@ -418,39 +439,39 @@ export const WORKOUTS: WorkoutDay[] = [
         name: 'Face pull poulie haute (corde)',
         muscleGroup: 'DELTOÏDE POSTÉRIEUR',
         sets: 4,
-        targetReps: '15-20 (S9) · 12-15 (S10-11)',
+        targetReps: '15-20 (S9) · 12-15 (S10-11) · S12 : 13/12/11/10',
         restSeconds: 120,
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '24',
         essential: true,
-        notes: "★ Priorité 1. Passe à 4 séries, charge remontée vers le niveau V3.0 (22-24 kg). HAUTEUR : Sem 9 encore à hauteur de POITRINE comme pendant la pause ; retour à hauteur de VISAGE en Sem 10 seulement si Sem 9 est muette (à hauteur de visage l'humérus monte à ~90° d'abduction, ce qui recrute le latéral et referme l'espace sous-acromial). Coudes au-dessus des poignets, tirage vers l'arrière et non vers le haut. S11 : partiels sur le tiers final de la traction (rétraction scapulaire max), 6 reps. Sem 9 : 20 kg hauteur poitrine, RIR 1-2. Sem 10 : 22 kg, hauteur visage si indolore. Sem 11 : 24 kg. Tempo 2-1-1. V4.2 (30/09) : Sem 9 validée ; Sem 10 à 50 lbs (≈ 22,7 kg) → 18/15/16/13, toutes les cibles atteintes → Sem 11 : 24 kg (+1 cran).",
+        notes: "★ Priorité 1. Passe à 4 séries, charge remontée vers le niveau V3.0 (22-24 kg). HAUTEUR : Sem 9 encore à hauteur de POITRINE comme pendant la pause ; retour à hauteur de VISAGE en Sem 10 seulement si Sem 9 est muette (à hauteur de visage l'humérus monte à ~90° d'abduction, ce qui recrute le latéral et referme l'espace sous-acromial). Coudes au-dessus des poignets, tirage vers l'arrière et non vers le haut. S11 : partiels sur le tiers final de la traction (rétraction scapulaire max), 6 reps. Sem 9 : 20 kg hauteur poitrine, RIR 1-2. Sem 10 : 22 kg, hauteur visage si indolore. Sem 11 : 24 kg. Tempo 2-1-1. V4.2 (30/09) : Sem 9 validée ; Sem 10 à 50 lbs (≈ 22,7 kg) → 18/15/16/13, toutes les cibles atteintes → Sem 11 : 24 kg (+1 cran). V4.3 (06/10) : Sem 12 : 24 kg (+1 cran), cibles 13/12/11/10. Le fichier V4.3 recale la Sem 11 sur la Sem 9 (22 kg) : l'ancien 24 kg de la V4.2 devient la charge de Sem 12.",
       },
       {
         id: 'pull-b-1',
         name: 'Tractions supination lestées (barre)',
         muscleGroup: 'DOS',
         sets: 3,
-        targetReps: '6-10',
+        targetReps: '6-10 · S12 : 12/11/9',
         restSeconds: 180,
         restMode: 'normal',
         isSuperset: false,
-        defaultWeight: 'PDC+10',
+        defaultWeight: 'PDC+9',
         essential: true,
-        notes: "Priorité 4, placé tôt (biceps frais). Lestage remonté par paliers : PDC+7,5 (Sem 9) → PDC+10 (Sem 10-11), puis plus aucune marge, le gilet est plein. Prise neutre définitivement écartée (question close le 10/09, une seule barre). En supination le chef long du biceps est en tension maximale en bas de suspension : épaule muette, pas de restriction, mais ne reste pas suspendu passivement entre les répétitions. Au-delà de PDC+10, la progression passera par le tempo excentrique comme au Jour 1. Sem 9 : PDC+7,5, RIR 2. Tempo 3-0-1. V4.2 (30/09) : Sem 9 validée (11/9/8) ; Sem 10 à PDC+10 → 15/11/10, confirmé : PDC+10 tenu en Sem 11 (gilet plein).",
+        notes: "Priorité 4, placé tôt (biceps frais). Lestage remonté par paliers : PDC+7,5 (Sem 9) → PDC+10 (Sem 10-11), puis plus aucune marge, le gilet est plein. Prise neutre définitivement écartée (question close le 10/09, une seule barre). En supination le chef long du biceps est en tension maximale en bas de suspension : épaule muette, pas de restriction, mais ne reste pas suspendu passivement entre les répétitions. Au-delà de PDC+10, la progression passera par le tempo excentrique comme au Jour 1. Sem 9 : PDC+7,5, RIR 2. Tempo 3-0-1. V4.2 (30/09) : Sem 9 validée (11/9/8) ; Sem 10 à PDC+10 → 15/11/10, confirmé : PDC+10 tenu en Sem 11 (gilet plein). V4.3 (06/10) : Sem 12 : PDC+9 (cible = reps réelles +1) 12/11/9, au lieu du PDC+10 de la V4.2.",
       },
       {
         id: 'pull-b-2',
         name: 'Curl incliné haltères (banc 45°)',
         muscleGroup: 'BICEPS',
         sets: 4,
-        targetReps: '12-15 · S11 : 10-12',
+        targetReps: '12-15 · S11 : 10-12 · S12 : 15/14/13/12',
         restSeconds: 120,
         restMode: 'normal',
         isSuperset: false,
-        defaultWeight: '23',
+        defaultWeight: '20',
         essential: true,
-        notes: "★ Priorité 2, RETOUR en V4.0 (il était sorti le 10/09 uniquement pour l'épaule). Sur banc à 45°, l'humérus part derrière le plan du tronc : étire directement le deltoïde antérieur et le chef long du biceps — seul exercice du programme qui charge le chef long en position allongée. Remplace le curl debout supination de la V3.1. ★ Point de vigilance n°3 : si ça réveille quelque chose (avec le développé-écarté du Jour 2), c'est celui-ci qui sort en premier — son apport n'est qu'un angle de biceps. S11 : partiels en position étirée (bras derrière le tronc), 5 reps. Sem 9 : 20 kg (départ prudent), RIR 1. Sem 10 : 23 kg. Sem 11 : 26 kg. Tempo 3-0-1. V4.2 (30/09) : Sem 9 à 20 kg → 15/13/13/11, NON validée → Sem 10 maintenue à 20 kg au RIR 0-1 ; Sem 10 faite → 26/17/16/17 pour 15/14/13/12 (charge notée 20 lbs, à vérifier), toutes cibles atteintes → Sem 11 : 23 kg (+1 cran). Si la saisie de Sem 10 était en lbs par haltère, redescends à la charge que tu as réellement tenue.",
+        notes: "★ Priorité 2, RETOUR en V4.0 (il était sorti le 10/09 uniquement pour l'épaule). Sur banc à 45°, l'humérus part derrière le plan du tronc : étire directement le deltoïde antérieur et le chef long du biceps — seul exercice du programme qui charge le chef long en position allongée. Remplace le curl debout supination de la V3.1. ★ Point de vigilance n°3 : si ça réveille quelque chose (avec le développé-écarté du Jour 2), c'est celui-ci qui sort en premier — son apport n'est qu'un angle de biceps. S11 : partiels en position étirée (bras derrière le tronc), 5 reps. Sem 9 : 20 kg (départ prudent), RIR 1. Sem 10 : 23 kg. Sem 11 : 26 kg. Tempo 3-0-1. V4.2 (30/09) : Sem 9 à 20 kg → 15/13/13/11, NON validée → Sem 10 maintenue à 20 kg au RIR 0-1 ; Sem 10 faite → 26/17/16/17 pour 15/14/13/12 (charge notée 20 lbs, à vérifier), toutes cibles atteintes → Sem 11 : 23 kg (+1 cran). Si la saisie de Sem 10 était en lbs par haltère, redescends à la charge que tu as réellement tenue. V4.3 (06/10) : Sem 12 : 20 kg maintenus (le 23 kg de la V4.2 reposait sur une saisie en lbs), cibles 15/14/13/12.",
       },
       {
         id: 'pull-b-3',
@@ -470,26 +491,26 @@ export const WORKOUTS: WorkoutDay[] = [
         name: 'Oiseau haltères buste penché',
         muscleGroup: 'DELTOÏDE POSTÉRIEUR — FINITION',
         sets: 3,
-        targetReps: '15-20 · S11 : 12-15',
+        targetReps: '15-20 · S11 : 12-15 · S12 : 18/18/17',
         restSeconds: 90,
         restMode: 'normal',
         isSuperset: false,
-        defaultWeight: '14',
+        defaultWeight: '17',
         essential: false,
-        notes: "RETOUR en V4.0 (il était sorti le 10/09 par arbitrage de volume, pas pour une douleur) : 2ᵉ dose de postérieur de la rotation, profil de résistance complémentaire de la version poitrine appuyée du Jour 1 (gravité maximale bras à l'horizontale, contre pic en position contractée). Buste penché = maintien lombaire isométrique ; si le bas du dos parle avant l'épaule, bascule sur la version poitrine appuyée (voir onglet Conseils — Lombaires). Repère V3.0 : 23 kg — on n'y revient pas d'emblée après 4 semaines d'arrêt. Sem 9 : 17 kg, RIR 1-2. Sem 10-11 : 20 kg. Tempo 2-1-1. V4.2 (30/09) : Sem 9 à 17 kg → 20/18/18 pour 20/19/18, série 2 manquée, non validée. Sem 10 à 14 kg → 17/22/20, non validée → Sem 11 : 14 kg tenus, cibles 18/19/18 au RIR 0-1.",
+        notes: "RETOUR en V4.0 (il était sorti le 10/09 par arbitrage de volume, pas pour une douleur) : 2ᵉ dose de postérieur de la rotation, profil de résistance complémentaire de la version poitrine appuyée du Jour 1 (gravité maximale bras à l'horizontale, contre pic en position contractée). Buste penché = maintien lombaire isométrique ; si le bas du dos parle avant l'épaule, bascule sur la version poitrine appuyée (voir onglet Conseils — Lombaires). Repère V3.0 : 23 kg — on n'y revient pas d'emblée après 4 semaines d'arrêt. Sem 9 : 17 kg, RIR 1-2. Sem 10-11 : 20 kg. Tempo 2-1-1. V4.2 (30/09) : Sem 9 à 17 kg → 20/18/18 pour 20/19/18, série 2 manquée, non validée. Sem 10 à 14 kg → 17/22/20, non validée → Sem 11 : 14 kg tenus, cibles 18/19/18 au RIR 0-1. V4.3 (06/10) : Sem 12 : 17 kg (+1 cran), cibles 18/18/17.",
       },
       {
         id: 'pull-b-6',
         name: 'Élévations latérales haltères (debout, séries longues)',
         muscleGroup: 'DELTOÏDE LATÉRAL — FINITION',
         sets: 3,
-        targetReps: '18-25 · S11 : 15-20',
+        targetReps: '18-25 · S11 : 15-20 · S12 : 18/17/16',
         restSeconds: 90,
         restMode: 'normal',
         isSuperset: false,
-        defaultWeight: '16',
+        defaultWeight: '20',
         essential: false,
-        notes: "NOUVEAU en V4.0 : 3ᵉ dose hebdomadaire de deltoïde latéral (avec les Jours 2 et 5), porte le latéral de 6 à 11 séries par rotation (+83 % — la plus grosse marche de volume du fichier). Version série longue et charge basse en toute fin de séance : coût de fatigue quasi nul, le latéral arrive frais (pas sollicité par les tractions) malgré la place en fin de séance. Au premier signal douloureux, c'est cette 3ᵉ dose qu'on supprime en premier — pas les deux doses principales. S11 : partiels sur la moitié basse jusqu'à l'échec complet. Sem 9-10 : 14 kg, RIR 1, sans jamais chercher la charge. Sem 11 : 17 kg. Tempo 2-1-1. V4.1 : charges recalées de +3 kg (Sem 10 : 17 kg, Sem 11 : 20 kg) car la série 1 de Sem 9 dépassait la fourchette (27/25/24 à 14 kg pour un plafond à 25) ; V4.2 : Sem 10 faite à 16 kg → 23/19/16 pour 25/24/23, non validée → Sem 11 : 16 kg tenus, cibles 24/20/17 au RIR 0 + partiels bas.",
+        notes: "NOUVEAU en V4.0 : 3ᵉ dose hebdomadaire de deltoïde latéral (avec les Jours 2 et 5), porte le latéral de 6 à 11 séries par rotation (+83 % — la plus grosse marche de volume du fichier). Version série longue et charge basse en toute fin de séance : coût de fatigue quasi nul, le latéral arrive frais (pas sollicité par les tractions) malgré la place en fin de séance. Au premier signal douloureux, c'est cette 3ᵉ dose qu'on supprime en premier — pas les deux doses principales. S11 : partiels sur la moitié basse jusqu'à l'échec complet. Sem 9-10 : 14 kg, RIR 1, sans jamais chercher la charge. Sem 11 : 17 kg. Tempo 2-1-1. V4.1 : charges recalées de +3 kg (Sem 10 : 17 kg, Sem 11 : 20 kg) car la série 1 de Sem 9 dépassait la fourchette (27/25/24 à 14 kg pour un plafond à 25) ; V4.2 : Sem 10 faite à 16 kg → 23/19/16 pour 25/24/23, non validée → Sem 11 : 16 kg tenus, cibles 24/20/17 au RIR 0 + partiels bas. V4.3 (06/10) : Sem 12 : 20 kg (+1 cran), cibles 18/17/16.",
       },
     ],
   },
@@ -520,26 +541,26 @@ export const WORKOUTS: WorkoutDay[] = [
         name: 'Pompes lestées (gilet 10 kg, mains largeur pecs)',
         muscleGroup: 'PECS',
         sets: 4,
-        targetReps: "S9 12-15 · S10 15/14/13/12 (étalonnage) · S11 : reps S10 +1",
+        targetReps: "S9 12-15 · S10 15/14/13/12 (étalonnage) · S11 : reps S10 +1 · S12 : reps S11 +1",
         restSeconds: 150,
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: 'PDC+10',
         essential: true,
-        notes: "Passe à 4 séries : mouvement de poussée principal de la séance, gilet plein donc plus aucune marge de charge — le volume et les reps sont les seules variables restantes (~58 kg de charge effective contre 68 kg au développé couché haltères de la V3.0). Progression en REPS uniquement sur les 3 semaines : 12-15 → 15-18 → 17-20. Mains au sol : les coudes ne peuvent pas descendre sous le plan du tronc, l'humérus ne part jamais en extension — la poussée la plus sûre du programme pour l'épaule. Si tu dépasses 20 reps propres en S11, surélève les pieds plutôt que d'allonger encore la série. S11 : partiels sur le tiers bas après l'échec. Sem 9 : PDC+10, RIR 2. Tempo 3-0-1. V4.2 (30/09) : le gilet n'avait jamais été porté sur cet exercice dans ce bloc (Sem 9 = machine) : la cible 18/17/16/15 de la Sem 10 était irréaliste avec +10 kg, donc Sem 10 = étalonnage à 15/14/13/12. Sem 10 faite → 8/7/6/5 ; Sem 11 = tes reps de Sem 10 +1 par série, soit 9/8/7/6.",
+        notes: "Passe à 4 séries : mouvement de poussée principal de la séance, gilet plein donc plus aucune marge de charge — le volume et les reps sont les seules variables restantes (~58 kg de charge effective contre 68 kg au développé couché haltères de la V3.0). Progression en REPS uniquement sur les 3 semaines : 12-15 → 15-18 → 17-20. Mains au sol : les coudes ne peuvent pas descendre sous le plan du tronc, l'humérus ne part jamais en extension — la poussée la plus sûre du programme pour l'épaule. Si tu dépasses 20 reps propres en S11, surélève les pieds plutôt que d'allonger encore la série. S11 : partiels sur le tiers bas après l'échec. Sem 9 : PDC+10, RIR 2. Tempo 3-0-1. V4.2 (30/09) : le gilet n'avait jamais été porté sur cet exercice dans ce bloc (Sem 9 = machine) : la cible 18/17/16/15 de la Sem 10 était irréaliste avec +10 kg, donc Sem 10 = étalonnage à 15/14/13/12. Sem 10 faite → 8/7/6/5 ; Sem 11 = tes reps de Sem 10 +1 par série, soit 9/8/7/6. V4.3 (06/10) : Sem 11 : cibles 9/8/7/6 (reps S10 +1) ; Sem 12 : même charge, reps S11 +1.",
       },
       {
         id: 'push-b-1',
         name: "Extension triceps poulie haute, barre droite prise pronation",
         muscleGroup: 'TRICEPS',
         sets: 4,
-        targetReps: '12-15 · S11 : 10-12',
+        targetReps: '12-15 · S11 : 10-12 · S12 : selon S11',
         restSeconds: 120,
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '25',
         essential: true,
-        notes: "★ Priorité 2. Passe à 4 séries. Prise supination = chef médial et latéral, angle complémentaire de la corde du Jour 2. Ta préférence documentée pour les séries longues sur le triceps est conservée (12-15, jamais en dessous de 10). Coude au corps, épaule neutre : aucun risque attendu. S11 : drop set unique (-30 % de charge, jusqu'à l'échec). Sem 9 : 24 kg, RIR 1. Sem 10 : 26 kg. Sem 11 : 28 kg. Tempo 2-0-1. V4.1 (29/09) : prise PRONATION dès la Sem 10 (ta préférence), la plus stable pour charger — même travail de fond (chefs latéral et médial, épaule neutre). V4.2 (30/09) : Sem 9 (Fitness Park) 18/14/12/12 non validée → 25 kg tenus en Sem 10 (14/15/11/10, non validée) → Sem 11 : 25 kg, cibles 15/14/12/11 + drop set.",
+        notes: "★ Priorité 2. Passe à 4 séries. Prise supination = chef médial et latéral, angle complémentaire de la corde du Jour 2. Ta préférence documentée pour les séries longues sur le triceps est conservée (12-15, jamais en dessous de 10). Coude au corps, épaule neutre : aucun risque attendu. S11 : drop set unique (-30 % de charge, jusqu'à l'échec). Sem 9 : 24 kg, RIR 1. Sem 10 : 26 kg. Sem 11 : 28 kg. Tempo 2-0-1. V4.1 (29/09) : prise PRONATION dès la Sem 10 (ta préférence), la plus stable pour charger — même travail de fond (chefs latéral et médial, épaule neutre). V4.2 (30/09) : Sem 9 (Fitness Park) 18/14/12/12 non validée → 25 kg tenus en Sem 10 (14/15/11/10, non validée) → Sem 11 : 25 kg, cibles 15/14/12/11 + drop set. V4.3 (06/10) : Sem 11 : 25 kg, cibles 15/14/12/11 ; Sem 12 calculée depuis la Sem 11.",
       },
       {
         id: 'push-a-5',
@@ -559,13 +580,13 @@ export const WORKOUTS: WorkoutDay[] = [
         name: 'Élévations latérales poulie basse unilatéral (câble devant le corps)',
         muscleGroup: 'DELTOÏDE LATÉRAL',
         sets: 3,
-        targetReps: '12-15 par bras',
+        targetReps: '12-15 par bras · S12 : selon S11',
         restSeconds: 90,
         restMode: 'normal',
         isSuperset: false,
         defaultWeight: '8',
         essential: false,
-        notes: "NOUVEAU en V4.1 (29/09/2026), dès la Sem 10 : remplace les élévations frontales et les pompes prise large (retirées, voir ci-dessous). C'est l'étape 2 d'origine du protocole de retour (« la poulie avant les haltères ») : résistance continue et tension en position étirée, bras le long du corps, là où l'haltère ne donne presque rien. Câble DEVANT le corps plutôt que derrière le dos : l'humérus ne part pas en extension, ce qui ménage le deltoïde antérieur. 2 côtés enchaînés puis 90 s (≈ 125 s de repos réel par côté). Sem 10 : 7 kg, 12-15 par bras, RIR 1 (fait : 20/20/18). Sem 11 : 8 kg (+1 cran de pile), RIR 0-1. Si la série 1 dépasse 15 : un cran de plus dès la séance suivante. Dernière dose de latéral à sortir si l'épaule parle : c'est la version la plus douce. Pas d'élan, buste immobile, main libre en appui ; la main ne dépasse pas le plan de l'épaule. Retirés en V4.1 : pompes prise large (doublon du développé-écarté, variante de pompe la plus exigeante pour l'antérieur) et élévations frontales (l'antérieur reçoit déjà ≈ 8,5 séries effectives par rotation, et c'est le faisceau qui a fait mal le 10/09). Tempo 2-1-1.",
+        notes: "NOUVEAU en V4.1 (29/09/2026), dès la Sem 10 : remplace les élévations frontales et les pompes prise large (retirées, voir ci-dessous). C'est l'étape 2 d'origine du protocole de retour (« la poulie avant les haltères ») : résistance continue et tension en position étirée, bras le long du corps, là où l'haltère ne donne presque rien. Câble DEVANT le corps plutôt que derrière le dos : l'humérus ne part pas en extension, ce qui ménage le deltoïde antérieur. 2 côtés enchaînés puis 90 s (≈ 125 s de repos réel par côté). Sem 10 : 7 kg, 12-15 par bras, RIR 1 (fait : 20/20/18). Sem 11 : 8 kg (+1 cran de pile), RIR 0-1. Si la série 1 dépasse 15 : un cran de plus dès la séance suivante. Dernière dose de latéral à sortir si l'épaule parle : c'est la version la plus douce. Pas d'élan, buste immobile, main libre en appui ; la main ne dépasse pas le plan de l'épaule. Retirés en V4.1 : pompes prise large (doublon du développé-écarté, variante de pompe la plus exigeante pour l'antérieur) et élévations frontales (l'antérieur reçoit déjà ≈ 8,5 séries effectives par rotation, et c'est le faisceau qui a fait mal le 10/09). Tempo 2-1-1. V4.3 (06/10) : Sem 11 : 8 kg, cibles 15/14/13 par bras ; Sem 12 depuis la Sem 11.",
       },
     ],
   },
