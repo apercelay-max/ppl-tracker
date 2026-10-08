@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { PaywallScreen } from './screens/PaywallScreen';
+import { ProPromptSheet } from './components/ProPromptSheet';
+import { initSubscriptions, subscriptionsAvailable } from './lib/subscriptions';
 import { App as CapacitorApp } from '@capacitor/app';
 import { HomeScreen } from './screens/HomeScreen';
 import { HomeScreenClassic } from './screens/HomeScreenClassic';
@@ -41,10 +44,10 @@ import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 
 type View =
 | 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'historique'
-| 'cardio' | 'activite' | 'exercices' | 'catalogue' | 'poids' | 'coach' | 'profil' | 'auth';
+| 'cardio' | 'activite' | 'exercices' | 'catalogue' | 'poids' | 'coach' | 'profil' | 'auth' | 'pro';
 
 // Écrans qu'un widget a le droit d'ouvrir.
-const WIDGET_LINK_VIEWS: View[] = ['home', 'objectifs', 'poids', 'coach', 'profil', 'exercices'];
+const WIDGET_LINK_VIEWS: View[] = ['home', 'objectifs', 'poids', 'coach', 'profil', 'exercices', 'pro'];
 
 // Durée d'affichage du splash "PPL" au démarrage, avant le fondu de sortie
 // (voir .splash-fade dans index.css). Volontairement court pour ne pas
@@ -284,6 +287,12 @@ const listener = CapacitorApp.addListener('appUrlOpen', (e) => deepLinkRef.curre
 return () => { void listener.then((h) => h.remove()); };
 }, []);
 
+// Écran PPL Pro : on mémorise d'où l'on vient pour que « Retour » y ramène
+// (les Réglages si on a appuyé sur leur carte, l'accueil si c'est une proposition).
+const [proReturnView, setProReturnView] = useState<View>('home');
+const openPro = (from: View) => { setProReturnView(from); setView('pro'); };
+useEffect(() => { void initSubscriptions(); }, []);
+
 const handleOpenDashboard = () => {
 setView('dashboard');
 };
@@ -347,6 +356,8 @@ screen = <PoidsScreen onBack={handleBack} />;
 screen = <CoachScreen onBack={handleBack} />;
 } else if (view === 'profil') {
 screen = <ProfilScreen onBack={handleBack} />;
+} else if (view === 'pro') {
+screen = <PaywallScreen onBack={() => setView(proReturnView)} />;
 } else if (view === 'auth') {
 screen = <AuthScreen onBack={handleBackFromAccount} initialMode={recoveryPending ? 'reset' : undefined} />;
 } else if (view === 'settings') {
@@ -356,6 +367,7 @@ initialCategory={settingsInitialCategory}
 onBack={handleBackFromSettings}
 onOpenAccount={handleOpenAccount}
 onRestartQuiz={() => { setView(settingsReturnView); setQuizOpen(true); }}
+onOpenPro={subscriptionsAvailable() ? () => openPro('settings') : undefined}
 syncStatus={sync.status}
 lastSyncedAt={sync.lastSyncedAt}
 />
@@ -412,6 +424,10 @@ onClose={() => setQuizOpen(false)}
 />
 )}
 {news.length > 0 && <WhatsNewSheet entries={news} onClose={closeNews} />}
+<ProPromptSheet
+enabled={view === 'home' && !splashVisible && hasCompletedOnboarding && !quizOpen && news.length === 0 && !summaryOpen}
+onOpenPro={() => openPro('home')}
+/>
 {sync.status === 'conflict' && sync.conflict && (
 <SyncConflictModal
 remoteUpdatedAt={sync.conflict.remoteUpdatedAt}

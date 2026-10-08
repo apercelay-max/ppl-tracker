@@ -11,6 +11,7 @@
 		1DBD6D9DD9DB28B353909DA6 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4E18559AA6110EC8E86421 /* MainViewController.swift */; };
 		1FAA3A137A6C30E762272BA6 /* PPLWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 061D7B33D64FB7C61F5F34EF /* PPLWidgetBundle.swift */; };
 		21728C940D6ACDF1007D6D3B /* RestTimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCF7C2FC14FB824FEF480C1C /* RestTimerAttributes.swift */; };
+		25529CDEFB47446D46533FAD /* SubscriptionsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9C499921F59C291DCF6AFAA /* SubscriptionsPlugin.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		3A7F542D7BA272B833EDADAF /* LockScreenWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBDFD58724ED828DA99893B4 /* LockScreenWidget.swift */; };
 		3F3C6E56311AA51978E8D3B5 /* RestTimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCF7C2FC14FB824FEF480C1C /* RestTimerAttributes.swift */; };
@@ -65,6 +66,7 @@
 		0EC8D08CF960EE4FD8E24714 /* PPLWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PPLWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		185F97988235B2B3EC148CCD /* RestTimerLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RestTimerLiveActivity.swift; sourceTree = "<group>"; };
 		2A8E05642CC778E7E81DAA59 /* CoachWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CoachWidget.swift; sourceTree = "<group>"; };
+		2F11A81078476D24014339D4 /* PPLTracker.storekit */ = {isa = PBXFileReference; includeInIndex = 1; path = PPLTracker.storekit; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		36A1EC60282E860DA3CF0132 /* PPLWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = PPLWidget.entitlements; sourceTree = "<group>"; };
 		4102C360CC94B796C223F3BA /* WeightWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WeightWidget.swift; sourceTree = "<group>"; };
@@ -89,6 +91,7 @@
 		DAB190C38753069658BF1937 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		DCF7C2FC14FB824FEF480C1C /* RestTimerAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RestTimerAttributes.swift; sourceTree = "<group>"; };
 		E834A471AFB2AACDB79CE6C6 /* RecordWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordWidget.swift; sourceTree = "<group>"; };
+		E9C499921F59C291DCF6AFAA /* SubscriptionsPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubscriptionsPlugin.swift; sourceTree = "<group>"; };
 		ED3CE044F0F5E4467829326C /* BinomeWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BinomeWidget.swift; sourceTree = "<group>"; };
 		F47C88219CB87D2F85BCBE8A /* RecoveryWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecoveryWidget.swift; sourceTree = "<group>"; };
 		F7AEA4391D6F60590EBDCC95 /* App.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
@@ -139,6 +142,7 @@
 				14D1DE27D6E6D8640E7BCED5 /* Frameworks */,
 				A5A7B52E884C3A0889DE3A8D /* PPLWidget */,
 				8130B9143358488A85AE461B /* Shared */,
+				2F11A81078476D24014339D4 /* PPLTracker.storekit */,
 			);
 			sourceTree = "<group>";
 		};
@@ -166,6 +170,7 @@
 				92D7AED5F3F3E3C292A52333 /* WidgetBridgePlugin.swift */,
 				AA4E18559AA6110EC8E86421 /* MainViewController.swift */,
 				F7AEA4391D6F60590EBDCC95 /* App.entitlements */,
+				E9C499921F59C291DCF6AFAA /* SubscriptionsPlugin.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -314,6 +319,7 @@
 				AD8652FF752B1849FADF1632 /* WidgetBridgePlugin.swift in Sources */,
 				1DBD6D9DD9DB28B353909DA6 /* MainViewController.swift in Sources */,
 				21728C940D6ACDF1007D6D3B /* RestTimerAttributes.swift in Sources */,
+				25529CDEFB47446D46533FAD /* SubscriptionsPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

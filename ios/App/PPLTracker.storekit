@@ -1,0 +1,92 @@
+{
+  "identifier" : "9B2C6A10",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_locale" : "fr_FR",
+    "_storefront" : "FRA"
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21500001",
+      "localizations" : [
+
+      ],
+      "name" : "PPL Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "7.49",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6760000001",
+          "introductoryOffer" : {
+            "internalID" : "6760000011",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "Tout PPL Pro pour 12 mois, avec 7 jours d'essai gratuits.",
+              "displayName" : "PPL Pro annuel",
+              "locale" : "fr"
+            }
+          ],
+          "productID" : "com.ppltracker.app.pro.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "PPL Pro annuel",
+          "subscriptionGroupID" : "21500001",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "0.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6760000002",
+          "introductoryOffer" : {
+            "internalID" : "6760000012",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "Tout PPL Pro, mois par mois, avec 7 jours d'essai gratuits.",
+              "displayName" : "PPL Pro mensuel",
+              "locale" : "fr"
+            }
+          ],
+          "productID" : "com.ppltracker.app.pro.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "PPL Pro mensuel",
+          "subscriptionGroupID" : "21500001",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

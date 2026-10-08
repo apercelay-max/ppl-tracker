@@ -13,6 +13,7 @@ import { buildHistoryImport, detectHistorySource, SOURCE_LABEL } from '../utils/
 import { historyToCsv } from '../utils/historyExport';
 import { saveBackup, listBackups, restoreBackup, markExported, getLastExportAt, type BackupMeta } from '../lib/localBackups';
 import { useAuth } from '../hooks/useAuth';
+import { useIsPro } from '../lib/subscriptions';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import type { SyncStatus } from '../hooks/useCloudSync';
 import { CARDIO_TYPE_LABELS } from '../store/workoutStore';
@@ -67,6 +68,8 @@ onBack: () => void;
 onOpenAccount: () => void;
 /** Relance le quiz de démarrage (voir components/OnboardingQuiz.tsx). */
 onRestartQuiz: () => void;
+/** Présent seulement dans l'appli iPhone, où les abonnements existent. */
+onOpenPro?: () => void;
 syncStatus?: SyncStatus;
 lastSyncedAt?: number | null;
 /** Catégorie ouverte à l'arrivée — un lien d'invitation binôme doit atterrir
@@ -188,8 +191,9 @@ if (diffMin < 60) return `il y a ${diffMin} min`;
 return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 };
 
-export const SettingsScreen: React.FC<SettingsScreenProps> = ({ initialCategory, onBack, onOpenAccount, onRestartQuiz, syncStatus, lastSyncedAt }) => {
+export const SettingsScreen: React.FC<SettingsScreenProps> = ({ initialCategory, onBack, onOpenAccount, onRestartQuiz, onOpenPro, syncStatus, lastSyncedAt }) => {
 const screenClass = useScreenClass();
+const isPro = useIsPro();
 const { user, loading: authLoading } = useAuth();
 const handleSignOut = () => { supabase?.auth.signOut(); };
 const accentTheme = useWorkoutStore((s) => s.accentTheme);
@@ -627,6 +631,17 @@ background: !collapsedCategories[id] ? 'var(--bg-elevated)' : 'transparent',
 <p style={subtitleStyle}>Personnalise l'appli</p>
 </div>
 </div>
+
+{onOpenPro && (
+<button onClick={onOpenPro} style={proCard}>
+<span style={{ fontSize: 22 }}>⭐</span>
+<div style={{ flex: 1, textAlign: 'left' }}>
+<p style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 800, margin: 0 }}>{isPro ? 'PPL Pro · abonné' : 'Découvrir PPL Pro'}</p>
+<p style={{ color: 'var(--text-dim)', fontSize: 12, margin: '2px 0 0' }}>{isPro ? 'Gérer mon abonnement' : '7 jours gratuits, puis prix de lancement −50 %'}</p>
+</div>
+<span style={{ color: 'var(--text-dim)', fontSize: 16 }}>›</span>
+</button>
+)}
 
 {/* Recherche — filtre les 4 catégories ci-dessous par mot-clé. */}
 <div style={settingsSearchWrap}>
@@ -1873,6 +1888,10 @@ flexShrink: 0,
 };
 const titleStyle: React.CSSProperties = { fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: -0.3 };
 const subtitleStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: 12, marginTop: 2 };
+const proCard: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 12, width: '100%', marginBottom: 14, padding: '14px 16px',
+  background: 'var(--bg-elevated)', border: '1px solid var(--brand-1)', borderRadius: 14,
+};
 const settingsSearchWrap: React.CSSProperties = {
 display: 'flex', alignItems: 'center', gap: 8,
 background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
