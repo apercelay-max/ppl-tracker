@@ -36,51 +36,92 @@ export const useDailyBrief = (enabled: boolean): DailyBriefState => {
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
   const retried = useRef(false);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rerunAfter = useRef(false);
+  const inFlightKey = useRef('');
+  // Dernière version de `generate` : la nouvelle tentative différée doit
+  // utiliser l'historique du moment, pas celui du rendu qui l'a programmée.
+  const generateRef = useRef<() => Promise<void>>(async () => {});
 
   const program = getProgram(activeProgramId, customPrograms);
   const plan = buildDailyPlan({
     history, program, cycleDoneIds, weeklySessionGoal, firstName: trainingProfile?.firstName,
   });
 
+  const clearRetry = () => {
+    if (retryTimer.current !== null) {
+      clearTimeout(retryTimer.current);
+      retryTimer.current = null;
+    }
+  };
+
   const generate: () => Promise<void> = useCallback(async () => {
-    if (inFlight.current) return;
+    const key = `${history.length}|${plan.workoutId ?? ''}|${todayKey()}`;
+    if (inFlight.current) {
+      // Une séance (ou un nouveau jour) est arrivée pendant un appel : le résumé en
+      // cours de rédaction sera déjà périmé, on en refera un juste après. Même
+      // situation que l'appel en cours (double clic, effet rejoué) : rien à refaire.
+      if (key !== inFlightKey.current) rerunAfter.current = true;
+      return;
+    }
     inFlight.current = true;
+    inFlightKey.current = key;
+    clearRetry();
     setLoading(true);
     setError(null);
-    const digest = buildCoachDigest({
-      history, resolveWorkout: getWorkout, profile: trainingProfile, bodyWeightHistory,
-      programName: program.name, weeklySessionGoal,
-    });
-    const response = await requestCoachAi({
-      mode: 'daily', digest, daily: plan.context, apiKey: readStoredApiKey() || undefined,
-    });
-    if (response.ok && response.mode === 'daily') {
-      const fresh: CachedDaily = {
-        daily: response.daily, day: todayKey(), sessions: history.length,
-        workoutId: plan.workoutId, model: response.model,
-      };
-      setCached(fresh);
-      writeCachedDaily(fresh);
-    } else if (!response.ok) {
-      setError(response.message);
-      // Tous les modèles étaient occupés (le serveur a déjà essayé les modèles
-      // de secours) : une seule nouvelle tentative, un peu plus tard.
-      if (!retried.current && response.code !== 'CLE_MANQUANTE' && response.code !== 'CLE_INVALIDE') {
-        retried.current = true;
-        setTimeout(() => { void generate(); }, 20_000);
+    try {
+      const digest = buildCoachDigest({
+        history, resolveWorkout: getWorkout, profile: trainingProfile, bodyWeightHistory,
+        programName: program.name, weeklySessionGoal,
+      });
+      const response = await requestCoachAi({
+        mode: 'daily', digest, daily: plan.context, apiKey: readStoredApiKey() || undefined,
+      });
+      if (response.ok && response.mode === 'daily') {
+        const fresh: CachedDaily = {
+          daily: response.daily, day: todayKey(), sessions: history.length,
+          workoutId: plan.workoutId, model: response.model,
+        };
+        setCached(fresh);
+        writeCachedDaily(fresh);
+        retried.current = false;
+      } else if (!response.ok) {
+        setError(response.message);
+        // Tous les modèles étaient occupés (le serveur a déjà essayé les modèles
+        // de secours) : une seule nouvelle tentative, un peu plus tard.
+        if (!retried.current && response.code !== 'CLE_MANQUANTE' && response.code !== 'CLE_INVALIDE') {
+          retried.current = true;
+          retryTimer.current = setTimeout(() => {
+            retryTimer.current = null;
+            void generateRef.current();
+          }, 20_000);
+        }
+      }
+    } catch {
+      setError('Le résumé n’a pas pu être préparé.');
+    } finally {
+      setLoading(false);
+      inFlight.current = false;
+      if (rerunAfter.current) {
+        rerunAfter.current = false;
+        void generateRef.current();
       }
     }
-    setLoading(false);
-    inFlight.current = false;
     // `plan` est recalculé à chaque rendu ; les entrées qui comptent sont listées ci-dessous.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [history, trainingProfile, bodyWeightHistory, program.name, weeklySessionGoal, plan.workoutId]);
+  generateRef.current = generate;
+
+  // Pas de nouvelle tentative différée une fois l'appli démontée.
+  useEffect(() => clearRetry, []);
 
   const upToDate = cached !== null && cached.day === todayKey()
     && cached.sessions === history.length && cached.workoutId === plan.workoutId;
 
   useEffect(() => {
     if (!enabled || upToDate || history.length === 0) return;
+    // Nouvelle séance ou nouveau jour : une nouvelle tentative différée redevient permise.
+    retried.current = false;
     void generate();
     // Une seule tentative automatique par changement de séance : pas de boucle si l'appel échoue.
     // eslint-disable-next-line react-hooks/exhaustive-deps

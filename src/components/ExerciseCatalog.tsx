@@ -27,7 +27,8 @@ const FAVS_KEY = 'ppl-catalog-favoris';
 export const readFavs = (): string[] => {
   try {
     const raw = localStorage.getItem(FAVS_KEY);
-    return raw ? (JSON.parse(raw) as string[]) : [];
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
   } catch {
     return []; // localStorage indisponible (navigation privée) : pas de favoris, pas de crash
   }

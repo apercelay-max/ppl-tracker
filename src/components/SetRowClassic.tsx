@@ -50,13 +50,20 @@ const isRepOutOfRange = (reps: string, targetReps: string): boolean => {
   return r < range[0] || r > range[1];
 };
 
+// Poids de départ non chiffré ("PDC", "PDC+10", "Élastique léger", "—") : ce n'est
+// pas une saisie valide (isValidSetInput la refuse, donc le bouton Valider restait
+// grisé tant qu'on n'effaçait pas « PDC »). Le champ part vide — vide = poids du
+// corps — et le texte du programme sert de simple indication (placeholder).
+const numericWeightOnly = (w: string | undefined | null): string =>
+  w && !isNaN(parseFloat(w.replace(',', '.'))) ? w : '';
+
 export const SetRowClassic: React.FC<SetRowProps> = ({
   setNumber, targetReps, defaultWeight, entry, isCurrent, onComplete, onEdit, lastTime, previousMaxWeight, onWeightStart,
   barKg, validateSignal, coachHint,
 }) => {
   const weightUnit = useWorkoutStore((s) => s.weightUnit);
   const setWeightUnit = useWorkoutStore((s) => s.setWeightUnit);
-  const [weight, setWeight] = useState(formatWeightForDisplay(entry.weight || defaultWeight || (lastTime && lastTime.completed && lastTime.reps !== '—' ? lastTime.weight : '') || '', weightUnit));
+  const [weight, setWeight] = useState(formatWeightForDisplay(numericWeightOnly(entry.weight) || numericWeightOnly(defaultWeight) || (lastTime && lastTime.completed && lastTime.reps !== '—' ? numericWeightOnly(lastTime.weight) : '') || '', weightUnit));
   // Reps pré-remplies (série pas encore validée, rien saisi) : celles de la
   // dernière fois, sinon le bas de la fourchette cible. Modifiable, et le
   // select() au focus permet de retaper directement par-dessus.
@@ -73,10 +80,11 @@ export const SetRowClassic: React.FC<SetRowProps> = ({
   // saut courant en salle (1,25 kg par côté) ; 5 lbs est l'équivalent
   // usuel côté lbs plutôt qu'une conversion exacte de 2,5 kg.
   const weightStep = weightUnit === 'kg' ? 2.5 : 5;
+  const textWeightHint = defaultWeight && !numericWeightOnly(defaultWeight) && defaultWeight !== '—' ? defaultWeight : '';
 
   useEffect(() => {
     if (!entry.completed) {
-      setWeight(formatWeightForDisplay(entry.weight || defaultWeight || (lastTime && lastTime.completed && lastTime.reps !== '—' ? lastTime.weight : '') || '', weightUnit));
+      setWeight(formatWeightForDisplay(numericWeightOnly(entry.weight) || numericWeightOnly(defaultWeight) || (lastTime && lastTime.completed && lastTime.reps !== '—' ? numericWeightOnly(lastTime.weight) : '') || '', weightUnit));
       setReps(entry.reps || defaultReps());
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -209,7 +217,7 @@ export const SetRowClassic: React.FC<SetRowProps> = ({
     const lastKg = parseFloat(lastTime.weight);
     if (!isNaN(lastKg) && !isNaN(currentWeightKg) && Math.abs(currentWeightKg - lastKg) >= 0.01) {
       const diffKg = currentWeightKg - lastKg;
-      const diffDisplay = formatWeightForDisplay(Math.abs(diffKg).toFixed(2), weightUnit);
+      const diffDisplay = formatWeightForDisplay(String(Math.round(Math.abs(diffKg) * 100) / 100), weightUnit).replace('.', ',');
       liveDeltaBadge = { text: `${diffKg > 0 ? '+' : '−'}${diffDisplay} ${weightUnitLabel(weightUnit)}`, positive: diffKg > 0 };
     } else {
       const lastReps = parseInt(lastTime.reps);
@@ -305,7 +313,7 @@ export const SetRowClassic: React.FC<SetRowProps> = ({
           title={`− ${weightStep} ${weightUnitLabel(weightUnit)}`}>−</button>
         <div className="input-field" style={inputWrapper}>
           <input style={inputField} type="text" inputMode="decimal" value={weight}
-            onChange={(e) => handleWeightChange(e.target.value)} placeholder={weightUnitLabel(weightUnit)} onFocus={(e) => e.target.select()} />
+            onChange={(e) => handleWeightChange(e.target.value)} placeholder={textWeightHint || weightUnitLabel(weightUnit)} onFocus={(e) => e.target.select()} />
           <button type="button" onClick={handleToggleWeightUnit} style={inputUnitBtn} title="Changer l'unité">{weightUnitLabel(weightUnit)}</button>
         </div>
         <button type="button" onClick={() => handleWeightStep(weightStep)} style={weightStepBtn}

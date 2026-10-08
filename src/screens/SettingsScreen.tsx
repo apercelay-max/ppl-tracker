@@ -22,14 +22,14 @@ import { BinomeSettings } from '../components/BinomeSettings';
 import type { CardioActivityType, NavTabKey } from '../data/types';
 import type { VoiceVerbosity } from '../store/workoutStore';
 import { isVoiceSupported, primeVoice, speak, stopVoice } from '../utils/voiceCoach';
-import { IconActivity, IconArrowRight, IconBarChart, IconBounce, IconCalendar, IconCheck, IconClose, IconDownload, IconDumbbell, IconFireworks, IconHome, IconMonitor, IconMoon, IconPalette, IconPartyPopper, IconRefreshCw, IconRotateCcw, IconSave, IconScale, IconSearch, IconSparkles, IconSun, IconTarget, IconUpload, IconUser } from '../components/Icons';
+import { IconActivity, IconArrowRight, IconBarChart, IconBook, IconBounce, IconCalendar, IconCheck, IconClose, IconDownload, IconDumbbell, IconFireworks, IconHome, IconMonitor, IconMoon, IconPalette, IconPartyPopper, IconRefreshCw, IconRotateCcw, IconSave, IconScale, IconSearch, IconSparkles, IconSun, IconTarget, IconUpload, IconUser } from '../components/Icons';
 import { useScreenClass } from '../hooks/useScreenClass';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
 const VAPID_PUBLIC_KEY = 'BJoSxXQJwt-i1AhuIBtDocpTSPQXj7NVsNV0104CLSqX9Uj2IP_-up_cFb6StENbdJJd4pCFZ3Wx5UspZFprQH0';
 
-function urlBase64ToUint8Array(base64String) {
+function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const rawData = atob(base64);
@@ -49,6 +49,7 @@ const NAV_TAB_META: { id: NavTabKey; label: string; Icon: React.FC<{ size?: numb
 { id: 'historique', label: 'Historique', Icon: IconCalendar },
 { id: 'cardio', label: 'Cardio', Icon: IconActivity },
 { id: 'exercices', label: 'Exercices', Icon: IconDumbbell },
+{ id: 'catalogue', label: 'Catalogue', Icon: IconBook },
 { id: 'poids', label: 'Poids', Icon: IconScale },
 { id: 'dashboard', label: 'Stats', Icon: IconBarChart },
 { id: 'coach', label: 'Coach', Icon: IconSparkles },
@@ -303,7 +304,12 @@ const enablePushNotifications = async () => {
       setPushStatus('denied');
       return;
     }
-    const registration = await navigator.serviceWorker.ready;
+    // `ready` ne se résout jamais si l'enregistrement du service worker a
+    // échoué : sans délai, le bouton resterait sur « Activation... » pour de bon.
+    const registration = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('sw-timeout')), 10_000)),
+    ]);
     let subscription = await registration.pushManager.getSubscription();
     if (!subscription) {
       subscription = await registration.pushManager.subscribe({
@@ -416,8 +422,11 @@ const url = URL.createObjectURL(blob);
 const a = document.createElement('a');
 a.href = url;
 a.download = `ppl-tracker-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
+document.body.appendChild(a);
 a.click();
-URL.revokeObjectURL(url);
+document.body.removeChild(a);
+// Libérer l'URL tout de suite peut annuler le téléchargement (Safari) : on attend un peu.
+setTimeout(() => URL.revokeObjectURL(url), 4000);
 markExported();
 setLastExportAt(Date.now());
 };
@@ -431,8 +440,10 @@ const url = URL.createObjectURL(blob);
 const a = document.createElement('a');
 a.href = url;
 a.download = `ppl-tracker-historique-${new Date().toISOString().slice(0, 10)}.csv`;
+document.body.appendChild(a);
 a.click();
-URL.revokeObjectURL(url);
+document.body.removeChild(a);
+setTimeout(() => URL.revokeObjectURL(url), 4000);
 markExported();
 setLastExportAt(Date.now());
 };
@@ -530,11 +541,16 @@ return;
 }
 const reader = new FileReader();
 reader.onload = () => {
+try {
 const text = String(reader.result ?? '');
 if (detectHistorySource(text)) { finishHistoryImport(text, file.name); return; }
 const result = parseImportedFile(file.name, text);
 finishImport(result, text, file.name);
+} catch {
+setImportMsg("Import impossible — ce fichier n'a pas pu être analysé.");
+}
 };
+reader.onerror = () => setImportMsg("Import impossible — le fichier n'a pas pu être lu.");
 reader.readAsText(file);
 };
 
@@ -1537,6 +1553,8 @@ Utilise les flèches pour réordonner les blocs, et l'interrupteur pour masquer 
 <div>
 {homeSectionOrder.map((key, idx) => {
 const meta = SECTION_META[key];
+// Clé d'une ancienne sauvegarde qui n'existe plus : on l'ignore plutôt que de planter les Réglages.
+if (!meta) return null;
 const visible = meta.toggleable ? homeSections[key as keyof typeof homeSections] : true;
 return (
 <div key={key} style={toggleRow}>
@@ -1923,6 +1941,7 @@ borderRadius: 14, padding: '12px 14px', marginBottom: 8,
 };
 const switchTrack: React.CSSProperties = {
 width: 44, height: 26, borderRadius: 13, padding: 3,
+border: '1px solid var(--border-strong)', boxSizing: 'border-box',
 display: 'flex', alignItems: 'center', flexShrink: 0, cursor: 'pointer',
 transition: 'background 0.2s',
 };

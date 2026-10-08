@@ -40,15 +40,30 @@ export const getNextStep = (
   setIndex: number,
   setsOf: (ex: Exercise) => number,
   disabledGroupIds: string[] = [],
+  /** Série déjà validée ? Si fourni, on saute les exercices déjà faits (faits dans le
+   *  désordre via « Faire ») et on revient sur ceux laissés derrière avant de conclure
+   *  que la séance est terminée. La série `setIndex` en cours compte comme faite. */
+  isSetDone?: (ex: Exercise, setIndex: number) => boolean,
 ): NextStep => {
   const ex = exercises[exerciseIndex];
   if (!ex) return { exerciseIndex: null, setIndex: 0, rest: false };
 
-  const after = (idx: number): NextStep => ({
-    exerciseIndex: idx < exercises.length ? idx : null,
-    setIndex: 0,
-    rest: true,
-  });
+  const after = (idx: number): NextStep => {
+    if (!isSetDone) {
+      return { exerciseIndex: idx < exercises.length ? idx : null, setIndex: 0, rest: true };
+    }
+    const n = exercises.length;
+    for (let k = 0; k < n; k++) {
+      const j = (idx + k) % n;
+      const cand = exercises[j];
+      for (let s = 0; s < setsOf(cand); s++) {
+        if (!((cand === ex && s === setIndex) || isSetDone(cand, s))) {
+          return { exerciseIndex: j, setIndex: s, rest: true };
+        }
+      }
+    }
+    return { exerciseIndex: null, setIndex: 0, rest: true };
+  };
 
   if (isChained(ex, disabledGroupIds)) {
     const members = supersetMemberIndexes(exercises, ex.supersetGroupId as string);
@@ -74,3 +89,7 @@ export const getNextStep = (
   if (setIndex + 1 < setsOf(ex)) return { exerciseIndex, setIndex: setIndex + 1, rest: true };
   return after(exerciseIndex + 1);
 };
+
+/** Fabrique le `isSetDone` de getNextStep à partir de la progression d'une séance. */
+export const setDoneIn = (progress: Record<string, { completed: boolean }[]> | undefined) =>
+  (ex: Exercise, setIndex: number): boolean => !!progress?.[ex.id]?.[setIndex]?.completed;

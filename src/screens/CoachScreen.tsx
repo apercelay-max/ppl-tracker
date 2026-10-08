@@ -70,6 +70,13 @@ const screenClass = useScreenClass();
   const [question, setQuestion] = useState('');
   const [chat, setChat] = useState<ChatState>(readChat);
   const [asking, setAsking] = useState(false);
+  // Dernier état de la conversation. Les gestionnaires lisent celui-ci plutôt que
+  // `chat` : pendant l'attente d'une réponse, le `chat` capturé au clic serait
+  // périmé et la réponse écraserait une proposition traitée entre-temps (qui
+  // redeviendrait « en attente » et pourrait être appliquée deux fois).
+  const chatRef = useRef<ChatState>(chat);
+  // Incrémenté par « Effacer » : une réponse qui arrive après n'a plus de question.
+  const chatEpoch = useRef(0);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   // Fin de la liste des messages : on y descend à chaque nouveau message,
   // sinon la réponse arrive hors de l'écran sur un téléphone.
@@ -114,22 +121,34 @@ const screenClass = useScreenClass();
     return false;
   };
 
+  const commitChat = (update: (prev: ChatState) => ChatState) => {
+    const next = update(chatRef.current);
+    chatRef.current = next;
+    setChat(next);
+    writeChat(next);
+  };
+
   const generate = async () => {
     if (loading) return;
     setLoading(true);
     setError(null);
-    const response = await requestCoachAi({ mode: 'brief', digest, apiKey: apiKey || undefined });
-    if (handleResponse(response) && response.ok && response.mode === 'brief') {
-      const fresh: CachedBrief = {
-        brief: response.brief,
-        at: Date.now(),
-        model: response.model,
-        sessions: history.length,
-      };
-      setCached(fresh);
-      writeCachedBrief(fresh);
+    try {
+      const response = await requestCoachAi({ mode: 'brief', digest, apiKey: apiKey || undefined });
+      if (handleResponse(response) && response.ok && response.mode === 'brief') {
+        const fresh: CachedBrief = {
+          brief: response.brief,
+          at: Date.now(),
+          model: response.model,
+          sessions: history.length,
+        };
+        setCached(fresh);
+        writeCachedBrief(fresh);
+      }
+    } catch {
+      setError('Le bilan n’a pas pu être généré. Réessaie dans un instant.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const ask = async () => {
@@ -138,128 +157,176 @@ const screenClass = useScreenClass();
 
     // Le message part à l'écran tout de suite : attendre la réponse pour
     // l'afficher donnerait l'impression que le bouton n'a rien fait.
-    const withMine: ChatState = {
-      ...chat,
-      messages: [...chat.messages, { role: 'moi', text: clean, at: Date.now() }],
-    };
-    setChat(withMine);
-    writeChat(withMine);
+    const mineAt = Date.now();
+    const epoch = chatEpoch.current;
+    const previousInteractionId = chatRef.current.interactionId;
+    commitChat((prev) => ({
+      ...prev,
+      messages: [...prev.messages, { role: 'moi', text: clean, at: mineAt }],
+    }));
     setQuestion('');
     chatInputRef.current?.focus();
     setAsking(true);
     setError(null);
 
-    const response = await sendChatMessage({
-      digest,
-      question: clean,
-      previousInteractionId: chat.interactionId,
-      apiKey: apiKey || undefined,
-      program: programView,
-      catalog: catalogIndex,
-    });
+    try {
+      const response = await sendChatMessage({
+        digest,
+        question: clean,
+        previousInteractionId,
+        apiKey: apiKey || undefined,
+        program: programView,
+        catalog: catalogIndex,
+      });
 
-    if (handleResponse(response) && response.ok && response.mode === 'chat') {
-      // La proposition du modèle est confrontée au programme RÉEL avant
-      // d'être affichée : identifiants, limites ado, séance qui se viderait.
-      // Ce qui s'affiche ensuite est donc vrai par construction, même si le
-      // modèle a raconté n'importe quoi.
-      let proposition: ChatProposal | undefined;
-      if (response.proposition) {
-        const validated = validateProposal(activeProgram, response.proposition);
-        if (validated.changes.length > 0 || validated.rejets.length > 0) {
-          proposition = {
-            titre: response.proposition.titre,
-            raison: response.proposition.raison,
-            changes: validated.changes,
-            ops: validated.ops,
-            rejets: validated.rejets,
+      // Conversation effacée pendant l'attente : la réponse n'a plus de question.
+      if (epoch !== chatEpoch.current) return;
+
+      if (handleResponse(response) && response.ok && response.mode === 'chat') {
+        // La proposition du modèle est confrontée au programme RÉEL avant
+        // d'être affichée : identifiants, limites ado, séance qui se viderait.
+        // Ce qui s'affiche ensuite est donc vrai par construction, même si le
+        // modèle a raconté n'importe quoi.
+        let proposition: ChatProposal | undefined;
+        if (response.proposition) {
+          const validated = validateProposal(activeProgram, response.proposition);
+          if (validated.changes.length > 0 || validated.rejets.length > 0) {
+            proposition = {
+              titre: response.proposition.titre,
+              raison: response.proposition.raison,
+              changes: validated.changes,
+              ops: validated.ops,
+              rejets: validated.rejets,
+              statut: 'en-attente',
+            };
+          }
+        }
+        // Programme complet : le contrôle décisif est le volume de la semaine,
+        // fait par validateNewProgram. S'il ne passe pas, on garde quand même
+        // l'objet pour AFFICHER les raisons du refus au lieu de rien dire.
+        let nouveauProgramme: ChatNewProgram | undefined;
+        if (response.nouveauProgramme) {
+          const checked = validateNewProgram(response.nouveauProgramme);
+          nouveauProgramme = {
+            nom: response.nouveauProgramme.nom,
+            raison: response.nouveauProgramme.raison,
+            apercu: checked.apercu,
+            volume: checked.volume,
+            rejets: checked.rejets,
             statut: 'en-attente',
+            program: checked.program ?? undefined,
           };
         }
-      }
-      // Programme complet : le contrôle décisif est le volume de la semaine,
-      // fait par validateNewProgram. S'il ne passe pas, on garde quand même
-      // l'objet pour AFFICHER les raisons du refus au lieu de rien dire.
-      let nouveauProgramme: ChatNewProgram | undefined;
-      if (response.nouveauProgramme) {
-        const checked = validateNewProgram(response.nouveauProgramme);
-        nouveauProgramme = {
-          nom: response.nouveauProgramme.nom,
-          raison: response.nouveauProgramme.raison,
-          apercu: checked.apercu,
-          volume: checked.volume,
-          rejets: checked.rejets,
-          statut: 'en-attente',
-          program: checked.program ?? undefined,
-        };
-      }
 
-      const withReply: ChatState = {
-        messages: [
-          ...withMine.messages,
-          { role: 'coach', text: response.reponse, at: Date.now(), proposition, nouveauProgramme },
-        ],
-        interactionId: response.interactionId,
-      };
-      setChat(withReply);
-      writeChat(withReply);
+        commitChat((prev) => ({
+          messages: [
+            ...prev.messages,
+            { role: 'coach', text: response.reponse, at: Date.now(), proposition, nouveauProgramme },
+          ],
+          interactionId: response.interactionId,
+        }));
+      } else {
+        // Échec : la question restée sans réponse repart dans le champ, au lieu
+        // de rester seule dans la conversation (et d'être retapée en double).
+        commitChat((prev) => ({
+          ...prev,
+          messages: prev.messages.filter((m) => !(m.role === 'moi' && m.at === mineAt && m.text === clean)),
+        }));
+        setQuestion((current) => current || clean);
+      }
+    } catch {
+      if (epoch !== chatEpoch.current) return;
+      setError('Le message n’a pas pu partir. Réessaie dans un instant.');
+      commitChat((prev) => ({
+        ...prev,
+        messages: prev.messages.filter((m) => !(m.role === 'moi' && m.at === mineAt && m.text === clean)),
+      }));
+      setQuestion((current) => current || clean);
+    } finally {
+      // Après « Effacer », resetChat a déjà remis `asking` à zéro (et une autre
+      // question a pu partir depuis).
+      if (epoch === chatEpoch.current) setAsking(false);
     }
-    setAsking(false);
   };
 
   /** Marque une proposition comme traitée : elle reste visible dans la
    *  conversation, mais ne redemande plus de décision. */
   const settleProposal = (index: number, statut: ChatProposal['statut']) => {
-    const next: ChatState = {
-      ...chat,
-      messages: chat.messages.map((message, i) =>
+    commitChat((prev) => ({
+      ...prev,
+      messages: prev.messages.map((message, i) =>
         i === index && message.proposition
           ? { ...message, proposition: { ...message.proposition, statut } }
           : message
       ),
-    };
-    setChat(next);
-    writeChat(next);
+    }));
   };
 
   const settleProgram = (index: number, statut: ChatNewProgram['statut']) => {
-    const next: ChatState = {
-      ...chat,
-      messages: chat.messages.map((message, i) =>
+    commitChat((prev) => ({
+      ...prev,
+      messages: prev.messages.map((message, i) =>
         i === index && message.nouveauProgramme
           ? { ...message, nouveauProgramme: { ...message.nouveauProgramme, statut, program: undefined } }
           : message
       ),
-    };
-    setChat(next);
-    writeChat(next);
+    }));
+  };
+
+  // Le programme montré au coach date du début de la conversation. Quand le
+  // programme actif change d'identifiants, on repart d'un échange neuf : le
+  // prochain message renvoie le programme à jour, sinon le coach proposerait des
+  // séances et des exercices qui n'existent plus.
+  const forgetConversationProgram = () => {
+    commitChat((prev) => ({ ...prev, interactionId: undefined }));
   };
 
   const applyProgram = (index: number) => {
-    const proposed = chat.messages[index]?.nouveauProgramme?.program;
+    const proposed = chatRef.current.messages[index]?.nouveauProgramme?.program;
     if (!proposed) return;
     // Nouveau programme : il s'ajoute à la liste, il ne remplace rien.
     upsertCustomProgram(proposed);
     setActiveProgram(proposed.id);
     settleProgram(index, 'appliquee');
+    forgetConversationProgram();
   };
 
   const applyProposal = (index: number) => {
-    const proposition = chat.messages[index]?.proposition;
+    const proposition = chatRef.current.messages[index]?.proposition;
     if (!proposition || proposition.ops.length === 0) return;
+
+    // Le programme actif a pu changer depuis la proposition (autre programme
+    // choisi, autre proposition appliquée entre-temps) : on revalide les
+    // opérations contre le programme d'AUJOURD'HUI, sinon elles tomberaient sur
+    // un exercice qui n'est plus le bon ou qui n'existe plus.
+    const current = validateProposal(activeProgram, {
+      titre: proposition.titre, raison: proposition.raison, ops: proposition.ops,
+    });
+    if (current.ops.length === 0) {
+      setError('Ton programme a changé depuis cette proposition : elle ne s’applique plus. Redemande au coach.');
+      settleProposal(index, 'refusee');
+      return;
+    }
 
     // Un programme intégré n'est pas modifiable (il vit dans le code) : on
     // fabrique un programme personnalisé dérivé, à l'id stable, et l'original
     // reste dans la liste pour pouvoir y revenir.
-    const updated = buildCoachProgram(activeProgram, proposition.ops);
+    const updated = buildCoachProgram(activeProgram, current.ops);
     upsertCustomProgram(updated);
-    if (activeProgramId !== updated.id) setActiveProgram(updated.id);
+    if (activeProgramId !== updated.id) {
+      setActiveProgram(updated.id);
+      // Nouveau programme actif, donc nouveaux identifiants de séance.
+      forgetConversationProgram();
+    }
     settleProposal(index, 'appliquee');
   };
 
   const resetChat = () => {
+    chatEpoch.current += 1;
     clearChat();
-    setChat({ messages: [] });
+    chatRef.current = { messages: [] };
+    setChat(chatRef.current);
+    setAsking(false);
     setError(null);
   };
 
@@ -387,8 +454,8 @@ const screenClass = useScreenClass();
                         <p style={proposalReason}>{message.nouveauProgramme.raison}</p>
                       )}
 
-                      {message.nouveauProgramme.apercu.map((jour) => (
-                        <div key={jour.jour} style={changeRow}>
+                      {message.nouveauProgramme.apercu.map((jour, j) => (
+                        <div key={j} style={changeRow}>
                           <span style={changeDay}>
                             {jour.jour}{jour.duree ? ` · ${jour.duree}` : ''}
                           </span>
@@ -638,7 +705,7 @@ const screenClass = useScreenClass();
               <p style={{ color: 'var(--text-muted)', fontSize: 12.5, lineHeight: 1.45, marginBottom: 10 }}>
                 Colle ici une clé Gemini créée sur <strong style={{ color: 'var(--text-primary)' }}>aistudio.google.com/apikey</strong>.
                 Elle reste sur ce téléphone et n'est envoyée qu'à la fonction du site au moment d'un bilan.
-                Si une clé est déjà configurée sur Vercel, tu peux laisser ce champ vide.
+                Tu peux laisser ce champ vide : l'appli fournit déjà une clé par défaut.
               </p>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <input
@@ -677,8 +744,7 @@ const screenClass = useScreenClass();
         </div>
 
         <p style={hintLine}>
-          Sans clé ici, l'appli utilise celle du serveur (GEMINI_API_KEY sur Vercel). Avec une clé ici, c'est
-          celle-ci qui passe devant.
+          Facultatif. Sans clé ici, l'appli utilise sa clé par défaut. Avec la tienne, c'est elle qui est utilisée.
         </p>
 
       </div>

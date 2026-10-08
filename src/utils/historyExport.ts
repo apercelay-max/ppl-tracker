@@ -34,7 +34,7 @@ export const historyToCsv = (history: HistoryEntry[]): string => {
       const exName = entry.exerciseNameOverrides?.[exId] ?? workout?.exercises.find((e) => e.id === exId)?.name ?? exId;
       let order = 0;
       for (const s of sets) {
-        if (!s.completed) continue;
+        if (!s.completed || s.reps === '—') continue; // série « passée » : rien à exporter
         order++;
         const timed = /\ss?$|sec/i.test(s.reps) && !/^\d+$/.test(s.reps);
         const secs = timed ? parseInt(s.reps, 10) : 0;

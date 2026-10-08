@@ -210,7 +210,7 @@ export const computeTrainingStatus = (
     if (trend === 'down' && daysSinceLast !== null && daysSinceLast >= 7) {
       return make('detraining', `Très peu de charge cette semaine et force en baisse${trendTxt}. Reprends progressivement.`);
     }
-    return make('recovery', "Charge légère cette semaine : le corps récupère. Reprends quand tu te sens frais.");
+    return make('recovery', "Charge légère cette semaine : le corps a bien récupéré. Tu peux relancer une séance dès que l'envie est là.");
   }
   if (trend === 'up') return make('productive', `Charge adaptée et force en hausse${trendTxt} : ton entraînement porte ses fruits.`);
   if (trend === 'down') return make('unproductive', `Charge normale mais force en baisse${trendTxt} : sommeil, nutrition ou volume à revoir.`);
@@ -248,8 +248,13 @@ export const computeReadiness = (
   const penalties: { pts: number; text: string }[] = [];
   const add = (pts: number, text: string) => { if (pts !== 0) { score -= pts; penalties.push({ pts: Math.abs(pts), text }); } };
 
-  if (status.zone === 'veryHigh') add(35, 'charge de la semaine très élevée');
-  else if (status.zone === 'high') add(20, 'charge de la semaine élevée');
+  // Statut 'none' = pas assez de recul (moins de 4 séances / 2 semaines) : le
+  // rapport charge aiguë / habituelle n'a alors aucune base (la 1re séance donne
+  // « ×4 ») et ne doit pas faire baisser le score d'un débutant.
+  if (status.status !== 'none') {
+    if (status.zone === 'veryHigh') add(35, 'charge de la semaine très élevée');
+    else if (status.zone === 'high') add(20, 'charge de la semaine élevée');
+  }
 
   const lastStrength = history[0]?.date;
   if (lastStrength) {

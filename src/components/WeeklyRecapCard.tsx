@@ -8,7 +8,7 @@ interface Props { history: HistoryEntry[]; weeklySessionGoal: number; }
 // faites, tonnage et record éventuel. Tout vient de l'historique, sur la même
 // fenêtre glissante de 7 jours que l'anneau hebdo (voir bucketByWeek).
 export const WeeklyRecapCard: React.FC<Props> = ({ history, weeklySessionGoal }) => {
-  const buckets = bucketByWeek(history, 12);
+  const buckets = bucketByWeek(history, 52); // 52 et non 12 : la série peut dépasser 12 semaines
   const current = buckets[buckets.length - 1];
 
   // Série : même règle que ProfilScreen (semaines d'affilée où l'objectif est

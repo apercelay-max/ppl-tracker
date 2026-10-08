@@ -246,7 +246,8 @@ const toSessionExercise = (cat: CatalogExercise, goal: Goal, setsOverride?: numb
   const base = cat.pattern === 'Gainage'
     ? HOLD_SCHEME
     : cat.type === 'Polyarticulaire' ? SCHEMES[goal].compound : SCHEMES[goal].isolation;
-  const scheme = setsOverride ? { ...base, sets: Math.max(2, setsOverride) } : base;
+  // Un plafond de séries ne peut que RÉDUIRE : un exercice prévu à 3 séries ne passe pas à 4.
+  const scheme = setsOverride ? { ...base, sets: Math.min(base.sets, Math.max(2, setsOverride)) } : base;
   return {
     // Préfixe `cat-` : l'id reste le même d'un programme généré à l'autre, donc
     // les records et les courbes de progression se cumulent au lieu de repartir

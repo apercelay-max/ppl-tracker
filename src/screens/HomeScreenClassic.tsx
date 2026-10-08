@@ -27,7 +27,8 @@ const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre']
 // Renvoie une date relative courte ("Aujourd'hui", "Hier", "Il y a 3 j"...) —
 // utilisé par le cardio ET par le widget "Séance précédente".
 const formatRelativeDate = (ts: number): string => {
-  const diffDays = Math.floor((Date.now() - ts) / 86400000);
+  // Jours calendaires (et non tranches de 24 h) : une séance d'hier 21 h n'est pas « aujourd'hui ».
+  const diffDays = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(ts).setHours(0, 0, 0, 0)) / 86400000);
   if (diffDays <= 0) return "Aujourd'hui";
   if (diffDays === 1) return 'Hier';
   if (diffDays < 7) return `Il y a ${diffDays} j`;
@@ -142,7 +143,9 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
   useEffect(() => {
     if (!binome?.connecte || !binome.en_binome || binome.relances_recues === 0 || !binome.partenaire) return;
     setNudgedBy(binome.partenaire.nom);
-    void markNudgesSeen().then(() => refreshBinome());
+    // Pas de rafraîchissement si l'appel a échoué : l'état serait remplacé, l'effet
+    // relancerait l'appel, et ainsi de suite sans fin tant que le serveur répond mal.
+    void markNudgesSeen().then((r) => { if (r.ok) void refreshBinome(); });
   }, [binome]);
   const homeSectionColors = useWorkoutStore((s) => s.homeSectionColors);
   const setHomeSectionOrder = useWorkoutStore((s) => s.setHomeSectionOrder);
@@ -416,7 +419,7 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
   // Les supersets n'existent que sur Push A et Push B. Le rappel reste
   // consultable tous les jours sous « Tout voir » ; il ne remonte dans la
   // partie simple que les jours où il sert (voir promotedNow plus bas).
-  const isPushDay = nextWorkout.id.startsWith('push');
+  const isPushDay = !!nextWorkout?.id.startsWith('push');
   const supersetSection = homeSections.supersetRule && activeProgramId === 'strict-v10' && (
     <div key="supersetRule" className="glass-card glass-green" style={{
       borderRadius: 26, padding: 16, marginTop: 10, marginBottom: 12,

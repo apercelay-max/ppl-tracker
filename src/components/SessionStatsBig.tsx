@@ -55,17 +55,17 @@ export const SessionStatsBig: React.FC<SessionStatsBigProps> = ({
   return (
     <div style={scrollArea}>
       <div style={inner}>
-        <p style={screenTitle}>{workout.name} - Stats de la seance</p>
+        <p style={screenTitle}>{workout.name} - Stats de la séance</p>
 
         <SessionTimingCard workout={workout} session={session} />
 
         <div style={card}>
-          <p style={label}>DUREE</p>
+          <p style={label}>DURÉE</p>
           <p style={{ ...bigNum, color: '#4CAF50' }}>{chrono}</p>
         </div>
 
         <div style={card}>
-          <p style={label}>SERIES</p>
+          <p style={label}>SÉRIES</p>
           <p style={bigNum}>{completedSets} <span style={unitSpan}>/ {totalSets}</span></p>
           <div style={progressTrack}>
             <div style={{ ...progressFill, width: progressPct + '%' }} />
@@ -73,7 +73,7 @@ export const SessionStatsBig: React.FC<SessionStatsBigProps> = ({
         </div>
 
         <div style={card}>
-          <p style={label}>TONNAGE SOULEVE</p>
+          <p style={label}>TONNAGE SOULEVÉ</p>
           <p style={bigNum}>{tonnageDisplay} <span style={unitSpan}>{weightUnitLabel(weightUnit)}</span></p>
         </div>
 
@@ -81,7 +81,7 @@ export const SessionStatsBig: React.FC<SessionStatsBigProps> = ({
               <div style={card}>
                 <p style={label}>
                   <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconTrendingUp size={12} /></span>
-                  VS SEANCE PRECEDENTE
+                  VS SÉANCE PRÉCÉDENTE
                 </p>
                 {tonnageKg > 0 ? (
                   <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: '19px', marginBottom: 10 }}>
@@ -102,16 +102,16 @@ export const SessionStatsBig: React.FC<SessionStatsBigProps> = ({
             )}
             <div style={cardRow}>
           <div style={{ ...card, flex: 1 }}>
-            <p style={label}>FREQUENCE CARDIAQUE</p>
+            <p style={label}>FRÉQUENCE CARDIAQUE</p>
             {connected ? (
               <>
                 <p style={{ ...bigNum, color: hrColor, fontSize: 26 }}>{hr ?? '-'} <span style={unitSpan}>bpm</span></p>
-                <button style={smallBtn} onClick={disconnect}>Deconnecter</button>
+                <button style={smallBtn} onClick={disconnect}>Déconnecter</button>
               </>
             ) : (
               <>
                 <p style={{ fontSize: 18, color: 'var(--text-dim)', fontWeight: 200, marginBottom: 10 }}>
-                  {connecting ? 'Connexion...' : '-'}
+                  {connecting ? 'Connexion…' : '-'}
                 </p>
                 <button
                   style={{
@@ -123,7 +123,7 @@ export const SessionStatsBig: React.FC<SessionStatsBigProps> = ({
                   onClick={isSupported ? connect : undefined}
                   disabled={connecting || !isSupported}
                 >
-                  {!isSupported ? 'iOS non supporte' : connecting ? 'Connexion...' : 'Connecter'}
+                  {!isSupported ? 'iOS non supporté' : connecting ? 'Connexion…' : 'Connecter'}
                 </button>
                 {error && <p style={{ color: '#f66', fontSize: 11, marginTop: 6 }}>{error}</p>}
               </>
@@ -139,12 +139,12 @@ export const SessionStatsBig: React.FC<SessionStatsBigProps> = ({
         </div>
 
         <div style={card}>
-          <p style={label}>MUSCLES SOLLICITES</p>
+          <p style={label}>MUSCLES SOLLICITÉS</p>
           <BodyDiagram intensity={bodyIntensity} />
         </div>
 
         <div style={card}>
-          <p style={label}>RECORDS DE LA SEANCE</p>
+          <p style={label}>RECORDS DE LA SÉANCE</p>
           {prList.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {prList.map((name) => (
@@ -155,7 +155,7 @@ export const SessionStatsBig: React.FC<SessionStatsBigProps> = ({
               ))}
             </div>
           ) : (
-            <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Pas encore de record dans cette seance - a toi de jouer !</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Pas encore de record dans cette séance – à toi de jouer !</p>
           )}
         </div>
       </div>

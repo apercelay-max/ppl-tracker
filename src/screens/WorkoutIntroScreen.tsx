@@ -246,7 +246,7 @@ Pas totalement récupéré
 {unrecoveredGroups.map((s, i) => (
 <span key={s.group}>
 {i > 0 && ', '}
-{s.group} (encore {s.hoursRemaining >= 24 ? `${Math.round(s.hoursRemaining / 24 * 10) / 10} j` : `${s.hoursRemaining} h`})
+{s.group} (encore {s.hoursRemaining >= 24 ? `${String(Math.round(s.hoursRemaining / 24 * 10) / 10).replace('.', ',')} j` : `${s.hoursRemaining} h`})
 </span>
 ))}
 </p>

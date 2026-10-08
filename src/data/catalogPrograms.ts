@@ -288,7 +288,7 @@ const HALTERES_MAISON_3J_WORKOUTS: WorkoutDay[] = [
       { id: 'cat-curl-marteau', name: 'Curl marteau', muscleGroup: 'BICEPS',
         sets: 3, targetReps: '10-15', restSeconds: 90,
         restMode: 'normal', isSuperset: false, notes: '' },
-      { id: 'cat-extensions-mollets-debout-a-l-haltere', name: 'Extensions mollets debout à l\\\'haltère', muscleGroup: 'MOLLETS',
+      { id: 'cat-extensions-mollets-debout-a-l-haltere', name: 'Extensions mollets debout à l\'haltère', muscleGroup: 'MOLLETS',
         sets: 3, targetReps: '10-15', restSeconds: 90,
         restMode: 'normal', isSuperset: false, notes: '' },
     ],

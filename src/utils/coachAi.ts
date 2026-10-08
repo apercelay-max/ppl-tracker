@@ -81,7 +81,7 @@ export const readCachedBrief = (): CachedBrief | null => {
     const raw = localStorage.getItem(BRIEF_STORAGE);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CachedBrief;
-    return parsed?.brief?.resume ? parsed : null;
+    return parsed?.brief?.resume && Array.isArray(parsed.brief.points) ? parsed : null;
   } catch {
     return null;
   }
@@ -104,40 +104,59 @@ export const digestFromStore = (input: CoachDigestInput): CoachDigest => buildCo
 
 const networkError = (message: string): CoachAiResponse => ({ ok: false, code: 'RESEAU', message });
 
+/** Délai maximal côté appli : le serveur essaie jusqu'à trois modèles de 12 s
+ *  chacun. Au-delà, la connexion est bloquée — sans cette limite, le bouton
+ *  resterait sur « Analyse en cours… » pour toujours. */
+const CLIENT_TIMEOUT_MS = 50_000;
+
 export const requestCoachAi = async (request: CoachAiRequest): Promise<CoachAiResponse> => {
-  let response: Response;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
   try {
-    response = await fetch(COACH_AI_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    });
-  } catch {
-    return networkError('Pas de réseau. Le bilan IA a besoin d’une connexion — le coach local, lui, marche toujours.');
-  }
+    let response: Response;
+    try {
+      response = await fetch(COACH_AI_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+        signal: controller.signal,
+      });
+    } catch {
+      if (controller.signal.aborted) {
+        return { ok: false, code: 'DELAI_DEPASSE', message: 'Le coach IA met trop de temps à répondre. Réessaie dans un instant.' };
+      }
+      return networkError('Pas de réseau. Le bilan IA a besoin d’une connexion — le coach local, lui, marche toujours.');
+    }
 
-  // `npm run dev` (Vite) ne sert pas le dossier api/ : il renvoie l'index HTML
-  // de l'appli avec un code 200. Sans ce test, on tomberait sur une erreur de
-  // parsing JSON incompréhensible au lieu d'une explication.
-  const contentType = response.headers.get('content-type') ?? '';
-  if (!contentType.includes('application/json')) {
-    return networkError(
-      'La fonction /api/coach n’a pas répondu. En local, elle n’existe qu’avec « vercel dev » ; en ligne, vérifie que le déploiement est bien passé.'
-    );
-  }
+    // `npm run dev` (Vite) ne sert pas le dossier api/ : il renvoie l'index HTML
+    // de l'appli avec un code 200. Sans ce test, on tomberait sur une erreur de
+    // parsing JSON incompréhensible au lieu d'une explication.
+    const contentType = response.headers.get('content-type') ?? '';
+    if (!contentType.includes('application/json')) {
+      // Message de développeur uniquement en `npm run dev` ; les utilisateurs
+      // voient une phrase simple.
+      return networkError(
+        import.meta.env.DEV
+          ? 'La fonction /api/coach n’a pas répondu. En local, elle n’existe qu’avec « vercel dev ».'
+          : 'Le coach IA est momentanément indisponible. Réessaie dans un instant — ton coach local, lui, marche toujours.'
+      );
+    }
 
-  let payload: unknown;
-  try {
-    payload = await response.json();
-  } catch {
-    return networkError('Réponse illisible du serveur.');
-  }
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      return networkError('Réponse illisible du serveur.');
+    }
 
-  const parsed = payload as CoachAiResponse;
-  if (!parsed || typeof parsed !== 'object' || !('ok' in parsed)) {
-    return networkError('Réponse inattendue du serveur.');
+    const parsed = payload as CoachAiResponse;
+    if (!parsed || typeof parsed !== 'object' || !('ok' in parsed)) {
+      return networkError('Réponse inattendue du serveur.');
+    }
+    return parsed;
+  } finally {
+    clearTimeout(timer);
   }
-  return parsed;
 };
 
 // ─── Conversation ─────────────────────────────────────────────────────────

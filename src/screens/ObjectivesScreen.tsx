@@ -154,7 +154,7 @@ const screenClass = useScreenClass();
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
                       <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{s.group}</span>
                       <span style={{ color, fontSize: 12, fontWeight: 700 }}>
-                        {s.recovered ? 'Récupéré ✅' : s.hoursRemaining >= 24 ? `encore ${Math.round(s.hoursRemaining / 24 * 10) / 10} j` : `encore ${s.hoursRemaining} h`}
+                        {s.recovered ? 'Récupéré ✅' : s.hoursRemaining >= 24 ? `encore ${String(Math.round(s.hoursRemaining / 24 * 10) / 10).replace('.', ',')} j` : `encore ${s.hoursRemaining} h`}
                       </span>
                     </div>
                     <div style={recoveryTrack}>

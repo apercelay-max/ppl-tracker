@@ -99,7 +99,7 @@ catalogue: 'Tous les mouvements',
 poids: 'Suivi du poids de corps',
 dashboard: 'Volume, progression, graphiques',
 coach: 'Ton bilan analysé par l’IA',
-profil: 'Compte et synchronisation',
+profil: 'Ton résumé, tes records et tes badges',
 settings: 'Apparence, barre de menus…',
 };
 
@@ -246,7 +246,11 @@ try { localStorage.setItem(DISMISS_KEY, pinnedSig); } catch { /* stockage indisp
 // l'onglet actif, et on réserve une case pour le bouton "+".
 const tidyIntoMore = () => {
 const keepSlots = Math.max(1, fittingSlots - 1); // une case réservée au "+"
-const others = pinnedTabs.filter((t) => t.id !== 'settings');
+// Les onglets les plus utiles restent en premier (Historique, Stats, Coach
+// avant Cardio, Catalogue…), plutôt que l'ordre brut de la barre.
+const KEEP_PRIORITY: NavView[] = ['home', 'historique', 'dashboard', 'coach'];
+const rank = (id: NavView) => { const i = KEEP_PRIORITY.indexOf(id); return i === -1 ? KEEP_PRIORITY.length : i; };
+const others = pinnedTabs.filter((t) => t.id !== 'settings').sort((a, b) => rank(a.id) - rank(b.id));
 // "Réglages" prend une case, et l'onglet ouvert en ce moment en prend une
 // autre (il reste épinglé quoi qu'il arrive) : on retire les deux du budget
 // avant de décider qui reste, sinon on dépasse à nouveau la largeur.

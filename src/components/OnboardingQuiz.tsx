@@ -255,7 +255,7 @@ export const OnboardingQuiz: React.FC<OnboardingQuizProps> = ({ initialProfile, 
                 un programme de coach ni une méthode commerciale : c'est une trame classique, à ajuster
                 selon ton ressenti.
               </p>
-              <button onClick={goNext} style={secondaryBtn}>Personnaliser à fond</button>
+              <button onClick={() => { setQuick(false); goNext(); }} style={secondaryBtn}>Personnaliser à fond</button>
               {!canDismiss && (
                 <button onClick={skipQuiz} style={skipBtn}>
                   Passer le quiz et garder le programme par défaut
@@ -498,7 +498,7 @@ export const OnboardingQuiz: React.FC<OnboardingQuizProps> = ({ initialProfile, 
             <Step
               icon={<IconDumbbell size={26} />}
               title="Ton matériel exactement"
-              subtitle="Décoche ce que tu n'as pas, coche ce qui manque. Rien de coché = tout le catalogue."
+              subtitle="Coche le matériel que tu as sous la main. Rien de coché = tout le catalogue."
             >
               <div style={chipWrap}>
                 {CATALOG_EQUIPMENT.map((eq) => (
@@ -516,7 +516,7 @@ export const OnboardingQuiz: React.FC<OnboardingQuizProps> = ({ initialProfile, 
                   : `${draft.equipment.length} type(s) de matériel coché(s).`}
               </p>
               <p style={honestNote}>
-                Le poids du corps reste toujours autorisé, même décoché : avoir des haltères
+                Le poids du corps reste toujours autorisé, même sans le cocher : avoir des haltères
                 n'empêche pas de faire des pompes.
               </p>
             </Step>
@@ -788,26 +788,33 @@ const IntroLine: React.FC<{ icon: React.ReactNode; text: string }> = ({ icon, te
 const NumberField: React.FC<{
   label: string; value: number | null; onChange: (v: number | null) => void;
   placeholder: string; min: number; max: number;
-}> = ({ label, value, onChange, placeholder, min, max }) => (
-  <div style={{ flex: 1, minWidth: 0 }}>
-    <p style={fieldLabel}>{label}</p>
-    <input
-      type="number"
-      inputMode="numeric"
-      value={value ?? ''}
-      min={min}
-      max={max}
-      onChange={(e) => {
-        const n = parseFloat(e.target.value);
-        // Une saisie vide efface la valeur au lieu d'enregistrer NaN, et on
-        // ne retient rien d'aberrant (doigt qui glisse sur le pavé).
-        onChange(Number.isFinite(n) && n >= min && n <= max ? n : null);
-      }}
-      placeholder={placeholder}
-      style={{ ...textInput, marginBottom: 0 }}
-    />
-  </div>
-);
+}> = ({ label, value, onChange, placeholder, min, max }) => {
+  // Le texte tapé est gardé à part : sinon « 1 » (< min de la taille, du poids,
+  // de l'âge) était aussitôt effacé et on ne pouvait jamais saisir « 170 ».
+  const [text, setText] = useState(value == null ? '' : String(value));
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <p style={fieldLabel}>{label}</p>
+      <input
+        type="number"
+        inputMode="numeric"
+        value={text}
+        min={min}
+        max={max}
+        onChange={(e) => {
+          setText(e.target.value);
+          const n = parseFloat(e.target.value);
+          // Une saisie vide efface la valeur au lieu d'enregistrer NaN, et on
+          // ne retient rien d'aberrant (doigt qui glisse sur le pavé).
+          onChange(Number.isFinite(n) && n >= min && n <= max ? n : null);
+        }}
+        onBlur={() => { if (value == null) setText(''); }}
+        placeholder={placeholder}
+        style={{ ...textInput, marginBottom: 0 }}
+      />
+    </div>
+  );
+};
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 

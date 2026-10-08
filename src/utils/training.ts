@@ -131,7 +131,10 @@ export const getLastExerciseSets = (history: HistoryEntry[], exerciseId: string)
   for (const entry of history) {
     if (wasSubstituted(entry, exerciseId)) continue;
     const sets = entry.exerciseProgress[exerciseId];
-    if (sets && sets.some((s) => s.completed)) return sets;
+    // Une série « passée » (reps « — ») est marquée completed mais n'a rien de
+    // réellement fait : sans ce filtre, un exercice sauté (ou coupé par
+    // « Raccourcir la séance ») masquait la vraie dernière perf.
+    if (sets && sets.some(isPerformedSet)) return sets;
   }
   return null;
 };
@@ -514,27 +517,27 @@ export const detectPlateaus = (
 export const ALL_MUSCLE_GROUPS: string[] = Array.from(new Set(WORKOUTS.flatMap((w) => w.exercises.map((e) => e.muscleGroup))));
 
 /**
- * Groupes à afficher pour un historique donné : ceux du programme Strict
- * (toujours, même à zéro), plus ceux réellement rencontrés dans l'historique.
+ * Groupes à afficher pour un historique donné : uniquement ceux réellement
+ * travaillés (au moins une série validée), dans l'ordre historique du
+ * programme Strict puis les autres.
  *
- * Sans ça, s'entraîner sur un autre programme faisait disparaître le travail
- * des groupes que Strict ne nomme pas (ÉPAULES, ISCHIO-JAMBIERS, LOMBAIRES,
- * TRAPÈZES…) : les séries étaient enregistrées mais n'apparaissaient nulle
- * part. Les nouveaux groupes n'apparaissent qu'une fois vraiment travaillés,
- * donc l'affichage ne bouge pas tant qu'on reste sur Strict.
+ * On n'affiche plus les groupes que Strict nomme mais que l'utilisateur n'a
+ * jamais travaillés : ils produisaient une quinzaine de lignes rouges
+ * « jamais travaillé » (GENOU – MOBILITÉ, DOS – FINITION…) sur des profils
+ * qui ne suivent pas ce programme.
  */
 export const groupsForHistory = (history: HistoryEntry[]): string[] => {
-  const extra: string[] = [];
+  const worked = new Set<string>();
   for (const entry of history) {
     for (const [exId, sets] of Object.entries(entry.exerciseProgress)) {
-      if (!sets.some((s) => s.completed)) continue;
+      if (!sets.some(isPerformedSet)) continue;
       const group = primaryGroupOf(exId);
-      if (group && !ALL_MUSCLE_GROUPS.includes(group) && !extra.includes(group)) {
-        extra.push(group);
-      }
+      if (group) worked.add(group);
     }
   }
-  return [...ALL_MUSCLE_GROUPS, ...extra];
+  const known = ALL_MUSCLE_GROUPS.filter((g) => worked.has(g));
+  const extra = [...worked].filter((g) => !ALL_MUSCLE_GROUPS.includes(g));
+  return [...known, ...extra];
 };
 
 export interface MuscleGroupStatus {
@@ -554,7 +557,7 @@ export const getMuscleGroupsStatus = (history: HistoryEntry[]): MuscleGroupStatu
     let lastDate: number | null = null;
     for (const entry of history) {
       const worked = Object.entries(entry.exerciseProgress).some(
-        ([exId, sets]) => primaryGroupOf(exId) === group && sets.some((s) => s.completed)
+        ([exId, sets]) => primaryGroupOf(exId) === group && sets.some(isPerformedSet)
       );
       if (worked) { lastDate = entry.date; break; } // history triée du + récent au + ancien
     }
@@ -617,7 +620,7 @@ export const getMuscleRecoveryStatus = (history: HistoryEntry[]): MuscleRecovery
     let lastDate: number | null = null;
     for (const entry of history) {
       const worked = Object.entries(entry.exerciseProgress).some(
-        ([exId, sets]) => primaryGroupOf(exId) === group && sets.some((s) => s.completed)
+        ([exId, sets]) => primaryGroupOf(exId) === group && sets.some(isPerformedSet)
       );
       if (worked) { lastDate = entry.date; break; } // history triée du + récent au + ancien
     }
@@ -1024,7 +1027,7 @@ export const suggestNextLoad = (
   const range = parseRepRange(targetReps);
   if (!range) return null;
 
-  const done = lastSets.filter((s) => s.completed);
+  const done = lastSets.filter(isPerformedSet); // une série « passée » (reps « — ») n'est pas une perf
   if (done.length === 0) return null;
 
   const weights = done.map((s) => parseFloat(s.weight)).filter((w) => isFinite(w) && w > 0);

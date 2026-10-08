@@ -214,5 +214,9 @@ export const useBikeSensor = () => {
     setDeviceName(null);
   }, [isSupported]);
 
+  // Quitter l'écran sans passer par « Terminer » laissait le vélo connecté
+  // (batterie, et impossible de le reconnecter ensuite).
+  useEffect(() => () => { try { deviceRef.current?.gatt?.disconnect(); } catch { /* déjà déconnecté */ } }, []);
+
   return { reading, status, error, deviceName, connect, disconnect, isSupported };
 };

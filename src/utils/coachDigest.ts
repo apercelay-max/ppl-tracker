@@ -368,7 +368,10 @@ export const buildCoachDigest = (input: CoachDigestInput): CoachDigest => {
 
   // ── Profil ──
   const profile = input.profile ?? null;
-  const bodyWeightKg = input.bodyWeightHistory?.[0]?.weightKg ?? profile?.weightKg ?? undefined;
+  // Pesée la plus récente PAR DATE : la liste est dans l'ordre de saisie, pas de date.
+  const latestWeighIn = (input.bodyWeightHistory ?? []).reduce<BodyWeightEntry | undefined>(
+    (best, e) => (!best || e.date > best.date ? e : best), undefined);
+  const bodyWeightKg = latestWeighIn?.weightKg ?? profile?.weightKg ?? undefined;
   const athlete: DigestAthlete = {};
   if (profile?.age != null && profile.age > 0) athlete.ageYears = profile.age;
   if (bodyWeightKg != null && bodyWeightKg > 0) athlete.bodyWeightKg = round1(bodyWeightKg);
@@ -395,7 +398,9 @@ export const buildCoachDigest = (input: CoachDigestInput): CoachDigest => {
       // mouvement : la mélanger à la série de l'exercice prévu fausserait la
       // tendance (même filtre que training.ts).
       if (wasSubstituted(entry, exId)) continue;
-      const done = sets.filter((s) => s.completed);
+      // Une série « passée » (reps « — ») n'est pas une perf : elle ne compte ni
+      // comme séance de l'exercice ni comme dernière série.
+      const done = sets.filter(isPerformedSet);
       if (done.length === 0) continue;
 
       let agg = aggs.get(exId);

@@ -120,15 +120,16 @@ export const buildSessionRecapImage = async (data: SessionRecapData): Promise<Bl
 
   ctx.font = '800 46px' + FONT;
   ctx.fillStyle = textPrimary;
-  ctx.fillText('Seance terminee !', W / 2, badgeY + 130);
+  ctx.fillText('Séance terminée !', W / 2, badgeY + 130);
 
   ctx.font = '700 34px' + FONT;
   ctx.fillStyle = brand1;
-  ctx.fillText(data.workoutName, W / 2, badgeY + 180);
+  // maxWidth : un nom de séance long serait coupé par le bord de l'image.
+  ctx.fillText(data.workoutName, W / 2, badgeY + 180, W - 120);
 
   ctx.font = '400 24px' + FONT;
   ctx.fillStyle = textMuted;
-  ctx.fillText(data.dateLabel, W / 2, badgeY + 218);
+  ctx.fillText(data.dateLabel, W / 2, badgeY + 218, W - 120);
 
   const gridTop = badgeY + 270;
   const cardW = 470;
@@ -137,10 +138,10 @@ export const buildSessionRecapImage = async (data: SessionRecapData): Promise<Bl
   const gridLeft = (W - (cardW * 2 + gap)) / 2;
 
   const stats = [
-    { label: 'DUREE', value: data.durationMin + ' min', color: '#4CAF50' },
-    { label: 'TONNAGE', value: data.tonnageDisplay + ' ' + weightUnitLabel(data.weightUnit), color: textPrimary },
-    { label: 'SERIES', value: data.completedSets + '/' + data.totalSets, color: textPrimary },
-    { label: 'CALORIES', value: data.calories + ' kcal', color: '#ff9800' },
+    { label: 'DURÉE', value: Math.round(data.durationMin) + ' min', color: '#4CAF50' },
+    { label: 'TONNAGE', value: Math.round(data.tonnageDisplay) + ' ' + weightUnitLabel(data.weightUnit), color: textPrimary },
+    { label: 'SÉRIES', value: data.completedSets + '/' + data.totalSets, color: textPrimary },
+    { label: 'CALORIES', value: Math.round(data.calories) + ' kcal', color: '#ff9800' },
   ];
 
   stats.forEach((s, idx) => {
@@ -162,7 +163,7 @@ export const buildSessionRecapImage = async (data: SessionRecapData): Promise<Bl
 
     ctx.font = '800 54px' + FONT;
     ctx.fillStyle = s.color;
-    ctx.fillText(s.value, x + 30, y + 122);
+    ctx.fillText(s.value, x + 30, y + 122, cardW - 60);
   });
 
   let cursorY = gridTop + cardH * 2 + gap + 46;
@@ -180,11 +181,11 @@ export const buildSessionRecapImage = async (data: SessionRecapData): Promise<Bl
     ctx.textAlign = 'left';
     ctx.font = '700 20px' + FONT;
     ctx.fillStyle = textDim;
-    ctx.fillText('EVOLUTION DU TONNAGE', gridLeft + 30, cursorY + 42);
+    ctx.fillText('ÉVOLUTION DU TONNAGE', gridLeft + 30, cursorY + 42);
 
     ctx.font = '800 40px' + FONT;
     ctx.fillStyle = color;
-    ctx.fillText((pct >= 0 ? '+' : '') + pct + '%', gridLeft + 30, cursorY + 88);
+    ctx.fillText((pct >= 0 ? '+' : '') + Math.round(pct) + ' %', gridLeft + 30, cursorY + 88);
 
     cursorY += 110 + 30;
   }
@@ -207,7 +208,7 @@ export const buildSessionRecapImage = async (data: SessionRecapData): Promise<Bl
     ctx.font = '600 26px' + FONT;
     ctx.fillStyle = textPrimary;
     shown.forEach((name, i) => {
-      ctx.fillText(name, gridLeft + 30, cursorY + 82 + i * 44);
+      ctx.fillText(name, gridLeft + 30, cursorY + 82 + i * 44, cardW * 2 + gap - 60);
     });
 
     cursorY += prH + 30;
@@ -216,7 +217,7 @@ export const buildSessionRecapImage = async (data: SessionRecapData): Promise<Bl
   ctx.textAlign = 'center';
   ctx.font = '500 22px' + FONT;
   ctx.fillStyle = textDim;
-  ctx.fillText('Genere avec PPL Tracker', W / 2, H - 40);
+  ctx.fillText('Généré avec PPL Tracker', W / 2, H - 40);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {

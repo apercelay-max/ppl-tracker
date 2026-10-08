@@ -67,9 +67,13 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   const animSize = ICON_SIZE_PRESETS[iconSize].anim;
   const customRestSeconds = useWorkoutStore((s) => s.customRestSeconds);
   const history = useWorkoutStore((s) => s.history);
-  const lastTimeSets = getLastExerciseSets(history, exercise.id);
+  // Exercice remplacé pendant cette séance : la dernière perf et le record de
+  // l'exercice d'origine ne valent pas pour le mouvement réellement fait
+  // (même règle que wasSubstituted pour l'historique).
+  const substituted = useWorkoutStore((s) => !!s.session && !s.session.isComplete && !!s.session.exerciseNameOverrides?.[exercise.id]);
+  const lastTimeSets = substituted ? null : getLastExerciseSets(history, exercise.id);
   const weightUnit = useWorkoutStore((s) => s.weightUnit);
-  const previousMaxWeight = getMaxWeightEver(history, exercise.id);
+  const previousMaxWeight = substituted ? 0 : getMaxWeightEver(history, exercise.id);
   const lastBestSet = bestCompletedSet(lastTimeSets);
   const currentBestSet = bestCompletedSet(setEntries);
   let exerciseDeltaLabel: string | null = null;
@@ -79,12 +83,12 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       exerciseDeltaLabel = 'Même charge que la dernière fois (' + lastBestSet.reps + ' reps)';
     } else {
       const sign = diffKg > 0 ? '+' : '-';
-      const diffDisplay = formatWeightForDisplay(Math.abs(diffKg).toFixed(2), weightUnit).replace('.', ',');
+      const diffDisplay = formatWeightForDisplay(String(Math.round(Math.abs(diffKg) * 100) / 100), weightUnit).replace('.', ',');
       exerciseDeltaLabel = sign + diffDisplay + ' ' + weightUnitLabel(weightUnit) + ' vs dernière fois';
     }
   } else if (lastBestSet) {
     const lastDisplay = formatWeightForDisplay(String(lastBestSet.weight), weightUnit);
-    exerciseDeltaLabel = 'Derniere fois : ' + lastDisplay + ' ' + weightUnitLabel(weightUnit) + ' x ' + lastBestSet.reps;
+    exerciseDeltaLabel = 'Dernière fois : ' + lastDisplay + ' ' + weightUnitLabel(weightUnit) + ' × ' + lastBestSet.reps;
   }
 
   const weekData = getProgressionWeek(currentWeek);
@@ -98,6 +102,14 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   const gym = useActiveGym();
   const barKg = barType === 'Barre' ? gym.barKg : barType === 'Barre EZ' ? gym.ezBarKg : null;
 
+  // Incrément réellement disponible dans la salle : le plus petit disque
+  // compte double (un de chaque côté de la barre), sinon l'incrément fin.
+  // (Sans disque renseigné, Math.min() vaudrait Infinity : on retombe sur
+  // l'incrément fin.)
+  const incrementKg = barKg !== null && gym.plates.length > 0
+    ? Math.min(...gym.plates) * 2
+    : gym.otherIncrementKg;
+
   // Suggestion de charge en double progression : ce que la plupart des apps
   // concurrentes automatisent — « la dernière fois tu as tout passé en haut de
   // la fourchette, monte d'un cran ». Affichée seulement AVANT la première
@@ -109,15 +121,9 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         lastTimeSets ?? [],
         exercise.targetReps,
         exercise.sets,
-        barKg !== null ? Math.min(...gym.plates) * 2 : gym.otherIncrementKg
+        incrementKg
       )
     : null;
-
-  // Incrément réellement disponible dans la salle : le plus petit disque
-  // compte double (un de chaque côté de la barre), sinon l'incrément fin.
-  const incrementKg = barKg !== null && gym.plates.length > 0
-    ? Math.min(...gym.plates) * 2
-    : gym.otherIncrementKg;
 
   // Conseil du coach sur la prochaine série, lu depuis la dernière série faite
   // (voir utils/coach.ts). Uniquement sur l'exercice actif : ailleurs ce serait
@@ -209,7 +215,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
       {/* Objectif, lisible d'un coup d'œil */}
       <div className="sv2-pills">
-        {isActive && !allDone && <span className="key">Série {Math.min(completedCount + 1, totalSets)} sur {totalSets}</span>}
+        {isActive && !allDone && <span className="key">Série {coachHintSetIdx === -1 ? totalSets : coachHintSetIdx + 1} sur {totalSets}</span>}
         <span className={isActive && !allDone ? 'key' : undefined}>{exercise.targetReps} reps</span>
         <span>{weekData.rir}</span>
         <span>Repos {restLabel}</span>

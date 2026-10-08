@@ -48,8 +48,17 @@ const NEWS_SEEN_KEY = 'ppl-news-seen';
 const SPLASH_VISIBLE_MS = 2900;
 const SPLASH_FADE_MS = 450;
 
+// Lien « mot de passe oublié » reçu par e-mail : Supabase y ajoute type=recovery.
+// Lu ici, à l'évaluation du module, avant que la librairie ne nettoie l'adresse :
+// l'événement PASSWORD_RECOVERY part avant que l'écran Compte existe, donc
+// celui-ci ne pouvait jamais proposer de choisir le nouveau mot de passe.
+const OPENED_FROM_RECOVERY_LINK = typeof window !== 'undefined'
+  && /[#&?]type=recovery(&|$)/.test(window.location.search + window.location.hash);
+
 export default function App() {
-const [view, setView] = useState<View>('home');
+const [view, setView] = useState<View>(OPENED_FROM_RECOVERY_LINK ? 'auth' : 'home');
+// Vrai tant que l'écran Compte doit s'ouvrir sur « nouveau mot de passe ».
+const [recoveryPending, setRecoveryPending] = useState(OPENED_FROM_RECOVERY_LINK);
 const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
 // Quelle activité l'écran cardio en direct doit afficher (vélo, marche, course).
 const [activityMode, setActivityMode] = useState<CardioActivityType>('velo');
@@ -220,6 +229,14 @@ setView('intro');
 // la séance réellement faite à partir de là.
 const handleStartWorkout = (adaptation: SessionAdaptation | null = null, gymId?: string, passageGym?: GymProfile | null) => {
 if (!selectedDayId) return;
+const current = useWorkoutStore.getState().session;
+if (current && !current.isComplete && current.dayId !== selectedDayId) {
+// Une autre séance est en cours : en lancer une nouvelle l'écraserait sans un
+// mot (séries validées perdues). On demande d'abord, et on l'abandonne
+// proprement (minuteur, notification de repos, écran allumé).
+if (!window.confirm('Une autre séance est en cours. La remplacer par celle-ci ? Les séries déjà validées de la séance en cours seront perdues.')) return;
+useWorkoutStore.getState().abandonSession();
+}
 useWorkoutStore.getState().startSession(selectedDayId, adaptation, gymId, passageGym ?? null);
 setView('session');
 };
@@ -264,6 +281,7 @@ setView('auth');
 };
 
 const handleBackFromAccount = () => {
+setRecoveryPending(false);
 setView('settings');
 };
 
@@ -271,7 +289,9 @@ setView('settings');
 // Réglages) — "Réglages" passe par handleOpenSettings pour garder le
 // comportement normal du bouton retour de cet écran.
 const handleNavigate = (v: NavView) => {
-if (v === 'settings') { handleOpenSettings(); return; }
+// Déjà dans les Réglages : un 2e appui sur l'onglet ne doit pas faire de
+// « Réglages » son propre écran de retour (le bouton retour ne ferait plus rien).
+if (v === 'settings') { if (view !== 'settings') handleOpenSettings(); return; }
 setView(v);
 };
 
@@ -303,7 +323,7 @@ screen = <CoachScreen onBack={handleBack} />;
 } else if (view === 'profil') {
 screen = <ProfilScreen onBack={handleBack} />;
 } else if (view === 'auth') {
-screen = <AuthScreen onBack={handleBackFromAccount} />;
+screen = <AuthScreen onBack={handleBackFromAccount} initialMode={recoveryPending ? 'reset' : undefined} />;
 } else if (view === 'settings') {
 screen = (
 <SettingsScreen

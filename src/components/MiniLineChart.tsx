@@ -55,6 +55,9 @@ export const MiniLineChart: React.FC<MiniLineChartProps> = ({
   const lineColor = trendUp ? '#4CAF50' : '#f5a623';
   const midVal = (min + max) / 2;
   const dateFmt = (ts: number) => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  // Sur une plage étroite (poids du corps : 70,1 → 70,6), arrondir à l'entier
+  // donnait trois repères identiques « 70 · 70 · 70 » : on garde une décimale.
+  const axisFmt = (v: number) => (range < 6 ? (Math.round(v * 10) / 10).toLocaleString('fr-FR') : String(Math.round(v)));
 
   return (
     <>
@@ -64,7 +67,7 @@ export const MiniLineChart: React.FC<MiniLineChartProps> = ({
           return (
             <g key={i}>
               <line x1={plotX0} y1={y} x2={CHART_W} y2={y} stroke="var(--border-subtle)" strokeWidth={1} />
-              <text x={plotX0 - 4} y={y + 3} textAnchor="end" fontSize="8" fill="var(--text-dim)">{Math.round(v)}</text>
+              <text x={plotX0 - 4} y={y + 3} textAnchor="end" fontSize="8" fill="var(--text-dim)">{axisFmt(v)}</text>
             </g>
           );
         })}

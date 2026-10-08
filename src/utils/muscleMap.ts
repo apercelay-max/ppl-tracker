@@ -21,7 +21,7 @@
 
 import { BUILT_IN_PROGRAMS } from '../data/programs';
 import { LEGACY_LEGS_WORKOUTS } from '../data/legacyWorkouts';
-import { findCatalogExercise } from './catalogMatch';
+import { findCatalogExercise, normalize } from './catalogMatch';
 
 /** Poids d'un muscle synergiste dans le décompte des séries effectives. */
 export const SYNERGIST_WEIGHT = 0.5;
@@ -209,14 +209,27 @@ export const resolveExerciseMuscles = (
   const cached = contributionCache.get(cacheKey);
   if (cached) return cached;
 
-  const indexed = EXERCISE_INDEX[exerciseId];
+  let indexed: IndexedExercise | undefined = EXERCISE_INDEX[exerciseId];
   const name = indexed?.name ?? fallbackName ?? '';
-  const manual = MANUAL_CATALOG_MATCH[exerciseId];
-  const catalogHit = manual
+  const manual: string | undefined = MANUAL_CATALOG_MATCH[exerciseId];
+  let catalogHit = manual
     ? findCatalogExercise(`cat-${manual}`, '')
     : name !== '' || exerciseId.startsWith('cat-')
     ? findCatalogExercise(exerciseId, name)
     : null;
+
+  // Exercice REMPLACÉ en séance : `fallbackName` est alors le nom du remplaçant,
+  // et les séries doivent créditer SES muscles, pas ceux de l'exercice prévu
+  // (une machine occupée remplacée par des pompes ne travaille plus les mêmes
+  // muscles). Si le remplaçant est introuvable au catalogue, on garde le repli
+  // sur l'exercice d'origine.
+  if (indexed && fallbackName && normalize(fallbackName) !== normalize(indexed.name)) {
+    const substitute = findCatalogExercise('', fallbackName);
+    if (substitute) {
+      indexed = undefined;
+      catalogHit = substitute;
+    }
+  }
 
   const result: MuscleContribution[] = [];
   const primaries = new Set<string>();

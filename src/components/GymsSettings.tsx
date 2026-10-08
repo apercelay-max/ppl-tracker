@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { CATALOG_EQUIPMENT, type Equipment } from '../data/exercisesCatalog';
 import type { Gym } from '../utils/gymAdapt';
@@ -11,6 +11,32 @@ import type { Gym } from '../utils/gymAdapt';
 
 const PLATE_CHOICES = [25, 20, 15, 10, 5, 2.5, 1.25, 0.5];
 const INCREMENTS = [1, 1.25, 2, 2.5, 5];
+
+// Poids d'une barre : le texte tapé est gardé tel quel (« 7, », « 7,5 », champ
+// vide) et seule une valeur valide est enregistrée. Sans ça, un champ contrôlé
+// directement par le nombre du store réécrivait « 7, » en « 7 » : impossible de
+// taper une décimale ni d'effacer le dernier chiffre.
+const BarWeightField: React.FC<{ value: number; onCommit: (v: number) => void }> = ({ value, onCommit }) => {
+  const [text, setText] = useState(String(value));
+  useEffect(() => {
+    // Valeur changée ailleurs (synchro, autre salle) : on suit, sauf si le texte tapé la représente déjà.
+    setText((t) => (parseFloat(t.replace(',', '.')) === value ? t : String(value)));
+  }, [value]);
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={text}
+      onChange={(e) => {
+        setText(e.target.value);
+        const v = parseFloat(e.target.value.replace(',', '.'));
+        if (!isNaN(v) && v > 0) onCommit(v);
+      }}
+      onBlur={() => setText(String(value))}
+      style={{ ...champ, marginBottom: 0 }}
+    />
+  );
+};
 
 export const GymsSettings: React.FC = () => {
   const gyms = useWorkoutStore((s) => s.gyms);
@@ -85,15 +111,9 @@ export const GymsSettings: React.FC = () => {
                     <div key={cle} style={champBloc}>
                       <p style={champLabel}>{titre}</p>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={String(gym[cle])}
-                          onChange={(e) => {
-                            const v = parseFloat(e.target.value.replace(',', '.'));
-                            if (!isNaN(v) && v > 0) updateGym(gym.id, { [cle]: v } as Partial<Gym>);
-                          }}
-                          style={{ ...champ, marginBottom: 0 }}
+                        <BarWeightField
+                          value={gym[cle]}
+                          onCommit={(v) => updateGym(gym.id, { [cle]: v } as Partial<Gym>)}
                         />
                         <span style={{ color: 'var(--text-dim)', fontSize: 11, fontWeight: 700 }}>kg</span>
                       </div>

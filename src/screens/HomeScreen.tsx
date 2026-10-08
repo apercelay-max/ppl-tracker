@@ -26,7 +26,8 @@ const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre']
 // Renvoie une date relative courte ("Aujourd'hui", "Hier", "Il y a 3 j"...) —
 // utilisé par le cardio ET par le widget "Séance précédente".
 const formatRelativeDate = (ts: number): string => {
-  const diffDays = Math.floor((Date.now() - ts) / 86400000);
+  // Jours calendaires (et non tranches de 24 h) : une séance d'hier 21 h n'est pas « aujourd'hui ».
+  const diffDays = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(ts).setHours(0, 0, 0, 0)) / 86400000);
   if (diffDays <= 0) return "Aujourd'hui";
   if (diffDays === 1) return 'Hier';
   if (diffDays < 7) return `Il y a ${diffDays} j`;
@@ -143,7 +144,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
   useEffect(() => {
     if (!binome?.connecte || !binome.en_binome || binome.relances_recues === 0 || !binome.partenaire) return;
     setNudgedBy(binome.partenaire.nom);
-    void markNudgesSeen().then(() => refreshBinome());
+    // Pas de rafraîchissement si l'appel a échoué : l'état serait remplacé, l'effet
+    // relancerait l'appel, et ainsi de suite sans fin tant que le serveur répond mal.
+    void markNudgesSeen().then((r) => { if (r.ok) void refreshBinome(); });
   }, [binome]);
   const homeSectionColors = useWorkoutStore((s) => s.homeSectionColors);
   const setHomeSectionOrder = useWorkoutStore((s) => s.setHomeSectionOrder);
@@ -429,7 +432,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
   // Les supersets n'existent que sur Push A et Push B. Le rappel reste
   // consultable tous les jours sous « Tout voir » ; il ne remonte dans la
   // partie simple que les jours où il sert (voir promotedNow plus bas).
-  const isPushDay = nextWorkout.id.startsWith('push');
+  const isPushDay = !!nextWorkout?.id.startsWith('push');
   const supersetSection = homeSections.supersetRule && activeProgramId === 'strict-v10' && (
     <div key="supersetRule" className="glass-card glass-green" style={{
       borderRadius: 18, padding: 16,
@@ -618,15 +621,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
     const goalColor = blockColor('weeklyGoal', 'var(--brand-1)');
     // Les 7 derniers jours, aujourd'hui en dernier : la même fenêtre glissante
     // que le compteur au-dessus, pour que les deux disent toujours la même chose.
-    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+    // Minuit de chaque jour calculé en jours calendaires (setDate) et non en
+    // multiples de 24 h : un jour de changement d'heure dure 23 ou 25 h, ce qui
+    // décalait les cases (et la lettre du jour) d'une heure.
     const days = Array.from({ length: 7 }, (_, i) => {
-      const dayStart = startOfToday.getTime() - (6 - i) * 86400000;
-      const d = new Date(dayStart);
+      const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (6 - i));
+      const dayStart = d.getTime();
+      const dayEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
       return {
         key: dayStart,
         label: d.toLocaleDateString('fr-FR', { weekday: 'narrow' }),
         name: d.toLocaleDateString('fr-FR', { weekday: 'long' }),
-        done: history.some((e) => e.date >= dayStart && e.date < dayStart + 86400000),
+        done: history.some((e) => e.date >= dayStart && e.date < dayEnd),
         today: i === 6,
       };
     });

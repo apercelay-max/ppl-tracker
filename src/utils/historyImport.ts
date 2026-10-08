@@ -86,7 +86,7 @@ const slugify = (s: string): string =>
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'x';
 
 const MONTHS: Record<string, number> = {
-  jan: 0, janv: 0, feb: 1, fev: 1, febr: 1, mar: 2, mars: 2, apr: 3, avr: 3, avril: 3,
+  jan: 0, janv: 0, feb: 1, fev: 1, fevr: 1, febr: 1, mar: 2, mars: 2, apr: 3, avr: 3, avril: 3,
   may: 4, mai: 4, jun: 5, juin: 5, jul: 6, juil: 6, aug: 7, aou: 7, aout: 7,
   sep: 8, sept: 8, oct: 9, nov: 10, dec: 11,
 };

@@ -33,7 +33,9 @@ export const parseWeightInputToKg = (displayValue: string, unit: WeightUnit): st
 if (unit === 'kg') return displayValue;
 const n = parseFreeWeight(displayValue);
 if (n === null) return displayValue; // "PDC", vide, texte libre : inchangé
-return (Math.round(lbsToKg(n) * 10) / 10).toString();
+// Au centième de kg : arrondi au dixième, 135 lbs devenait 61,2 kg puis
+// s'affichait 134,9 lbs au tour suivant.
+return (Math.round(lbsToKg(n) * 100) / 100).toString();
 };
 
 export const weightUnitLabel = (unit: WeightUnit): string => (unit === 'kg' ? 'kg' : 'lbs');

@@ -1,17 +1,19 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { saveBackup } from '../lib/localBackups';
-import { WorkoutSession, ExerciseProgress, SetEntry, HistoryEntry, TimerState, CardioActivityType, CardioEntry, CardioStats, BodyWeightEntry, NavTabKey } from '../data/types';
+import { WorkoutSession, ExerciseProgress, SetEntry, HistoryEntry, TimerState, CardioActivityType, CardioEntry, CardioStats, BodyWeightEntry, MassMeasurement, NavTabKey } from '../data/types';
 import { getWorkout, getBaseWorkout, setCustomWorkouts, setSessionWorkoutOverride, MESOCYCLE_WEEKS } from '../data/workouts';
 import { applyAdaptation, passageAsGym, PASSAGE_GYM_ID, type Gym, type GymProfile, type SessionAdaptation } from '../utils/gymAdapt';
 import { Program } from '../data/programs';
 import { bucketByWeek, computeTonnage } from '../utils/training';
-import { getNextStep } from '../utils/supersets';
+import { getNextStep, setDoneIn } from '../utils/supersets';
 import type { TrainingProfile } from '../utils/onboardingQuiz';
 
 const notifSupported = typeof Notification !== 'undefined';
 let notifTimeoutId: ReturnType<typeof setTimeout> | null = null;
+// Vrai dès que le 1er chargement du stockage local a eu lieu (voir merge).
+let restTimerRearmed = false;
 
 // Sur beaucoup de navigateurs mobiles (Chrome/Android notamment), appeler
 // `new Notification()` sur une page contrôlée par un service worker lève
@@ -24,9 +26,11 @@ try {
 const { beepEnabled, beepTone, beepVolume } = useWorkoutStore.getState();
 if (beepEnabled) playBeep(beepTone, beepVolume);
 } catch (_) {}
-if (Notification.permission !== 'granted') return;
+// Le bip est joué plus haut même sans API Notification (Safari iOS hors PWA).
+if (!notifSupported || Notification.permission !== 'granted') return;
 const title = '\u{1F4AA} Repos terminé !';
-const options: NotificationOptions = {
+// `renotify` est dans la spec mais absent de lib.dom : on l'ajoute au type.
+const options: NotificationOptions & { renotify?: boolean } = {
 body: "C'est reparti → série suivante.",
 silent: false,
 icon: '/icon-192.png',
@@ -44,7 +48,8 @@ try { new Notification(title, options); } catch (_) {}
 };
 
 const scheduleRestNotification = (seconds: number) => {
-if (!notifSupported) return;
+// Pas de garde sur notifSupported : c'est aussi ce minuteur qui joue le bip
+// de fin de repos, qui ne devait pas dépendre de l'API Notification.
 if (notifTimeoutId) clearTimeout(notifTimeoutId);
 notifTimeoutId = setTimeout(fireRestNotification, seconds * 1000);
 };
@@ -126,9 +131,11 @@ let wakeLockSentinel: WakeLockSentinel | null = null;
 
 const requestWakeLock = async () => {
 try {
+if (wakeLockSentinel) return;
 if ('wakeLock' in navigator) {
-wakeLockSentinel = await (navigator as Navigator & { wakeLock: { request: (type: string) => Promise<WakeLockSentinel> } }).wakeLock.request('screen');
-wakeLockSentinel.addEventListener('release', () => { wakeLockSentinel = null; });
+const sentinel = await (navigator as Navigator & { wakeLock: { request: (type: string) => Promise<WakeLockSentinel> } }).wakeLock.request('screen');
+wakeLockSentinel = sentinel;
+sentinel.addEventListener('release', () => { if (wakeLockSentinel === sentinel) wakeLockSentinel = null; });
 }
 } catch (_) {}
 };
@@ -137,9 +144,18 @@ const releaseWakeLock = () => {
 if (wakeLockSentinel) { wakeLockSentinel.release(); wakeLockSentinel = null; }
 };
 
+// Le navigateur relâche le verrou quand la page passe en arrière-plan : on le
+// reprend au retour, mais seulement si une séance est en cours et que le
+// réglage est actif — sinon l'écran restait allumé en permanence, même sur
+// l'accueil ou avec « Garder l'écran allumé » désactivé.
+const sessionInProgress = (): boolean => {
+const { session } = useWorkoutStore.getState();
+return !!session && !session.isComplete;
+};
+
 if (typeof document !== 'undefined') {
 document.addEventListener('visibilitychange', () => {
-if (!document.hidden && wakeLockSentinel === null) requestWakeLock();
+if (!document.hidden && wakeLockSentinel === null && useWorkoutStore.getState().wakeLockEnabled && sessionInProgress()) requestWakeLock();
 });
 }
 
@@ -224,11 +240,12 @@ exercices: true, catalogue: true, poids: true, dashboard: true, coach: true, pro
 // de menus). Tout épinglé par défaut : rien ne change tant que Léo ne
 // personnalise pas la répartition lui-même.
 const DEFAULT_NAV_TABS_PINNED: Record<NavTabKey, boolean> = {
-home: true, objectifs: true, historique: true, cardio: true,
-exercices: true, catalogue: true, poids: true, dashboard: true, profil: true, settings: true,
-// Pas épinglé d'origine : le Coach arrive dans le menu « Plus » pour ne pas
-// pousser un onglet hors de la barre. À épingler dans Réglages si voulu.
-coach: false,
+// Seuls l'essentiel est épinglé d'origine (Accueil, Historique, Stats, et
+// Réglages qui l'est toujours) : onze onglets d'un coup se coupaient sur un
+// écran de 375 px. Le reste est dans le menu « Plus », à épingler dans
+// Réglages si voulu. Les sauvegardes existantes gardent leur répartition.
+home: true, historique: true, dashboard: true, settings: true,
+objectifs: false, cardio: false, exercices: false, catalogue: false, poids: false, profil: false, coach: false,
 };
 
 // Matériel de la salle — sert au calcul des disques (« 2×10 + 2,5 par côté »)
@@ -446,7 +463,7 @@ removeGym: (id: string) => void;
 duplicateGym: (id: string) => string;
 setActiveGym: (id: string) => void;
 setShakeToValidateEnabled: (enabled: boolean) => void;
-addBodyWeightEntry: (weightKg: number) => void;
+addBodyWeightEntry: (weightKg: number, bodyFat?: MassMeasurement, muscleMass?: MassMeasurement) => void;
 deleteBodyWeightEntry: (id: string) => void;
 setActiveProgram: (id: string) => void;
 addCustomProgram: (program: Program) => void;
@@ -483,7 +500,9 @@ setCustomWorkouts(customPrograms.flatMap((p) => p.workouts));
 // ProfilScreen.tsx, réutilisé ici pour tenir à jour le record `bestWeekStreak`
 // (badges de régularité) à chaque séance terminée.
 const computeCurrentWeekStreak = (history: HistoryEntry[], weeklySessionGoal: number): number => {
-const buckets = bucketByWeek(history, 12);
+// 52 semaines et non 12 : le dernier palier du badge de régularité est à 26
+// semaines, inatteignable si la série était plafonnée à 12.
+const buckets = bucketByWeek(history, 52);
 let streak = 0;
 for (let i = buckets.length - 1; i >= 0; i--) {
 if (buckets[i].sessionCount >= weeklySessionGoal) streak++;
@@ -602,15 +621,23 @@ try {
 if (notifSupported && Notification.permission === 'default') Notification.requestPermission();
 } catch (_) {}
 const exerciseProgress: ExerciseProgress = {};
+// Un exercice remplacé par l'adaptation (matériel absent, articulation sensible)
+// garde l'id d'origine : sans trace, son poids et son record viendraient gonfler
+// l'exercice prévu, et l'historique afficherait le mauvais nom. On le marque comme
+// un remplacement fait en séance (voir wasSubstituted).
+const adaptedNames: Record<string, string> = {};
 for (const ex of workout.exercises) {
 exerciseProgress[ex.id] = Array.from({ length: ex.sets }, () => ({
 weight: ex.defaultWeight ?? '', reps: '', completed: false,
 }));
+const baseEx = base.exercises.find((b) => b.id === ex.id);
+if (baseEx && baseEx.name !== ex.name) adaptedNames[ex.id] = ex.name;
 }
 set({
 session: {
 dayId, startTime: Date.now(), exerciseProgress,
 currentExerciseIndex: 0, currentSetIndex: 0, isComplete: false,
+...(Object.keys(adaptedNames).length > 0 ? { exerciseNameOverrides: adaptedNames } : {}),
 // Salle de passage : on enregistre l'identifiant réservé plutôt qu'une
 // salle existante, pour que l'historique ne l'attribue pas à tort.
 gymId: passageGym ? PASSAGE_GYM_ID : (gymId ?? get().activeGymId),
@@ -620,7 +647,11 @@ gymId: passageGym ? PASSAGE_GYM_ID : (gymId ?? get().activeGymId),
 // → on regrise toutes les séances de l'accueil.
 cycleDoneIds: workout.dayNumber === 1 ? [] : get().cycleDoneIds,
 sessionAdaptation: adaptation,
+// Repartir d'une séance vierge : ni pause ni repos hérités de la précédente.
+sessionPausedAt: null,
+timer: { isRunning: false, endTimestamp: null, totalSeconds: 0 },
 });
+cancelRestNotification();
 if (get().wakeLockEnabled) requestWakeLock();
 },
 
@@ -628,7 +659,10 @@ completeSet: (exerciseId, setIndex, entry) => {
 const { session, hapticsEnabled } = get();
 if (!session) return;
 const updated = { ...session.exerciseProgress };
-updated[exerciseId] = [...updated[exerciseId]];
+// `?? []` : une séance reprise après une mise à jour du programme peut citer un
+// exercice absent de la progression sauvegardée — le spread d'undefined plantait.
+updated[exerciseId] = [...(updated[exerciseId] ?? [])];
+while (updated[exerciseId].length < setIndex) updated[exerciseId].push({ weight: '', reps: '', completed: false });
 updated[exerciseId][setIndex] = { ...entry, completed: true };
 // Reporter le poids sur la série suivante
 const nextIdx = setIndex + 1;
@@ -646,8 +680,12 @@ if (!session) return;
 const workout = getWorkout(session.dayId);
 if (!workout) return;
 const updated = { ...session.exerciseProgress };
-updated[exerciseId] = [...updated[exerciseId]];
-updated[exerciseId][setIndex] = { ...updated[exerciseId][setIndex], completed: false };
+updated[exerciseId] = [...(updated[exerciseId] ?? [])];
+// Une série « passée » (reps '—') rouverte repartirait avec '—' dans le champ reps
+// (impossible à valider) : on remet le champ à vide.
+const reopened = updated[exerciseId][setIndex];
+if (!reopened) return;
+updated[exerciseId][setIndex] = { ...reopened, completed: false, ...(reopened.reps === '—' ? { reps: '' } : {}) };
 const exIdx = workout.exercises.findIndex(e => e.id === exerciseId);
 set({
 session: {
@@ -679,7 +717,8 @@ if (!workout) return;
 const currentEx = workout.exercises[session.currentExerciseIndex];
 if (!currentEx) return;
 const updated = { ...session.exerciseProgress };
-updated[currentEx.id] = [...updated[currentEx.id]];
+updated[currentEx.id] = [...(updated[currentEx.id] ?? [])];
+while (updated[currentEx.id].length < session.currentSetIndex) updated[currentEx.id].push({ weight: '', reps: '', completed: false });
 updated[currentEx.id][session.currentSetIndex] = { weight: '', reps: '—', completed: true };
 set({ session: { ...session, exerciseProgress: updated } });
 get().advanceSession();
@@ -694,15 +733,27 @@ if (!workout) return;
 const currentEx = workout.exercises[session.currentExerciseIndex];
 if (!currentEx) return;
 const updated = { ...session.exerciseProgress };
-updated[currentEx.id] = updated[currentEx.id].map(e =>
+updated[currentEx.id] = (updated[currentEx.id] ?? []).map(e =>
 e.completed ? e : { weight: '', reps: '—', completed: true }
 );
-const nextIdx = session.currentExerciseIndex + 1;
-if (nextIdx >= workout.exercises.length) {
+// Exercice suivant qui a encore une série à faire (en repartant du début s'il
+// en reste derrière nous, faits dans le désordre) : sauter le dernier exercice
+// de la liste terminait la séance même avec des exercices pas encore faits, et
+// un exercice déjà entamé repartait de sa série 1 (déjà validée).
+const total = workout.exercises.length;
+let nextIdx = -1;
+let nextSetIdx = 0;
+for (let k = 1; k < total; k++) {
+const j = (session.currentExerciseIndex + k) % total;
+const entries = updated[workout.exercises[j].id] ?? [];
+const open = entries.findIndex((e) => !e.completed);
+if (open !== -1) { nextIdx = j; nextSetIdx = open; break; }
+}
+if (nextIdx === -1) {
 set({ session: { ...session, exerciseProgress: updated } });
 get().finishSession();
 } else {
-set({ session: { ...session, exerciseProgress: updated, currentExerciseIndex: nextIdx, currentSetIndex: 0 } });
+set({ session: { ...session, exerciseProgress: updated, currentExerciseIndex: nextIdx, currentSetIndex: nextSetIdx } });
 }
 get().skipTimer();
 },
@@ -825,15 +876,19 @@ session.currentExerciseIndex,
 session.currentSetIndex,
 (ex) => session.exerciseProgress[ex.id]?.length ?? ex.sets,
 session.disabledSupersetGroupIds ?? [],
+setDoneIn(session.exerciseProgress),
 );
 if (step.exerciseIndex === null) { get().finishSession(); return; }
 set({ session: { ...session, currentExerciseIndex: step.exerciseIndex, currentSetIndex: step.setIndex } });
 },
 
 finishSession: () => {
-const { session, history, weeklySessionGoal, totalSessionsCompleted, bestWeekStreak, hapticsEnabled } = get();
-if (!session) return;
-const durationMs = Date.now() - session.startTime;
+const { session, history, weeklySessionGoal, totalSessionsCompleted, bestWeekStreak, hapticsEnabled, sessionPausedAt } = get();
+// Déjà terminée : un 2e appel (double tap, rechargement pile à la fin…)
+// enregistrait la même séance deux fois dans l'historique.
+if (!session || session.isComplete) return;
+// Séance terminée pendant une pause : le temps de pause ne compte pas.
+const durationMs = Math.max(0, (sessionPausedAt ?? Date.now()) - session.startTime);
 const entry: HistoryEntry = {
 id: `${session.dayId}-${session.startTime}`,
 dayId: session.dayId, date: session.startTime,
@@ -863,6 +918,9 @@ totalSessionsCompleted: totalSessionsCompleted + 1,
 bestWeekStreak: Math.max(bestWeekStreak, currentStreak),
 // Une séance terminée n'est plus en pause.
 sessionPausedAt: null,
+// Ni en repos : un minuteur resté actif (dernière série validée juste après une
+// autre) tournait encore sur l'écran de fin, puis dans la séance suivante.
+timer: { isRunning: false, endTimestamp: null, totalSeconds: 0 },
 }));
 if (hapticsEnabled) successVibrate();
 cancelRestNotification();
@@ -921,16 +979,22 @@ set({ timer: { isRunning: false, endTimestamp: null, totalSeconds: 0 } });
 cancelRestNotification();
 },
 
+// totalSeconds suit les ajustements (−30 s / +30 s) : sans ça la barre de
+// progression dépassait 100 % après un +30 s, et le repos « appris » (Passer /
+// −30 s / +30 s) se calculait toujours sur la durée de départ, donc deux appuis
+// sur +30 s ne cumulaient pas.
 reduceTimer: (secondsToRemove) => {
 const { timer } = get();
 if (timer.isPaused) {
-const newRemaining = Math.max(1, (timer.pausedRemainingSeconds ?? 0) - secondsToRemove);
-set({ timer: { ...timer, pausedRemainingSeconds: newRemaining } });
+const oldRemaining = timer.pausedRemainingSeconds ?? 0;
+const newRemaining = Math.max(1, oldRemaining - secondsToRemove);
+set({ timer: { ...timer, pausedRemainingSeconds: newRemaining, totalSeconds: Math.max(newRemaining, timer.totalSeconds - (oldRemaining - newRemaining)) } });
 return;
 }
 if (!timer.endTimestamp) return;
 const newEnd = Math.max(Date.now() + 1000, timer.endTimestamp - secondsToRemove * 1000);
-set({ timer: { ...timer, endTimestamp: newEnd } });
+const removedSeconds = Math.round((timer.endTimestamp - newEnd) / 1000);
+set({ timer: { ...timer, endTimestamp: newEnd, totalSeconds: Math.max(1, timer.totalSeconds - Math.max(0, removedSeconds)) } });
 scheduleRestNotification(Math.ceil((newEnd - Date.now()) / 1000));
 },
 
@@ -938,12 +1002,12 @@ addTimer: (secondsToAdd) => {
 const { timer } = get();
 if (timer.isPaused) {
 const newRemaining = (timer.pausedRemainingSeconds ?? 0) + secondsToAdd;
-set({ timer: { ...timer, pausedRemainingSeconds: newRemaining } });
+set({ timer: { ...timer, pausedRemainingSeconds: newRemaining, totalSeconds: timer.totalSeconds + secondsToAdd } });
 return;
 }
 if (!timer.endTimestamp) return;
 const newEnd = timer.endTimestamp + secondsToAdd * 1000;
-set({ timer: { ...timer, endTimestamp: newEnd } });
+set({ timer: { ...timer, endTimestamp: newEnd, totalSeconds: timer.totalSeconds + secondsToAdd } });
 scheduleRestNotification(Math.ceil((newEnd - Date.now()) / 1000));
 },
 
@@ -987,7 +1051,8 @@ set({ themeMode: m, theme: m });
 },
 setWakeLockEnabled: (enabled) => {
 set({ wakeLockEnabled: enabled });
-if (enabled) { requestWakeLock(); } else { releaseWakeLock(); }
+// Pas de verrou hors séance : l'activer dans les Réglages gardait l'écran allumé partout.
+if (enabled) { if (sessionInProgress()) requestWakeLock(); } else { releaseWakeLock(); }
 },
 
 // Sauvegarder le temps de repos custom pour un exercice (appelé
@@ -1179,8 +1244,12 @@ if (!get().gyms.some((g) => g.id === id)) return;
 set({ activeGymId: id });
 },
 
-addBodyWeightEntry: (weightKg) => {
-const entry: BodyWeightEntry = { id: `bw-${Date.now()}`, date: Date.now(), weightKg };
+addBodyWeightEntry: (weightKg, bodyFat, muscleMass) => {
+const entry: BodyWeightEntry = {
+  id: `bw-${Date.now()}`, date: Date.now(), weightKg,
+  ...(bodyFat ? { bodyFat } : {}),
+  ...(muscleMass ? { muscleMass } : {}),
+};
 set((state) => ({ bodyWeightHistory: [entry, ...state.bodyWeightHistory].slice(0, 200) }));
 },
 deleteBodyWeightEntry: (id) => {
@@ -1271,12 +1340,29 @@ setUltraAnimationStyle: (style) => set({ ultraAnimationStyle: style }),
 setUltraTransitionStyle: (style) => set({ ultraTransitionStyle: style }),
 setSimplicityMode: (enabled) => set({ simplicityMode: enabled }),
 // Appelé une seule fois, depuis OnboardingModal, au tout premier lancement.
-completeOnboarding: (choice) => set({ hasCompletedOnboarding: true, simplicityMode: choice === 'simple' }),
+// La barre du bas est activée d'office : sans elle, un nouvel utilisateur
+// (surtout en mode simple) ne trouvait ni l'Historique ni les Stats.
+completeOnboarding: (choice) => set((state) => ({
+  hasCompletedOnboarding: true,
+  simplicityMode: choice === 'simple',
+  // Uniquement au tout premier passage : refaire le quiz ne doit pas réactiver une barre masquée.
+  ...(state.hasCompletedOnboarding ? {} : { navBarEnabled: true }),
+})),
 
 saveTrainingProfile: (profile) => set({ trainingProfile: profile }),
 }),
 {
 name: 'ppl-tracker-store',
+// Stockage tolérant : un quota dépassé (très gros historique, ~5 Mo) ou un stockage
+// bloqué fait lever localStorage.setItem, et l'exception remontait dans set() — donc
+// dans l'action en cours (valider une série, terminer la séance…) qui plantait.
+storage: createJSONStorage(() => ({
+getItem: (name: string) => localStorage.getItem(name),
+setItem: (name: string, value: string) => {
+try { localStorage.setItem(name, value); } catch (err) { console.warn('Sauvegarde locale impossible', err); }
+},
+removeItem: (name: string) => { try { localStorage.removeItem(name); } catch (_) {} },
+})),
 partialize: (state) => ({
 session: state.session,
 sessionPausedAt: state.sessionPausedAt,
@@ -1355,14 +1441,24 @@ const p = (persisted ?? {}) as Partial<WorkoutStore>;
 // minuteur à zéro qui sonne dans le vide.
 if (p.timer?.isRunning && p.timer.endTimestamp && p.timer.endTimestamp <= Date.now()) {
 p.timer = { isRunning: false, endTimestamp: null, totalSeconds: 0 };
+} else if (!restTimerRearmed && p.timer?.isRunning && p.timer.endTimestamp && !p.timer.isPaused) {
+// Repos encore en cours après un rechargement (téléphone verrouillé, appli
+// relancée) : le minuteur du bip/de la notification de fin n'a pas survécu.
+// Uniquement au 1er chargement — pas à une resynchro cloud/autre onglet,
+// qui ferait sonner ici le repos d'un autre appareil.
+scheduleRestNotification(Math.ceil((p.timer.endTimestamp - Date.now()) / 1000));
 }
+restTimerRearmed = true;
 const merged = { ...current, ...p };
 merged.homeSections = { ...current.homeSections, ...(p.homeSections ?? {}) };
 // Même précaution que pour homeSections : un bloc ajouté plus tard doit
 // apparaître avec sa valeur par défaut au lieu d'être absent du réglage
 // sauvegardé sur le téléphone.
 merged.homeEssentials = { ...current.homeEssentials, ...(p.homeEssentials ?? {}) };
-const savedOrder = p.homeSectionOrder ?? current.homeSectionOrder;
+// Seules les clés connues, une fois chacune : une clé périmée ou dupliquée (sauvegarde
+// d'une autre version, cloud) faisait planter l'accueil (HOME_SECTION_META[key] undefined).
+const savedOrder = (p.homeSectionOrder ?? current.homeSectionOrder)
+.filter((k, i, a) => current.homeSectionOrder.includes(k) && a.indexOf(k) === i);
 const missingKeys = current.homeSectionOrder.filter((k) => !savedOrder.includes(k));
 merged.homeSectionOrder = [...savedOrder, ...missingKeys];
 // Même logique pour les onglets de la nav bar : un nouvel onglet

@@ -14,6 +14,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-08',
+    title: 'Programme Strict V4.3',
+    items: [
+      'Le programme passe en V4.3 : la sèche court jusqu’au 21/10, avec les semaines 12 et 13.',
+      'Deltoïde latéral en tête : élévations latérales ajoutées au Pull A, 5 séries au Push A, poulie basse au Push B.',
+      'Push B : élévations frontales et pompes prise large retirées, triceps en prise pronation.',
+      'Progression à un cran à la fois : la charge ne monte que si toutes les séries atteignent leurs reps.',
+    ],
+  },
+  {
     id: '2026-09-26',
     title: 'Coach, statut et sauvegardes',
     items: [

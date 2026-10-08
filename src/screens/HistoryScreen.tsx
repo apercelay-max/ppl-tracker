@@ -60,7 +60,7 @@ const MonthCalendar: React.FC<{ history: HistoryEntry[] }> = ({ history }) => {
   }
 
   const monthLabel = viewDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-  const sessionsThisMonth = Object.keys(sessionsByDay).length;
+  const sessionsThisMonth = Object.values(sessionsByDay).reduce((n, list) => n + list.length, 0);
 
   return (
     <div style={chartCard}>
@@ -132,7 +132,7 @@ const screenClass = useScreenClass();
     const workout = getWorkout(entry.dayId);
     if (workout && normalize(workout.name).includes(q)) return true;
     return Object.keys(entry.exerciseProgress).some((exId) => {
-      const exName = workout?.exercises.find((e) => e.id === exId)?.name ?? exId;
+      const exName = entry.exerciseNameOverrides?.[exId] ?? workout?.exercises.find((e) => e.id === exId)?.name ?? exId;
       return normalize(exName).includes(q);
     });
   });
@@ -166,8 +166,9 @@ const screenClass = useScreenClass();
                 <button onClick={() => setQuery('')} style={searchClear}><IconClose size={14} /></button>
               )}
             </div>
+            {/* Seuls les types de séance réellement présents : pas de « Pull / Push / Legs » en Full Body. */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              {DAY_TYPE_FILTERS.map((f) => (
+              {DAY_TYPE_FILTERS.filter((f) => f.id === 'all' || f.id === dayFilter || history.some((e) => e.dayId.toLowerCase().includes(f.id))).map((f) => (
                 <button
                   key={f.id}
                   onClick={() => setDayFilter(f.id)}
@@ -225,7 +226,7 @@ const screenClass = useScreenClass();
                     <p style={{ color: 'var(--text-dim)', fontSize: 11, whiteSpace: 'nowrap' }}>{formatDate(entry.date)}</p>
                   </div>
                   <div style={{ display: 'flex', gap: 14, marginTop: 8, flexWrap: 'wrap' }}>
-                    <span style={statChip}>⏱ {minutes} min</span>
+                    {minutes > 0 && <span style={statChip}>⏱ {minutes} min</span>}
                     <span style={statChip}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 5 }}><IconDumbbell size={12} /></span>{formatWeightForDisplay(String(Math.round(tonnage)), weightUnit)} {weightUnitLabel(weightUnit)}</span>
                     {entry.rpe && <span style={statChip}><span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 5 }}><IconZap size={12} /></span>RPE {entry.rpe}</span>}
                   </div>

@@ -5,6 +5,7 @@ import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getAllExercises, getMaxWeightEver, computeTonnage, bucketByWeek, countPersonalRecords } from '../utils/training';
 import { BADGE_CATEGORIES, computeBadgeProgress } from '../data/badges';
+import { MESOCYCLE_WEEKS } from '../data/workouts';
 import { useScreenClass } from '../hooks/useScreenClass';
 
 interface ProfilScreenProps { onBack: () => void; }
@@ -38,12 +39,15 @@ const screenClass = useScreenClass();
 
   // Semaines d'affilée (semaine en cours incluse) où l'objectif hebdo a été
   // atteint — basé sur l'historique réel, pas inventé.
-  const buckets = bucketByWeek(history, 12);
+  const buckets = bucketByWeek(history, 52); // 52 et non 12 : palier de badge à 26 semaines
   let weekStreak = 0;
   for (let i = buckets.length - 1; i >= 0; i--) {
     if (buckets[i].sessionCount >= weeklySessionGoal) weekStreak++;
-    else break;
+    // Même règle que la carte « Cette semaine » de l'accueil : la semaine en
+    // cours ne casse pas la série tant qu'elle n'est pas terminée.
+    else if (i !== buckets.length - 1) break;
   }
+  const currentWeekReached = buckets[buckets.length - 1].sessionCount >= weeklySessionGoal;
 
   // history est du plus récent au plus ancien → la dernière position est la
   // toute première séance jamais enregistrée.
@@ -112,7 +116,7 @@ const screenClass = useScreenClass();
               </p>
               <p style={{ color: 'var(--text-dim)', fontSize: 12, marginTop: 3, lineHeight: '16px' }}>
                 {weekStreak > 0
-                  ? `Objectif de ${weeklySessionGoal} séance${weeklySessionGoal > 1 ? 's' : ''}/sem. atteint (semaine en cours incluse).`
+                  ? `Objectif de ${weeklySessionGoal} séance${weeklySessionGoal > 1 ? 's' : ''}/sem. atteint${currentWeekReached ? ' (semaine en cours incluse).' : ' (la semaine en cours n\'est pas encore comptée).'}`
                   : "Objectif hebdo pas encore atteint cette semaine."}
               </p>
             </div>
@@ -131,7 +135,7 @@ const screenClass = useScreenClass();
 
             <p style={sectionLabel}>CYCLE</p>
             <div style={card}>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Semaine {currentWeek} / 8</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Semaine {currentWeek} / {MESOCYCLE_WEEKS}</p>
             </div>
 
             {firstSession && (

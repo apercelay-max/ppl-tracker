@@ -96,6 +96,12 @@ const buildProgramFromDays = (
 const findColInHeader = (header: string[], ...names: string[]): number =>
   header.findIndex((h) => names.some((n) => h.includes(n)));
 
+// « rep » est aussi le début de « repos » : sans cette exclusion, une colonne
+// « Repos » placée avant « Reps » était lue comme les répétitions (« 90 »).
+// « Répétitions » (accent) n'était pas reconnu du tout.
+const findRepsCol = (header: string[]): number =>
+  header.findIndex((h) => (h.includes('rep') || h.includes('rép')) && !h.includes('repos'));
+
 // Transforme un tableau de lignes (en-tête + données) en jours/exercices.
 // Si une colonne "jour/séance" existe dans l'en-tête, on regroupe par
 // cette colonne ; sinon toutes les lignes vont dans `fallbackDayName`
@@ -108,7 +114,7 @@ const rowsToDays = (
   const colDay = findColInHeader(header, 'jour', 'séance', 'seance', 'day');
   const colEx = findColInHeader(header, 'exercice', 'exercise', 'nom');
   const colSets = findColInHeader(header, 'série', 'serie', 'set');
-  const colReps = findColInHeader(header, 'rep');
+  const colReps = findRepsCol(header);
   const colRest = findColInHeader(header, 'repos', 'rest');
   if (colEx === -1) return null;
 
@@ -123,9 +129,10 @@ const rowsToDays = (
     if (!dayMap.has(dayName)) dayMap.set(dayName, { name: dayName, exercises: [] });
     dayMap.get(dayName)!.exercises.push({
       name: exName,
-      sets: Number.isFinite(sets) ? sets : undefined,
+      // 0 série (ou négatif) ferait un exercice vide, impossible à valider.
+      sets: sets !== undefined && Number.isFinite(sets) && sets > 0 ? sets : undefined,
       reps: reps || undefined,
-      restSeconds: Number.isFinite(restRaw) ? restRaw : undefined,
+      restSeconds: restRaw !== undefined && Number.isFinite(restRaw) && restRaw > 0 ? restRaw : undefined,
     });
   }
   return Array.from(dayMap.values());
@@ -148,7 +155,7 @@ const parseCsv = (content: string, programId: string, programName: string): Impo
   }
 
   const colSets = findColInHeader(header, 'série', 'serie', 'set');
-  const colReps = findColInHeader(header, 'rep');
+  const colReps = findRepsCol(header);
   const dataRows = lines.slice(1).map(splitRow);
   const daysRaw = rowsToDays(header, dataRows, 'Jour 1') ?? [];
 
@@ -309,14 +316,19 @@ const parseGenericJson = (parsed: unknown, programId: string, programName: strin
   const warnings: string[] = [];
   let daysRaw: { name: string; exercises: { name: string; sets?: number; reps?: string }[] }[] = [];
 
+  // name/reps forcés en texte : un JSON {"reps": 10} donnait un targetReps
+  // numérique, et tout ce qui fait targetReps.match(...) plantait ensuite.
   const asDaysArray = (arr: unknown[]) => arr.map((d: any, i: number) => ({
-    name: d?.name ?? d?.day ?? d?.jour ?? `Jour ${i + 1}`,
+    name: String(d?.name ?? d?.day ?? d?.jour ?? `Jour ${i + 1}`),
     exercises: Array.isArray(d?.exercises ?? d?.exercices)
-      ? (d.exercises ?? d.exercices).map((e: any) => ({
-          name: String(e?.name ?? e?.nom ?? e?.exercise ?? 'Exercice'),
-          sets: Number(e?.sets ?? e?.series ?? e?.séries) || undefined,
-          reps: e?.reps ?? e?.repetitions ?? e?.targetReps ?? undefined,
-        }))
+      ? (d.exercises ?? d.exercices).map((e: any) => {
+          const reps = e?.reps ?? e?.repetitions ?? e?.targetReps;
+          return {
+            name: String(e?.name ?? e?.nom ?? e?.exercise ?? 'Exercice'),
+            sets: Number(e?.sets ?? e?.series ?? e?.séries) || undefined,
+            reps: reps === undefined || reps === null || reps === '' ? undefined : String(reps),
+          };
+        })
       : [],
   }));
 
@@ -353,7 +365,10 @@ export const parseImportedFile = (filename: string, content: string): ImportResu
   //    l'appelant (restauration complète, pas un programme).
   try {
     const parsed = JSON.parse(content);
-    if (parsed && typeof parsed === 'object' && 'state' in parsed) {
+    // `state` doit être un objet : un JSON quelconque avec une clé « state » (autre appli)
+    // serait sinon écrit tel quel dans le stockage local et empêcherait l'appli de démarrer.
+    if (parsed && typeof parsed === 'object' && 'state' in parsed
+        && parsed.state && typeof parsed.state === 'object' && !Array.isArray(parsed.state)) {
       return { program: null, warnings: [], isBackupFile: true, daysDetected: 0, exercisesDetected: 0 };
     }
     // 2) JSON générique

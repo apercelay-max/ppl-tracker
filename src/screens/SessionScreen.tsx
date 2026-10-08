@@ -2,7 +2,7 @@ import { isPerformedSet } from '../utils/weight';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useWorkoutStore, useActiveGym } from '../store/workoutStore';
 import { getWorkout, getProgressionWeek } from '../data/workouts';
-import { getNextStep } from '../utils/supersets';
+import { getNextStep, setDoneIn } from '../utils/supersets';
 import { ExerciseCard } from '../components/ExerciseCard';
 import { ExerciseCardClassic } from '../components/ExerciseCardClassic';
 import { InlineRestBar } from '../components/InlineRestBar';
@@ -25,6 +25,7 @@ import { useRestTimer } from '../hooks/useRestTimer';
 import { useShakeToValidate } from '../hooks/useShakeToValidate';
 import { computeTonnage, computeTrainingLoad, compareSessionToHistory, getWorkoutBodyIntensity, getMaxWeightEver } from '../utils/training';
 import { SetEntry, Exercise, ExerciseProgress, HistoryEntry } from '../data/types';
+import { InfoTip } from '../components/InfoTip';
 
 interface SessionScreenProps { dayId: string; onBack: () => void; onOpenSettings: () => void; }
 
@@ -43,11 +44,17 @@ return r < range[0] || r > range[1];
 export const SessionScreen: React.FC<SessionScreenProps> = ({ dayId, onBack, onOpenSettings }) => {
 const workout = getWorkout(dayId);
 const session = useWorkoutStore((s) => s.session);
+// finishSession retire la surcouche « séance adaptée » : dès que la séance est
+// terminée, getWorkout() renvoie la séance du programme, plus celle réellement
+// faite. L'écran de fin garde donc la dernière version utilisée pendant la séance.
+const sessionWorkoutRef = useRef(workout);
+if (workout && session && session.dayId === dayId && !session.isComplete) sessionWorkoutRef.current = workout;
 const currentWeek = useWorkoutStore((s) => s.currentWeek);
 const customRestSeconds = useWorkoutStore((s) => s.customRestSeconds);
 const defaultRestSeconds = useWorkoutStore((s) => s.defaultRestSeconds);
 const history = useWorkoutStore((s) => s.history);
-const lastSessionNote = [...history].reverse().find((h) => h.dayId === dayId && h.note && h.note.trim())?.note ?? null;
+// history est triée du plus récent au plus ancien : on veut la note de la DERNIÈRE séance, pas de la plus ancienne.
+const lastSessionNote = history.find((h) => h.dayId === dayId && h.note && h.note.trim())?.note ?? null;
 const timer = useWorkoutStore((s) => s.timer);
 const startSession = useWorkoutStore((s) => s.startSession);
 const completeSet = useWorkoutStore((s) => s.completeSet);
@@ -113,6 +120,9 @@ useEffect(() => () => { if (shakeToastRef.current) clearTimeout(shakeToastRef.cu
 // Bandeau "séance adaptée" repliable, ouvert au démarrage de la séance.
 const [adaptBannerOpen, setAdaptBannerOpen] = useState(false);
   const [sessionTab, setSessionTab] = useState<'exercise' | 'stats' | 'programme' | 'repos'>('exercise');
+// Feuille « Arrêter la séance ? » — déclarée ici (avant les return conditionnels)
+// pour respecter l'ordre des hooks.
+const [stopSheetOpen, setStopSheetOpen] = useState(false);
 
 // ── Détection de record personnel (PR) ───────────────────────────────────
 const [prBanner, setPrBanner] = useState<string | null>(null);
@@ -151,7 +161,9 @@ const skipTimerAdvanceRef = useRef(false);
 // passée (bouton crayon) — non-null tant qu'une correction est en cours.
 // Sert à revenir pile où on en était sans relancer de repos ni avancer/
 // reculer la progression (voir handleEditSet / handleSetComplete).
-const editRestoreRef = useRef<{ exerciseIndex: number; setIndex: number } | null>(null);
+// `editedKey` = la série rouverte (« exerciceId:index ») : seule SA validation
+// ramène à la position mémorisée (voir handleSetComplete).
+const editRestoreRef = useRef<{ exerciseIndex: number; setIndex: number; editedKey: string } | null>(null);
 
 // ── Schéma corps humain, en tout début de séance ────────────────────────
 const [bodyDiagramVisible, setBodyDiagramVisible] = useState(true);
@@ -246,6 +258,20 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, []);
 
+// Rechargement (ou app tuée en arrière-plan) PENDANT le repos qui suit une série
+// validée : le minuteur périmé est effacé au chargement (voir le merge du store)
+// et personne n'appelle la fin de repos, donc la séance restait collée sur la
+// série déjà validée, sans aucune série active à l'écran. Pas de repos en cours
+// + série courante déjà validée = le repos est fini, on avance.
+useEffect(() => {
+  const st = useWorkoutStore.getState();
+  const cur = st.session;
+  if (!cur || cur.dayId !== dayId || cur.isComplete || st.timer.isRunning) return;
+  const ex = getWorkout(dayId)?.exercises[cur.currentExerciseIndex];
+  if (ex && cur.exerciseProgress[ex.id]?.[cur.currentSetIndex]?.completed) st.advanceSession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
 // Une séance oubliée en arrière-plan (téléphone verrouillé, appli quittée
 // longtemps…) fausse durée/calories en bas de page car le chrono compte
 // le temps réel écoulé depuis le lancement. Passé 3h, on propose de la
@@ -288,10 +314,29 @@ return;
 // séance tout de suite : on avancera quand ✓ sera pressé.
 const key = pendingSetKeyRef.current;
 const store = useWorkoutStore.getState();
-const setDone = key ? !!store.session?.exerciseProgress[key.exerciseId]?.[key.setIndex]?.completed : true;
+let setDone = true;
+if (key) {
+setDone = !!store.session?.exerciseProgress[key.exerciseId]?.[key.setIndex]?.completed;
+} else if (store.session) {
+// Repères perdus (retour sur l'écran de séance après un détour par les
+// Réglages…) : on se fie à la série courante. Avancer sans condition faisait
+// sauter une série jamais validée quand le repos avait démarré à la saisie du poids.
+const curEx = getWorkout(store.session.dayId)?.exercises[store.session.currentExerciseIndex];
+if (curEx) {
+setDone = !!store.session.exerciseProgress[curEx.id]?.[store.session.currentSetIndex]?.completed;
+if (!setDone) pendingSetKeyRef.current = { exerciseId: curEx.id, setIndex: store.session.currentSetIndex };
+}
+}
 if (setDone) {
 pendingSetKeyRef.current = null;
-advanceSession();
+// Si on est passé à un autre exercice PENDANT le repos (« Faire » / Programme →
+// « Aller à cet exercice »), le pointeur est déjà là où on le veut : l'avancer
+// ferait sauter la première série de ce nouvel exercice.
+const cur = store.session;
+const pointerEx = cur ? getWorkout(cur.dayId)?.exercises[cur.currentExerciseIndex] : undefined;
+const pointerMoved = !!key && !!cur && !!pointerEx
+&& (pointerEx.id !== key.exerciseId || cur.currentSetIndex !== key.setIndex);
+if (!pointerMoved) advanceSession();
 } else {
 timerAlreadyElapsedRef.current = true;
 }
@@ -366,6 +411,7 @@ exIdx,
 setIndex,
 (ex) => st?.exerciseProgress[ex.id]?.length ?? ex.sets,
 st?.disabledSupersetGroupIds ?? [],
+setDoneIn(st?.exerciseProgress),
 );
 return step.exerciseIndex === null;
 }, [workout]);
@@ -375,8 +421,13 @@ return step.exerciseIndex === null;
 // vraiment) pour pouvoir y revenir une fois la correction enregistrée,
 // sans relancer de repos ni avancer/reculer la progression.
 const handleEditSet = useCallback((exerciseId: string, setIndex: number) => {
-if (session) {
-editRestoreRef.current = { exerciseIndex: session.currentExerciseIndex, setIndex: session.currentSetIndex };
+const editedKey = `${exerciseId}:${setIndex}`;
+if (editRestoreRef.current) {
+// Une autre série est déjà rouverte : la position à retrouver reste la
+// vraie (sinon on « reviendrait » sur la première série rouverte).
+editRestoreRef.current = { ...editRestoreRef.current, editedKey };
+} else if (session) {
+editRestoreRef.current = { exerciseIndex: session.currentExerciseIndex, setIndex: session.currentSetIndex, editedKey };
 }
 editSet(exerciseId, setIndex);
 }, [session, editSet]);
@@ -390,9 +441,22 @@ const handleSetComplete = useCallback(async (exerciseId: string, setIndex: numbe
 // record d'avant aujourd'hui" qu'on compare au poids qui vient d'être
 // saisi.
 const newWeight = parseFloat(entry.weight);
-if (!isNaN(newWeight)) {
-const previousMax = getMaxWeightEver(history, exerciseId);
-if (previousMax > 0 && newWeight > previousMax) {
+// Exercice remplacé pendant la séance : le record de l'exercice d'origine ne
+// s'applique pas au mouvement réellement fait (voir wasSubstituted).
+const liveSession = useWorkoutStore.getState().session;
+const substituted = !!liveSession?.exerciseNameOverrides?.[exerciseId];
+if (!isNaN(newWeight) && !substituted) {
+const historyMax = getMaxWeightEver(history, exerciseId);
+// Un record déjà battu plus tôt dans CETTE séance devient la barre à
+// dépasser : sinon chaque série au même poids (le poids est reporté d'une
+// série à l'autre) rejouait « Nouveau record ! », vibration et confettis.
+let previousMax = historyMax;
+(liveSession?.exerciseProgress[exerciseId] ?? []).forEach((s, i) => {
+if (i === setIndex || !isPerformedSet(s)) return;
+const w = parseFloat(s.weight);
+if (!isNaN(w) && w > previousMax) previousMax = w;
+});
+if (historyMax > 0 && newWeight > previousMax) {
 const exerciseName = workout?.exercises.find((e) => e.id === exerciseId)?.name ?? '';
 if (prTimeoutRef.current) clearTimeout(prTimeoutRef.current);
 setPrBanner(exerciseName);
@@ -412,19 +476,49 @@ if (!exercise) return;
 if (editRestoreRef.current) {
 const restore = editRestoreRef.current;
 editRestoreRef.current = null;
-restoreSessionPosition(restore.exerciseIndex, restore.setIndex);
+if (restore.editedKey === `${exerciseId}:${setIndex}`) {
+// Le repos de cette série s'est terminé PENDANT la correction : personne
+// n'a fait avancer la séance (handleTimerComplete a attendu la validation).
+// Revenir à la position mémorisée la laissait bloquée sur une série déjà
+// validée (« Passer la série » l'aurait alors écrasée) → on avance.
+const pk = pendingSetKeyRef.current;
+if (timerAlreadyElapsedRef.current && pk && pk.exerciseId === exerciseId && pk.setIndex === setIndex) {
+timerAlreadyElapsedRef.current = false;
+pendingSetKeyRef.current = null;
+advanceSession();
 return;
+}
+restoreSessionPosition(restore.exerciseIndex, restore.setIndex);
+// La position mémorisée est une série déjà validée dont le repos s'est terminé
+// pendant la correction (sa fin n'a pas fait avancer la séance, le pointeur
+// étant ailleurs) : on avance maintenant, sinon plus aucune série n'est active.
+const afterRestore = useWorkoutStore.getState();
+const restoredEx = workout?.exercises[restore.exerciseIndex];
+if (restoredEx && !afterRestore.timer.isRunning
+&& afterRestore.session?.exerciseProgress[restoredEx.id]?.[restore.setIndex]?.completed) {
+pendingSetKeyRef.current = null;
+timerAlreadyElapsedRef.current = false;
+advanceSession();
+}
+return;
+}
+// Une AUTRE série a été validée : la correction rouverte a été abandonnée
+// (ex. « Faire » sur un autre exercice), on poursuit normalement.
 }
 // Ou va-t-on apres cette serie ? getNextStep gere la rotation A->B->C des
 // supersets et tri-sets (voir utils/supersets.ts).
 const workoutExercises = workout?.exercises ?? [];
 const exIdxNow = workoutExercises.findIndex((e) => e.id === exerciseId);
+const stepSession = useWorkoutStore.getState().session;
 const step = getNextStep(
 workoutExercises,
 exIdxNow,
 setIndex,
-(ex) => useWorkoutStore.getState().session?.exerciseProgress[ex.id]?.length ?? ex.sets,
-session?.disabledSupersetGroupIds ?? [],
+(ex) => stepSession?.exerciseProgress[ex.id]?.length ?? ex.sets,
+// Lu dans le store : `session` de la fermeture est périmé (le bouton
+// « Repos ajouté » du Programme ne s'appliquait pas).
+stepSession?.disabledSupersetGroupIds ?? [],
+setDoneIn(stepSession?.exerciseProgress),
 );
 // Milieu d'un tour de superset/tri-set → aucun repos, on enchaine.
 if (!step.rest) {
@@ -446,21 +540,22 @@ return;
 // précédent. Le repos continue de tourner et de s'afficher normalement ;
 // on empêche juste sa fin de faire avancer la séance une 2e fois (voir
 // handleTimerComplete).
-skipTimerAdvanceRef.current = false;
-if (step.exerciseIndex !== exIdxNow) {
-timerAlreadyElapsedRef.current = false;
-skipTimerAdvanceRef.current = true;
-advanceSession();
-}
 // Le repos peut avoir déjà démarré à la saisie du poids (voir
 // handleWeightEntered). S'il s'est déjà terminé pendant qu'on
-// remplissait la série, on avance direct sans relancer de repos.
+// remplissait la série, on avance direct sans relancer de repos (y compris
+// après la dernière série d'un exercice : le repos a déjà eu lieu).
 const isSameSet = pendingSetKeyRef.current?.exerciseId === exerciseId && pendingSetKeyRef.current?.setIndex === setIndex;
 if (isSameSet && timerAlreadyElapsedRef.current) {
 timerAlreadyElapsedRef.current = false;
 pendingSetKeyRef.current = null;
+skipTimerAdvanceRef.current = false;
 advanceSession();
 return;
+}
+skipTimerAdvanceRef.current = false;
+if (step.exerciseIndex !== exIdxNow) {
+skipTimerAdvanceRef.current = true;
+advanceSession();
 }
 // S'il tourne déjà pour cette série, on le laisse continuer.
 if (isSameSet && useWorkoutStore.getState().timer.isRunning) {
@@ -490,26 +585,68 @@ const exercise = workout?.exercises.find((e) => e.id === exerciseId);
 if (!exercise) return;
 // Pas de repos anticipe au milieu d'un tour de superset/tri-set : on enchaine.
 const wIdx = workout?.exercises.findIndex((e) => e.id === exerciseId) ?? -1;
+const weSession = useWorkoutStore.getState().session;
 if (wIdx >= 0 && workout && !getNextStep(
 workout.exercises,
 wIdx,
 setIndex,
-(ex) => useWorkoutStore.getState().session?.exerciseProgress[ex.id]?.length ?? ex.sets,
-session?.disabledSupersetGroupIds ?? [],
+(ex) => weSession?.exerciseProgress[ex.id]?.length ?? ex.sets,
+weSession?.disabledSupersetGroupIds ?? [],
+setDoneIn(weSession?.exerciseProgress),
 ).rest) return;
 // Toute dernière série de la séance : pas de repos anticipé non plus,
 // le deload prendra le relais une fois la série validée.
 if (isFinalSetOfSession(exerciseId, setIndex)) return;
 // Correction d'une série déjà passée (crayon) : jamais de repos anticipé
 // pendant qu'on retape le poids, seul le crayon ré-ouvre l'édition.
-if (editRestoreRef.current) return;
+if (editRestoreRef.current?.editedKey === `${exerciseId}:${setIndex}`) return;
 if (useWorkoutStore.getState().timer.isRunning) return;
 const restSecs = customRestSeconds[exerciseId] ?? exercise.restSeconds ?? defaultRestSeconds;
+// Repos nul : startTimer(0) ne démarre rien, pas d'état d'attente à poser.
+if (restSecs <= 0) return;
 timerExerciseRef.current = exerciseId;
 pendingSetKeyRef.current = { exerciseId, setIndex };
 timerAlreadyElapsedRef.current = false;
+skipTimerAdvanceRef.current = false;
 startTimer(restSecs);
 }, [workout, customRestSeconds, defaultRestSeconds, startTimer, isFinalSetOfSession]);
+
+// « Passer la série » : pendant le repos qui suit une série validée, la série
+// « courante » du store est encore CETTE série validée (la séance n'avance qu'à
+// la fin du repos) — le bouton l'écrasait en « passée », puis la fin du repos
+// faisait avancer une 2e fois (une série disparaissait sans être vue). On
+// avance donc d'abord, et on coupe le repos qui ne correspond plus à rien.
+const handleSkipSet = useCallback(() => {
+const cur = useWorkoutStore.getState().session;
+if (!cur || !workout) return;
+const curEx = workout.exercises[cur.currentExerciseIndex];
+const pointerDone = !!curEx && !!cur.exerciseProgress[curEx.id]?.[cur.currentSetIndex]?.completed;
+const pk = pendingSetKeyRef.current;
+const restIsForPointer = !!pk && !!curEx && pk.exerciseId === curEx.id && pk.setIndex === cur.currentSetIndex;
+editRestoreRef.current = null;
+if (pointerDone || restIsForPointer) {
+skipTimer();
+pendingSetKeyRef.current = null;
+skipTimerAdvanceRef.current = false;
+timerAlreadyElapsedRef.current = false;
+}
+if (pointerDone) {
+advanceSession();
+const after = useWorkoutStore.getState().session;
+if (!after || after.isComplete) return;
+}
+skipSet();
+}, [workout, skipTimer, advanceSession, skipSet]);
+
+// « Passer l'exercice » : le store coupe le repos lui-même, il faut aussi
+// oublier l'état d'attente associé (sinon le prochain repos était mal aiguillé).
+const handleSkipExercise = useCallback(() => {
+pendingSetKeyRef.current = null;
+skipTimerAdvanceRef.current = false;
+timerAlreadyElapsedRef.current = false;
+editRestoreRef.current = null;
+skipExercise();
+}, [skipExercise]);
 
 if (!workout || !session || session.dayId !== dayId) {
 return (
@@ -519,7 +656,7 @@ return (
 );
 }
 
-if (session.isComplete) return <CompletionScreen workout={workout} session={session} onBack={onBack} history={history} />;
+if (session.isComplete) return <CompletionScreen workout={sessionWorkoutRef.current ?? workout} session={session} onBack={onBack} history={history} />;
 
 // Deload : remplace le dernier repos par 3 min de cardio lent avant de
 // clôturer la séance (voir handleSetComplete / isFinalSetOfSession).
@@ -560,26 +697,18 @@ restRefExIdx,
 restRefSetIdx,
 (ex) => session.exerciseProgress[ex.id]?.length ?? ex.sets,
 session.disabledSupersetGroupIds ?? [],
+setDoneIn(session.exerciseProgress),
 );
 if (step.exerciseIndex === null) return {};
 return { exercise: exercises[step.exerciseIndex], setNumber: step.setIndex + 1 };
 };
 const nextInfo = getNextInfo();
 
-const handleAbandon = () => {
-  const performed = Object.values(session.exerciseProgress).flat().filter(isPerformedSet).length;
-  if (performed > 0) {
-    // Ne pas perdre l'heure de saisie sur un tap accidentel : on propose d'abord d'enregistrer.
-    if (window.confirm(`Terminer la séance et enregistrer tes ${performed} séries déjà faites ?\n\nOK = terminer et enregistrer\nAnnuler = autres options`)) {
-      finishSession();
-      return;
-    }
-    if (!window.confirm('Abandonner SANS enregistrer ? Les séries faites seront perdues.')) return;
-    abandonSession(); onBack();
-    return;
-  }
-  if (window.confirm('Abandonner la séance ?')) { abandonSession(); onBack(); }
-};
+// Plus de window.confirm natif (« OK = terminer, Annuler = autres options »,
+// illisible) : une feuille avec des boutons nommés. (Le useState de
+// stopSheetOpen est déclaré plus haut, avant les return conditionnels.)
+const handleAbandon = () => setStopSheetOpen(true);
+const performedSetsCount = Object.values(session.exerciseProgress).flat().filter(isPerformedSet).length;
 
 const totalSets = exercises.reduce((sum, ex) => sum + (session.exerciseProgress[ex.id]?.length ?? ex.sets), 0);
 const completedSets = Object.values(session.exerciseProgress).flat().filter((s) => s.completed).length;
@@ -587,16 +716,17 @@ const progressPct = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
 
 // Grouper les exercices en superset pairs
 const groupedExercises: (Exercise | Exercise[])[] = [];
-let i = 0;
-while (i < exercises.length) {
-const ex = exercises[i];
+// Un groupe est rendu une seule fois, à la place de son premier membre — même si
+// ses membres ne se suivent pas (avancer de « pair.length » sautait alors un
+// exercice voisin et rendait le groupe en double).
+const renderedGroups = new Set<string>();
+for (const ex of exercises) {
 if (ex.restMode === 'superset' && ex.supersetGroupId) {
-const pair = exercises.filter(e => e.supersetGroupId === ex.supersetGroupId);
-groupedExercises.push(pair);
-i += pair.length;
+if (renderedGroups.has(ex.supersetGroupId)) continue;
+renderedGroups.add(ex.supersetGroupId);
+groupedExercises.push(exercises.filter(e => e.supersetGroupId === ex.supersetGroupId));
 } else {
 groupedExercises.push(ex);
-i++;
 }
 }
 
@@ -738,7 +868,7 @@ return <div key={ex.id} style={{ flex: n }}><i style={{ width: `${Math.min(100, 
 <div style={{ flex: 1, minWidth: 0 }}>
 <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800, lineHeight: '20px', letterSpacing: -0.3 }}>{workout.name}</p>
 <p style={{ color: 'var(--text-dim)', fontSize: 12 }}>
-{completedSets}/{totalSets} séries · SEM. {currentWeek} · RIR {weekData.rir.replace('RIR ', '')}
+{completedSets}/{totalSets} séries · SEM. {currentWeek} · RIR {weekData.rir.replace('RIR ', '')}<InfoTip term="RIR" size={14} />
 </p>
 </div>
 <button onClick={onOpenSettings} className="glass-icon" style={settingsBtn} title="Réglages (sans quitter la séance)"><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><IconSettings size={18} /></span></button>
@@ -924,8 +1054,8 @@ groupActive={groupIsInPlay}
 currentWeek={currentWeek}
 onSetComplete={(setIndex, entry) => handleSetComplete(exercise.id, setIndex, entry)}
 onEditSet={(setIndex) => handleEditSet(exercise.id, setIndex)}
-onSkipSet={exIdx === currentExIdx ? skipSet : undefined}
-onSkipExercise={exIdx === currentExIdx ? skipExercise : undefined}
+onSkipSet={exIdx === currentExIdx ? handleSkipSet : undefined}
+onSkipExercise={exIdx === currentExIdx ? handleSkipExercise : undefined}
 onAddSet={() => addSet(exercise.id)}
 onWeightStart={(setIndex) => handleWeightEntered(exercise.id, setIndex)}
 onSwitchTo={() => switchToExercise(exercise.id)}
@@ -953,8 +1083,8 @@ isActive={exIdx === currentExIdx}
 currentWeek={currentWeek}
 onSetComplete={(setIndex, entry) => handleSetComplete(exercise.id, setIndex, entry)}
 onEditSet={(setIndex) => handleEditSet(exercise.id, setIndex)}
-onSkipSet={exIdx === currentExIdx ? skipSet : undefined}
-onSkipExercise={exIdx === currentExIdx ? skipExercise : undefined}
+onSkipSet={exIdx === currentExIdx ? handleSkipSet : undefined}
+onSkipExercise={exIdx === currentExIdx ? handleSkipExercise : undefined}
 onAddSet={() => addSet(exercise.id)}
 onWeightStart={(setIndex) => handleWeightEntered(exercise.id, setIndex)}
 onSwitchTo={() => switchToExercise(exercise.id)}
@@ -1019,12 +1149,49 @@ isPaused={sessionPausedAt !== null}
 onTogglePause={() => (sessionPausedAt !== null ? resumeSession() : pauseSession())}
 onStop={handleAbandon}
 />
+{stopSheetOpen && (
+<div style={stopOverlay} onClick={() => setStopSheetOpen(false)}>
+<div style={stopSheet} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Arrêter la séance">
+<p style={{ color: 'var(--text-primary)', fontSize: 17, fontWeight: 800, marginBottom: 6 }}>Arrêter la séance ?</p>
+<p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: '19px', marginBottom: 16 }}>
+{performedSetsCount > 0
+? `Tu as fait ${performedSetsCount} série${performedSetsCount > 1 ? 's' : ''}. Tu peux les garder dans ton historique ou tout effacer.`
+: 'Tu n\'as pas encore validé de série : rien ne sera enregistré.'}
+</p>
+{performedSetsCount > 0 && (
+<button style={{ ...stopBtn, background: 'linear-gradient(135deg, #4CAF50, #3a8c3d)', color: '#fff', border: 'none' }}
+onClick={() => { setStopSheetOpen(false); finishSession(); }}>
+Terminer et enregistrer
+</button>
+)}
+<button style={{ ...stopBtn, color: '#f55555' }}
+onClick={() => { setStopSheetOpen(false); abandonSession(); onBack(); }}>
+{performedSetsCount > 0 ? 'Abandonner sans enregistrer' : 'Abandonner la séance'}
+</button>
+<button style={{ ...stopBtn, color: 'var(--text-muted)' }} onClick={() => setStopSheetOpen(false)}>
+Continuer la séance
+</button>
+</div>
+</div>
+)}
 </div>
 );
 };
 
 // ─── Schéma corps humain ──────────────────────────────────────────────────
 
+const stopOverlay: React.CSSProperties = {
+position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.55)',
+display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+};
+const stopSheet: React.CSSProperties = {
+width: '100%', maxWidth: 440, background: 'var(--bg-surface)', borderRadius: '22px 22px 0 0',
+padding: '20px 18px calc(18px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 8,
+};
+const stopBtn: React.CSSProperties = {
+width: '100%', padding: '13px 10px', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer',
+background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+};
 const bodyDiagramCard: React.CSSProperties = {
 borderRadius: 26, padding: '16px 16px', marginBottom: 14,
 };
@@ -1126,7 +1293,7 @@ const RPE_LABELS: Record<number, string> = {
 
 const CompletionScreen: React.FC<{
 workout: NonNullable<ReturnType<typeof getWorkout>>;
-session: { startTime: number; exerciseProgress: ExerciseProgress; dayId: string; isComplete: boolean; currentExerciseIndex: number; currentSetIndex: number };
+session: { startTime: number; exerciseProgress: ExerciseProgress; dayId: string; isComplete: boolean; currentExerciseIndex: number; currentSetIndex: number; disabledSupersetGroupIds?: string[] };
 onBack: () => void;
 history: HistoryEntry[];
 }> = ({ workout, session, onBack, history }) => {
@@ -1153,12 +1320,25 @@ const t = setTimeout(() => setShowConfetti(false), 2200);
 return () => clearTimeout(t);
 }, [ultraAnimationsEnabled]);
 
-const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
-const durationMs = Date.now() - session.startTime;
+// Séries prévues au programme vs séries réellement faites : le récap affichait
+// le prévu (« 21 séries ») même quand une seule avait été validée.
+const plannedSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
+const totalSets = Object.values(session.exerciseProgress).flat().filter(isPerformedSet).length;
+// Séance écourtée : moins de la moitié du prévu. On ne la juge ni ne la compare
+// à une séance complète (-95 % de tonnage n'aurait aucun sens).
+const isPartialSession = totalSets < plannedSets / 2;
+// Durée figée à celle enregistrée dans l'historique à la fin de la séance : avec
+// Date.now() à chaque rendu, elle grimpait pendant qu'on saisissait RPE et note,
+// et la charge d'entraînement (RPE × durée) ne correspondait plus à l'historique.
+const [fallbackNow] = useState(() => Date.now());
+const savedEntry = history.find((h) => h.id === `${session.dayId}-${session.startTime}`);
+const durationMs = savedEntry?.durationMs ?? Math.max(0, fallbackNow - session.startTime);
 const durationMin = Math.round(durationMs / 60000);
 const cal = Math.round((caloriesPerHour / 60) * durationMin);
 const tonnage = computeTonnage(session.exerciseProgress);
 const comparison = compareSessionToHistory(history, session.dayId, tonnage);
+// Tonnage stocké en kg : on l'affiche dans l'unité choisie (comme l'onglet Stats).
+const toDisplayTonnage = (kg: number) => (weightUnit === 'lbs' ? Math.round(kgToLbs(kg)) : kg);
 
 // Estimation du temps de repos total : on ne connaît pas le temps réel
 // écoulé série par série, donc on additionne le temps de repos "prévu"
@@ -1185,6 +1365,7 @@ const outOfRangeCount = allEntries.filter((e) => isRepOutOfRange(e.reps, e.targe
 const pct = allEntries.length > 0 ? outOfRangeCount / allEntries.length : 0;
 
 const getRec = () => {
+if (isPartialSession) return { icon: <IconTarget size={20} color="#9b9b9b" />, title: 'Séance écourtée', detail: 'Pas grave : chaque série compte. Reprends là où tu t\'es arrêté à la prochaine séance.', color: '#9b9b9b' };
 if (pct > 0.35) return { icon: <IconScale size={20} color="#f5a623" />, title: 'Calibration poids requise', detail: `${outOfRangeCount} série(s) hors plage cible. Ajuste les charges de ±2.5 kg.`, color: '#f5a623' };
 if (pct > 0.1) return { icon: <IconThumbsUp size={20} color="#e8a020" />, title: 'Bonne séance, quelques ajustements', detail: `${outOfRangeCount} série(s) légèrement hors cible. Surveille la semaine prochaine.`, color: '#e8a020' };
 return { icon: <IconTarget size={20} color="#4CAF50" />, title: 'Exécution parfaite !', detail: 'Toutes les séries dans la plage cible. +2.5 kg envisageable la semaine prochaine.', color: '#4CAF50' };
@@ -1222,7 +1403,7 @@ const completedSetsCount = Object.values(session.exerciseProgress).reduce(
 (sum, sets) => sum + sets.filter(isPerformedSet).length,
 0
 );
-const tonnageDisplayShare = weightUnit === 'lbs' ? Math.round(kgToLbs(tonnage)) : tonnage;
+const tonnageDisplayShare = toDisplayTonnage(tonnage);
 const dateLabel = new Date(session.startTime).toLocaleDateString('fr-FR', {
 weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
 });
@@ -1233,7 +1414,7 @@ durationMin,
 tonnageDisplay: tonnageDisplayShare,
 weightUnit,
 completedSets: completedSetsCount,
-totalSets,
+totalSets: plannedSets,
 calories: cal,
 tonnagePctVsPrevious: comparison.tonnagePctVsPrevious,
 prNames: [],
@@ -1262,7 +1443,7 @@ className={ultraAnimationsEnabled ? 'ultra-pop-glow' : undefined}
 ><span style={{ display: 'inline-flex' }}><IconTrophy size={44} /></span></div>
 <h2 style={{ color: 'var(--text-primary)', fontSize: 24, fontWeight: 800, marginBottom: 6, letterSpacing: -0.5 }}>Séance terminée !</h2>
 <p style={{ color: 'var(--brand-1)', fontSize: 17, fontWeight: 700, marginBottom: 2 }}>{workout.name}</p>
-<p style={{ color: 'var(--text-muted)', fontSize: 13 }}>{totalSets} séries · {durationMin} min</p>
+<p style={{ color: 'var(--text-muted)', fontSize: 13 }}>{totalSets} série{totalSets > 1 ? 's' : ''} · {durationMin} min</p>
 </div>
 
 <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -1291,20 +1472,20 @@ className={ultraAnimationsEnabled ? 'ultra-pop-glow' : undefined}
 {tonnage > 0 && (
 <div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.24s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
 <span style={{ display: 'inline-flex' }}><IconPlate size={22} color="#5560cc" /></span>
-<span style={{ color: '#5560cc', fontSize: 20, fontWeight: 200 }}>{tonnage}<span style={{ fontSize: 11 }}> kg</span></span>
+<span style={{ color: '#5560cc', fontSize: 20, fontWeight: 200 }}>{toDisplayTonnage(tonnage)}<span style={{ fontSize: 11 }}> {weightUnitLabel(weightUnit)}</span></span>
 <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>TONNAGE</span>
 </div>
 )}
 </div>
 
-{(comparison.tonnagePctVsPrevious !== undefined || comparison.tonnagePctVsFirst !== undefined) && tonnage > 0 && (
+{!isPartialSession && (comparison.tonnagePctVsPrevious !== undefined || comparison.tonnagePctVsFirst !== undefined) && tonnage > 0 && (
 <div style={progressionCard}>
 <p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 10 }}>
 <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6 }}><IconTrendingUp size={12} /></span>ÉVOLUTION DU TONNAGE
 </p>
 {comparison.tonnagePctVsPrevious !== undefined && comparison.previous && (
 <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: '19px', marginBottom: comparison.tonnagePctVsFirst !== undefined ? 6 : 0 }}>
-vs {workout.name} précédente ({comparison.previous.tonnage} kg) :{' '}
+vs {workout.name} précédente ({toDisplayTonnage(comparison.previous.tonnage)} {weightUnitLabel(weightUnit)}) :{' '}
 <strong style={{ color: comparison.tonnagePctVsPrevious >= 0 ? '#4CAF50' : '#f5a623' }}>
 {comparison.tonnagePctVsPrevious >= 0 ? '+' : ''}{comparison.tonnagePctVsPrevious}%
 </strong>
@@ -1312,7 +1493,7 @@ vs {workout.name} précédente ({comparison.previous.tonnage} kg) :{' '}
 )}
 {comparison.tonnagePctVsFirst !== undefined && comparison.first && (
 <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: '19px' }}>
-vs ta 1ère {workout.name} ({comparison.first.tonnage} kg) :{' '}
+vs ta 1ère {workout.name} ({toDisplayTonnage(comparison.first.tonnage)} {weightUnitLabel(weightUnit)}) :{' '}
 <strong style={{ color: comparison.tonnagePctVsFirst >= 0 ? '#4CAF50' : '#f5a623' }}>
 {comparison.tonnagePctVsFirst >= 0 ? '+' : ''}{comparison.tonnagePctVsFirst}%
 </strong>
@@ -1336,7 +1517,7 @@ LA PROCHAINE FOIS
 
 <div style={rpeCard}>
 <p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 10 }}>
-RESSENTI DE LA SÉANCE (RPE)
+RESSENTI DE LA SÉANCE (RPE)<InfoTip term="RPE" />
 </p>
 <div style={{ display: 'flex', gap: 5, marginBottom: rpe ? 8 : 0 }}>
 {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (

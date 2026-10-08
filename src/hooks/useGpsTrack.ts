@@ -94,6 +94,9 @@ export const useGpsTrack = () => {
     if (!isSupported) { setStatus('unsupported'); return; }
     setStatus('requesting');
     setError(null);
+    // Un démarrage sans arrêt entre deux laissait le premier suivi actif pour
+    // toujours (la référence était écrasée) : GPS allumé, distance comptée 2 fois.
+    if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current);
     watchRef.current = navigator.geolocation.watchPosition(
       (pos) => { setStatus('tracking'); handleFix(pos); },
       (err) => {

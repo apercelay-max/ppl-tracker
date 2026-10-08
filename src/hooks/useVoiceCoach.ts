@@ -21,6 +21,7 @@ import { useEffect, useRef } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getWorkout } from '../data/workouts';
 import { getLastExerciseSets } from '../utils/training';
+import { formatWeightForDisplay } from '../utils/weight';
 import {
   installVoicePrimer, isVoiceSupported, sayDuration, sayExerciseName,
   sayReps, sayWeight, speak, stopVoice,
@@ -142,18 +143,21 @@ export const useVoiceCoach = (): void => {
     // regarde pas son écran est la seule faute vraiment grave ici.
     const spokenUnit = unit === 'kg' ? 'kilos' : 'livres';
     const lastTime = getLastExerciseSets(history, ex.id);
+    // Les poids sont stockés en kg : en mode livres, il faut les convertir avant
+    // de les annoncer (60 kg se disait « 60 livres »).
+    const sayStored = (kg: string) => sayWeight(formatWeightForDisplay(kg, unit), spokenUnit);
 
     let weight = '';
     let source = '';
     if (done[setIdx]?.weight) {
-      weight = sayWeight(done[setIdx].weight, spokenUnit);
+      weight = sayStored(done[setIdx].weight);
     } else if (setIdx > 0 && done[setIdx - 1]?.weight) {
-      weight = sayWeight(done[setIdx - 1].weight, spokenUnit);
+      weight = sayStored(done[setIdx - 1].weight);
     } else if (lastTime?.[setIdx]?.weight || lastTime?.[0]?.weight) {
-      weight = sayWeight(lastTime[setIdx]?.weight ?? lastTime[0].weight, spokenUnit);
+      weight = sayStored(lastTime[setIdx]?.weight ?? lastTime[0].weight);
       source = 'comme la dernière fois';
     } else if (ex.defaultWeight) {
-      weight = sayWeight(ex.defaultWeight, spokenUnit);
+      weight = sayStored(ex.defaultWeight);
       source = 'au programme';
     }
 

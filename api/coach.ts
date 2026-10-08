@@ -415,7 +415,8 @@ const parseBrief = (text: string): CoachAiBrief | null => {
     return null;
   }
   // Tout est `unknown` en entrée : c'est du texte écrit par un modèle, même
-  // quand un schéma a été demandé.
+  // quand un schéma a été demandé. `null` ou un nombre est un JSON valide.
+  if (!parsed || typeof parsed !== 'object') return null;
   const raw = parsed as { resume?: unknown; points?: unknown; encouragement?: unknown };
   if (typeof raw.resume !== 'string' || !Array.isArray(raw.points)) return null;
 
@@ -443,6 +444,7 @@ const parseDaily = (text: string): CoachAiDaily | null => {
   } catch {
     return null;
   }
+  if (!parsed || typeof parsed !== 'object') return null;
   const raw = parsed as Record<string, unknown>;
   const str = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
   const daily = {
@@ -478,10 +480,25 @@ const parseChat = (
       }
       return { reponse: `${clean.trim()}\n\n(Réponse coupée en route. Redemande, ou pose une question plus précise.)` };
     }
-    return { reponse: text };
+    // Du JSON coupé avant « reponse » : l'afficher tel quel montrerait des
+    // accolades à l'utilisateur.
+    return {
+      reponse: text.trim().startsWith('{')
+        ? 'Ma réponse a été coupée en route. Redemande, ou pose une question plus précise.'
+        : text,
+    };
+  }
+  // `null`, un nombre ou une chaîne sont du JSON valide : pas d'objet à lire.
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { reponse: typeof parsed === 'string' && parsed.trim() !== '' ? parsed : text };
   }
   const raw = parsed as { reponse?: unknown; proposition?: unknown; nouveauProgramme?: unknown };
-  const reponse = typeof raw.reponse === 'string' && raw.reponse.trim() !== '' ? raw.reponse : text;
+  const hasProposal = (typeof raw.proposition === 'object' && raw.proposition !== null)
+    || (typeof raw.nouveauProgramme === 'object' && raw.nouveauProgramme !== null);
+  // Réponse vide mais proposition présente : ne jamais afficher le JSON brut.
+  const reponse = typeof raw.reponse === 'string' && raw.reponse.trim() !== ''
+    ? raw.reponse
+    : hasProposal ? 'Voici ce que je te propose.' : text;
 
   // Programme complet : transmis tel quel, c'est `validateNewProgram` côté
   // appli qui décide s'il tient debout (volume hebdomadaire compris).

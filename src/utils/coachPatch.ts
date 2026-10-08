@@ -195,6 +195,16 @@ export const validateProposal = (program: Program, proposal: CoachProposal): Val
   // retraits déjà acceptés : deux retraits sur la même séance pourraient
   // passer un par un et la vider à deux.
   const removedPerDay = new Map<string, number>();
+  // Exercices du catalogue déjà ajoutés par une opération retenue, par séance :
+  // deux « remplacer » vers le même exercice sur une même séance en perdraient un.
+  const addedPerDay = new Map<string, Set<string>>();
+  const alreadyAdded = (dayId: string, catId: string): boolean => {
+    const set = addedPerDay.get(dayId) ?? new Set<string>();
+    addedPerDay.set(dayId, set);
+    if (set.has(catId)) return true;
+    set.add(catId);
+    return false;
+  };
 
   for (const op of proposed.slice(0, PATCH_LIMITS.maxOps)) {
     const day = findDay(program, op?.jourId ?? '');
@@ -212,7 +222,7 @@ export const validateProposal = (program: Program, proposal: CoachProposal): Val
       const kept: CoachPatchOp = { op: 'reglages', jourId: day.id, exerciceId: ex.id };
       let any = false;
 
-      if (typeof op.series === 'number' && op.series !== ex.sets) {
+      if (typeof op.series === 'number' && Math.round(op.series) !== ex.sets) {
         const s = Math.round(op.series);
         if (s < PATCH_LIMITS.setsMin || s > PATCH_LIMITS.setsMax) {
           rejets.push(`${ex.name} : ${s} séries, c'est hors des limites (${PATCH_LIMITS.setsMin}-${PATCH_LIMITS.setsMax}).`);
@@ -286,7 +296,7 @@ export const validateProposal = (program: Program, proposal: CoachProposal): Val
         rejets.push(`Exercice de remplacement introuvable dans le catalogue (${op.catalogueId ?? op.parNom ?? '?'}) : ignoré.`);
         continue;
       }
-      if (day.exercises.some((e) => e.id === `cat-${cat.id}`)) {
+      if (day.exercises.some((e) => e.id === `cat-${cat.id}`) || alreadyAdded(day.id, cat.id)) {
         rejets.push(`${cat.name} est déjà dans ${day.name} : remplacement ignoré.`);
         continue;
       }
@@ -301,7 +311,7 @@ export const validateProposal = (program: Program, proposal: CoachProposal): Val
         rejets.push(`Exercice introuvable dans le catalogue (${op.catalogueId ?? op.nom ?? '?'}) : ajout ignoré.`);
         continue;
       }
-      if (day.exercises.some((e) => e.id === `cat-${cat.id}`)) {
+      if (day.exercises.some((e) => e.id === `cat-${cat.id}`) || alreadyAdded(day.id, cat.id)) {
         rejets.push(`${cat.name} est déjà dans ${day.name} : ajout ignoré.`);
         continue;
       }
@@ -395,11 +405,30 @@ export const isCoachProgram = (id: string): boolean => id.startsWith(COACH_PROGR
 const COACH_SUFFIX = ' · ajusté par le coach';
 
 export const buildCoachProgram = (base: Program, ops: CoachPatchOp[]): Program => {
-  const patched = applyOps(base, ops);
+  const applied = applyOps(base, ops);
+  const derivedId = coachProgramIdFor(base.id);
+  // Nouveaux identifiants de séance quand on part d'un AUTRE programme : getWorkout()
+  // retrouve une séance par son id, et il rendrait la version d'origine (intégrée ou
+  // non modifiée) au lieu de la version ajustée — la séance démarrerait sans les
+  // changements validés. Si la base est déjà un programme du coach aux ids propres, ils restent
+  // (un programme du coach créé avant ce correctif garde les ids d'origine : on le migre).
+  const hasOwnIds = derivedId === base.id && applied.workouts.every((w) => w.id.startsWith(`${derivedId}-`));
+  const patched: Program = hasOwnIds
+    ? applied
+    : {
+        ...applied,
+        workouts: applied.workouts.map((w, i) => ({ ...w, id: `${derivedId}-j${i + 1}` })),
+        dayAccents: Object.fromEntries(
+          applied.workouts.map((w, i) => [`${derivedId}-j${i + 1}`, applied.dayAccents?.[w.id] ?? NEUTRAL_ACCENTS[i % NEUTRAL_ACCENTS.length]])
+        ),
+        dayTypeLabels: Object.fromEntries(
+          applied.workouts.map((w, i) => [`${derivedId}-j${i + 1}`, applied.dayTypeLabels?.[w.id] ?? `J${i + 1}`])
+        ),
+      };
   const cleanName = base.name.replace(COACH_SUFFIX, '');
   return {
     ...patched,
-    id: coachProgramIdFor(base.id),
+    id: derivedId,
     name: `${cleanName}${COACH_SUFFIX}`,
     focusLabel: base.focusLabel,
     shortDescription: base.shortDescription,
@@ -472,8 +501,8 @@ export interface ValidatedNewProgram {
   rejets: string[];
 }
 
-const skeletonDay = (nom: string, focus: string | undefined, index: number): WorkoutDay => ({
-  id: `coach-j${index + 1}`,
+const skeletonDay = (id: string, nom: string, focus: string | undefined, index: number): WorkoutDay => ({
+  id,
   dayNumber: index + 1,
   name: nom,
   focus: focus ?? '',
@@ -497,12 +526,19 @@ export const validateNewProgram = (proposal: CoachNewProgram): ValidatedNewProgr
   }
 
   // ── Construction, séance par séance ──
-  const name = (proposal.nom || '').trim() || 'Programme proposé par le coach';
+  // Texte écrit par un modèle : un nombre ou un objet à la place d'une chaîne ne doit pas faire planter.
+  const str = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
+  const name = str(proposal.nom) || 'Programme proposé par le coach';
   const dayAccents: Record<string, string> = {};
   const dayTypeLabels: Record<string, string> = {};
+  // Ids de séance propres à CE programme : getWorkout() retrouve une séance par
+  // son id seul, deux programmes du coach partageant « coach-j1 » se voleraient
+  // leurs séances (et l'historique de l'un s'afficherait avec les exercices de l'autre).
+  const programId = `coach-nouveau-${Date.now()}`;
+  const dayIdOf = (index: number) => `${programId}-j${index + 1}`;
 
   let program: Program = {
-    id: `coach-nouveau-${Date.now()}`,
+    id: programId,
     name,
     focusLabel: `${name} · proposé par le coach`,
     shortDescription: `${jours.length} séance${jours.length > 1 ? 's' : ''} par semaine, construites par le coach IA à partir de tes stats et validées par toi.`,
@@ -511,21 +547,21 @@ export const validateNewProgram = (proposal: CoachNewProgram): ValidatedNewProgr
       + 'exercices du catalogue de l\'appli, puis vérifié contre les repères de volume pour un adolescent '
       + 'et validé par toi. Ce n\'est pas un programme rédigé par un professionnel de santé.',
     isCustom: true,
-    workouts: jours.map((jour, i) => skeletonDay((jour?.nom || `Séance ${i + 1}`).trim(), jour?.focus?.trim(), i)),
+    workouts: jours.map((jour, i) => skeletonDay(dayIdOf(i), str(jour?.nom) || `Séance ${i + 1}`, str(jour?.focus) || undefined, i)),
     dayAccents,
     dayTypeLabels,
   };
 
   jours.forEach((jour, i) => {
-    const dayId = `coach-j${i + 1}`;
+    const dayId = dayIdOf(i);
     dayAccents[dayId] = NEUTRAL_ACCENTS[i % NEUTRAL_ACCENTS.length];
     dayTypeLabels[dayId] = `J${i + 1}`;
 
     const exercices = Array.isArray(jour?.exercices) ? jour.exercices : [];
     for (const wanted of exercices) {
-      const cat = catalogById.get((wanted?.catalogueId ?? '').trim());
+      const cat = catalogById.get(str(wanted?.catalogueId));
       if (!cat) {
-        rejets.push(`${jour?.nom ?? `Séance ${i + 1}`} : exercice introuvable dans le catalogue (${wanted?.catalogueId ?? '?'}), ignoré.`);
+        rejets.push(`${str(jour?.nom) || `Séance ${i + 1}`} : exercice introuvable dans le catalogue (${str(wanted?.catalogueId) || '?'}), ignoré.`);
         continue;
       }
       const before = program;

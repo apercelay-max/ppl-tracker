@@ -74,7 +74,7 @@ closeModal();
 return (
 <div style={scrollArea}>
 <div style={inner}>
-<p style={screenTitle}>{workout.name} - Programme de la seance</p>
+<p style={screenTitle}>{workout.name} - Programme de la séance</p>
 <SessionTimingCard workout={workout} session={session} />
 {workout.exercises.map((ex, idx) => {
 const entries = session.exerciseProgress[ex.id] ?? [];
@@ -82,7 +82,7 @@ const doneCount = entries.filter((e) => e.completed).length;
 const totalCount = Math.max(ex.sets, entries.length);
 const isDone = totalCount > 0 && doneCount >= totalCount;
 const isCurrent = idx === session.currentExerciseIndex && !isDone;
-const statusLabel = isDone ? 'Termine' : isCurrent ? 'En cours' : doneCount > 0 ? 'En cours' : 'A venir';
+const statusLabel = isDone ? 'Terminé' : isCurrent ? 'En cours' : doneCount > 0 ? 'En cours' : 'À venir';
 const statusColor = isDone ? '#4CAF50' : isCurrent ? 'var(--brand-1)' : doneCount > 0 ? '#FF9800' : 'var(--text-dim)';
 const overrideName = overrides[ex.id];
 const displayName = overrideName ?? ex.name;
@@ -104,11 +104,11 @@ background: isCurrent ? 'var(--bg-elevated)' : 'var(--bg-card)',
 <div style={rowInfo}>
 <p style={rowName}>
 {displayName}
-{overrideName && <span style={substTag}> (remplace {ex.name})</span>}
+{overrideName && overrideName !== ex.name && <span style={substTag}> (remplace {ex.name})</span>}
 </p>
 <p style={rowMeta}>
-{ex.muscleGroup} - {doneCount}/{totalCount} series
-{groupDisabled && ' - Repos ajoute'}
+{ex.muscleGroup} - {doneCount}/{totalCount} {totalCount > 1 ? 'séries' : 'série'}
+{groupDisabled && ' – Repos ajouté'}
 </p>
 </div>
 </div>
@@ -140,7 +140,7 @@ onCancel={() => setPicking(false)}
 Remplacer par un exercice du catalogue
 </button>
 
-<label style={modalLabel}>Nom pour cette seance</label>
+<label style={modalLabel}>Nom pour cette séance</label>
 <input
 value={draft}
 onChange={(e) => setDraft(e.target.value)}
@@ -150,7 +150,7 @@ style={modalInput}
 
 <div style={modalBtnRow}>
 {overrides[modalExercise.id] && (
-<button onClick={resetOverride} style={modalSecondaryBtn}>Reinitialiser</button>
+<button onClick={resetOverride} style={modalSecondaryBtn}>Réinitialiser</button>
 )}
 <button onClick={saveDraft} style={modalPrimaryBtn}>Enregistrer</button>
 </div>
@@ -161,12 +161,12 @@ onClick={() => onToggleSupersetRest(modalExercise.supersetGroupId as string, !mo
 style={{ ...modalToggleBtn, color: modalGroupDisabled ? '#FF9800' : 'var(--text-muted)' }}
 >
 {modalGroupDisabled
-? 'Repos ajoute - remettre l\'enchainement'
-: 'Machine occupee - ajouter du repos'}
+? 'Repos ajouté – remettre l\'enchaînement'
+: 'Machine occupée – ajouter du repos'}
 </button>
 )}
 
-<button onClick={goToExercise} style={modalGoBtn}>Aller a cet exercice</button>
+<button onClick={goToExercise} style={modalGoBtn}>Aller à cet exercice</button>
 <button onClick={closeModal} style={modalCloseBtn}>Fermer</button>
 </>
 )}

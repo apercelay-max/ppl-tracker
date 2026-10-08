@@ -163,6 +163,12 @@ const screenClass = useScreenClass();
     onBack();
   };
 
+  // La flèche ne doit pas jeter une sortie en cours d'un simple appui malheureux.
+  const handleBack = () => {
+    if (startedAt !== null && !saved && !window.confirm('Abandonner cette sortie en cours ? Rien ne sera enregistré.')) return;
+    onBack();
+  };
+
   const connectLabel = useMemo(() => {
     if (bike.status === 'connected') return bike.deviceName ?? 'Vélo connecté';
     if (bike.status === 'connecting') return 'Connexion…';
@@ -175,7 +181,7 @@ const screenClass = useScreenClass();
       <div style={scroll}>
 
         <div style={headerRow}>
-          <button onClick={onBack} className="glass-icon" style={backBtn} aria-label="Retour"><IconArrowLeft size={17} /></button>
+          <button onClick={handleBack} className="glass-icon" style={backBtn} aria-label="Retour"><IconArrowLeft size={17} /></button>
           <GlassIcon size={38} accent><meta.Icon size={19} /></GlassIcon>
           <div>
             <h1 style={title}>{meta.title}</h1>

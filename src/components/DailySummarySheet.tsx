@@ -14,7 +14,7 @@ interface DailySummarySheetProps {
 const DAY_LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
 const agoLabel = (ts: number): string => {
-  const days = Math.floor((Date.now() - ts) / 86_400_000);
+  const days = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(ts).setHours(0, 0, 0, 0)) / 86_400_000);
   if (days <= 0) return 'aujourd’hui';
   if (days === 1) return 'hier';
   return `il y a ${days} jours`;
@@ -89,7 +89,7 @@ export const DailySummarySheet: React.FC<DailySummarySheetProps> = ({ firstName,
                 </div>
               ))}
             </div>
-            {daily && <p style={text}>{daily.semaine}</p>}
+            {daily?.semaine && <p style={text}>{daily.semaine}</p>}
           </section>
 
           <section className="daily-in" style={{ ...block, ...step() }}>
@@ -116,7 +116,7 @@ export const DailySummarySheet: React.FC<DailySummarySheetProps> = ({ firstName,
               <h2 style={sub}>Séance conseillée</h2>
               <p style={sessionName}>{session.name}</p>
               {session.focus && <p style={dim}>{session.focus}</p>}
-              {daily && <p style={text}>{daily.seance}</p>}
+              {daily?.seance && <p style={text}>{daily.seance}</p>}
               <ul style={ul}>
                 {plan.exercises.map((ex) => (
                   <li key={ex.name} style={li}>
@@ -128,11 +128,11 @@ export const DailySummarySheet: React.FC<DailySummarySheetProps> = ({ firstName,
                   </li>
                 ))}
               </ul>
-              {daily && <p style={text}>{daily.poids}</p>}
+              {daily?.poids && <p style={text}>{daily.poids}</p>}
             </section>
           )}
 
-          {daily && (
+          {daily?.conseil && (
             <section className="daily-in" style={{ ...block, ...step() }}>
               <h2 style={sub}>Conseil du jour</h2>
               <p style={{ ...text, color: '#fff', fontSize: 15 }}>{daily.conseil}</p>

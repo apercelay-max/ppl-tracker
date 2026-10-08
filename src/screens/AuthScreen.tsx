@@ -4,13 +4,16 @@ import { useScreenClass } from '../hooks/useScreenClass';
 
 interface AuthScreenProps {
   onBack: () => void;
+  // Ouvert depuis le lien « mot de passe oublié » : on arrive directement sur
+  // le choix du nouveau mot de passe (voir App.tsx).
+  initialMode?: Mode;
 }
 
 type Mode = 'login' | 'signup' | 'forgot' | 'reset';
 
-export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, initialMode }) => {
 const screenClass = useScreenClass();
-  const [mode, setMode] = useState<Mode>('login');
+  const [mode, setMode] = useState<Mode>(initialMode ?? 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -87,15 +90,16 @@ const screenClass = useScreenClass();
         if (error) { setErrorMsg(error.message); return; }
         if (data.session) {
           // Confirmation email désactivée sur ce projet Supabase → connecté
-          // tout de suite. useAuth() détecte le changement et App.tsx
-          // renverra automatiquement vers l'écran précédent.
-          setInfoMsg('Compte créé, tu es connecté.');
+          // tout de suite. useAuth() détecte le changement ; rien d'autre ne
+          // nous fait quitter cet écran, donc on revient aux Réglages.
+          onBack();
         } else {
           setInfoMsg("Compte créé. Vérifie tes emails pour confirmer ton adresse avant de pouvoir te connecter.");
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) { setErrorMsg(error.message); return; }
+        onBack(); // connecté : sans ça l'écran restait figé, sans aucun retour
       }
     } catch (e) {
       setErrorMsg("Une erreur inattendue s'est produite. Réessaie.");

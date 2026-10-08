@@ -72,7 +72,7 @@ d="M4 7.7a2.2 2.2 0 012.2-2.2h11.6A2.2 2.2 0 0120 7.7v11.6A2.2 2.2 0 0117.8 21.5
 );
 
 export const HeartPulseIcon: React.FC<IconProps> = ({ size = 18, filled }) => (
-<svg width={size} height={size} viewBox="0 0 24 24" {...(filled ? {} : base)}>
+<svg width={size} height={size} {...(filled ? { viewBox: '0 0 24 24' } : base)}>
 <path
 fill={filled ? 'currentColor' : 'none'}
 stroke={filled ? 'none' : 'currentColor'}

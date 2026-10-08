@@ -70,6 +70,8 @@ const roundTo = (kg: number, increment: number, mode: 'down' | 'up'): number => 
 
 /** Décimale à la française : 1.6 → « 1,6 ». */
 const fr = (n: number): string => String(n).replace('.', ',');
+// Français : singulier en dessous de 2 (« 1 série », « 1,5 série »).
+const serieLabel = (n: number): string => (n < 2 ? 'série' : 'séries');
 
 const numericReps = (entry: SetEntry): number | null => {
   const n = parseInt(entry.reps, 10);
@@ -288,7 +290,7 @@ export const getCoachBrief = (
       if (pct < 0) tonnageDropPct = -pct;
     }
   }
-  const recap = `${name}, ${agoLabel(last.date)} : ${sets} séries, ${tonnage.toLocaleString('fr-FR')} kg${deltaLabel}.`;
+  const recap = `${name}, ${agoLabel(last.date)} : ${sets} ${serieLabel(sets)}, ${tonnage.toLocaleString('fr-FR')} kg${deltaLabel}.`;
 
   // ── Ligne 2 et 3 : un seul point, le plus prioritaire ──
 
@@ -300,7 +302,7 @@ export const getCoachBrief = (
   if (overloaded) {
     return {
       recap,
-      focus: `Trop de volume sur ${overloaded.group.toLowerCase()} : ${overloaded.directPerWeek} séries directes cette semaine, au-delà de ${COACH_LIMITS.volumeMax} la récupération ne suit plus.`,
+      focus: `Trop de volume sur ${overloaded.group.toLowerCase()} : ${fr(overloaded.directPerWeek)} ${serieLabel(overloaded.directPerWeek)} directes cette semaine, au-delà de ${COACH_LIMITS.volumeMax} la récupération ne suit plus.`,
       action: `Coupe une série d'isolation sur ce groupe aujourd'hui.`,
       tone: 'warn',
     };
@@ -355,7 +357,7 @@ export const getCoachBrief = (
   if (underworked) {
     return {
       recap,
-      focus: `${underworked.group.charAt(0) + underworked.group.slice(1).toLowerCase()} : ${underworked.perWeek} séries cette semaine, il en faut au moins ${COACH_LIMITS.volumeMin}.`,
+      focus: `${underworked.group.charAt(0) + underworked.group.slice(1).toLowerCase()} : ${fr(underworked.perWeek)} ${serieLabel(underworked.perWeek)} cette semaine, il en faut au moins ${COACH_LIMITS.volumeMin}.`,
       action: `Ajoute 1 à 2 séries sur ce groupe dès que ta séance le permet.`,
       tone: 'hold',
     };

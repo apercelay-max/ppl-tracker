@@ -15,7 +15,8 @@ interface ExercicesScreenProps { onBack: () => void; }
 // écran-ci reste concentré sur une seule chose : ta progression.
 
 const formatLastDate = (ts: number): string => {
-  const diffDays = Math.floor((Date.now() - ts) / 86400000);
+  // Jours calendaires (et non tranches de 24 h) : une séance d'hier 21 h n'est pas « aujourd'hui ».
+  const diffDays = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(ts).setHours(0, 0, 0, 0)) / 86400000);
   if (diffDays <= 0) return "aujourd'hui";
   if (diffDays === 1) return 'hier';
   if (diffDays < 7) return `il y a ${diffDays} j`;
@@ -152,7 +153,9 @@ const screenClass = useScreenClass();
 
             {groups.length === 0 && (
               <p style={{ color: 'var(--text-dim)', fontSize: 13, textAlign: 'center', marginTop: 24 }}>
-                Aucun exercice ne correspond à "{query}".
+                {query.trim() === ''
+                  ? 'Pas encore d\'exercice : ta progression apparaîtra ici après ta première séance.'
+                  : `Aucun exercice ne correspond à « ${query.trim()} ».`}
               </p>
             )}
 

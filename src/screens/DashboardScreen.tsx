@@ -12,6 +12,7 @@ import {
   getAllExercises, getExerciseWeightHistory, getMuscleGroupVolume,
   getEffectiveWeeklySets, EFFECTIVE_SETS_MIN, EFFECTIVE_SETS_MAX,
 } from '../utils/training';
+import { InfoTip } from '../components/InfoTip';
 import {
   computeTrainingStatus, computeReadiness, weeklyLoads, STATUS_LABEL, READINESS_LABEL,
   type TrainingStatus, type TrainingStatusKey, type Readiness, type ReadinessLevel, type LoadZone,
@@ -20,7 +21,8 @@ import {
 interface DashboardScreenProps { onBack: () => void; }
 
 const formatDate = (ts: number): string => {
-  const diffDays = Math.floor((Date.now() - ts) / 86400000);
+  // Jours calendaires (et non tranches de 24 h) : une séance d'hier 21 h n'est pas « aujourd'hui ».
+  const diffDays = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(ts).setHours(0, 0, 0, 0)) / 86400000);
   if (diffDays <= 0) return "Aujourd'hui";
   if (diffDays === 1) return 'Hier';
   if (diffDays < 7) return `Il y a ${diffDays} j`;
@@ -119,6 +121,8 @@ const ProgressionChart: React.FC<{ history: HistoryEntry[] }> = ({ history }) =>
     const lineColor = trendUp ? '#4CAF50' : '#f5a623';
     const midVal = (min + max) / 2;
     const dateFmt = (ts: number) => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    // Plage étroite (ex. 80 → 82,5 kg) : une décimale, sinon repères identiques.
+    const axisFmt = (v: number) => (range < 6 ? (Math.round(v * 10) / 10).toLocaleString('fr-FR') : String(Math.round(v)));
 
     svgContent = (
       <>
@@ -129,7 +133,7 @@ const ProgressionChart: React.FC<{ history: HistoryEntry[] }> = ({ history }) =>
             return (
               <g key={i}>
                 <line x1={plotX0} y1={y} x2={CHART_W} y2={y} stroke="var(--border-subtle)" strokeWidth={1} />
-                <text x={plotX0 - 4} y={y + 3} textAnchor="end" fontSize="8" fill="var(--text-dim)">{Math.round(v)}</text>
+                <text x={plotX0 - 4} y={y + 3} textAnchor="end" fontSize="8" fill="var(--text-dim)">{axisFmt(v)}</text>
               </g>
             );
           })}
@@ -335,7 +339,7 @@ const TrainingStatusCard: React.FC<{ status: TrainingStatus }> = ({ status }) =>
   const color = STATUS_COLOR[status.status];
   return (
     <div style={{ ...statusCard, borderColor: color + '40' }}>
-      <p style={sectionLabel}>STATUT D'ENTRAÎNEMENT</p>
+      <p style={sectionLabel}>STATUT D'ENTRAÎNEMENT<InfoTip term="CHARGE" /></p>
       <p style={{ fontSize: 20, fontWeight: 800, color, marginBottom: 4 }}>{STATUS_LABEL[status.status]}</p>
       <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: '17px' }}>{status.detail}</p>
       {status.status !== 'none' && (
@@ -370,7 +374,7 @@ const ReadinessCard: React.FC<{ readiness: Readiness }> = ({ readiness }) => {
   const color = READINESS_COLOR[readiness.level];
   return (
     <div style={chartCard}>
-      <p style={sectionLabel}>APTITUDE À L'ENTRAÎNEMENT</p>
+      <p style={sectionLabel}>APTITUDE À L'ENTRAÎNEMENT<InfoTip term="APTITUDE" /></p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <div style={{ width: 56, height: 56, borderRadius: 28, border: `4px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <span style={{ color: 'var(--text-primary)', fontSize: 18, fontWeight: 800 }}>{readiness.score}</span>
@@ -457,7 +461,7 @@ const screenClass = useScreenClass();
 
             {/* Tonnage hebdo */}
             <div style={chartCard}>
-              <p style={sectionLabel}>TONNAGE / SEMAINE (KG)</p>
+              <p style={sectionLabel}>TONNAGE / SEMAINE (KG)<InfoTip term="TONNAGE" /></p>
               <WeeklyBarChart buckets={buckets} valueFn={(b) => b.tonnage} color="#5560cc" />
             </div>
 

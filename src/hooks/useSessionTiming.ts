@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { WorkoutDay, WorkoutSession } from '../data/types';
+import { useWorkoutStore } from '../store/workoutStore';
 
 // Mêmes constantes que utils/workoutGenerator.ts (estimation "≈ X min" des
 // séances) : le temps de travail réel par série n'est pas mesurable à
@@ -30,6 +31,9 @@ export const useSessionTiming = (
   customRestSeconds: Record<string, number>,
 ): SessionTiming => {
   const [now, setNow] = useState(() => Date.now());
+  // Séance en pause : le temps écoulé reste figé (startTime n'est décalé qu'à la reprise),
+  // sinon la pause comptait comme du retard (« En retard de … », bouton Raccourcir).
+  const pausedAt = useWorkoutStore((s) => s.sessionPausedAt);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 15000);
@@ -50,7 +54,7 @@ export const useSessionTiming = (
     if (ex.essential !== true && doneCount === 0) hasDroppableExercises = true;
   }
 
-  const elapsedSeconds = (now - session.startTime) / 1000;
+  const elapsedSeconds = ((pausedAt ?? now) - session.startTime) / 1000;
   const remainingSeconds = Math.max(0, totalPlannedSeconds - plannedUpToNowSeconds);
 
   return {

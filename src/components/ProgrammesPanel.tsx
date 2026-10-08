@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ExerciseSheet, findCatalogExercise, readFavs, writeFavs } from './ExerciseCatalog';
 import { EXERCISE_IMG_BASE } from '../data/exercisesCatalog';
@@ -50,9 +50,13 @@ export const ProgrammesPanel: React.FC = () => {
 
   const openProgram = programs.find((p) => p.id === openId) ?? null;
 
+  // Un seul minuteur : sans l'annuler, le timer du 1er toast effaçait le 2e trop tôt.
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
   const flash = (msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 2600);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2600);
   };
 
   const handleSave = (program: Program) => {

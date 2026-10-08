@@ -19,7 +19,8 @@ const LIVE_MODES: { mode: CardioActivityType; label: string; hint: string }[] = 
 ];
 
 const formatCardioDate = (ts: number): string => {
-  const diffDays = Math.floor((Date.now() - ts) / 86400000);
+  // Jours calendaires (et non tranches de 24 h) : une séance d'hier 21 h n'est pas « aujourd'hui ».
+  const diffDays = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(ts).setHours(0, 0, 0, 0)) / 86400000);
   if (diffDays <= 0) return "Aujourd'hui";
   if (diffDays === 1) return 'Hier';
   if (diffDays < 7) return `Il y a ${diffDays} j`;
