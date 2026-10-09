@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import {
-  LAUNCH_OFFER, PRODUCT_YEARLY, askForReview, freeTrialLabel, subscriptionsAvailable, useIsPro, useSubscriptionStore,
+  LAUNCH_OFFER, PRODUCT_PLUS, TIER_NAME, askForReview, freeTrialLabel, subscriptionsAvailable, usePaidTier, useSubscriptionStore,
 } from '../lib/subscriptions';
 
 // Propose PPL Pro de temps en temps, et demande un avis après une bonne séance.
@@ -37,7 +37,8 @@ interface ProPromptSheetProps {
 export const ProPromptSheet: React.FC<ProPromptSheetProps> = ({ enabled, onOpenPro }) => {
   const ready = useSubscriptionStore((s) => s.ready);
   const products = useSubscriptionStore((s) => s.products);
-  const isPro = useIsPro();
+  const paid = usePaidTier();
+  const isPro = paid !== 'free';
   const sessions = useWorkoutStore((s) => s.totalSessionsCompleted);
   const [open, setOpen] = useState(false);
   const decided = useRef(false);
@@ -67,19 +68,19 @@ export const ProPromptSheet: React.FC<ProPromptSheetProps> = ({ enabled, onOpenP
 
   if (!open || !enabled) return null;
 
-  const yearly = products.find((p) => p.id === PRODUCT_YEARLY);
-  const trial = freeTrialLabel(yearly);
+  const plus = products.find((p) => p.id === PRODUCT_PLUS);
+  const trial = freeTrialLabel(plus);
 
   return (
     <div style={backdrop} onClick={() => setOpen(false)}>
       <div style={sheet} onClick={(e) => e.stopPropagation()}>
-        <p style={tag}>PPL PRO</p>
-        <h2 style={heading}>{trial ? `Essaie PPL Pro ${trial} gratuitement` : 'Passe à PPL Pro'}</h2>
+        <p style={tag}>PPL PLUS · PPL PRO</p>
+        <h2 style={heading}>{trial ? `Essaie ${TIER_NAME.plus} ${trial} gratuitement` : 'Passe à PPL Plus ou PPL Pro'}</h2>
         <p style={body}>
-          Coach IA sans limite, widgets, binôme et stats avancées.
-          {LAUNCH_OFFER.active && ` Prix de lancement −50 % pour les ${LAUNCH_OFFER.places} premiers abonnés.`}
+          Sans publicité, widgets, séance en direct sur l’écran verrouillé, Siri, et plus de coach IA. PPL Plus dès 4,99 €/mois, PPL Pro pour aller plus loin.
+          {LAUNCH_OFFER.active && ` Prix de lancement −50 % pour les ${LAUNCH_OFFER.places} premiers abonnés de chaque formule.`}
         </p>
-        <button style={primary} onClick={() => { setOpen(false); onOpenPro(); }}>Découvrir PPL Pro</button>
+        <button style={primary} onClick={() => { setOpen(false); onOpenPro(); }}>Voir les formules</button>
         <button style={later} onClick={() => setOpen(false)}>Plus tard</button>
       </div>
     </div>

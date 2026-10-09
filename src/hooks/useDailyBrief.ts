@@ -87,6 +87,10 @@ export const useDailyBrief = (enabled: boolean): DailyBriefState => {
         setCached(fresh);
         writeCachedDaily(fresh);
         retried.current = false;
+      } else if (!response.ok && response.code === 'LIMITE_FORMULE') {
+        // Limite de la formule atteinte : ni nouvelle tentative ni message d'erreur rouge.
+        setError(response.message);
+        retried.current = true;
       } else if (!response.ok && response.code === 'CONSENTEMENT_REFUSE') {
         // Pas d'accord : ni erreur rouge ni nouvelle tentative, juste une invitation.
         setError(auto

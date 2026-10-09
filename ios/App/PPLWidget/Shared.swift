@@ -22,6 +22,8 @@ struct CoachInfo: Codable { var recap: String?; var focus: String?; var action: 
 struct WidgetData: Codable {
     /// Faux : PPL Pro n'est pas actif, les widgets montrent un écran verrouillé.
     var pro: Bool?
+    /// « free », « plus » ou « pro » : les grands widgets demandent « pro ».
+    var tier: String?
     var nextName: String?
     var nextDayId: String?
     var dayLabel: String?
@@ -197,15 +199,18 @@ struct ProgressRing: View {
     }
 }
 
-// ─── Verrou PPL Pro ──────────────────────────────────────────────────────────
+// ─── Verrou des formules ─────────────────────────────────────────────────────
 
-/// Écran affiché à la place du widget quand PPL Pro n'est pas actif. Un appui ouvre l'écran d'offre.
+/// Écran affiché à la place du widget quand la formule ne le permet pas. Un appui ouvre l'écran des formules.
 struct LockedWidgetView: View {
+    var message = "Débloque les widgets avec PPL Plus."
+    var title = "PPL Plus"
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Image(systemName: "lock.fill").font(.title3).foregroundColor(Color(red: 1.0, green: 0.45, blue: 0.3))
-            Text("PPL Pro").font(.headline).foregroundColor(.white)
-            Text("Débloque les widgets avec PPL Pro.").font(.caption).foregroundColor(.white.opacity(0.7))
+            Text(title).font(.headline).foregroundColor(.white)
+            Text(message).font(.caption).foregroundColor(.white.opacity(0.7))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .widgetBackground()
@@ -213,12 +218,19 @@ struct LockedWidgetView: View {
     }
 }
 
-/// Affiche le widget, ou l'écran verrouillé si PPL Pro n'est pas actif.
+/// Affiche le widget, ou l'écran verrouillé : PPL Plus ouvre les petits et moyens formats, PPL Pro les grands.
 struct ProGate<Content: View>: View {
+    @Environment(\.widgetFamily) private var family
     let entry: SessionEntry
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        if entry.locked { LockedWidgetView() } else { content() }
+        if entry.locked {
+            LockedWidgetView()
+        } else if family == .systemLarge, let tier = entry.data?.tier, tier != "pro" {
+            LockedWidgetView(message: "Les grands widgets font partie de PPL Pro.", title: "PPL Pro")
+        } else {
+            content()
+        }
     }
 }

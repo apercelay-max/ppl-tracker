@@ -32,7 +32,7 @@ private enum SiriData {
     }
 
     static let needsApp = "Ouvre PPL Tracker une fois pour que je puisse te répondre."
-    static let needsPro = "Les raccourcis Siri font partie de PPL Pro."
+    static let needsPro = "Les raccourcis Siri font partie de PPL Plus et PPL Pro."
 }
 
 extension Notification.Name {

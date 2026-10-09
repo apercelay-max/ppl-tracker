@@ -8,7 +8,7 @@ import { kgToLbs, lbsToKg } from '../utils/weight';
 import { getWatchHandlers } from './watchBridge';
 import { computeCurrentWeekStreak, useWorkoutStore } from '../store/workoutStore';
 import { getBinomeState, subscribeBinome } from '../hooks/useBinome';
-import { hasProAccess, useSubscriptionStore } from './subscriptions';
+import { currentTier, hasTier, useSubscriptionStore } from './subscriptions';
 import { useReferralStore } from './referral';
 
 // Pont vers les widgets iOS et le minuteur de repos de l'écran verrouillé
@@ -40,8 +40,10 @@ const DAY_MS = 86400000;
 // WidgetData (ios/App/PPLWidget/Shared.swift) en optionnel, sinon un widget
 // plus ancien que l'appli (ou l'inverse) cesserait d'afficher quoi que ce soit.
 interface WidgetPayload {
-  // Faux = widgets verrouillés (« Débloque avec PPL Pro »). PPL Pro et le mois offert du parrainage l'ouvrent.
+  // Faux = widgets verrouillés. PPL Plus, PPL Pro et le mois offert du parrainage l'ouvrent.
   pro: boolean;
+  // Formule active : les grands widgets demandent PPL Pro.
+  tier: 'free' | 'plus' | 'pro';
   nextName: string;
   nextDayId: string;
   dayLabel: string;
@@ -146,7 +148,8 @@ const buildPayload = (): WidgetPayload | null => {
   const brief = getCoachBrief(s.history, getWorkout);
 
   return {
-    pro: hasProAccess(),
+    pro: hasTier('plus'),
+    tier: currentTier(),
     nextName: next.name,
     nextDayId: next.id,
     dayLabel: [program.dayTypeLabels[next.id], `J${next.dayNumber}`].filter(Boolean).join(' · '),
@@ -207,8 +210,8 @@ let lastWorkoutKey = '';
 
 const syncWorkoutActivity = () => {
   const { session, timer, sessionPausedAt } = useWorkoutStore.getState();
-  // La séance en direct fait partie de PPL Pro.
-  const workout = session && !session.isComplete && hasProAccess() ? getWorkout(session.dayId) : undefined;
+  // La séance en direct fait partie de PPL Plus et de PPL Pro.
+  const workout = session && !session.isComplete && hasTier('plus') ? getWorkout(session.dayId) : undefined;
   const current = workout?.exercises[session!.currentExerciseIndex];
   if (!session || !workout || !current) {
     if (lastWorkoutKey !== 'off') {
@@ -268,7 +271,8 @@ let lastWatchKey = '';
 const syncWatch = () => {
   if (!useSubscriptionStore.getState().ready) return;
   const s = useWorkoutStore.getState();
-  const pro = hasProAccess();
+  // L'Apple Watch fait partie de PPL Pro (pas de PPL Plus).
+  const pro = hasTier('pro');
   const program = getProgram(s.activeProgramId, s.customPrograms);
   const next = program.workouts.find((w) => !s.cycleDoneIds.includes(w.id)) ?? program.workouts[0];
   const now = Date.now();

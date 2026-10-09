@@ -1,4 +1,5 @@
 import { isPerformedSet } from '../utils/weight';
+import { TierLock } from '../components/TierLock';
 import React, { useState } from 'react';
 import { IconArrowLeft, IconBarChart } from '../components/Icons';
 import { GlassIcon } from '../components/GlassIcon';
@@ -450,6 +451,8 @@ const screenClass = useScreenClass();
               </div>
             </div>
 
+            {/* Stats avancées : statut de forme, aptitude et charge d'entraînement (PPL Pro dans l'appli iPhone). */}
+            <TierLock min="pro" title="Stats avancées" text="Statut de forme, aptitude du jour et charge d'entraînement semaine par semaine.">
             <TrainingStatusCard status={trainingStatus} />
             <ReadinessCard readiness={readiness} />
 
@@ -458,6 +461,7 @@ const screenClass = useScreenClass();
               <p style={sectionLabel}>CHARGE D'ENTRAÎNEMENT / SEMAINE</p>
               <WeeklyBarChart buckets={buckets} valueFn={(b) => loadByWeek[b.weeksAgo] ?? 0} color="var(--brand-1)" />
             </div>
+            </TierLock>
 
             {/* Tonnage hebdo */}
             <div style={chartCard}>

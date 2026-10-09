@@ -16,6 +16,7 @@ import type { CoachPatchOp, CoachProgramView, NewProgramPreview, PatchChange } f
 import type { Program } from '../data/programs';
 
 import { webOrigin } from '../lib/appUrl';
+import { aiQuota, canUse, recordAiCall } from '../lib/subscriptions';
 
 // Adresse complète : dans l'appli iPhone, « /api/coach » seul ne mènerait pas au serveur.
 export const COACH_AI_ENDPOINT = `${webOrigin()}/api/coach`;
@@ -141,12 +142,25 @@ const networkError = (message: string): CoachAiResponse => ({ ok: false, code: '
 const CLIENT_TIMEOUT_MS = 50_000;
 
 export const requestCoachAi = async (
-  request: CoachAiRequest,
+  initial: CoachAiRequest,
   options: { prompt?: boolean } = {},
 ): Promise<CoachAiResponse> => {
   if (!askAiConsent(options.prompt !== false)) {
     return { ok: false, code: 'CONSENTEMENT_REFUSE', message: 'Le coach IA a besoin de ton accord pour envoyer ton résumé d’entraînement à Google. Ton coach local, lui, marche sans rien envoyer.' };
   }
+  // Limite de la formule (voir AI_LIMITS) : vérifiée avant d'envoyer quoi que ce soit.
+  let request = initial;
+  const quota = aiQuota();
+  if (!quota.allowed) {
+    const per = quota.per === 'week' ? 'cette semaine' : 'ce mois-ci';
+    return {
+      ok: false, code: 'LIMITE_FORMULE',
+      message: `Tu as utilisé tes ${quota.limit} coachs IA ${per}. Passe à une formule supérieure pour en avoir plus. Ton coach local, lui, reste illimité.`,
+    };
+  }
+  // Modifier le programme par l'IA est réservé à PPL Pro : sans le programme et le catalogue,
+  // le coach peut discuter mais n'a rien à proposer de modifiable.
+  if (!canUse('pro')) request = { ...request, program: undefined, catalog: undefined };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
   try {
@@ -190,6 +204,7 @@ export const requestCoachAi = async (
     if (!parsed || typeof parsed !== 'object' || !('ok' in parsed)) {
       return networkError('Réponse inattendue du serveur.');
     }
+    if (parsed.ok) recordAiCall(); // seuls les appels réussis comptent dans la limite
     return parsed;
   } finally {
     clearTimeout(timer);

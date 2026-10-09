@@ -147,7 +147,7 @@ struct LockedView: View {
         VStack(spacing: 6) {
             Image(systemName: "lock.fill").font(.title2).foregroundColor(accent)
             Text("PPL Pro").font(.headline)
-            Text("L’Apple Watch fait partie de PPL Pro. Active-le sur ton iPhone.").font(.caption2).multilineTextAlignment(.center).foregroundColor(.secondary)
+            Text("L’Apple Watch fait partie de PPL Pro (pas de PPL Plus). Passe à PPL Pro sur ton iPhone.").font(.caption2).multilineTextAlignment(.center).foregroundColor(.secondary)
         }
     }
 }

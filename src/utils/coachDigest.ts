@@ -276,6 +276,8 @@ export type CoachAiErrorCode =
   | 'DELAI_DEPASSE'
   /** L'utilisateur a refusé l'envoi de ses données à Google — détecté côté client. */
   | 'CONSENTEMENT_REFUSE'
+  /** La limite d'appels de la formule de la personne est atteinte — détecté côté client. */
+  | 'LIMITE_FORMULE'
   | 'REPONSE_VIDE'
   /** L'échange précédent n'est plus connu de Google (expiré). Le client
    *  repart d'une conversation neuve, en rejoignant le digest. */

@@ -1,92 +1,74 @@
 {
-  "identifier" : "9B2C6A10",
-  "nonRenewingSubscriptions" : [
-
-  ],
-  "products" : [
-
-  ],
-  "settings" : {
-    "_locale" : "fr_FR",
-    "_storefront" : "FRA"
+  "identifier": "9B2C6A10",
+  "nonRenewingSubscriptions": [],
+  "products": [],
+  "settings": {
+    "_locale": "fr_FR",
+    "_storefront": "FRA"
   },
-  "subscriptionGroups" : [
+  "subscriptionGroups": [
     {
-      "id" : "21500001",
-      "localizations" : [
-
-      ],
-      "name" : "PPL Pro",
-      "subscriptions" : [
+      "id": "21500001",
+      "localizations": [],
+      "name": "PPL Plus et Pro",
+      "subscriptions": [
         {
-          "adHocOffers" : [
-
-          ],
-          "codeOffers" : [
-
-          ],
-          "displayPrice" : "74.99",
-          "familyShareable" : false,
-          "groupNumber" : 1,
-          "internalID" : "6760000001",
-          "introductoryOffer" : {
-            "internalID" : "6760000011",
-            "paymentMode" : "free",
-            "subscriptionPeriod" : "P1W"
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "7.49",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "6760000001",
+          "introductoryOffer": {
+            "internalID": "6760000011",
+            "paymentMode": "free",
+            "subscriptionPeriod": "P1W"
           },
-          "localizations" : [
+          "localizations": [
             {
-              "description" : "Tout PPL Pro pour 12 mois (environ 2 mois offerts), avec 7 jours d'essai gratuits.",
-              "displayName" : "PPL Pro annuel",
-              "locale" : "fr"
+              "description": "Tout PPL Plus, avec le coach IA illimité, l'Apple Watch et les stats avancées.",
+              "displayName": "PPL Pro",
+              "locale": "fr"
             }
           ],
-          "productID" : "com.ppltracker.app.pro.yearly",
-          "recurringSubscriptionPeriod" : "P1Y",
-          "referenceName" : "PPL Pro annuel",
-          "subscriptionGroupID" : "21500001",
-          "type" : "RecurringSubscription",
-          "winbackOffers" : [
-
-          ]
+          "productID": "com.ppltracker.app.pro.monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "PPL Pro",
+          "subscriptionGroupID": "21500001",
+          "type": "RecurringSubscription",
+          "winbackOffers": []
         },
         {
-          "adHocOffers" : [
-
-          ],
-          "codeOffers" : [
-
-          ],
-          "displayPrice" : "7.49",
-          "familyShareable" : false,
-          "groupNumber" : 2,
-          "internalID" : "6760000002",
-          "introductoryOffer" : {
-            "internalID" : "6760000012",
-            "paymentMode" : "free",
-            "subscriptionPeriod" : "P1W"
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "2.49",
+          "familyShareable": false,
+          "groupNumber": 2,
+          "internalID": "6760000002",
+          "introductoryOffer": {
+            "internalID": "6760000012",
+            "paymentMode": "free",
+            "subscriptionPeriod": "P1W"
           },
-          "localizations" : [
+          "localizations": [
             {
-              "description" : "Tout PPL Pro, mois par mois, avec 7 jours d'essai gratuits.",
-              "displayName" : "PPL Pro mensuel",
-              "locale" : "fr"
+              "description": "Sans publicité, widgets, séance en direct, Siri et coach IA.",
+              "displayName": "PPL Plus",
+              "locale": "fr"
             }
           ],
-          "productID" : "com.ppltracker.app.pro.monthly",
-          "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "PPL Pro mensuel",
-          "subscriptionGroupID" : "21500001",
-          "type" : "RecurringSubscription",
-          "winbackOffers" : [
-
-          ]
+          "productID": "com.ppltracker.app.plus.monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "PPL Plus",
+          "subscriptionGroupID": "21500001",
+          "type": "RecurringSubscription",
+          "winbackOffers": []
         }
       ]
     }
   ],
-  "version" : {
-    "major" : 4,
-    "minor" : 0
+  "version": {
+    "major": 4,
+    "minor": 0
   }
 }

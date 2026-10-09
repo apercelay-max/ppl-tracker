@@ -13,7 +13,7 @@ import { buildHistoryImport, detectHistorySource, SOURCE_LABEL } from '../utils/
 import { historyToCsv } from '../utils/historyExport';
 import { saveBackup, listBackups, restoreBackup, markExported, getLastExportAt, type BackupMeta } from '../lib/localBackups';
 import { useAuth } from '../hooks/useAuth';
-import { useIsPro, bonusUntilNow } from '../lib/subscriptions';
+import { usePaidTier, bonusUntilNow, TIER_NAME } from '../lib/subscriptions';
 import { useReferralStore } from '../lib/referral';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import type { SyncStatus } from '../hooks/useCloudSync';
@@ -217,7 +217,8 @@ const AiConsentRow: React.FC = () => {
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ initialCategory, onBack, onOpenAccount, onRestartQuiz, onOpenPro, syncStatus, lastSyncedAt }) => {
 const screenClass = useScreenClass();
-const isPro = useIsPro();
+const paidTier = usePaidTier();
+const isPro = paidTier !== 'free';
 useReferralStore((s) => s.state?.bonusUntil);
 const bonusUntil = bonusUntilNow();
 const { user, loading: authLoading } = useAuth();
@@ -662,8 +663,8 @@ background: !collapsedCategories[id] ? 'var(--bg-elevated)' : 'transparent',
 <button onClick={onOpenPro} style={proCard}>
 <span style={{ fontSize: 22 }}>⭐</span>
 <div style={{ flex: 1, textAlign: 'left' }}>
-<p style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 800, margin: 0 }}>{isPro ? 'PPL Pro · abonné' : bonusUntil ? 'PPL Pro · offert' : 'Découvrir PPL Pro'}</p>
-<p style={{ color: 'var(--text-dim)', fontSize: 12, margin: '2px 0 0' }}>{isPro ? 'Gérer mon abonnement' : bonusUntil ? `Jusqu’au ${new Date(bonusUntil).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}` : '7 jours gratuits, puis prix de lancement −50 %'}</p>
+<p style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 800, margin: 0 }}>{isPro ? `${TIER_NAME[paidTier]} · abonné` : bonusUntil ? 'PPL Plus · offert' : 'PPL Plus et PPL Pro'}</p>
+<p style={{ color: 'var(--text-dim)', fontSize: 12, margin: '2px 0 0' }}>{isPro ? 'Gérer mon abonnement' : bonusUntil ? `Jusqu’au ${new Date(bonusUntil).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}` : 'Dès 4,99 €/mois · 7 jours gratuits'}</p>
 </div>
 <span style={{ color: 'var(--text-dim)', fontSize: 16 }}>›</span>
 </button>

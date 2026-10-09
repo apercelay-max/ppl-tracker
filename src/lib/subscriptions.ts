@@ -8,15 +8,26 @@ import { useReferralStore } from './referral';
 // (navigateur, PWA) il n'y a ni boutique ni prix, et `isPro` reste faux.
 // Plugin natif : ios/App/App/SubscriptionsPlugin.swift (StoreKit 2).
 
-// Mêmes identifiants que dans App Store Connect et ios/App/PPLTracker.storekit.
-// Basés sur l'identifiant provisoire de l'appli : à confirmer avec l'adulte
-// responsable du compte Apple Developer avant de créer les produits.
-export const PRODUCT_YEARLY = 'com.ppltracker.app.pro.yearly';
-export const PRODUCT_MONTHLY = 'com.ppltracker.app.pro.monthly';
-export const PRODUCT_IDS = [PRODUCT_YEARLY, PRODUCT_MONTHLY];
+// Deux formules dans le MÊME groupe d'abonnement Apple (niveaux) : on ne peut être abonné qu'à une
+// seule à la fois, on passe de l'une à l'autre dans les réglages d'Apple, et l'essai gratuit n'est
+// donné qu'une fois. Mêmes identifiants que dans App Store Connect et ios/App/PPLTracker.storekit,
+// basés sur l'identifiant provisoire de l'appli : à confirmer avec l'adulte responsable du compte
+// Apple Developer avant de créer les produits.
+export const PRODUCT_PLUS = 'com.ppltracker.app.plus.monthly';
+export const PRODUCT_PRO = 'com.ppltracker.app.pro.monthly';
+export const PRODUCT_IDS = [PRODUCT_PLUS, PRODUCT_PRO];
+
+export type Tier = 'free' | 'plus' | 'pro';
+const TIER_RANK: Record<Tier, number> = { free: 0, plus: 1, pro: 2 };
+const TIER_OF_PRODUCT: Record<string, Tier> = { [PRODUCT_PLUS]: 'plus', [PRODUCT_PRO]: 'pro' };
+
+export const TIER_NAME: Record<Tier, string> = { free: 'Gratuit', plus: 'PPL Plus', pro: 'PPL Pro' };
+
+/** Vrai si `tier` donne au moins les droits de `min`. */
+export const tierAtLeast = (tier: Tier, min: Tier): boolean => TIER_RANK[tier] >= TIER_RANK[min];
 
 /**
- * Offre de lancement : les 50 premiers abonnés paient moitié prix, et le gardent.
+ * Offre de lancement : les 50 premiers abonnés de chaque formule paient moitié prix, et le gardent.
  *
  * Comment ça marche côté Apple : l'abonnement est mis en vente AU PRIX DE LANCEMENT.
  * Une fois les 50 abonnés atteints (à suivre dans App Store Connect > Ventes), on relève
@@ -31,18 +42,57 @@ export const PRODUCT_IDS = [PRODUCT_YEARLY, PRODUCT_MONTHLY];
 export const LAUNCH_OFFER = {
   active: true,
   places: 50,
-  regularPrice: { [PRODUCT_YEARLY]: '149,99 €', [PRODUCT_MONTHLY]: '14,99 €' } as Record<string, string>,
+  regularPrice: { [PRODUCT_PLUS]: '4,99 €', [PRODUCT_PRO]: '14,99 €' } as Record<string, string>,
 };
 
-// Textes montrés sur l'écran d'offre. Apple exige qu'ils décrivent ce que l'abonnement
-// débloque RÉELLEMENT (règle 3.1.2) : PPL Pro ouvre les extras de l'appli iPhone, et
-// uniquement eux. Toute l'appli de suivi reste gratuite. Si on verrouille autre chose
-// un jour, c'est ici qu'on l'écrit — et seulement une fois que c'est verrouillé.
-export const PRO_BENEFITS: { icon: string; title: string; text: string }[] = [
-  { icon: '📱', title: 'Widgets sur l\'écran d\'accueil', text: 'Prochaine séance, série, record, poids, objectifs et récupération, en petit, moyen ou grand.' },
-  { icon: '🏝️', title: 'Séance en direct', text: 'Exercice, repos, volume et durée sur l\'écran verrouillé et dans la Dynamic Island.' },
-  { icon: '🎙️', title: 'Siri et Raccourcis', text: '« Démarre ma séance », « Où j\'en suis cette semaine ? » sans ouvrir l\'appli.' },
-  { icon: '⌚', title: 'Apple Watch', text: 'Valide tes séries et suis ton repos depuis ton poignet.' },
+// Limites du coach IA (résumé du jour, bilans, chat), en nombre d'appels réussis.
+// Il coûte de l'argent à chaque appel (Google) : c'est ce qui sépare les formules.
+// La limite est comptée sur le téléphone : elle règle l'usage normal, elle n'est pas
+// inviolable (un serveur qui connaîtrait l'abonné serait nécessaire pour l'être).
+export const AI_LIMITS: Record<Tier, { count: number; per: 'week' | 'month' } | null> = {
+  free: { count: 3, per: 'week' },
+  plus: { count: 15, per: 'month' },
+  pro: null, // illimité
+};
+
+// Ce que chaque formule débloque. Apple exige que ces textes décrivent ce qui est RÉELLEMENT
+// verrouillé (règle 3.1.2) : à garder alignés avec le code (tierAtLeast / hasTier).
+export interface TierPlan {
+  tier: Exclude<Tier, 'free'>;
+  productId: string;
+  tagline: string;
+  /** Ce que cette formule ajoute ; `inherits` : « tout de la formule du dessous ». */
+  inherits?: string;
+  benefits: { icon: string; title: string; text: string }[];
+}
+
+export const TIER_PLANS: TierPlan[] = [
+  {
+    tier: 'plus',
+    productId: PRODUCT_PLUS,
+    tagline: 'Pour bien démarrer',
+    benefits: [
+      { icon: '🚫', title: 'Sans publicité', text: 'Plus aucune bannière dans l\'appli.' },
+      { icon: '📱', title: 'Widgets petits et moyens', text: 'Prochaine séance, série, record, poids, objectifs et récupération sur ton écran d\'accueil.' },
+      { icon: '🏝️', title: 'Séance en direct', text: 'Exercice, repos, volume et durée sur l\'écran verrouillé et dans la Dynamic Island.' },
+      { icon: '🎙️', title: 'Siri et Raccourcis', text: '« Démarre ma séance », « Où j\'en suis cette semaine ? » sans ouvrir l\'appli.' },
+      { icon: '🤖', title: 'Coach IA : 15 par mois', text: 'Résumé du jour, bilans et chat.' },
+      { icon: '🔋', title: 'Récupération musculaire', text: 'Où en est chaque muscle de sa récupération.' },
+    ],
+  },
+  {
+    tier: 'pro',
+    productId: PRODUCT_PRO,
+    tagline: 'Pour les sportifs sérieux',
+    inherits: 'Tout PPL Plus, et :',
+    benefits: [
+      { icon: '🤖', title: 'Coach IA illimité', text: 'Autant de résumés, bilans et questions que tu veux.' },
+      { icon: '🧠', title: 'Programme adapté par l\'IA', text: 'Le coach propose de modifier tes séances et tes charges.' },
+      { icon: '⌚', title: 'Apple Watch', text: 'Valide tes séries et suis ton repos depuis ton poignet.' },
+      { icon: '📊', title: 'Stats avancées', text: 'Charge d\'entraînement, statut de forme et tendances semaine par semaine.' },
+      { icon: '🧱', title: 'Grands widgets', text: 'Objectifs et récupération musculaire en grand format.' },
+    ],
+  },
 ];
 
 export type PeriodUnit = 'day' | 'week' | 'month' | 'year';
@@ -102,23 +152,90 @@ export const useSubscriptionStore = create<SubscriptionState>(() => ({
 
 const patch = (p: Partial<SubscriptionState>) => useSubscriptionStore.setState(p);
 
-/** Vrai tant qu'un abonnement (essai gratuit compris) est actif. */
-export const useIsPro = (): boolean => useSubscriptionStore((s) => s.entitlements.length > 0);
-
 /** Fin du Pro offert par le parrainage (ms), ou null. */
 export const bonusUntilNow = (): number | null => {
   const until = useReferralStore.getState().state?.bonusUntil ?? null;
   return until !== null && until > Date.now() ? until : null;
 };
 
-/** Accès aux fonctions Pro : abonnement payant OU mois offert par le parrainage. */
-export const hasProAccess = (): boolean =>
-  useSubscriptionStore.getState().entitlements.length > 0 || bonusUntilNow() !== null;
+const paidTier = (entitlements: Entitlement[]): Tier =>
+  entitlements.reduce<Tier>((best, e) => {
+    const t = TIER_OF_PRODUCT[e.productId] ?? 'free';
+    return tierAtLeast(t, best) ? t : best;
+  }, 'free');
 
-export const useProAccess = (): boolean => {
-  const paid = useIsPro();
+// Le mois offert par le parrainage donne PPL Plus (pas Pro : l'IA illimitée a un coût réel).
+const BONUS_TIER: Tier = 'plus';
+
+/** Formule active : l'abonnement payant le plus haut, sinon le mois offert, sinon gratuit. */
+export const currentTier = (): Tier => {
+  const paid = paidTier(useSubscriptionStore.getState().entitlements);
+  return bonusUntilNow() !== null && !tierAtLeast(paid, BONUS_TIER) ? BONUS_TIER : paid;
+};
+
+export const hasTier = (min: Tier): boolean => tierAtLeast(currentTier(), min);
+
+export const useTier = (): Tier => {
+  const entitlements = useSubscriptionStore((s) => s.entitlements);
   const bonusUntil = useReferralStore((s) => s.state?.bonusUntil ?? null);
-  return paid || (bonusUntil !== null && bonusUntil > Date.now());
+  const paid = paidTier(entitlements);
+  const bonusOn = bonusUntil !== null && bonusUntil > Date.now();
+  return bonusOn && !tierAtLeast(paid, BONUS_TIER) ? BONUS_TIER : paid;
+};
+
+/** Vrai si une formule payante est active (hors mois offert). */
+export const usePaidTier = (): Tier => paidTier(useSubscriptionStore((s) => s.entitlements));
+
+/**
+ * Les formules n'existent que dans l'appli iPhone. Sur le web et la PWA, personne n'est limité :
+ * les utilisateurs actuels gardent tout. `ready` : tant que l'abonnement n'est pas lu, on ne limite rien.
+ */
+export const tiersEnforced = (): boolean => subscriptionsAvailable() && useSubscriptionStore.getState().ready;
+
+/** Accès à une fonction réservée à `min` : toujours vrai hors appli iPhone. */
+export const canUse = (min: Tier): boolean => !tiersEnforced() || hasTier(min);
+
+export const useCanUse = (min: Tier): boolean => {
+  const ready = useSubscriptionStore((s) => s.ready);
+  const tier = useTier();
+  return !subscriptionsAvailable() || !ready || tierAtLeast(tier, min);
+};
+
+// ─── Limite du coach IA ─────────────────────────────────────────────────────
+const USAGE_KEY = 'ppl-ai-usage';
+
+/** Début de la période en cours : le lundi de la semaine, ou le mois, en date locale. */
+const periodKey = (per: 'week' | 'month'): string => {
+  const d = new Date();
+  if (per === 'month') return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+  return `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+};
+
+const readUsage = (key: string): number => {
+  try {
+    const u = JSON.parse(localStorage.getItem(USAGE_KEY) ?? 'null') as { key: string; count: number } | null;
+    return u && u.key === key ? u.count : 0;
+  } catch { return 0; }
+};
+
+export interface AiQuota { allowed: boolean; used: number; limit: number | null; per: 'week' | 'month' | null; tier: Tier }
+
+/** Où en est la personne de ses appels au coach IA. Illimité hors appli iPhone et pour Pro. */
+export const aiQuota = (): AiQuota => {
+  const tier = currentTier();
+  const rule = tiersEnforced() ? AI_LIMITS[tier] : null;
+  if (!rule) return { allowed: true, used: 0, limit: null, per: null, tier };
+  const used = readUsage(`${tier}|${periodKey(rule.per)}`);
+  return { allowed: used < rule.count, used, limit: rule.count, per: rule.per, tier };
+};
+
+/** À appeler après un appel réussi au coach IA. */
+export const recordAiCall = (): void => {
+  const q = aiQuota();
+  if (q.limit === null || q.per === null) return;
+  const key = `${q.tier}|${periodKey(q.per)}`;
+  try { localStorage.setItem(USAGE_KEY, JSON.stringify({ key, count: readUsage(key) + 1 })); } catch { /* compteur indisponible : on ne bloque pas */ }
 };
 
 export const loadProducts = async (): Promise<void> => {

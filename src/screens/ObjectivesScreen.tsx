@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { TierLock } from '../components/TierLock';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getMuscleGroupsStatus, getMuscleRecoveryStatus, getRecoveryRegionStatus, getMaxWeightEver, getAllExercises, getBodyIntensityFromHistory } from '../utils/training';
 import type { BodyRegionKey } from '../utils/training';
@@ -130,6 +131,7 @@ const screenClass = useScreenClass();
 
         {/* Récupération — temps restant avant que chaque muscle soit prêt */}
         {recoveryStatuses.length > 0 && (
+          <TierLock min="plus" title="Récupération musculaire" text="Où en est chaque muscle de sa récupération, avec le temps restant avant qu'il soit prêt.">
           <>
             <p style={sectionLabel}>RÉCUPÉRATION</p>
             <div style={{ ...card, alignItems: 'stretch', flexDirection: 'column', gap: 12 }}>
@@ -168,6 +170,7 @@ const screenClass = useScreenClass();
               </p>
             </div>
           </>
+          </TierLock>
         )}
 
         {/* Corps — schéma des muscles travaillés récemment */}

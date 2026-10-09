@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { PaywallScreen } from './screens/PaywallScreen';
 import { ProPromptSheet } from './components/ProPromptSheet';
 import { initSubscriptions, subscriptionsAvailable } from './lib/subscriptions';
+import { setProOpener } from './lib/proNav';
 import { consumePendingLink, onPendingLink } from './lib/widgetSync';
 import { App as CapacitorApp } from '@capacitor/app';
 import { HomeScreen } from './screens/HomeScreen';
@@ -317,6 +318,10 @@ stopPending();
 const [proReturnView, setProReturnView] = useState<View>('home');
 const openPro = (from: View) => { setProReturnView(from); setView('pro'); };
 useEffect(() => { void initSubscriptions(); }, []);
+// Les verrous (TierLock) ouvrent l'écran des formules depuis n'importe quel écran, puis « Retour » y ramène.
+const viewRef = useRef<View>(view);
+viewRef.current = view;
+useEffect(() => { setProOpener(() => openPro(viewRef.current)); return () => setProOpener(null); }, []);
 
 const handleOpenDashboard = () => {
 setView('dashboard');

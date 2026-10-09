@@ -14,9 +14,9 @@ Aucune clé ni donnée personnelle dans ce fichier : le dépôt est public.
       (Apple vérifie ces deux adresses).
 - [ ] Compléter dans `public/confidentialite.html` le nom de l'éditeur et une adresse de contact
       (aujourd'hui : la page de suivi GitHub). Une adresse e-mail dédiée vaut mieux qu'un e-mail personnel.
-- [ ] Créer dans App Store Connect les deux abonnements, groupe « PPL Pro », mêmes identifiants que dans le code :
-      `com.ppltracker.app.pro.monthly` (14,99 €/mois) et `com.ppltracker.app.pro.yearly` (149,99 €/an, prix annuel à confirmer),
-      essai gratuit 7 jours. Prix de lancement −50 % : voir `LAUNCH_OFFER` dans `src/lib/subscriptions.ts`.
+- [ ] Créer dans App Store Connect un groupe d'abonnement « PPL Plus et Pro » avec deux abonnements mensuels, mêmes identifiants que dans le code :
+      `com.ppltracker.app.pro.monthly` (14,99 €, niveau 1 = le plus haut) et `com.ppltracker.app.plus.monthly` (4,99 €, niveau 2),
+      essai gratuit 7 jours sur les deux. Prix de lancement −50 % (7,49 € et 2,49 €) : voir `LAUNCH_OFFER` dans `src/lib/subscriptions.ts`.
 - [ ] Captures d'écran iPhone (6,9" et 6,5") : accueil, séance en cours, Dynamic Island, widgets, stats.
 - [ ] Questionnaire « Confidentialité des données » : reprendre `ios/App/App/PrivacyInfo.xcprivacy`
       (e-mail, prénom, données de forme et de santé, identifiant : liés au compte, jamais pour du suivi publicitaire).
@@ -26,7 +26,7 @@ Aucune clé ni donnée personnelle dans ce fichier : le dépôt est public.
 
 **Nom** : PPL Tracker
 **Sous-titre** (30 car.) : Musculation, simple et suivie
-**Texte promotionnel** (170 car.) : Ton programme, ton repos, tes progrès. Séance en direct sur l'écran verrouillé, widgets, Siri et Apple Watch avec PPL Pro.
+**Texte promotionnel** (170 car.) : Ton programme, ton repos, tes progrès. Widgets, séance en direct et Siri avec PPL Plus ; coach IA illimité et Apple Watch avec PPL Pro.
 
 **Description**
 
@@ -40,11 +40,8 @@ PPL Tracker t'accompagne à chaque séance de musculation : programme Push / Pul
 • Binôme : suis la régularité d'un ami, sans jamais voir le détail de ses séances.
 • Fonctionne hors ligne, dans les salles où le réseau est mauvais. Pas de publicité.
 
-PPL Pro (abonnement, 7 jours gratuits) débloque les extras de l'iPhone :
-• Widgets sur l'écran d'accueil et l'écran verrouillé.
-• Séance en direct dans la Dynamic Island et sur l'écran verrouillé.
-• Siri et Raccourcis.
-• Apple Watch.
+PPL Plus (4,99 €/mois, 7 jours gratuits) : sans publicité, widgets, séance en direct dans la Dynamic Island et sur l'écran verrouillé, Siri et Raccourcis, récupération musculaire, 15 coachs IA par mois.
+PPL Pro (14,99 €/mois, 7 jours gratuits) : tout PPL Plus, avec le coach IA illimité, le programme adapté par l'IA, l'Apple Watch, les stats avancées et les grands widgets.
 
 L'abonnement se renouvelle automatiquement sauf annulation au moins 24 h avant la fin de la période. Gestion et résiliation dans les réglages de ton compte Apple.
 
@@ -62,8 +59,8 @@ musculation,entraînement,séance,programme,push pull legs,PPL,fitness,repos,chr
 ## Notes pour l'équipe de validation d'Apple
 
 - Le compte est facultatif : toute l'appli fonctionne sans se connecter. Aucun identifiant de test n'est nécessaire.
-- Pour tester les abonnements : Réglages → carte « PPL Pro ». Les widgets, la séance en direct, Siri et la Watch
-  sont les fonctions de PPL Pro.
+- Pour tester les abonnements : Réglages → carte « PPL Plus et PPL Pro ». Plus : widgets, séance en direct, Siri, récupération.
+  Pro : en plus, l'Apple Watch, les stats avancées, le programme adapté par l'IA et le coach IA illimité.
 - Suppression du compte : Réglages → Données & compte → Supprimer mon compte (visible une fois connecté).
 - Le coach IA envoie un résumé d'entraînement à Google Gemini après accord explicite de l'utilisateur
   (fenêtre d'accord au premier usage ; retirable dans Réglages → Données & compte).
