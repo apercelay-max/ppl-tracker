@@ -28,7 +28,7 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({ onBack }) => {
   const isPro = useIsPro();
   useReferralStore((s) => s.state?.bonusUntil); // re-rend quand le mois offert change
   const bonusUntil = bonusUntilNow();
-  const [selected, setSelected] = useState(PRODUCT_YEARLY);
+  const [selected, setSelected] = useState(PRODUCT_MONTHLY);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => { if (products.length === 0) void loadProducts(); }, [products.length]);

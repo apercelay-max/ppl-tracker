@@ -15,7 +15,7 @@ Aucune clé ni donnée personnelle dans ce fichier : le dépôt est public.
 - [ ] Compléter dans `public/confidentialite.html` le nom de l'éditeur et une adresse de contact
       (aujourd'hui : la page de suivi GitHub). Une adresse e-mail dédiée vaut mieux qu'un e-mail personnel.
 - [ ] Créer dans App Store Connect les deux abonnements, groupe « PPL Pro », mêmes identifiants que dans le code :
-      `com.ppltracker.app.pro.yearly` (14,99 €/an) et `com.ppltracker.app.pro.monthly` (1,99 €/mois),
+      `com.ppltracker.app.pro.monthly` (14,99 €/mois) et `com.ppltracker.app.pro.yearly` (149,99 €/an, prix annuel à confirmer),
       essai gratuit 7 jours. Prix de lancement −50 % : voir `LAUNCH_OFFER` dans `src/lib/subscriptions.ts`.
 - [ ] Captures d'écran iPhone (6,9" et 6,5") : accueil, séance en cours, Dynamic Island, widgets, stats.
 - [ ] Questionnaire « Confidentialité des données » : reprendre `ios/App/App/PrivacyInfo.xcprivacy`

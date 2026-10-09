@@ -79,7 +79,7 @@ chaque ordinateur : tout ce qui doit être partagé va dans ce fichier.
 - Ajouter un fichier Swift ou une cible : le déclarer dans `App.xcodeproj` (via Xcode, ou le gem Ruby `xcodeproj`).
 - Abonnements « PPL Pro » : achats intégrés Apple (StoreKit 2), code dans `ios/App/App/SubscriptionsPlugin.swift`,
   `src/lib/subscriptions.ts`, `src/screens/PaywallScreen.tsx`, `src/components/ProPromptSheet.tsx`. Essai gratuit 7 jours,
-  prix normal 14,99 €/an et 1,99 €/mois, prix de lancement −50 % (7,49 €/an) pour les 50 premiers (voir `LAUNCH_OFFER`).
+  prix normal 14,99 €/mois (et 149,99 €/an, à confirmer), prix de lancement −50 % (7,49 €/mois, 74,99 €/an) pour les 50 premiers (voir `LAUNCH_OFFER`).
   Pour tester sans compte Apple : lancer l'appli **depuis Xcode (▶)** : `ios/App/PPLTracker.storekit` simule la boutique.
   Les produits réels se créent dans App Store Connect (par l'adulte responsable) avec les mêmes identifiants.
 - Interdit par Apple, ne pas faire : offrir un avantage (Pro gratuit…) en échange d'un avis (règle 5.6.1).

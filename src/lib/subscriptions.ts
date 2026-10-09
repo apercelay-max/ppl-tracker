@@ -31,7 +31,7 @@ export const PRODUCT_IDS = [PRODUCT_YEARLY, PRODUCT_MONTHLY];
 export const LAUNCH_OFFER = {
   active: true,
   places: 50,
-  regularPrice: { [PRODUCT_YEARLY]: '14,99 €', [PRODUCT_MONTHLY]: '1,99 €' } as Record<string, string>,
+  regularPrice: { [PRODUCT_YEARLY]: '149,99 €', [PRODUCT_MONTHLY]: '14,99 €' } as Record<string, string>,
 };
 
 // Textes montrés sur l'écran d'offre. Apple exige qu'ils décrivent ce que l'abonnement

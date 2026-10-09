@@ -25,7 +25,7 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "7.49",
+          "displayPrice" : "74.99",
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "6760000001",
@@ -36,7 +36,7 @@
           },
           "localizations" : [
             {
-              "description" : "Tout PPL Pro pour 12 mois, avec 7 jours d'essai gratuits.",
+              "description" : "Tout PPL Pro pour 12 mois (environ 2 mois offerts), avec 7 jours d'essai gratuits.",
               "displayName" : "PPL Pro annuel",
               "locale" : "fr"
             }
@@ -57,7 +57,7 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "0.99",
+          "displayPrice" : "7.49",
           "familyShareable" : false,
           "groupNumber" : 2,
           "internalID" : "6760000002",
