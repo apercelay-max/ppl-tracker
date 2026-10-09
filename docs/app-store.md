@@ -9,7 +9,9 @@ Aucune clé ni donnée personnelle dans ce fichier : le dépôt est public.
 - [ ] Valider l'identifiant de l'appli `com.ppltracker.app` et l'App Group `group.com.ppltracker.app`
       (les changer ensuite est pénible : le décider avant la première soumission).
 - [ ] Appliquer la migration `supabase/migrations/20261008120000_compte_et_parrainage.sql`
-      (suppression de compte + parrainage). Sans elle, ces boutons répondent « pas encore disponible ».
+      (suppression de compte + parrainage). Sans elle, ces boutons répondent « pas encore disponible » : **Apple teste la suppression de
+      compte, il ne faut pas soumettre avant**. Le SQL a été vérifié par `supabase/tests/compte_et_parrainage.test.mjs` (25 vérifications,
+      voir l'en-tête du fichier pour le lancer), mais pas sur le vrai projet Supabase : refaire l'essai après l'avoir passé (créer un compte de test, le supprimer).
 - [ ] Fusionner la branche dans `main` pour que `/confidentialite.html` et `/support.html` soient en ligne
       (Apple vérifie ces deux adresses).
 - [ ] Compléter dans `public/confidentialite.html` le nom de l'éditeur et une adresse de contact
