@@ -269,7 +269,11 @@ const syncWorkoutActivity = () => {
 // maître des données : la montre ne calcule rien, elle affiche et demande.
 let lastWatchKey = '';
 
+// Interrupteur : la montre n'est pas livrée dans la première version (non testée sur une vraie montre).
+const WATCH_ENABLED = false;
+
 const syncWatch = () => {
+  if (!WATCH_ENABLED) return;
   if (!useSubscriptionStore.getState().ready) return;
   const s = useWorkoutStore.getState();
   // L'Apple Watch fait partie de PPL Pro (pas de PPL Plus).
@@ -401,7 +405,7 @@ export const startWidgetSync = () => {
     syncWatch();
     void syncRestNotification();
   });
-  void WidgetBridge.addListener('watchCommand', handleWatchCommand);
+  if (WATCH_ENABLED) void WidgetBridge.addListener('watchCommand', handleWatchCommand);
   // Le binôme est chargé depuis le serveur, après le démarrage de l'appli.
   subscribeBinome(schedulePush);
   // Abonnement ou mois offert qui change : widgets et séance en direct se verrouillent / se déverrouillent.

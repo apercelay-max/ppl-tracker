@@ -81,7 +81,7 @@ chaque ordinateur : tout ce qui doit être partagé va dans ce fichier.
   **PPL Pro 14,99 €** (essai gratuit 7 jours ; prix de lancement −50 % pour les 50 premiers de chaque formule, voir `LAUNCH_OFFER`).
   Qui a droit à quoi : `TIER_PLANS`, `AI_LIMITS` et `canUse()` dans `src/lib/subscriptions.ts` ; `TierLock` (`src/components/`) verrouille
   un bloc d'écran. Plus : widgets petit/moyen, séance en direct, Siri, récupération musculaire, 15 coachs IA/mois. Pro : tout Plus +
-  coach IA illimité, programme adapté par l'IA, Apple Watch, stats avancées, grands widgets. Gratuit : suivi complet, 3 coachs IA/semaine.
+  coach IA illimité, programme adapté par l'IA, stats avancées, grands widgets. Gratuit : suivi complet, 3 coachs IA/semaine.
   **Rien n'est limité hors de l'appli iPhone** (web/PWA : tout reste accessible). La limite d'IA est comptée sur le téléphone, pas sur un serveur.
   Mois offert du parrainage = PPL Plus. Test sans compte Apple : lancer l'appli **depuis Xcode (▶)**, `ios/App/PPLTracker.storekit` simule la boutique.
   Les produits réels se créent dans App Store Connect (par l'adulte responsable) avec les mêmes identifiants. **Il n'y a pas de pub** (et donc aucune promesse « sans pub » dans les écrans ni la fiche) : si on en ajoute un jour,
@@ -89,9 +89,11 @@ chaque ordinateur : tout ce qui doit être partagé va dans ce fichier.
 - Interdit par Apple, ne pas faire : offrir un avantage (Pro gratuit…) en échange d'un avis (règle 5.6.1).
 - Raccourcis Siri (`ios/App/App/SiriShortcuts.swift`, App Intents en français) : lisent le même résumé que les widgets ;
   « Démarrer ma séance » laisse un lien dans l'App Group, lu par `consumePendingLink` (`src/lib/widgetSync.ts`).
-- Apple Watch (`ios/App/PPLWatch/`, SwiftUI) : le téléphone envoie l'état par WatchConnectivity (`PhoneWatchLink.swift`,
+- Apple Watch (`ios/App/PPLWatch/`, SwiftUI) : **retirée de la première version** (non testée sur une vraie montre ; la cible reste
+  dans le projet mais n'est plus intégrée à l'appli : voir `WATCH_ENABLED` dans `widgetSync.ts`). Pour la remettre : relancer l'intégration
+  « Embed Watch Content » + dépendance dans `App.xcodeproj`, passer `WATCH_ENABLED` à true, retester sur une montre, ré-écrire les textes Pro. Principe : : le téléphone envoie l'état par WatchConnectivity (`PhoneWatchLink.swift`,
   `syncWatch` dans `widgetSync.ts`), la montre renvoie des commandes (valider la série, passer le repos) que
   `src/lib/watchBridge.ts` route vers l'écran de séance : mêmes fonctions que les boutons du téléphone. **Jamais testée sur
-  une vraie montre** (pas de simulateur watchOS installé sur le Mac de Léopold) : à essayer avant publication.
+  une vraie montre** (pas de simulateur watchOS installé sur le Mac de Léopold).
 - Compte : suppression depuis l'appli (`src/lib/account.ts`) et parrainage (`src/lib/referral.ts`) demandent la migration
   `supabase/migrations/20261008120000_compte_et_parrainage.sql`, à passer par l'adulte responsable. Fiche App Store : `docs/app-store.md`.

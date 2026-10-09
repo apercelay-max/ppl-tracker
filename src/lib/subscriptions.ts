@@ -87,7 +87,6 @@ export const TIER_PLANS: TierPlan[] = [
     benefits: [
       { icon: '🤖', title: 'Coach IA illimité', text: 'Autant de résumés, bilans et questions que tu veux.' },
       { icon: '🧠', title: 'Programme adapté par l\'IA', text: 'Le coach propose de modifier tes séances et tes charges.' },
-      { icon: '⌚', title: 'Apple Watch', text: 'Valide tes séries et suis ton repos depuis ton poignet.' },
       { icon: '📊', title: 'Stats avancées', text: 'Charge d\'entraînement, statut de forme et tendances semaine par semaine.' },
       { icon: '🧱', title: 'Grands widgets', text: 'Objectifs et récupération musculaire en grand format.' },
     ],

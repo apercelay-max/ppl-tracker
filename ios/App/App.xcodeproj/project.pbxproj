@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		0332EAA903D106A2EC71A9E0 /* SiriShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9CB54E55EBF8C1EEDD5641E /* SiriShortcuts.swift */; };
-		084DE2B30756B57B01BDD998 /* PPLWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 230FF33E4CC545D710D3EDC7 /* PPLWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		0AF312B8DAEA8F3E8DBFEAC7 /* RecoveryWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F47C88219CB87D2F85BCBE8A /* RecoveryWidget.swift */; };
 		1DBD6D9DD9DB28B353909DA6 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4E18559AA6110EC8E86421 /* MainViewController.swift */; };
 		1FAA3A137A6C30E762272BA6 /* PPLWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 061D7B33D64FB7C61F5F34EF /* PPLWidgetBundle.swift */; };
@@ -55,13 +54,6 @@
 			remoteGlobalIDString = B91405EC23C63A28E27F9201;
 			remoteInfo = PPLWidget;
 		};
-		3C466EE614A177CBB74DF131 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 87ADB5856DA53B092F89C8BA;
-			remoteInfo = PPLWatch;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -74,17 +66,6 @@
 				47F0E03669C1B9B9E11A91E0 /* PPLWidget.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		8911D23858DDE788FC412ADA /* Embed Watch Content */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
-			dstSubfolderSpec = 16;
-			files = (
-				084DE2B30756B57B01BDD998 /* PPLWatch.app in Embed Watch Content */,
-			);
-			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -290,13 +271,11 @@
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
 				3172E9EE6F92F7AAB4957E43 /* Embed Foundation Extensions */,
-				8911D23858DDE788FC412ADA /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				1CA3B80CC7F395A45823B49D /* PBXTargetDependency */,
-				CD3BA46678295DDDDDAC80D1 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -467,12 +446,6 @@
 			name = PPLWidget;
 			target = B91405EC23C63A28E27F9201 /* PPLWidget */;
 			targetProxy = 1491C4FC7F9EA90A8F2DDC9C /* PBXContainerItemProxy */;
-		};
-		CD3BA46678295DDDDDAC80D1 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = PPLWatch;
-			target = 87ADB5856DA53B092F89C8BA /* PPLWatch */;
-			targetProxy = 3C466EE614A177CBB74DF131 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 

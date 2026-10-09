@@ -28,7 +28,7 @@ Aucune clé ni donnée personnelle dans ce fichier : le dépôt est public.
 
 **Nom** : PPL Tracker
 **Sous-titre** (30 car.) : Musculation, simple et suivie
-**Texte promotionnel** (170 car.) : Ton programme, ton repos, tes progrès. Widgets, séance en direct et Siri avec PPL Plus ; coach IA illimité et Apple Watch avec PPL Pro.
+**Texte promotionnel** (170 car.) : Ton programme, ton repos, tes progrès. Widgets, séance en direct et Siri avec PPL Plus ; coach IA illimité et stats avancées avec PPL Pro.
 
 **Description**
 
@@ -43,7 +43,7 @@ PPL Tracker t'accompagne à chaque séance de musculation : programme Push / Pul
 • Fonctionne hors ligne, dans les salles où le réseau est mauvais. Pas de publicité.
 
 PPL Plus (4,99 €/mois, 7 jours gratuits) : widgets, séance en direct dans la Dynamic Island et sur l'écran verrouillé, Siri et Raccourcis, récupération musculaire, 15 coachs IA par mois.
-PPL Pro (14,99 €/mois, 7 jours gratuits) : tout PPL Plus, avec le coach IA illimité, le programme adapté par l'IA, l'Apple Watch, les stats avancées et les grands widgets.
+PPL Pro (14,99 €/mois, 7 jours gratuits) : tout PPL Plus, avec le coach IA illimité, le programme adapté par l'IA, les stats avancées et les grands widgets.
 
 L'abonnement se renouvelle automatiquement sauf annulation au moins 24 h avant la fin de la période. Gestion et résiliation dans les réglages de ton compte Apple.
 
@@ -62,7 +62,7 @@ musculation,entraînement,séance,programme,push pull legs,PPL,fitness,repos,chr
 
 - Le compte est facultatif : toute l'appli fonctionne sans se connecter. Aucun identifiant de test n'est nécessaire.
 - Pour tester les abonnements : Réglages → carte « PPL Plus et PPL Pro ». Plus : widgets, séance en direct, Siri, récupération.
-  Pro : en plus, l'Apple Watch, les stats avancées, le programme adapté par l'IA et le coach IA illimité.
+  Pro : en plus, les stats avancées, le programme adapté par l'IA et le coach IA illimité.
 - Suppression du compte : Réglages → Données & compte → Supprimer mon compte (visible une fois connecté).
 - Le coach IA envoie un résumé d'entraînement à Google Gemini après accord explicite de l'utilisateur
   (fenêtre d'accord au premier usage ; retirable dans Réglages → Données & compte).
