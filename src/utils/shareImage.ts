@@ -14,7 +14,7 @@ export interface SessionRecapData {
   prNames: string[];
 }
 
-const FALLBACK = {
+export const FALLBACK = {
   bgBase: '#131318',
   bgCard: '#25252f',
   border: '#363646',
@@ -25,15 +25,15 @@ const FALLBACK = {
   brand2: '#9b27af',
 };
 
-const FONT = ' -apple-system, system-ui, sans-serif';
+export const FONT = ' -apple-system, system-ui, sans-serif';
 
-const cssVar = (name: string, fallback: string): string => {
+export const cssVar = (name: string, fallback: string): string => {
   if (typeof document === 'undefined') return fallback;
   const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   return v || fallback;
 };
 
-const hexToRgba = (hex: string, alpha: number): string => {
+export const hexToRgba = (hex: string, alpha: number): string => {
   let h = hex.trim();
   if (h.charAt(0) === '#') h = h.slice(1);
   if (h.length === 3) h = h.split('').map((c) => c + c).join('');
@@ -44,7 +44,7 @@ const hexToRgba = (hex: string, alpha: number): string => {
   return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
 };
 
-const roundRect = (
+export const roundRect = (
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,

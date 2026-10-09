@@ -24,6 +24,7 @@ import { IconActivity, IconBell, IconClock, IconClose, IconDumbbell, IconFlame, 
 import { useRestTimer } from '../hooks/useRestTimer';
 import { useShakeToValidate } from '../hooks/useShakeToValidate';
 import { registerWatchHandlers } from '../lib/watchBridge';
+import { SessionAiAnalysis } from '../components/SessionAiAnalysis';
 import { computeTonnage, computeTrainingLoad, compareSessionToHistory, getWorkoutBodyIntensity, getMaxWeightEver } from '../utils/training';
 import { SetEntry, Exercise, ExerciseProgress, HistoryEntry } from '../data/types';
 import { InfoTip } from '../components/InfoTip';
@@ -1599,6 +1600,7 @@ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
 <span style={{ display: 'inline-flex' }}><IconShare size={18} /></span>
 {sharing ? 'Génération...' : 'Partager ma séance'}
 </button>
+<div style={{ width: '100%', textAlign: 'left' }}><SessionAiAnalysis /></div>
 <button style={completeBtnStyle} onClick={onBack}>Retour à l'accueil</button>
 </div>
 </div>

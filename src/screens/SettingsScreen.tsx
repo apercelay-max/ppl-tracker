@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { DataIcon } from '../components/DataIcon';
 import { useWorkoutStore } from '../store/workoutStore';
-import { ACCENT_PRESETS, GYM_PRESETS } from '../data/accents';
+import { ACCENT_PRESETS, GYM_PRESETS, PREMIUM_PRESETS } from '../data/accents';
 import { HOME_SECTION_META } from '../data/homeSectionMeta';
 import { ICON_SHAPE_RADIUS, ICON_SHAPE_LABEL, ICON_SIZE_LABEL } from '../data/iconPrefs';
 import type { IconShape, IconSize } from '../data/iconPrefs';
@@ -13,7 +13,8 @@ import { buildHistoryImport, detectHistorySource, SOURCE_LABEL } from '../utils/
 import { historyToCsv } from '../utils/historyExport';
 import { saveBackup, listBackups, restoreBackup, markExported, getLastExportAt, type BackupMeta } from '../lib/localBackups';
 import { useAuth } from '../hooks/useAuth';
-import { usePaidTier, bonusUntilNow, TIER_NAME } from '../lib/subscriptions';
+import { usePaidTier, bonusUntilNow, TIER_NAME, useCanUse } from '../lib/subscriptions';
+import { openProScreen } from '../lib/proNav';
 import { useReferralStore } from '../lib/referral';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import type { SyncStatus } from '../hooks/useCloudSync';
@@ -23,6 +24,8 @@ import { GymsSettings } from '../components/GymsSettings';
 import { BinomeSettings } from '../components/BinomeSettings';
 import { ReferralSettings } from '../components/ReferralSettings';
 import { saveFile } from '../lib/saveFile';
+import { EncryptedBackupSection } from '../components/EncryptedBackupSection';
+import { AdvancedExportSection } from '../components/AdvancedExportSection';
 import { Browser } from '@capacitor/browser';
 import { webOrigin, isNativeApp } from '../lib/appUrl';
 import { DeleteAccountSection } from '../components/DeleteAccountSection';
@@ -221,6 +224,7 @@ const AiConsentRow: React.FC = () => {
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ initialCategory, onBack, onOpenAccount, onRestartQuiz, onOpenPro, syncStatus, lastSyncedAt }) => {
 const screenClass = useScreenClass();
 const paidTier = usePaidTier();
+const canUsePro = useCanUse('pro');
 const isPro = paidTier !== 'free';
 useReferralStore((s) => s.state?.bonusUntil);
 const bonusUntil = bonusUntilNow();
@@ -581,7 +585,7 @@ reader.readAsText(file);
 // description générique : on voit son programme et son temps de repos sans
 // avoir à ouvrir la catégorie.
 const formatRest = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
-const accentLabel = [...ACCENT_PRESETS, ...GYM_PRESETS].find((a) => a.id === accentTheme)?.label
+const accentLabel = [...ACCENT_PRESETS, ...GYM_PRESETS, ...PREMIUM_PRESETS].find((a) => a.id === accentTheme)?.label
 ?? (accentTheme === 'custom' ? 'perso' : accentTheme);
 const CATEGORY_SUMMARY: Record<CategoryId, string> = {
 seance: [
@@ -1279,6 +1283,28 @@ boxShadow: accentTheme === g.id ? `0 0 0 3px var(--bg-card), 0 0 0 5px ${g.c1}` 
 ))}
 </div>
 
+{/* Thèmes PPL Pro : visibles par tous, utilisables avec PPL Pro (appli iPhone). */}
+<p style={{ ...subLabel, marginTop: 20 }}>THÈMES PPL PRO</p>
+<div style={swatchGrid}>
+{PREMIUM_PRESETS.map((a) => (
+<button
+key={a.id}
+onClick={() => { if (!canUsePro) { openProScreen(); return; } setAccentTheme(a.id); }}
+style={{ ...swatchBtn, border: accentTheme === a.id ? `2px solid ${a.c1}` : '2px solid transparent', opacity: canUsePro ? 1 : 0.7 }}
+title={canUsePro ? a.label : `${a.label} (PPL Pro)`}
+>
+<span style={{
+display: 'block', width: 40, height: 40, borderRadius: '50%', position: 'relative',
+background: `linear-gradient(135deg, ${a.c1}, ${a.c2})`,
+boxShadow: accentTheme === a.id ? `0 0 0 3px var(--bg-card), 0 0 0 5px ${a.c1}` : 'none',
+}}>
+{!canUsePro && <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🔒</span>}
+</span>
+<span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 700, textAlign: 'center' }}>{a.label}</span>
+</button>
+))}
+</div>
+
 {/* Apparence (Système/Clair/Sombre) — pilule compacte façon
 menu de réglages Claude, distincte des segmentBtn colorés
 utilisés ailleurs (transitions, effets...). Reste visible même
@@ -1830,6 +1856,9 @@ Objectif, niveau, matériel, blessures — et un nouveau programme construit pou
 </span>
 <IconArrowRight size={15} />
 </button>
+
+<AdvancedExportSection />
+<EncryptedBackupSection />
 
 <p style={{ ...subLabel, marginTop: 4 }}>COMPTE</p>
 {!isSupabaseConfigured ? (

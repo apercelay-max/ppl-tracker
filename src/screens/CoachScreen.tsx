@@ -5,6 +5,7 @@ import { useWorkoutStore } from '../store/workoutStore';
 import { getWorkout } from '../data/workouts';
 import { getProgram } from '../data/programs';
 import { buildCoachDigest, digestSizeBytes } from '../utils/coachDigest';
+import { WeekPlanner } from '../components/WeekPlanner';
 import {
   buildCatalogIndex, buildCoachProgram, buildProgramView, isCoachProgram, validateNewProgram,
   validateProposal,
@@ -151,8 +152,8 @@ const screenClass = useScreenClass();
     }
   };
 
-  const ask = async () => {
-    const clean = question.trim();
+  const ask = async (override?: string) => {
+    const clean = (override ?? question).trim();
     if (!clean || asking) return;
 
     // Le message part à l'écran tout de suite : attendre la réponse pour
@@ -425,6 +426,8 @@ const screenClass = useScreenClass();
           </div>
         )}
 
+        <WeekPlanner busy={asking} onAsk={(q) => void ask(q)} />
+
         {/* ── Conversation ─────────────────────────────────────────────── */}
         <div style={chatHeaderRow}>
           <p style={{ ...sectionLabel, margin: 0 }}>PARLER AU COACH</p>
@@ -595,7 +598,7 @@ const screenClass = useScreenClass();
           />
           <button
             type="button"
-            onClick={ask}
+            onClick={() => void ask()}
             disabled={asking || !question.trim()}
             style={{ ...primaryBtn, marginTop: 8, opacity: asking || !question.trim() ? 0.55 : 1 }}
           >

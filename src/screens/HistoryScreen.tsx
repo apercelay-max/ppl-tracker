@@ -9,6 +9,7 @@ import type { HistoryEntry } from '../data/types';
 import { EmptyState } from '../components/EmptyState';
 import { IconArrowLeft, IconCalendar, IconClose, IconDumbbell, IconSearch, IconZap } from '../components/Icons';
 import { GlassIcon } from '../components/GlassIcon';
+import { ReportCard } from '../components/ReportCard';
 import { useScreenClass } from '../hooks/useScreenClass';
 
 interface HistoryScreenProps { onBack: () => void; }
@@ -184,6 +185,8 @@ const screenClass = useScreenClass();
             </div>
           </>
         )}
+
+        {history.length > 0 && <ReportCard />}
 
         {history.length === 0 ? (
           <div style={card}>

@@ -89,6 +89,12 @@ export const TIER_PLANS: TierPlan[] = [
       { icon: '🧠', title: 'Programme adapté par l\'IA', text: 'Le coach propose de modifier tes séances et tes charges.' },
       { icon: '📊', title: 'Stats avancées', text: 'Charge d\'entraînement, statut de forme et tendances semaine par semaine.' },
       { icon: '🧱', title: 'Grands widgets', text: 'Objectifs et récupération musculaire en grand format.' },
+      { icon: '🧾', title: 'Analyse de séance par l\'IA', text: 'Un bilan à la fin de chaque séance : ce qui progresse, ce qui stagne, quoi changer.' },
+      { icon: '🗓️', title: 'Planificateur de semaine', text: 'Dis tes jours, ton objectif et ton temps : le coach te construit un programme complet.' },
+      { icon: '📤', title: 'Rapports à partager', text: 'Ta semaine ou ton mois en une image, avec volume, jours actifs et records.' },
+      { icon: '📊', title: 'Export Excel complet', text: 'Séances, séries, records, poids et cardio dans un classeur.' },
+      { icon: '🔐', title: 'Sauvegarde chiffrée', text: 'Une copie de tes données chiffrée avec ton mot de passe.' },
+      { icon: '🎨', title: 'Thèmes exclusifs', text: 'Six palettes réservées à PPL Pro.' },
     ],
   },
 ];

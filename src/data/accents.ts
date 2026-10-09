@@ -37,6 +37,19 @@ export const GYM_PRESETS: AccentPreset[] = [
   { id: 'gym-magicform',    label: 'Magic Form',     c1: '#CE2329', c2: '#141414', rgb1: '206,35,41' },
 ];
 
+// ── Thèmes PPL Pro ──────────────────────────────────────────────────────────
+// Réservés à PPL Pro dans l'appli iPhone (voir TierLock / canUse). Les couleurs déjà
+// choisies restent appliquées si l'abonnement s'arrête : on ne retire jamais un réglage
+// à quelqu'un, on l'empêche seulement d'en choisir un nouveau.
+export const PREMIUM_PRESETS: AccentPreset[] = [
+  { id: 'pro-aurore',   label: 'Aurore',   c1: '#14b8a6', c2: '#8b5cf6', rgb1: '20,184,166' },
+  { id: 'pro-ocean',    label: 'Océan',    c1: '#0ea5e9', c2: '#1e3a8a', rgb1: '14,165,233' },
+  { id: 'pro-braise',   label: 'Braise',   c1: '#f97316', c2: '#be123c', rgb1: '249,115,22' },
+  { id: 'pro-rose',     label: 'Rose',     c1: '#fb7185', c2: '#c084fc', rgb1: '251,113,133' },
+  { id: 'pro-or',       label: 'Or',       c1: '#eab308', c2: '#92400e', rgb1: '234,179,8' },
+  { id: 'pro-carbone',  label: 'Carbone',  c1: '#e5e7eb', c2: '#374151', rgb1: '229,231,235' },
+];
+
 // ── Couleur perso (color picker libre) ──────────────────────────────────────
 
 export const hexToRgbTriplet = (hex: string): string => {
@@ -65,5 +78,5 @@ export const getAccent = (id: string, customHex?: string): AccentPreset => {
   if (id === 'custom' && customHex) {
     return { id: 'custom', label: 'Perso', c1: customHex, c2: darken(customHex, 0.22), rgb1: hexToRgbTriplet(customHex) };
   }
-  return ACCENT_PRESETS.find((a) => a.id === id) ?? GYM_PRESETS.find((a) => a.id === id) ?? ACCENT_PRESETS[0];
+  return ACCENT_PRESETS.find((a) => a.id === id) ?? GYM_PRESETS.find((a) => a.id === id) ?? PREMIUM_PRESETS.find((a) => a.id === id) ?? ACCENT_PRESETS[0];
 };

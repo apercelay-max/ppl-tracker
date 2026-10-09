@@ -81,7 +81,8 @@ chaque ordinateur : tout ce qui doit être partagé va dans ce fichier.
   **PPL Pro 14,99 €** (essai gratuit 7 jours ; prix de lancement −50 % pour les 50 premiers de chaque formule, voir `LAUNCH_OFFER`).
   Qui a droit à quoi : `TIER_PLANS`, `AI_LIMITS` et `canUse()` dans `src/lib/subscriptions.ts` ; `TierLock` (`src/components/`) verrouille
   un bloc d'écran. Plus : widgets petit/moyen, séance en direct, Siri, récupération musculaire, 15 coachs IA/mois. Pro : tout Plus +
-  coach IA illimité, programme adapté par l'IA, stats avancées, grands widgets. Gratuit : suivi complet, 3 coachs IA/semaine.
+  coach IA illimité, programme adapté par l'IA, stats avancées, grands widgets, analyse de séance par l'IA, planificateur de semaine, rapports à partager (image),
+  export Excel complet, sauvegarde chiffrée (AES-GCM), six thèmes exclusifs (`PREMIUM_PRESETS`). Gratuit : suivi complet, 3 coachs IA/semaine.
   **Rien n'est limité hors de l'appli iPhone** (web/PWA : tout reste accessible). La limite d'IA est comptée sur le téléphone, pas sur un serveur.
   Mois offert du parrainage = PPL Plus. Test sans compte Apple : lancer l'appli **depuis Xcode (▶)**, `ios/App/PPLTracker.storekit` simule la boutique.
   Les produits réels se créent dans App Store Connect (par l'adulte responsable) avec les mêmes identifiants. **Il n'y a pas de pub** (et donc aucune promesse « sans pub » dans les écrans ni la fiche) : si on en ajoute un jour,

@@ -43,7 +43,7 @@ PPL Tracker t'accompagne à chaque séance de musculation : programme Push / Pul
 • Fonctionne hors ligne, dans les salles où le réseau est mauvais. Pas de publicité.
 
 PPL Plus (4,99 €/mois, 7 jours gratuits) : widgets, séance en direct dans la Dynamic Island et sur l'écran verrouillé, Siri et Raccourcis, récupération musculaire, 15 coachs IA par mois.
-PPL Pro (14,99 €/mois, 7 jours gratuits) : tout PPL Plus, avec le coach IA illimité, le programme adapté par l'IA, les stats avancées et les grands widgets.
+PPL Pro (14,99 €/mois, 7 jours gratuits) : tout PPL Plus, avec le coach IA illimité, le programme adapté par l'IA, l'analyse de séance et le planificateur de semaine par l'IA, les rapports à partager, l'export Excel complet, la sauvegarde chiffrée, des thèmes exclusifs, les stats avancées et les grands widgets.
 
 L'abonnement se renouvelle automatiquement sauf annulation au moins 24 h avant la fin de la période. Gestion et résiliation dans les réglages de ton compte Apple.
 
