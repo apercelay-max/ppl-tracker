@@ -77,7 +77,7 @@ export const ProPromptSheet: React.FC<ProPromptSheetProps> = ({ enabled, onOpenP
         <p style={tag}>PPL PLUS · PPL PRO</p>
         <h2 style={heading}>{trial ? `Essaie ${TIER_NAME.plus} ${trial} gratuitement` : 'Passe à PPL Plus ou PPL Pro'}</h2>
         <p style={body}>
-          Sans publicité, widgets, séance en direct sur l’écran verrouillé, Siri, et plus de coach IA. PPL Plus dès 4,99 €/mois, PPL Pro pour aller plus loin.
+          Widgets, séance en direct sur l’écran verrouillé, Siri, et plus de coach IA. PPL Plus dès 4,99 €/mois, PPL Pro pour aller plus loin.
           {LAUNCH_OFFER.active && ` Prix de lancement −50 % pour les ${LAUNCH_OFFER.places} premiers abonnés de chaque formule.`}
         </p>
         <button style={primary} onClick={() => { setOpen(false); onOpenPro(); }}>Voir les formules</button>

@@ -40,7 +40,7 @@ PPL Tracker t'accompagne à chaque séance de musculation : programme Push / Pul
 • Binôme : suis la régularité d'un ami, sans jamais voir le détail de ses séances.
 • Fonctionne hors ligne, dans les salles où le réseau est mauvais. Pas de publicité.
 
-PPL Plus (4,99 €/mois, 7 jours gratuits) : sans publicité, widgets, séance en direct dans la Dynamic Island et sur l'écran verrouillé, Siri et Raccourcis, récupération musculaire, 15 coachs IA par mois.
+PPL Plus (4,99 €/mois, 7 jours gratuits) : widgets, séance en direct dans la Dynamic Island et sur l'écran verrouillé, Siri et Raccourcis, récupération musculaire, 15 coachs IA par mois.
 PPL Pro (14,99 €/mois, 7 jours gratuits) : tout PPL Plus, avec le coach IA illimité, le programme adapté par l'IA, l'Apple Watch, les stats avancées et les grands widgets.
 
 L'abonnement se renouvelle automatiquement sauf annulation au moins 24 h avant la fin de la période. Gestion et résiliation dans les réglages de ton compte Apple.

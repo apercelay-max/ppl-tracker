@@ -72,7 +72,6 @@ export const TIER_PLANS: TierPlan[] = [
     productId: PRODUCT_PLUS,
     tagline: 'Pour bien démarrer',
     benefits: [
-      { icon: '🚫', title: 'Sans publicité', text: 'Plus aucune bannière dans l\'appli.' },
       { icon: '📱', title: 'Widgets petits et moyens', text: 'Prochaine séance, série, record, poids, objectifs et récupération sur ton écran d\'accueil.' },
       { icon: '🏝️', title: 'Séance en direct', text: 'Exercice, repos, volume et durée sur l\'écran verrouillé et dans la Dynamic Island.' },
       { icon: '🎙️', title: 'Siri et Raccourcis', text: '« Démarre ma séance », « Où j\'en suis cette semaine ? » sans ouvrir l\'appli.' },

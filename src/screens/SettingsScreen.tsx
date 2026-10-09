@@ -22,6 +22,9 @@ import { motionSensorSupported, requestMotionPermission } from '../hooks/useShak
 import { GymsSettings } from '../components/GymsSettings';
 import { BinomeSettings } from '../components/BinomeSettings';
 import { ReferralSettings } from '../components/ReferralSettings';
+import { saveFile } from '../lib/saveFile';
+import { Browser } from '@capacitor/browser';
+import { webOrigin, isNativeApp } from '../lib/appUrl';
 import { DeleteAccountSection } from '../components/DeleteAccountSection';
 import { hasAiConsent, withdrawAiConsent } from '../utils/coachAi';
 import type { CardioActivityType, NavTabKey } from '../data/types';
@@ -445,36 +448,25 @@ return !collapsedCategories[id];
 // Télécharge tout le contenu du store (séances, historique, réglages…)
 // dans un fichier JSON, pour pouvoir le garder au chaud ou le remettre
 // sur un autre téléphone.
-const handleExport = () => {
+const handleExport = async () => {
 const raw = localStorage.getItem('ppl-tracker-store');
 if (!raw) return;
 const blob = new Blob([raw], { type: 'application/json' });
-const url = URL.createObjectURL(blob);
-const a = document.createElement('a');
-a.href = url;
-a.download = `ppl-tracker-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
-document.body.appendChild(a);
-a.click();
-document.body.removeChild(a);
-// Libérer l'URL tout de suite peut annuler le téléchargement (Safari) : on attend un peu.
-setTimeout(() => URL.revokeObjectURL(url), 4000);
+const result = await saveFile(`ppl-tracker-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`, blob);
+if (result === 'failed') { setImportMsg('L’export a échoué. Réessaie.'); return; }
+if (result === 'cancelled') return; // feuille de partage fermée : la sauvegarde n'a pas eu lieu
 markExported();
 setLastExportAt(Date.now());
 };
 
 // Historique en CSV (colonnes de Strong) : lisible par un tableur et par les
 // autres apps de musculation, et réimportable tel quel ici.
-const handleExportCsv = () => {
+const handleExportCsv = async () => {
 if (history.length === 0) { setImportMsg('Rien à exporter : aucune séance dans ton historique.'); return; }
 const blob = new Blob(['\uFEFF' + historyToCsv(history)], { type: 'text/csv;charset=utf-8' });
-const url = URL.createObjectURL(blob);
-const a = document.createElement('a');
-a.href = url;
-a.download = `ppl-tracker-historique-${new Date().toISOString().slice(0, 10)}.csv`;
-document.body.appendChild(a);
-a.click();
-document.body.removeChild(a);
-setTimeout(() => URL.revokeObjectURL(url), 4000);
+const result = await saveFile(`ppl-tracker-historique-${new Date().toISOString().slice(0, 10)}.csv`, blob);
+if (result === 'failed') { setImportMsg('L’export a échoué. Réessaie.'); return; }
+if (result === 'cancelled') return;
 markExported();
 setLastExportAt(Date.now());
 };
@@ -905,6 +897,18 @@ justifyContent: hapticsEnabled ? 'flex-end' : 'flex-start',
 </div>
 
 {/* Notifications de récupération */}
+{isNativeApp() ? (
+<>
+<p style={subLabel}>NOTIFICATIONS</p>
+<div style={{ ...toggleRow, marginBottom: 20, flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
+  <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Fin de repos</p>
+  <p style={{ color: 'var(--text-dim)', fontSize: 11, lineHeight: '15px' }}>
+    Une notification te prévient quand ton repos est terminé, même téléphone verrouillé. iOS te demande l’autorisation la première fois. Tu peux la couper à tout moment dans Réglages d’iOS → PPL Tracker → Notifications.
+  </p>
+</div>
+</>
+) : (
+<>
 <p style={subLabel}>NOTIFICATIONS</p>
 <div style={{ ...toggleRow, marginBottom: 20, flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
   <div style={{ flex: 1 }}>
@@ -941,6 +945,8 @@ justifyContent: hapticsEnabled ? 'flex-end' : 'flex-start',
     </p>
   )}
 </div>
+</>
+)}
 
 {/* Schéma des muscles sollicités */}
 <p style={subLabel}>SÉANCE</p>
@@ -1879,6 +1885,12 @@ Se connecter / créer un compte
 </div>
 )}
 
+{/* Liens légaux : Apple veut les retrouver dans l'appli elle-même, pas seulement sur la fiche. */}
+<div style={{ display: 'flex', gap: 18, justifyContent: 'center', padding: '18px 0 8px' }}>
+<button onClick={() => void Browser.open({ url: `${webOrigin()}/confidentialite.html` })} style={legalLink}>Confidentialité</button>
+<button onClick={() => void Browser.open({ url: `${webOrigin()}/support.html` })} style={legalLink}>Aide</button>
+</div>
+
 </div>
 </div>
 </div>
@@ -1886,6 +1898,7 @@ Se connecter / créer un compte
 };
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
+const legalLink: React.CSSProperties = { background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: 12, textDecoration: 'underline', padding: '8px 4px' };
 
 const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto' };
 const scroll: React.CSSProperties = { maxWidth: 480, margin: '0 auto', padding: '0 16px 40px' };

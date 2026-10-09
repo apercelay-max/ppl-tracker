@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
+import { isNativeApp } from '../lib/appUrl';
 import {
   acceptInvite, createInvite, formatCode, inviteLink, leaveBinome, previewInvite,
 } from '../lib/binome';
@@ -151,8 +152,9 @@ export const BinomeSettings: React.FC<Props> = ({ signedIn, onOpenAccount }) => 
         </div>
 
         <p style={help}>
-          Pour recevoir les relances même app fermée, active les notifications dans
-          Réglages → Séance → Notifications.
+          {isNativeApp()
+            ? 'Les relances de ton binôme apparaissent sur ton accueil quand tu ouvres l’appli.'
+            : 'Pour recevoir les relances même app fermée, active les notifications dans Réglages → Séance → Notifications.'}
         </p>
 
         {!confirmLeave ? (

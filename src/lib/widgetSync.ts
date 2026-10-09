@@ -6,6 +6,7 @@ import { getAllExercises, getLastExerciseSets, getMuscleGroupsStatus, getMuscleR
 import { getCoachBrief } from '../utils/coach';
 import { kgToLbs, lbsToKg } from '../utils/weight';
 import { getWatchHandlers } from './watchBridge';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { computeCurrentWeekStreak, useWorkoutStore } from '../store/workoutStore';
 import { getBinomeState, subscribeBinome } from '../hooks/useBinome';
 import { currentTier, hasTier, useSubscriptionStore } from './subscriptions';
@@ -352,15 +353,53 @@ const handleWatchCommand = (data: { cmd: string; weight?: number; reps?: number 
   }
 };
 
+// ─── Notification de fin de repos ──────────────────────────────────────────
+// Dans l'appli iPhone, les minuteurs du web s'endorment quand le téléphone se verrouille : seule
+// une notification programmée par iOS prévient à temps. Programmée au début du repos, annulée si
+// on passe le repos ou si on le met en pause. La permission n'est demandée qu'au premier repos.
+const REST_NOTIFICATION_ID = 4242;
+let lastRestKey = '';
+let notifAllowed: boolean | null = null;
+
+const syncRestNotification = async () => {
+  const { timer } = useWorkoutStore.getState();
+  const active = timer.isRunning && timer.endTimestamp !== null && !timer.isPaused && (timer.endTimestamp as number) > Date.now();
+  const key = active ? String(timer.endTimestamp) : 'off';
+  if (key === lastRestKey) return;
+  lastRestKey = key;
+  try {
+    await LocalNotifications.cancel({ notifications: [{ id: REST_NOTIFICATION_ID }] });
+    if (!active) return;
+    if (notifAllowed === null) {
+      const status = await LocalNotifications.checkPermissions();
+      notifAllowed = status.display === 'granted'
+        || (status.display === 'prompt' && (await LocalNotifications.requestPermissions()).display === 'granted');
+    }
+    if (!notifAllowed) return;
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: REST_NOTIFICATION_ID,
+        title: 'Repos terminé',
+        body: 'C’est reparti pour la prochaine série.',
+        schedule: { at: new Date(timer.endTimestamp as number), allowWhileIdle: true },
+      }],
+    });
+  } catch {
+    // Notifications indisponibles : le minuteur à l'écran et la séance en direct fonctionnent quand même.
+  }
+};
+
 export const startWidgetSync = () => {
   if (Capacitor.getPlatform() !== 'ios') return;
   schedulePush();
   syncWorkoutActivity();
   syncWatch();
+  void syncRestNotification();
   useWorkoutStore.subscribe(() => {
     schedulePush();
     syncWorkoutActivity();
     syncWatch();
+    void syncRestNotification();
   });
   void WidgetBridge.addListener('watchCommand', handleWatchCommand);
   // Le binôme est chargé depuis le serveur, après le démarrage de l'appli.

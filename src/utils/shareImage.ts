@@ -1,3 +1,4 @@
+import { saveFile } from '../lib/saveFile';
 import { WeightUnit, weightUnitLabel } from './weight';
 
 export interface SessionRecapData {
@@ -245,17 +246,6 @@ export const shareOrDownloadRecapImage = async (
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') return 'shared';
   }
-  try {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
-    return 'downloaded';
-  } catch (err) {
-    return 'failed';
-  }
+  const saved = await saveFile(filename, blob);
+  return saved === 'failed' ? 'failed' : 'downloaded';
 };
