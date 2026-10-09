@@ -83,3 +83,11 @@ chaque ordinateur : tout ce qui doit être partagé va dans ce fichier.
   Pour tester sans compte Apple : lancer l'appli **depuis Xcode (▶)** : `ios/App/PPLTracker.storekit` simule la boutique.
   Les produits réels se créent dans App Store Connect (par l'adulte responsable) avec les mêmes identifiants.
 - Interdit par Apple, ne pas faire : offrir un avantage (Pro gratuit…) en échange d'un avis (règle 5.6.1).
+- Raccourcis Siri (`ios/App/App/SiriShortcuts.swift`, App Intents en français) : lisent le même résumé que les widgets ;
+  « Démarrer ma séance » laisse un lien dans l'App Group, lu par `consumePendingLink` (`src/lib/widgetSync.ts`).
+- Apple Watch (`ios/App/PPLWatch/`, SwiftUI) : le téléphone envoie l'état par WatchConnectivity (`PhoneWatchLink.swift`,
+  `syncWatch` dans `widgetSync.ts`), la montre renvoie des commandes (valider la série, passer le repos) que
+  `src/lib/watchBridge.ts` route vers l'écran de séance : mêmes fonctions que les boutons du téléphone. **Jamais testée sur
+  une vraie montre** (pas de simulateur watchOS installé sur le Mac de Léopold) : à essayer avant publication.
+- Compte : suppression depuis l'appli (`src/lib/account.ts`) et parrainage (`src/lib/referral.ts`) demandent la migration
+  `supabase/migrations/20261008120000_compte_et_parrainage.sql`, à passer par l'adulte responsable. Fiche App Store : `docs/app-store.md`.

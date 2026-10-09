@@ -23,6 +23,7 @@ import { usesBarbell } from '../utils/gymAdapt';
 import { IconActivity, IconBell, IconClock, IconClose, IconDumbbell, IconFlame, IconLightbulb, IconMoon, IconPlate, IconScale, IconSettings, IconShare, IconSun, IconTarget, IconThumbsUp, IconTrendingUp, IconTrophy, IconUtensils, IconVibrate, IconWind } from '../components/Icons';
 import { useRestTimer } from '../hooks/useRestTimer';
 import { useShakeToValidate } from '../hooks/useShakeToValidate';
+import { registerWatchHandlers } from '../lib/watchBridge';
 import { computeTonnage, computeTrainingLoad, compareSessionToHistory, getWorkoutBodyIntensity, getMaxWeightEver } from '../utils/training';
 import { SetEntry, Exercise, ExerciseProgress, HistoryEntry } from '../data/types';
 import { InfoTip } from '../components/InfoTip';
@@ -576,6 +577,21 @@ timerExerciseRef.current = exerciseId;
 pendingSetKeyRef.current = { exerciseId, setIndex };
 startTimer(restSecs);
 }, [workout, completeSet, advanceSession, startTimer, customRestSeconds, defaultRestSeconds, history, ultraAnimationsEnabled, fireConfetti, isFinalSetOfSession, restoreSessionPosition]);
+
+// Apple Watch : la montre valide la série en cours ou passe le repos en passant par les mêmes
+// fonctions que les boutons du téléphone (voir lib/watchBridge.ts).
+useEffect(() => registerWatchHandlers({
+completeSet: (weightKg, reps) => {
+const st = useWorkoutStore.getState();
+const live = st.session;
+if (!live || live.isComplete) return;
+const ex = workout?.exercises[live.currentExerciseIndex];
+if (!ex) return;
+void handleSetComplete(ex.id, live.currentSetIndex, { weight: weightKg, reps, completed: true });
+},
+skipRest: handleSkipRest,
+}), [workout, handleSetComplete, handleSkipRest]);
+
 
 // Démarre le repos dès que le poids est saisi (avant même de valider la
 // série), pour compter le repos au plus près du moment où la série a

@@ -13,6 +13,7 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "setData", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "consumePendingLink", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "updateWatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "updateWorkout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endWorkout", returnType: CAPPluginReturnPromise),
     ]
@@ -23,6 +24,11 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         NotificationCenter.default.addObserver(forName: .pplPendingLink, object: nil, queue: .main) { [weak self] _ in
             self?.notifyListeners("pendingLink", data: [:])
         }
+        // Commandes de l'Apple Watch (valider la série, passer le repos) : relayées au web.
+        NotificationCenter.default.addObserver(forName: .pplWatchCommand, object: nil, queue: .main) { [weak self] note in
+            self?.notifyListeners("watchCommand", data: (note.userInfo as? [String: Any]) ?? [:])
+        }
+        PhoneWatchLink.shared.start()
     }
 
     static let appGroup = "group.com.ppltracker.app"
@@ -43,6 +49,16 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         defaults.set(json, forKey: Self.dataKey)
         // Sans ça, iOS garde l'ancien affichage jusqu'à sa prochaine mise à jour planifiée.
         WidgetCenter.shared.reloadAllTimelines()
+        call.resolve()
+    }
+
+    // État à afficher sur la montre (séance, repos, prochaine séance).
+    @objc func updateWatch(_ call: CAPPluginCall) {
+        guard let json = call.getString("json") else {
+            call.reject("json manquant")
+            return
+        }
+        PhoneWatchLink.shared.push(json: json)
         call.resolve()
     }
 

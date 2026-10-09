@@ -8,13 +8,17 @@
 
 /* Begin PBXBuildFile section */
 		0332EAA903D106A2EC71A9E0 /* SiriShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9CB54E55EBF8C1EEDD5641E /* SiriShortcuts.swift */; };
+		084DE2B30756B57B01BDD998 /* PPLWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 230FF33E4CC545D710D3EDC7 /* PPLWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		0AF312B8DAEA8F3E8DBFEAC7 /* RecoveryWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F47C88219CB87D2F85BCBE8A /* RecoveryWidget.swift */; };
 		1DBD6D9DD9DB28B353909DA6 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4E18559AA6110EC8E86421 /* MainViewController.swift */; };
 		1FAA3A137A6C30E762272BA6 /* PPLWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 061D7B33D64FB7C61F5F34EF /* PPLWidgetBundle.swift */; };
 		25529CDEFB47446D46533FAD /* SubscriptionsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9C499921F59C291DCF6AFAA /* SubscriptionsPlugin.swift */; };
+		2F925D81E8F29E82647F68BD /* PhoneWatchLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81C2480436BFE11B20ADE7CA /* PhoneWatchLink.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
+		3343304B2BF9B7FA58F5B17A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 27F215E26A5C6A96B8E723F0 /* Assets.xcassets */; };
 		35036ECFEFDC2286C482290C /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7AD4453B638A71A49B519E5A /* PrivacyInfo.xcprivacy */; };
 		3A7F542D7BA272B833EDADAF /* LockScreenWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBDFD58724ED828DA99893B4 /* LockScreenWidget.swift */; };
+		3E91B33A802F7A419716B811 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9442927DF6C54C4897A534D6 /* Foundation.framework */; };
 		47F0E03669C1B9B9E11A91E0 /* PPLWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0EC8D08CF960EE4FD8E24714 /* PPLWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
@@ -24,6 +28,8 @@
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		725B3D6827EDD8C6FEA9153F /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95482E862829B8DDB65B226D /* WorkoutActivityAttributes.swift */; };
+		759C640B0B061E3DC99F6F45 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAA58E461353C580B633A2CE /* ContentView.swift */; };
+		84E1184133947A5E96BD3163 /* WatchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0996E2B904BC77A447F62030 /* WatchModel.swift */; };
 		8CD39AEBEE2FF544C5DF572A /* NextSessionWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3BFBD080C9CCD667790DB41 /* NextSessionWidget.swift */; };
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
 		9B40A7AD26F02C7B83128007 /* BinomeWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED3CE044F0F5E4467829326C /* BinomeWidget.swift */; };
@@ -35,6 +41,7 @@
 		C364BE29D6A9F7F90244B0EC /* Shared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 918962BADE61C6F9A6C5B614 /* Shared.swift */; };
 		CD26C384680CFD71E9FD11B8 /* WeightWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4102C360CC94B796C223F3BA /* WeightWidget.swift */; };
 		CD2E1E430080FFA1713055CD /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 1E2516F82BF4786C6AEB5874 /* PrivacyInfo.xcprivacy */; };
+		CE678D2BF96393DF3987B79D /* PPLWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C6F99628FB7DD50B682B71D /* PPLWatchApp.swift */; };
 		D4CC05E6C0E97EF6C496A623 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D53A7DCA1EBCFCC8FB52A955 /* Foundation.framework */; };
 		E40A4B96F143D42367CA484B /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95482E862829B8DDB65B226D /* WorkoutActivityAttributes.swift */; };
 		EE28A13156405968DB51E65B /* StreakWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6838EEA16FBC3D60F00F6D8D /* StreakWidget.swift */; };
@@ -47,6 +54,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = B91405EC23C63A28E27F9201;
 			remoteInfo = PPLWidget;
+		};
+		3C466EE614A177CBB74DF131 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 87ADB5856DA53B092F89C8BA;
+			remoteInfo = PPLWatch;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -62,13 +76,27 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8911D23858DDE788FC412ADA /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				084DE2B30756B57B01BDD998 /* PPLWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		061D7B33D64FB7C61F5F34EF /* PPLWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PPLWidgetBundle.swift; sourceTree = "<group>"; };
+		0996E2B904BC77A447F62030 /* WatchModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchModel.swift; sourceTree = "<group>"; };
 		0EC8D08CF960EE4FD8E24714 /* PPLWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PPLWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		14CE32E74BE02059576FD6CB /* WorkoutLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivity.swift; sourceTree = "<group>"; };
 		1E2516F82BF4786C6AEB5874 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		230FF33E4CC545D710D3EDC7 /* PPLWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PPLWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		27F215E26A5C6A96B8E723F0 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2A8E05642CC778E7E81DAA59 /* CoachWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CoachWidget.swift; sourceTree = "<group>"; };
 		2F11A81078476D24014339D4 /* PPLTracker.storekit */ = {isa = PBXFileReference; includeInIndex = 1; path = PPLTracker.storekit; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
@@ -85,8 +113,11 @@
 		60EB8D7E8981439C2B557145 /* ObjectivesWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ObjectivesWidget.swift; sourceTree = "<group>"; };
 		6838EEA16FBC3D60F00F6D8D /* StreakWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StreakWidget.swift; sourceTree = "<group>"; };
 		7AD4453B638A71A49B519E5A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		81C2480436BFE11B20ADE7CA /* PhoneWatchLink.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PhoneWatchLink.swift; sourceTree = "<group>"; };
+		8C6F99628FB7DD50B682B71D /* PPLWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PPLWatchApp.swift; sourceTree = "<group>"; };
 		918962BADE61C6F9A6C5B614 /* Shared.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Shared.swift; sourceTree = "<group>"; };
 		92D7AED5F3F3E3C292A52333 /* WidgetBridgePlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetBridgePlugin.swift; sourceTree = "<group>"; };
+		9442927DF6C54C4897A534D6 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		95482E862829B8DDB65B226D /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutActivityAttributes.swift; sourceTree = "<group>"; };
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
@@ -98,6 +129,7 @@
 		DAB190C38753069658BF1937 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E834A471AFB2AACDB79CE6C6 /* RecordWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordWidget.swift; sourceTree = "<group>"; };
 		E9C499921F59C291DCF6AFAA /* SubscriptionsPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubscriptionsPlugin.swift; sourceTree = "<group>"; };
+		EAA58E461353C580B633A2CE /* ContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		ED3CE044F0F5E4467829326C /* BinomeWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BinomeWidget.swift; sourceTree = "<group>"; };
 		F47C88219CB87D2F85BCBE8A /* RecoveryWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecoveryWidget.swift; sourceTree = "<group>"; };
 		F7AEA4391D6F60590EBDCC95 /* App.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
@@ -109,6 +141,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		59E8A6F371BE49E0E1CCBFAD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3E91B33A802F7A419716B811 /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -127,6 +167,7 @@
 			isa = PBXGroup;
 			children = (
 				21E4FEBDC5BAE8C947C19727 /* iOS */,
+				67468D7F11D5E36CCB433E2D /* watchOS */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -139,6 +180,18 @@
 			name = iOS;
 			sourceTree = "<group>";
 		};
+		2C4FF757AEA4D86E2C9B555B /* PPLWatch */ = {
+			isa = PBXGroup;
+			children = (
+				8C6F99628FB7DD50B682B71D /* PPLWatchApp.swift */,
+				0996E2B904BC77A447F62030 /* WatchModel.swift */,
+				EAA58E461353C580B633A2CE /* ContentView.swift */,
+				27F215E26A5C6A96B8E723F0 /* Assets.xcassets */,
+			);
+			name = PPLWatch;
+			path = PPLWatch;
+			sourceTree = "<group>";
+		};
 		504EC2FB1FED79650016851F = {
 			isa = PBXGroup;
 			children = (
@@ -149,6 +202,7 @@
 				A5A7B52E884C3A0889DE3A8D /* PPLWidget */,
 				8130B9143358488A85AE461B /* Shared */,
 				2F11A81078476D24014339D4 /* PPLTracker.storekit */,
+				2C4FF757AEA4D86E2C9B555B /* PPLWatch */,
 			);
 			sourceTree = "<group>";
 		};
@@ -157,6 +211,7 @@
 			children = (
 				504EC3041FED79650016851F /* App.app */,
 				0EC8D08CF960EE4FD8E24714 /* PPLWidget.appex */,
+				230FF33E4CC545D710D3EDC7 /* PPLWatch.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -179,8 +234,17 @@
 				E9C499921F59C291DCF6AFAA /* SubscriptionsPlugin.swift */,
 				7AD4453B638A71A49B519E5A /* PrivacyInfo.xcprivacy */,
 				B9CB54E55EBF8C1EEDD5641E /* SiriShortcuts.swift */,
+				81C2480436BFE11B20ADE7CA /* PhoneWatchLink.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		67468D7F11D5E36CCB433E2D /* watchOS */ = {
+			isa = PBXGroup;
+			children = (
+				9442927DF6C54C4897A534D6 /* Foundation.framework */,
+			);
+			name = watchOS;
 			sourceTree = "<group>";
 		};
 		8130B9143358488A85AE461B /* Shared */ = {
@@ -226,11 +290,13 @@
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
 				3172E9EE6F92F7AAB4957E43 /* Embed Foundation Extensions */,
+				8911D23858DDE788FC412ADA /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				1CA3B80CC7F395A45823B49D /* PBXTargetDependency */,
+				CD3BA46678295DDDDDAC80D1 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -238,6 +304,23 @@
 			);
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
+			productType = "com.apple.product-type.application";
+		};
+		87ADB5856DA53B092F89C8BA /* PPLWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4B63B60E383504F47D36FE16 /* Build configuration list for PBXNativeTarget "PPLWatch" */;
+			buildPhases = (
+				E0FD8968534CCB0CB23F9D5F /* Sources */,
+				59E8A6F371BE49E0E1CCBFAD /* Frameworks */,
+				43A06ED20F55AAF4123E5C01 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PPLWatch;
+			productName = PPLWatch;
+			productReference = 230FF33E4CC545D710D3EDC7 /* PPLWatch.app */;
 			productType = "com.apple.product-type.application";
 		};
 		B91405EC23C63A28E27F9201 /* PPLWidget */ = {
@@ -292,11 +375,20 @@
 			targets = (
 				504EC3031FED79650016851F /* App */,
 				B91405EC23C63A28E27F9201 /* PPLWidget */,
+				87ADB5856DA53B092F89C8BA /* PPLWatch */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		43A06ED20F55AAF4123E5C01 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3343304B2BF9B7FA58F5B17A /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3021FED79650016851F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -333,6 +425,7 @@
 				25529CDEFB47446D46533FAD /* SubscriptionsPlugin.swift in Sources */,
 				E40A4B96F143D42367CA484B /* WorkoutActivityAttributes.swift in Sources */,
 				0332EAA903D106A2EC71A9E0 /* SiriShortcuts.swift in Sources */,
+				2F925D81E8F29E82647F68BD /* PhoneWatchLink.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -356,6 +449,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E0FD8968534CCB0CB23F9D5F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CE678D2BF96393DF3987B79D /* PPLWatchApp.swift in Sources */,
+				84E1184133947A5E96BD3163 /* WatchModel.swift in Sources */,
+				759C640B0B061E3DC99F6F45 /* ContentView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -364,6 +467,12 @@
 			name = PPLWidget;
 			target = B91405EC23C63A28E27F9201 /* PPLWidget */;
 			targetProxy = 1491C4FC7F9EA90A8F2DDC9C /* PBXContainerItemProxy */;
+		};
+		CD3BA46678295DDDDDAC80D1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = PPLWatch;
+			target = 87ADB5856DA53B092F89C8BA /* PPLWatch */;
+			targetProxy = 3C466EE614A177CBB74DF131 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -411,6 +520,34 @@
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
+		};
+		34F8260ABA9B07212BB49762 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "PPL Tracker";
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.ppltracker.app;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ppltracker.app.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
+			};
+			name = Release;
 		};
 		504EC3141FED79650016851F /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -595,9 +732,45 @@
 			};
 			name = Release;
 		};
+		FAA9DF9CE8418972017552CC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "PPL Tracker";
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.ppltracker.app;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ppltracker.app.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		4B63B60E383504F47D36FE16 /* Build configuration list for PBXNativeTarget "PPLWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				34F8260ABA9B07212BB49762 /* Release */,
+				FAA9DF9CE8418972017552CC /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		504EC2FF1FED79650016851F /* Build configuration list for PBXProject "App" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

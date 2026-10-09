@@ -2,9 +2,10 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { getProgram } from '../data/programs';
 import { getWorkout } from '../data/workouts';
-import { getAllExercises, getMuscleGroupsStatus, getMuscleRecoveryStatus, getRecoveryPct } from '../utils/training';
+import { getAllExercises, getLastExerciseSets, getMuscleGroupsStatus, getMuscleRecoveryStatus, getRecoveryPct } from '../utils/training';
 import { getCoachBrief } from '../utils/coach';
-import { kgToLbs } from '../utils/weight';
+import { kgToLbs, lbsToKg } from '../utils/weight';
+import { getWatchHandlers } from './watchBridge';
 import { computeCurrentWeekStreak, useWorkoutStore } from '../store/workoutStore';
 import { getBinomeState, subscribeBinome } from '../hooks/useBinome';
 import { hasProAccess, useSubscriptionStore } from './subscriptions';
@@ -18,6 +19,8 @@ import { useReferralStore } from './referral';
 interface WidgetBridgePlugin {
   setData(options: { json: string }): Promise<void>;
   consumePendingLink(): Promise<{ link?: string }>;
+  updateWatch(options: { json: string }): Promise<void>;
+  addListener(event: 'watchCommand', cb: (data: { cmd: string; weight?: number; reps?: number }) => void): Promise<PluginListenerHandle>;
   addListener(event: 'pendingLink', cb: () => void): Promise<PluginListenerHandle>;
   updateWorkout(options: {
     title: string; exerciseName: string; setNumber: number; setsInExercise: number;
@@ -256,19 +259,111 @@ const syncWorkoutActivity = () => {
   WidgetBridge.updateWorkout(payload).catch(() => undefined);
 };
 
+// ─── Apple Watch ───────────────────────────────────────────────────────────
+// Envoie à la montre ce qu'elle affiche (séance en cours, repos, prochaine séance) et
+// reçoit ses commandes (valider la série, passer le repos). Le téléphone reste le seul
+// maître des données : la montre ne calcule rien, elle affiche et demande.
+let lastWatchKey = '';
+
+const syncWatch = () => {
+  if (!useSubscriptionStore.getState().ready) return;
+  const s = useWorkoutStore.getState();
+  const pro = hasProAccess();
+  const program = getProgram(s.activeProgramId, s.customPrograms);
+  const next = program.workouts.find((w) => !s.cycleDoneIds.includes(w.id)) ?? program.workouts[0];
+  const now = Date.now();
+  const live = s.session && !s.session.isComplete ? s.session : null;
+  const workout = live ? getWorkout(live.dayId) : undefined;
+  const ex = live && workout ? workout.exercises[live.currentExerciseIndex] : undefined;
+  const toDisplay = (kg: number) => Math.round((s.weightUnit === 'lbs' ? kgToLbs(kg) : kg) * 10) / 10;
+
+  let session: Record<string, unknown> | null = null;
+  if (pro && live && workout && ex) {
+    const sets = live.exerciseProgress[ex.id] ?? [];
+    const total = sets.length || ex.sets;
+    const setIdx = Math.min(live.currentSetIndex, Math.max(total - 1, 0));
+    // Valeurs de départ proposées sur la montre : série déjà saisie, sinon la série précédente
+    // de la séance, sinon la dernière fois, sinon la suggestion du programme.
+    const previous = [...sets].slice(0, setIdx).reverse().find((x) => x.completed && x.reps !== '—');
+    const lastTime = getLastExerciseSets(s.history, ex.id)?.[setIdx];
+    const weightStr = sets[setIdx]?.weight || previous?.weight || lastTime?.weight || ex.defaultWeight || '';
+    const weightKg = parseFloat(weightStr);
+    const repsStr = sets[setIdx]?.reps || previous?.reps || lastTime?.reps || (ex.targetReps.match(/\d+/)?.[0] ?? '');
+    let done = 0;
+    let all = 0;
+    for (const e of workout.exercises) {
+      const ps = live.exerciseProgress[e.id];
+      all += ps?.length ?? e.sets;
+      done += ps?.filter((x) => x.completed).length ?? 0;
+    }
+    const restActive = s.timer.isRunning && s.timer.endTimestamp !== null;
+    session = {
+      title: workout.name,
+      exercise: live.exerciseNameOverrides?.[ex.id] ?? ex.name,
+      setNumber: setIdx + 1,
+      setsInExercise: total,
+      setsDone: done,
+      setsTotal: Math.max(all, 1),
+      weight: isNaN(weightKg) ? null : toDisplay(weightKg),
+      reps: parseInt(repsStr, 10) || 0,
+      targetReps: ex.targetReps,
+      // « PDC » (poids du corps) ou charge non numérique : la montre ne propose pas de poids.
+      bodyweight: isNaN(weightKg),
+      restEnd: restActive ? s.timer.endTimestamp : null,
+      restTotal: restActive ? s.timer.totalSeconds : 0,
+      restPaused: restActive && !!s.timer.isPaused,
+      restPausedRemaining: s.timer.pausedRemainingSeconds ?? 0,
+    };
+  }
+
+  const payload = {
+    pro,
+    unit: s.weightUnit,
+    session,
+    next: next ? { name: next.name } : null,
+    week: {
+      done: s.history.filter((e) => now - e.date < 7 * DAY_MS).length,
+      goal: s.weeklySessionGoal,
+    },
+  };
+  const key = JSON.stringify(payload);
+  if (key === lastWatchKey) return;
+  lastWatchKey = key;
+  WidgetBridge.updateWatch({ json: key }).catch(() => undefined);
+};
+
+/** Commande reçue de la montre. Le poids revient dans l'unité affichée ; le store, lui, est en kg. */
+const handleWatchCommand = (data: { cmd: string; weight?: number; reps?: number }) => {
+  const handlers = getWatchHandlers();
+  const unit = useWorkoutStore.getState().weightUnit;
+  if (data.cmd === 'completeSet') {
+    if (!handlers) return; // l'écran de séance n'est pas affiché : rien n'est validé à l'aveugle
+    const w = typeof data.weight === 'number' ? (unit === 'lbs' ? lbsToKg(data.weight) : data.weight) : NaN;
+    const reps = typeof data.reps === 'number' && data.reps > 0 ? String(Math.round(data.reps)) : '';
+    if (!reps) return;
+    const weightKg = isNaN(w) ? '' : String(Math.round(w * 100) / 100);
+    handlers.completeSet(weightKg, reps);
+  } else if (data.cmd === 'skipRest') {
+    handlers?.skipRest();
+  }
+};
+
 export const startWidgetSync = () => {
   if (Capacitor.getPlatform() !== 'ios') return;
   schedulePush();
   syncWorkoutActivity();
+  syncWatch();
   useWorkoutStore.subscribe(() => {
     schedulePush();
     syncWorkoutActivity();
+    syncWatch();
   });
+  void WidgetBridge.addListener('watchCommand', handleWatchCommand);
   // Le binôme est chargé depuis le serveur, après le démarrage de l'appli.
   subscribeBinome(schedulePush);
   // Abonnement ou mois offert qui change : widgets et séance en direct se verrouillent / se déverrouillent.
-  useSubscriptionStore.subscribe(() => { schedulePush(); syncWorkoutActivity(); });
-  useReferralStore.subscribe(() => { schedulePush(); syncWorkoutActivity(); });
+  useSubscriptionStore.subscribe(() => { schedulePush(); syncWorkoutActivity(); syncWatch(); });
+  useReferralStore.subscribe(() => { schedulePush(); syncWorkoutActivity(); syncWatch(); });
 };
 
 // ─── Liens laissés par Siri ────────────────────────────────────────────────
