@@ -13,11 +13,9 @@ import { DashboardScreen } from './screens/DashboardScreen';
 import { SettingsScreen, type SettingsCategory } from './screens/SettingsScreen';
 import { WorkoutIntroScreen } from './screens/WorkoutIntroScreen';
 import type { SessionAdaptation } from './utils/gymAdapt';
-import type { CardioActivityType } from './data/types';
 import { ObjectivesScreen } from './screens/ObjectivesScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { CardioScreen } from './screens/CardioScreen';
-import { ActivityScreen } from './screens/ActivityScreen';
 import { ExercicesScreen } from './screens/ExercicesScreen';
 import { CatalogueScreen } from './screens/CatalogueScreen';
 import { PoidsScreen } from './screens/PoidsScreen';
@@ -48,7 +46,7 @@ import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 
 type View =
 | 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'historique'
-| 'cardio' | 'activite' | 'exercices' | 'catalogue' | 'poids' | 'coach' | 'profil' | 'auth' | 'pro';
+| 'cardio' | 'exercices' | 'catalogue' | 'poids' | 'coach' | 'profil' | 'auth' | 'pro';
 
 // Écrans qu'un widget a le droit d'ouvrir.
 const WIDGET_LINK_VIEWS: View[] = ['home', 'objectifs', 'poids', 'coach', 'profil', 'exercices', 'pro'];
@@ -72,8 +70,6 @@ const [view, setView] = useState<View>(OPENED_FROM_RECOVERY_LINK ? 'auth' : 'hom
 // Vrai tant que l'écran Compte doit s'ouvrir sur « nouveau mot de passe ».
 const [recoveryPending, setRecoveryPending] = useState(OPENED_FROM_RECOVERY_LINK);
 const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
-// Quelle activité l'écran cardio en direct doit afficher (vélo, marche, course).
-const [activityMode, setActivityMode] = useState<CardioActivityType>('velo');
 // D'où on est venu quand on ouvre les Réglages, pour y retourner sans
 // jamais toucher à une séance en cours (voir handleOpenSettings).
 const [settingsReturnView, setSettingsReturnView] = useState<View>('home');
@@ -371,11 +367,7 @@ screen = <ObjectivesScreen onBack={handleBack} />;
 } else if (view === 'historique') {
 screen = <HistoryScreen onBack={handleBack} />;
 } else if (view === 'cardio') {
-screen = <CardioScreen onBack={handleBack} onStartActivity={(m) => { setActivityMode(m); setView('activite'); }} />;
-} else if (view === 'activite') {
-// Une activité cardio se comporte comme une séance : pas de barre de
-// navigation, on en sort par « Terminer » ou par la flèche.
-screen = <ActivityScreen mode={activityMode} onBack={() => setView('cardio')} />;
+screen = <CardioScreen onBack={handleBack} />;
 } else if (view === 'catalogue') {
 screen = <CatalogueScreen onBack={handleBack} />;
 } else if (view === 'exercices') {

@@ -6,17 +6,9 @@ import { useWorkoutStore, CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import type { CardioActivityType, CardioStats } from '../data/types';
 import { useScreenClass } from '../hooks/useScreenClass';
 
-interface CardioScreenProps { onBack: () => void; onStartActivity?: (mode: CardioActivityType) => void; }
+interface CardioScreenProps { onBack: () => void; }
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
-
-// Les trois activités qui ont un écran en direct. « Autre » n'en a pas : sans
-// capteur ni GPS, ce serait un chrono sans rien autour.
-const LIVE_MODES: { mode: CardioActivityType; label: string; hint: string }[] = [
-  { mode: 'velo', label: 'Mode vélo', hint: 'Chrono, puissance, cadence — en direct' },
-  { mode: 'course', label: 'Mode course', hint: 'Distance et allure au GPS' },
-  { mode: 'marche', label: 'Mode marche', hint: 'Distance et allure au GPS' },
-];
 
 const formatCardioDate = (ts: number): string => {
   // Jours calendaires (et non tranches de 24 h) : une séance d'hier 21 h n'est pas « aujourd'hui ».
@@ -27,7 +19,7 @@ const formatCardioDate = (ts: number): string => {
   return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 };
 
-export const CardioScreen: React.FC<CardioScreenProps> = ({ onBack, onStartActivity }) => {
+export const CardioScreen: React.FC<CardioScreenProps> = ({ onBack }) => {
 const screenClass = useScreenClass();
   const cardioHistory = useWorkoutStore((s) => s.cardioHistory);
   const addCardioEntry = useWorkoutStore((s) => s.addCardioEntry);
@@ -62,25 +54,6 @@ const screenClass = useScreenClass();
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>Vélo, marche, course...</p>
           </div>
         </div>
-
-        {/* Mode vélo — séance en direct, avec les mesures du vélo si un
-            capteur Bluetooth est disponible. */}
-        {/* Séances en direct : chrono + mesures. Le vélo lit le Bluetooth,
-            la marche et la course le GPS (qui, lui, marche sur iPhone). */}
-        {onStartActivity && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-            {LIVE_MODES.map((m) => (
-              <button key={m.mode} onClick={() => onStartActivity(m.mode)} className="glass-card" style={liveCta}>
-                <GlassIcon size={40} accent><DataIcon name={CARDIO_TYPE_LABELS[m.mode].icon} size={20} /></GlassIcon>
-                <span style={{ flex: 1, textAlign: 'left' }}>
-                  <span style={{ display: 'block', color: 'var(--text-primary)', fontSize: 15, fontWeight: 800 }}>{m.label}</span>
-                  <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: 11.5, marginTop: 2 }}>{m.hint}</span>
-                </span>
-                <span style={{ color: 'var(--text-dim)', fontSize: 17 }}>›</span>
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* Résumé de la semaine */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
@@ -248,11 +221,6 @@ const deleteBtn: React.CSSProperties = {
   width: 26, height: 26, borderRadius: 8, flexShrink: 0,
   background: 'var(--bg-elevated)', color: 'var(--text-dim)', fontSize: 12, cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-};
-
-const liveCta: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 14, width: '100%', cursor: 'pointer',
-  borderRadius: 26, padding: '14px 18px',
 };
 
 /** Vrai dès qu'au moins une mesure chiffrée existe. */
