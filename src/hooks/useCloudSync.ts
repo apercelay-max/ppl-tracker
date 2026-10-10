@@ -26,6 +26,11 @@ export function useCloudSync() {
   const [status, setStatus] = useState<SyncStatus>('idle');
   const [conflict, setConflict] = useState<SyncConflict | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
+  // Vrai seulement après une lecture du cloud réussie (ou un choix explicite
+  // de l'utilisateur) pour CETTE session de l'appli — voir l'effet d'envoi
+  // plus bas, qui s'en sert pour ne jamais pousser sans avoir d'abord vu
+  // l'état réel du cloud.
+  const [readOk, setReadOk] = useState(false);
   const handledUserId = useRef<string | null>(null);
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const readRetryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -39,6 +44,7 @@ export function useCloudSync() {
       handledUserId.current = null;
       setStatus('idle');
       setConflict(null);
+      setReadOk(false);
       return;
     }
     if (handledUserId.current === user.id) return;
@@ -55,12 +61,18 @@ export function useCloudSync() {
       } catch {
         // Lecture impossible ≠ cloud vide : on n'envoie RIEN (ça écraserait le
         // cloud avec les données de cet appareil) et on réessaie plus tard.
+        // readOk reste à false : sans ça, un appareil déjà résolu lors d'une
+        // session précédente (RESOLVED_KEY posé) aurait quand même laissé
+        // l'effet d'envoi plus bas pousser au premier changement du store,
+        // sans avoir vu l'état actuel du cloud pendant CETTE session.
         handledUserId.current = null;
         setStatus('error');
+        setReadOk(false);
         if (readRetryTimer.current) clearTimeout(readRetryTimer.current);
         readRetryTimer.current = setTimeout(() => setReadRetry((n) => n + 1), READ_RETRY_MS);
         return;
       }
+      setReadOk(true);
 
       if (!remote) {
         // Rien dans le cloud pour ce compte → première synchro, on y
@@ -112,6 +124,7 @@ export function useCloudSync() {
       applyRemoteSnapshot(remote.data);
     }
     localStorage.setItem(RESOLVED_KEY, user.id);
+    setReadOk(true);
     setConflict(null);
     setStatus('synced');
     setLastSyncedAt(Date.now());
@@ -122,6 +135,9 @@ export function useCloudSync() {
     setStatus('syncing');
     const ok = await pushRemoteData(user.id, getLocalSnapshot());
     localStorage.setItem(RESOLVED_KEY, user.id);
+    // Choix explicite de l'utilisateur ("garder cet appareil") : il vaut
+    // comme lecture confirmée, même sans nouvelle lecture du cloud.
+    setReadOk(true);
     setConflict(null);
     setStatus(ok ? 'synced' : 'error');
     if (ok) setLastSyncedAt(Date.now());
@@ -131,7 +147,7 @@ export function useCloudSync() {
   // le cloud (avec un léger débounce pour ne pas spammer l'API à chaque
   // frappe pendant une saisie de série).
   useEffect(() => {
-    if (!user || conflict) return;
+    if (!user || conflict || !readOk) return;
     const userId = user.id;
     const unsubscribe = useWorkoutStore.subscribe(() => {
       // Tant que le choix cloud / appareil n'est pas fait (ou que la première
@@ -150,7 +166,7 @@ export function useCloudSync() {
       unsubscribe();
       if (pushTimer.current) clearTimeout(pushTimer.current);
     };
-  }, [user, conflict]);
+  }, [user, conflict, readOk]);
 
   return { status, conflict, resolveUseCloud, resolveUseDevice, lastSyncedAt };
 }
