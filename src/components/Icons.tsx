@@ -389,6 +389,13 @@ export const IconBook: React.FC<IconProps> = ({ size = 18, color = 'currentColor
   </svg>
 );
 
+export const IconTable: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M3 10h18M3 15h18M9 4v16" />
+  </svg>
+);
+
 export const IconStar: React.FC<IconProps & { filled?: boolean }> = ({ size = 18, color = 'currentColor', filled }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color} fill={filled ? color : 'none'}>
     <path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8 6.2 20.9l1.1-6.5L2.6 9.8l6.5-.9Z" />

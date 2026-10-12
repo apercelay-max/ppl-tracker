@@ -33,7 +33,7 @@ import { hasAiConsent, withdrawAiConsent } from '../utils/coachAi';
 import type { CardioActivityType, NavTabKey } from '../data/types';
 import type { VoiceVerbosity } from '../store/workoutStore';
 import { isVoiceSupported, primeVoice, speak, stopVoice } from '../utils/voiceCoach';
-import { IconActivity, IconArrowRight, IconBarChart, IconBook, IconBounce, IconCalendar, IconCheck, IconClose, IconDownload, IconDumbbell, IconFireworks, IconHome, IconMonitor, IconMoon, IconPalette, IconPartyPopper, IconRefreshCw, IconRotateCcw, IconSave, IconScale, IconSearch, IconSparkles, IconSun, IconTarget, IconUpload, IconUser } from '../components/Icons';
+import { IconActivity, IconArrowRight, IconBarChart, IconBook, IconBounce, IconCalendar, IconCheck, IconClose, IconDownload, IconDumbbell, IconFireworks, IconHome, IconMonitor, IconMoon, IconPalette, IconPartyPopper, IconRefreshCw, IconRotateCcw, IconSave, IconScale, IconSearch, IconSparkles, IconSun, IconTable, IconTarget, IconUpload, IconUser } from '../components/Icons';
 import { useScreenClass } from '../hooks/useScreenClass';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
@@ -65,6 +65,7 @@ const NAV_TAB_META: { id: NavTabKey; label: string; Icon: React.FC<{ size?: numb
 { id: 'dashboard', label: 'Stats', Icon: IconBarChart },
 { id: 'coach', label: 'Coach', Icon: IconSparkles },
 { id: 'profil', label: 'Profil', Icon: IconUser },
+{ id: 'tableur', label: 'Tableur', Icon: IconTable },
 ];
 
 const formatRest = (seconds: number): string => {

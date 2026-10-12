@@ -21,6 +21,7 @@ import { CatalogueScreen } from './screens/CatalogueScreen';
 import { PoidsScreen } from './screens/PoidsScreen';
 import { CoachScreen } from './screens/CoachScreen';
 import { ProfilScreen } from './screens/ProfilScreen';
+import { TableurScreen } from './screens/TableurScreen';
 import { AuthScreen } from './screens/AuthScreen';
 import { NavBar } from './components/NavBar';
 import type { NavView } from './components/NavBar';
@@ -46,7 +47,7 @@ import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 
 type View =
 | 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'historique'
-| 'cardio' | 'exercices' | 'catalogue' | 'poids' | 'coach' | 'profil' | 'auth' | 'pro';
+| 'cardio' | 'exercices' | 'catalogue' | 'poids' | 'coach' | 'profil' | 'tableur' | 'auth' | 'pro';
 
 // Écrans qu'un widget a le droit d'ouvrir.
 const WIDGET_LINK_VIEWS: View[] = ['home', 'objectifs', 'poids', 'coach', 'profil', 'exercices', 'pro'];
@@ -378,6 +379,8 @@ screen = <PoidsScreen onBack={handleBack} />;
 screen = <CoachScreen onBack={handleBack} />;
 } else if (view === 'profil') {
 screen = <ProfilScreen onBack={handleBack} />;
+} else if (view === 'tableur') {
+screen = <TableurScreen onBack={handleBack} />;
 } else if (view === 'pro') {
 screen = <PaywallScreen onBack={() => setView(proReturnView)} />;
 } else if (view === 'auth') {
@@ -404,7 +407,7 @@ lastSyncedAt={sync.lastSyncedAt}
 
 // La barre ne s'affiche jamais pendant une séance (intro/session) — même
 // activée dans les Réglages, elle distrairait pendant l'entraînement.
-const NAV_VIEWS: View[] = ['home', 'objectifs', 'historique', 'cardio', 'exercices', 'catalogue', 'poids', 'dashboard', 'coach', 'profil', 'settings'];
+const NAV_VIEWS: View[] = ['home', 'objectifs', 'historique', 'cardio', 'exercices', 'catalogue', 'poids', 'dashboard', 'coach', 'profil', 'tableur', 'settings'];
 const showNavBar = navBarEnabled && NAV_VIEWS.includes(view);
 const activeNavTab: NavView = (NAV_VIEWS.includes(view) ? view : 'home') as NavView;
 
