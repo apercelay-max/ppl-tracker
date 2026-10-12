@@ -34,6 +34,15 @@ fill={filled ? 'currentColor' : 'none'} fillOpacity={filled ? 0.2 : 0} />
 </svg>
 );
 
+// Grille façon tableur, pour l'onglet « Tableur ». Même trait que les autres, avec sa variante "filled".
+const TableIcon: React.FC<{ size?: number; filled?: boolean }> = ({ size = 22, filled }) => (
+<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+strokeWidth={filled ? 2 : 1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+<rect x="3" y="4" width="18" height="16" rx="2" fill={filled ? 'currentColor' : 'none'} fillOpacity={filled ? 0.2 : 0} />
+<path d="M3 10h18M3 15h18M9 4v16" />
+</svg>
+);
+
 // Petite coche affichée à droite de la ligne active dans le menu "Plus".
 const CheckIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
 <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -72,6 +81,7 @@ const TABS: { id: NavView; label: string }[] = [
 { id: 'dashboard', label: 'Stats' },
 { id: 'coach', label: 'Coach' },
 { id: 'profil', label: 'Profil' },
+{ id: 'tableur', label: 'Tableur' },
 { id: 'settings', label: 'Réglages' },
 ];
 
@@ -100,6 +110,7 @@ poids: 'Suivi du poids de corps',
 dashboard: 'Volume, progression, graphiques',
 coach: 'Ton bilan analysé par l’IA',
 profil: 'Ton résumé, tes records et tes badges',
+tableur: 'Tes séances en grille façon Excel',
 settings: 'Apparence, barre de menus…',
 };
 
@@ -119,6 +130,7 @@ poids: ScaleIcon,
 dashboard: ChartIcon,
 coach: SparklesIcon,
 profil: UserIcon,
+tableur: TableIcon,
 settings: SlidersIcon,
 };
 

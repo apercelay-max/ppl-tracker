@@ -14,6 +14,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-12',
+    title: 'Mode Tableur',
+    items: [
+      'Nouveau : « Tableur », dans le menu Plus. Tes séances en grille façon Excel, une colonne par séance faite.',
+      'Elle se remplit toute seule : termine une séance et elle apparaît, série par série.',
+      'Export Excel (.xlsx) de la grille, un onglet par séance.',
+    ],
+  },
+  {
     id: '2026-10-08',
     title: 'Programme Strict V4.3',
     items: [

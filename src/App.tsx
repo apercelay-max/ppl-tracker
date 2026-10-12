@@ -16,6 +16,7 @@ import { CatalogueScreen } from './screens/CatalogueScreen';
 import { PoidsScreen } from './screens/PoidsScreen';
 import { CoachScreen } from './screens/CoachScreen';
 import { ProfilScreen } from './screens/ProfilScreen';
+import { TableurScreen } from './screens/TableurScreen';
 import { AuthScreen } from './screens/AuthScreen';
 import { NavBar } from './components/NavBar';
 import type { NavView } from './components/NavBar';
@@ -39,7 +40,7 @@ import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 
 type View =
 | 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'historique'
-| 'cardio' | 'activite' | 'exercices' | 'catalogue' | 'poids' | 'coach' | 'profil' | 'auth';
+| 'cardio' | 'activite' | 'exercices' | 'catalogue' | 'poids' | 'coach' | 'profil' | 'tableur' | 'auth';
 
 // Durée d'affichage du splash "PPL" au démarrage, avant le fondu de sortie
 // (voir .splash-fade dans index.css). Volontairement court pour ne pas
@@ -322,6 +323,8 @@ screen = <PoidsScreen onBack={handleBack} />;
 screen = <CoachScreen onBack={handleBack} />;
 } else if (view === 'profil') {
 screen = <ProfilScreen onBack={handleBack} />;
+} else if (view === 'tableur') {
+screen = <TableurScreen onBack={handleBack} />;
 } else if (view === 'auth') {
 screen = <AuthScreen onBack={handleBackFromAccount} initialMode={recoveryPending ? 'reset' : undefined} />;
 } else if (view === 'settings') {
@@ -345,7 +348,7 @@ lastSyncedAt={sync.lastSyncedAt}
 
 // La barre ne s'affiche jamais pendant une séance (intro/session) — même
 // activée dans les Réglages, elle distrairait pendant l'entraînement.
-const NAV_VIEWS: View[] = ['home', 'objectifs', 'historique', 'cardio', 'exercices', 'catalogue', 'poids', 'dashboard', 'coach', 'profil', 'settings'];
+const NAV_VIEWS: View[] = ['home', 'objectifs', 'historique', 'cardio', 'exercices', 'catalogue', 'poids', 'dashboard', 'coach', 'profil', 'tableur', 'settings'];
 const showNavBar = navBarEnabled && NAV_VIEWS.includes(view);
 const activeNavTab: NavView = (NAV_VIEWS.includes(view) ? view : 'home') as NavView;
 
