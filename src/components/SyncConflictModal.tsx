@@ -1,4 +1,5 @@
 import React from 'react';
+import { dateLocale } from '../i18n';
 
 interface SyncConflictModalProps {
   remoteUpdatedAt: string;
@@ -7,7 +8,7 @@ interface SyncConflictModalProps {
 }
 
 export const SyncConflictModal: React.FC<SyncConflictModalProps> = ({ remoteUpdatedAt, onUseCloud, onUseDevice }) => {
-  const dateLabel = new Date(remoteUpdatedAt).toLocaleString('fr-FR', {
+  const dateLabel = new Date(remoteUpdatedAt).toLocaleString(dateLocale(), {
     day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
   });
 

@@ -37,6 +37,7 @@ import type { GymProfile } from './utils/gymAdapt';
 import { getAccent, hexToRgbTriplet } from './data/accents';
 import { getProgram } from './data/programs';
 import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
+import { useLang } from './i18n';
 
 type View =
 | 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'historique'
@@ -70,6 +71,9 @@ const [settingsReturnView, setSettingsReturnView] = useState<View>('home');
 // lien d'invitation binôme ; remis à zéro dès qu'on ouvre les Réglages
 // normalement.
 const [settingsInitialCategory, setSettingsInitialCategory] = useState<SettingsCategory | undefined>(undefined);
+// Abonne App à la langue : quand elle change, tout l'arbre se redessine (aucun
+// composant n'est mémoïsé) et chaque t() est réévalué.
+useLang();
 const theme = useWorkoutStore((s) => s.theme);
 // Pour l'étiquette du bouton rouge de la barre (« Commencer » vs « Reprendre »).
 const session = useWorkoutStore((s) => s.session);

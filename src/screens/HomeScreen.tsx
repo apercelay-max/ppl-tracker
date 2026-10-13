@@ -20,6 +20,7 @@ import { WeeklyRecapCard } from '../components/WeeklyRecapCard';
 import { refreshBinome, useBinome } from '../hooks/useBinome';
 import { markNudgesSeen, sendNudge } from '../lib/binome';
 import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconGauge, IconLightbulb, IconMoon, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
+import { dateLocale } from '../i18n';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -31,7 +32,7 @@ const formatRelativeDate = (ts: number): string => {
   if (diffDays <= 0) return "Aujourd'hui";
   if (diffDays === 1) return 'Hier';
   if (diffDays < 7) return `Il y a ${diffDays} j`;
-  return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  return new Date(ts).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
 };
 
 // Petit sparkline SVG normalisé (poids du corps, progression d'exercice) —
@@ -224,7 +225,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
     return () => { mq.removeEventListener('change', onChange); window.removeEventListener('resize', onChange); };
   }, []);
 
-  const todayLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const todayLabel = new Date().toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' });
 
   // ── Charge d'entraînement (alerte pic de charge) ─────────────────────────
   // Compare la charge de la semaine en cours à la moyenne des semaines
@@ -630,8 +631,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
       const dayEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
       return {
         key: dayStart,
-        label: d.toLocaleDateString('fr-FR', { weekday: 'narrow' }),
-        name: d.toLocaleDateString('fr-FR', { weekday: 'long' }),
+        label: d.toLocaleDateString(dateLocale(), { weekday: 'narrow' }),
+        name: d.toLocaleDateString(dateLocale(), { weekday: 'long' }),
         done: history.some((e) => e.date >= dayStart && e.date < dayEnd),
         today: i === 6,
       };
@@ -721,7 +722,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <div className="glass-tile" style={statTile}><span style={statTileLabel}>DURÉE</span><span style={statTileValue}>{durationMin} min</span></div>
-          <div className="glass-tile" style={statTile}><span style={statTileLabel}>TONNAGE</span><span style={statTileValue}>{tonnage.toLocaleString('fr-FR')} kg</span></div>
+          <div className="glass-tile" style={statTile}><span style={statTileLabel}>TONNAGE</span><span style={statTileValue}>{tonnage.toLocaleString(dateLocale())} kg</span></div>
           <div className="glass-tile" style={statTile}><span style={statTileLabel}>SÉRIES</span><span style={statTileValue}>{setsCount}</span></div>
         </div>
       </div>
@@ -743,7 +744,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
           <div>
             <p style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 3 }}>Tonnage cette semaine</p>
-            <p style={{ color: 'var(--text-primary)', fontSize: 20, fontWeight: 800 }}>{thisWeek.tonnage.toLocaleString('fr-FR')} kg</p>
+            <p style={{ color: 'var(--text-primary)', fontSize: 20, fontWeight: 800 }}>{thisWeek.tonnage.toLocaleString(dateLocale())} kg</p>
           </div>
           {pct !== null && (
             <span style={{
@@ -892,7 +893,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
     const sessionsDelta = thisW.sessionCount - prevW.sessionCount;
     const tonnagePct = prevW.tonnage > 0 ? Math.round(((thisW.tonnage - prevW.tonnage) / prevW.tonnage) * 100) : null;
     const maxTonnage = Math.max(1, ...weeks.map((w) => w.tonnage));
-    const formatT = (kg: number) => (kg >= 1000 ? (kg / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) : String(Math.round(kg)));
+    const formatT = (kg: number) => (kg >= 1000 ? (kg / 1000).toLocaleString(dateLocale(), { maximumFractionDigits: 1 }) : String(Math.round(kg)));
     const tUnit = thisW.tonnage >= 1000 ? 't' : 'kg';
     // Durée moyenne des 4 dernières semaines, comparée aux 4 d'avant.
     const DAY = 86400000;
@@ -986,7 +987,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
         <div className="ep-item"><span>Récupération</span><b>{Math.round(averagePct * 100)} %</b></div>
         <div className="ep-item">
           <span>Tonnage de la semaine</span>
-          <b>{weekTonnage >= 1000 ? `${(weekTonnage / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} t` : `${Math.round(weekTonnage)} kg`}</b>
+          <b>{weekTonnage >= 1000 ? `${(weekTonnage / 1000).toLocaleString(dateLocale(), { maximumFractionDigits: 1 })} t` : `${Math.round(weekTonnage)} kg`}</b>
         </div>
         {pr && <div className="ep-item"><span>Dernier record</span><b>{pr.exerciseName} · {pr.weight} kg</b></div>}
       </section>

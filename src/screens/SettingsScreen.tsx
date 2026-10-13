@@ -24,6 +24,7 @@ import type { VoiceVerbosity } from '../store/workoutStore';
 import { isVoiceSupported, primeVoice, speak, stopVoice } from '../utils/voiceCoach';
 import { IconActivity, IconArrowRight, IconBarChart, IconBook, IconBounce, IconCalendar, IconCheck, IconClose, IconDownload, IconDumbbell, IconFireworks, IconHome, IconMonitor, IconMoon, IconPalette, IconPartyPopper, IconRefreshCw, IconRotateCcw, IconSave, IconScale, IconSearch, IconSparkles, IconSun, IconTable, IconTarget, IconUpload, IconUser } from '../components/Icons';
 import { useScreenClass } from '../hooks/useScreenClass';
+import { LANGUAGES, dateLocale, t, useLangStore, type LangPref } from '../i18n';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -139,6 +140,9 @@ objectifs: { label: 'Objectifs & calories', Icon: IconTarget, desc: 'Badges, cal
 donnees: { label: 'Données & compte', Icon: IconSave, desc: 'Export, import, sauvegarde, synchronisation, quiz de démarrage.' },
 };
 
+// Noms des styles d'interface, pour le résumé de la catégorie Apparence.
+const UI_STYLE_LABELS: Record<string, string> = { nouveau: 'Nouveau', classique: 'Classique', sport: 'Sport pro', epure: 'Épuré' };
+
 const CATEGORY_ORDER: CategoryId[] = ['seance', 'apparence', 'objectifs', 'donnees'];
 
 // Mots-clés utilisés par la recherche (barre en haut des Réglages) pour
@@ -186,7 +190,7 @@ if (diffSec < 10) return "à l'instant";
 if (diffSec < 60) return `il y a ${diffSec}s`;
 const diffMin = Math.round(diffSec / 60);
 if (diffMin < 60) return `il y a ${diffMin} min`;
-return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+return new Date(ts).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' });
 };
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ initialCategory, onBack, onOpenAccount, onRestartQuiz, syncStatus, lastSyncedAt }) => {
@@ -201,6 +205,8 @@ const amoledMode = useWorkoutStore((s) => s.amoledMode);
 const setAmoledMode = useWorkoutStore((s) => s.setAmoledMode);
 const theme = useWorkoutStore((s) => s.theme);
 const themeMode = useWorkoutStore((s) => s.themeMode);
+const langPref = useLangStore((s) => s.pref);
+const setLangPref = useLangStore((s) => s.setPref);
 const setThemeMode = useWorkoutStore((s) => s.setThemeMode);
 const fontScale = useWorkoutStore((s) => s.fontScale);
 const setFontScale = useWorkoutStore((s) => s.setFontScale);
@@ -355,7 +361,7 @@ const normalizedQuery = normalizeSearch(settingsQuery.trim());
 const categoryMatchesQuery = (id: CategoryId) => {
 if (!normalizedQuery) return true;
 const meta = CATEGORY_META[id];
-const haystack = normalizeSearch([meta.label, meta.desc, ...CATEGORY_KEYWORDS[id]].join(' '));
+const haystack = normalizeSearch([meta.label, meta.desc, t(meta.label), t(meta.desc), ...CATEGORY_KEYWORDS[id]].join(' '));
 return haystack.includes(normalizedQuery);
 };
 const visibleCategoryCount = CATEGORY_ORDER.filter(categoryMatchesQuery).length;
@@ -455,7 +461,7 @@ setLastExportAt(Date.now());
 const finishHistoryImport = (text: string, filename: string) => {
 const result = buildHistoryImport(text, { assumedUnit: weightUnit });
 if ('error' in result) { setImportMsg(`Import impossible — ${result.error}`); return; }
-const fmt = (t: number) => new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+const fmt = (t: number) => new Date(t).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
 const unitLine = result.unitKnown
 ? ''
 : `\n\n${SOURCE_LABEL[result.source]} n'indique pas l'unité dans son export : les poids sont lus en ${weightUnit === 'kg' ? 'kilos' : 'livres'} (ton réglage actuel). Si ce n'est pas le bon, annule et change l'unité dans Réglages → Séance.`;
@@ -472,12 +478,12 @@ if (r.dropped) parts.push(`${r.dropped} plus ancienne(s) non gardée(s) (l'histo
 setImportMsg(parts.join(' · ') + '.');
 };
 
-const daysAgo = (t: number) => Math.floor((Date.now() - t) / 86400000);
-const agoLabel = (t: number) => { const d = daysAgo(t); return d <= 0 ? "aujourd'hui" : d === 1 ? 'hier' : `il y a ${d} jours`; };
+const daysAgo = (ts: number) => Math.floor((Date.now() - ts) / 86400000);
+const agoLabel = (ts: number) => { const d = daysAgo(ts); return d <= 0 ? t("aujourd'hui") : d === 1 ? t('hier') : t('il y a {n} jours', { n: d }); };
 const exportStale = history.length > 0 && (lastExportAt === null || daysAgo(lastExportAt) >= 30);
 
 const handleRestoreBackup = async (b: BackupMeta) => {
-const when = new Date(b.savedAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const when = new Date(b.savedAt).toLocaleString(dateLocale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 if (!window.confirm(`Revenir à la copie du ${when} (${b.sessions} séance(s)) ? Ce qui est enregistré maintenant sera lui aussi gardé en copie, tu pourras y revenir.`)) return;
 const ok = await restoreBackup(b.id);
 if (!ok) setImportMsg("Impossible de restaurer cette copie de secours.");
@@ -564,20 +570,20 @@ const accentLabel = [...ACCENT_PRESETS, ...GYM_PRESETS].find((a) => a.id === acc
 const CATEGORY_SUMMARY: Record<CategoryId, string> = {
 seance: [
 allPrograms.find((pr) => pr.id === activeProgramId)?.name,
-`repos ${formatRest(defaultRestSeconds)}`,
-weightUnit === 'kg' ? 'kilos' : 'livres',
+t('repos {x}', { x: formatRest(defaultRestSeconds) }),
+weightUnit === 'kg' ? t('kilos') : t('livres'),
 ].filter(Boolean).join(' · '),
 apparence: [
-THEME_MODES.find((m) => m.id === themeMode)?.label,
-`accent ${String(accentLabel).toLowerCase()}`,
-`style ${uiStyle === 'epure' ? 'épuré' : uiStyle}`,
+t(THEME_MODES.find((m) => m.id === themeMode)?.label ?? ''),
+t('accent {x}', { x: t(String(accentLabel)).toLowerCase() }),
+t('style {x}', { x: t(UI_STYLE_LABELS[uiStyle] ?? String(uiStyle)).toLowerCase() }),
 ].filter(Boolean).join(' · '),
-objectifs: `${weeklySessionGoal} séances par semaine · ${caloriesPerHour} kcal/h`,
+objectifs: t('{n} séances par semaine · {kcal} kcal/h', { n: weeklySessionGoal, kcal: caloriesPerHour }),
 donnees: exportStale
-? (lastExportAt === null ? 'Jamais exporté : pense à faire une sauvegarde.' : `Dernier export ${agoLabel(lastExportAt)} : pense à sauvegarder.`)
+? (lastExportAt === null ? t('Jamais exporté : pense à faire une sauvegarde.') : t('Dernier export {ago} : pense à sauvegarder.', { ago: agoLabel(lastExportAt) }))
 : syncStatus && syncStatus !== 'idle'
 ? SYNC_STATUS_META[syncStatus].label
-: 'Export, import, sauvegarde, quiz de démarrage.',
+: t('Export, import, sauvegarde, quiz de démarrage.'),
 };
 
 // Petit composant de tête de catégorie, réutilisé pour chacune des 4 classes.
@@ -588,8 +594,8 @@ return (
 <button onClick={() => toggleCategory(id)} style={categoryHeaderBtn}>
 <meta.Icon size={18} />
 <div style={{ flex: 1, textAlign: 'left' }}>
-<p style={categoryHeaderLabel}>{meta.label}</p>
-<p style={categoryHeaderDesc}>{CATEGORY_SUMMARY[id] || meta.desc}</p>
+<p style={categoryHeaderLabel}>{t(meta.label)}</p>
+<p style={categoryHeaderDesc}>{CATEGORY_SUMMARY[id] || t(meta.desc)}</p>
 </div>
 <span style={{ color: 'var(--text-dim)', fontSize: 12, transform: collapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.15s' }}>▾</span>
 </button>
@@ -605,14 +611,14 @@ return (
 <button
 key={id}
 onClick={() => handleSidebarJump(id)}
-title={CATEGORY_META[id].label}
+title={t(CATEGORY_META[id].label)}
 style={{
 ...landscapeSidebarBtn,
 background: !collapsedCategories[id] ? 'var(--bg-elevated)' : 'transparent',
 }}
 >
 {React.createElement(CATEGORY_META[id].Icon, { size: 20 })}
-<span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-muted)' }}>{CATEGORY_META[id].label}</span>
+<span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-muted)' }}>{t(CATEGORY_META[id].label)}</span>
 </button>
 ))}
 </div>
@@ -624,8 +630,8 @@ background: !collapsedCategories[id] ? 'var(--bg-elevated)' : 'transparent',
 <div style={headerRow}>
 <button onClick={onBack} className="glass-icon" style={backBtn}>←</button>
 <div>
-<h1 style={titleStyle}>Réglages</h1>
-<p style={subtitleStyle}>Personnalise l'appli</p>
+<h1 style={titleStyle}>{t('Réglages')}</h1>
+<p style={subtitleStyle}>{t("Personnalise l'appli")}</p>
 </div>
 </div>
 
@@ -635,7 +641,7 @@ background: !collapsedCategories[id] ? 'var(--bg-elevated)' : 'transparent',
 <input
 value={settingsQuery}
 onChange={(e) => setSettingsQuery(e.target.value)}
-placeholder="Rechercher un réglage (ex: repos, couleur, export...)"
+placeholder={t('Rechercher un réglage (ex: repos, couleur, export...)')}
 style={settingsSearchInput}
 />
 {settingsQuery !== '' && (
@@ -662,7 +668,7 @@ boxShadow: activeTab === id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
 }}
 >
 {React.createElement(CATEGORY_META[id].Icon, { size: 15 })}
-<span style={{ fontSize: 10, fontWeight: 700 }}>{CATEGORY_META[id].label}</span>
+<span style={{ fontSize: 10, fontWeight: 700 }}>{t(CATEGORY_META[id].label)}</span>
 </button>
 ))}
 </div>
@@ -670,7 +676,7 @@ boxShadow: activeTab === id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
 
 {normalizedQuery !== '' && visibleCategoryCount === 0 && (
 <p style={{ color: 'var(--text-dim)', fontSize: 12, textAlign: 'center', padding: '24px 0' }}>
-Aucune catégorie ne correspond à "{settingsQuery}".
+{t('Aucune catégorie ne correspond à « {q} ».', { q: settingsQuery })}
 </p>
 )}
 
@@ -1120,10 +1126,35 @@ style={stepperBtn}
 <CategoryHeader id="apparence" />
 {isBodyVisible('apparence') && (
 <div style={categoryBody}>
+{/* Langue : en tête et jamais masquée (même en mode simplifié), pour qu'on la
+    retrouve tout de suite si l'appli s'affiche dans une langue qu'on ne lit pas.
+    Chaque langue s'écrit dans sa propre langue, jamais traduite. */}
+<p style={subLabel}>{t('LANGUE · LANGUAGE')}</p>
+<div style={{ ...themeModePill, marginBottom: 6 }} role="group" aria-label="Language">
+{([{ id: 'auto', label: t('Auto') }, ...LANGUAGES] as { id: LangPref; label: string }[]).map((opt) => (
+<button
+key={opt.id}
+onClick={() => setLangPref(opt.id)}
+aria-pressed={langPref === opt.id}
+style={{
+...themeModeBtn,
+background: langPref === opt.id ? 'var(--bg-base)' : 'transparent',
+color: langPref === opt.id ? 'var(--text-primary)' : 'var(--text-dim)',
+boxShadow: langPref === opt.id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
+}}
+>
+<span style={{ fontSize: 12, fontWeight: 700 }}>{opt.label}</span>
+</button>
+))}
+</div>
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 20, lineHeight: '15px' }}>
+{t("Auto suit la langue du téléphone. Les écrans pas encore traduits restent en français.")}
+</p>
+
 {simplicityMode && (
 <div style={simplicityBanner}>
 <p style={{ color: 'var(--text-secondary)', fontSize: 12, lineHeight: '17px' }}>
-<IconSparkles size={12} /> Mode simplifié activé — les réglages de personnalisation avancés (couleurs, icônes, animations, barre de menus, accueil) sont masqués. Tu peux les retrouver à tout moment ci-dessous.
+<IconSparkles size={12} /> {t('Mode simplifié activé — les réglages de personnalisation avancés (couleurs, icônes, animations, barre de menus, accueil) sont masqués. Tu peux les retrouver à tout moment ci-dessous.')}
 </p>
 </div>
 )}
@@ -1131,9 +1162,9 @@ style={stepperBtn}
 {/* Mode simplifié / personnalisation avancée */}
 <div style={{ ...toggleRow, marginBottom: 20 }}>
 <div style={{ flex: 1 }}>
-<p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>Réglages avancés (personnalisation)</p>
+<p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>{t('Réglages avancés (personnalisation)')}</p>
 <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2, lineHeight: '15px' }}>
-Désactive pour ne garder que les réglages essentiels et masquer couleurs, icônes, animations, barre de menus et accueil.
+{t('Désactive pour ne garder que les réglages essentiels et masquer couleurs, icônes, animations, barre de menus et accueil.')}
 </p>
 </div>
 <button
@@ -1153,7 +1184,7 @@ justifyContent: !simplicityMode ? 'flex-end' : 'flex-start',
 {/* Couleur d'accent — masqué en mode simplifié (pur détail cosmétique,
 contrairement à la salle de sport et au thème clair/sombre juste en
 dessous, qui restent visibles quel que soit le mode). */}
-<p style={subLabel}>COULEUR D'ACCENT</p>
+<p style={subLabel}>{t("COULEUR D'ACCENT")}</p>
 <div style={swatchGrid}>
 {ACCENT_PRESETS.map((a) => (
 <button
@@ -1163,14 +1194,14 @@ style={{
 ...swatchBtn,
 border: accentTheme === a.id ? `2px solid ${a.c1}` : '2px solid transparent',
 }}
-title={a.label}
+title={t(a.label)}
 >
 <span style={{
 display: 'block', width: 40, height: 40, borderRadius: '50%',
 background: `linear-gradient(135deg, ${a.c1}, ${a.c2})`,
 boxShadow: accentTheme === a.id ? `0 0 0 3px var(--bg-card), 0 0 0 5px ${a.c1}` : 'none',
 }} />
-<span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }}>{a.label}</span>
+<span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }}>{t(a.label)}</span>
 </button>
 ))}
 <label
@@ -1179,7 +1210,7 @@ style={{
 cursor: 'pointer',
 border: accentTheme === 'custom' ? `2px solid ${customAccentColor}` : '2px solid transparent',
 }}
-title="Couleur perso"
+title={t('Couleur perso')}
 >
 <span style={{
 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1192,7 +1223,7 @@ fontSize: 16,
 }}>
 {accentTheme !== 'custom' && <IconPalette size={16} />}
 </span>
-<span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }}>Perso</span>
+<span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }}>{t('Perso')}</span>
 <input
 type="color"
 value={customAccentColor}
@@ -1207,9 +1238,9 @@ style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: '
 {/* Thème "salle de sport" — reste visible même en mode simplifié : c'est
 juste une couleur d'ambiance rapide à choisir, pas un réglage avancé
 comme la couleur d'accent perso juste au-dessus. */}
-<p style={{ ...subLabel, marginTop: simplicityMode ? 0 : 20 }}>SALLE DE SPORT</p>
+<p style={{ ...subLabel, marginTop: simplicityMode ? 0 : 20 }}>{t('SALLE DE SPORT')}</p>
 <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 12, lineHeight: '15px' }}>
-Choisis ta salle et l'appli (et le logo) reprend une couleur dans son esprit. Couleurs approximatives, pas les codes officiels de la marque.
+{t("Choisis ta salle et l'appli (et le logo) reprend une couleur dans son esprit. Couleurs approximatives, pas les codes officiels de la marque.")}
 </p>
 <div style={swatchGrid}>
 {GYM_PRESETS.map((g) => (
@@ -1236,13 +1267,13 @@ boxShadow: accentTheme === g.id ? `0 0 0 3px var(--bg-card), 0 0 0 5px ${g.c1}` 
 menu de réglages Claude, distincte des segmentBtn colorés
 utilisés ailleurs (transitions, effets...). Reste visible même
 en mode simplifié : c'est un réglage essentiel, pas un gadget. */}
-<p style={{ ...subLabel, marginTop: 20 }}>APPARENCE</p>
+<p style={{ ...subLabel, marginTop: 20 }}>{t('APPARENCE')}</p>
 <div style={themeModePill}>
 {THEME_MODES.map((m) => (
 <button
 key={m.id}
 onClick={() => setThemeMode(m.id)}
-title={m.label}
+title={t(m.label)}
 style={{
 ...themeModeBtn,
 background: themeMode === m.id ? 'var(--bg-base)' : 'transparent',
@@ -1251,7 +1282,7 @@ boxShadow: themeMode === m.id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
 }}
 >
 <m.Icon size={16} />
-<span style={{ fontSize: 10, fontWeight: 700 }}>{m.label}</span>
+<span style={{ fontSize: 10, fontWeight: 700 }}>{t(m.label)}</span>
 </button>
 ))}
 </div>
@@ -1259,8 +1290,8 @@ boxShadow: themeMode === m.id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
 {/* Style de l'interface : l'accueil et l'écran de séance existent en deux
     versions. Visible même en mode simplifié, comme l'apparence : c'est ce
     qui décide à quoi ressemble l'app au quotidien. */}
-<p style={{ ...subLabel, marginTop: 20 }}>STYLE DE L'INTERFACE</p>
-<div style={themeModePill} role="group" aria-label="Style de l'interface">
+<p style={{ ...subLabel, marginTop: 20 }}>{t("STYLE DE L'INTERFACE")}</p>
+<div style={themeModePill} role="group" aria-label={t("Style de l'interface")}>
 {([
 { id: 'nouveau', label: 'Nouveau', hint: 'Surfaces pleines, gros chiffres' },
 { id: 'classique', label: 'Classique', hint: 'Verre et halo de couleur' },
@@ -1271,7 +1302,7 @@ boxShadow: themeMode === m.id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
 key={opt.id}
 onClick={() => setUiStyle(opt.id)}
 aria-pressed={uiStyle === opt.id}
-title={opt.hint}
+title={t(opt.hint)}
 style={{
 ...themeModeBtn,
 background: uiStyle === opt.id ? 'var(--bg-base)' : 'transparent',
@@ -1279,13 +1310,13 @@ color: uiStyle === opt.id ? 'var(--text-primary)' : 'var(--text-dim)',
 boxShadow: uiStyle === opt.id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
 }}
 >
-<span style={{ fontSize: 12, fontWeight: 700 }}>{opt.label}</span>
-<span style={{ fontSize: 10, fontWeight: 500, opacity: 0.8 }}>{opt.hint}</span>
+<span style={{ fontSize: 12, fontWeight: 700 }}>{t(opt.label)}</span>
+<span style={{ fontSize: 10, fontWeight: 500, opacity: 0.8 }}>{t(opt.hint)}</span>
 </button>
 ))}
 </div>
 <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 6, lineHeight: '15px' }}>
-S'applique à l'accueil et à l'écran de séance.
+{t("S'applique à l'accueil et à l'écran de séance.")}
 </p>
 
 {!simplicityMode && (
@@ -1754,7 +1785,7 @@ Elles restent sur cet appareil : elles corrigent une fausse manœuvre, pas la pe
 <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderTop: '1px solid var(--border-subtle)' }}>
 <div style={{ flex: 1, minWidth: 0 }}>
 <p style={{ color: 'var(--text-primary)', fontSize: 12, fontWeight: 700 }}>{b.reason}</p>
-<p style={{ color: 'var(--text-dim)', fontSize: 11 }}>{new Date(b.savedAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · {b.sessions} séance(s)</p>
+<p style={{ color: 'var(--text-dim)', fontSize: 11 }}>{new Date(b.savedAt).toLocaleString(dateLocale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · {b.sessions} séance(s)</p>
 </div>
 <button onClick={() => handleRestoreBackup(b)} style={{ ...restBtn, padding: '8px 12px' }}>Restaurer</button>
 </div>

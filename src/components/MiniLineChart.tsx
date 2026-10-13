@@ -1,4 +1,5 @@
 import React from 'react';
+import { dateLocale } from '../i18n';
 
 export interface MiniLineChartPoint {
   date: number;
@@ -54,10 +55,10 @@ export const MiniLineChart: React.FC<MiniLineChartProps> = ({
   const trendUp = last.value >= first.value;
   const lineColor = trendUp ? '#4CAF50' : '#f5a623';
   const midVal = (min + max) / 2;
-  const dateFmt = (ts: number) => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  const dateFmt = (ts: number) => new Date(ts).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
   // Sur une plage étroite (poids du corps : 70,1 → 70,6), arrondir à l'entier
   // donnait trois repères identiques « 70 · 70 · 70 » : on garde une décimale.
-  const axisFmt = (v: number) => (range < 6 ? (Math.round(v * 10) / 10).toLocaleString('fr-FR') : String(Math.round(v)));
+  const axisFmt = (v: number) => (range < 6 ? (Math.round(v * 10) / 10).toLocaleString(dateLocale()) : String(Math.round(v)));
 
   return (
     <>

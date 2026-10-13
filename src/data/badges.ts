@@ -9,6 +9,8 @@
 // derrière l'icône dans le médaillon (voir components/BadgeMedallion.tsx),
 // pour que chaque badge ait une identité visuelle propre.
 
+import { dateLocale } from '../i18n';
+
 export type BadgeMotif =
   | 'rays' | 'spikes' | 'track' | 'dots' | 'starburst' | 'hex' | 'rings' | 'diamonds'
   | 'sunrise' | 'stars' | 'grid' | 'pulse' | 'quad' | 'bars' | 'pins' | 'lines';
@@ -98,7 +100,7 @@ export const BADGE_CATEGORIES: BadgeCategoryDef[] = [
     icon: 'plate',
     motif: 'hex',
     title: 'Tonnage soulevé',
-    unitLabel: (n) => `${n.toLocaleString('fr-FR')} kg soulevés`,
+    unitLabel: (n) => `${n.toLocaleString(dateLocale())} kg soulevés`,
     tiers: [
       { threshold: 10000, label: 'Première tonne' },
       { threshold: 50000, label: 'Force montante' },
@@ -172,7 +174,7 @@ export const BADGE_CATEGORIES: BadgeCategoryDef[] = [
     icon: 'heart',
     motif: 'pulse',
     title: 'Calories cardio brûlées',
-    unitLabel: (n) => `${n.toLocaleString('fr-FR')} kcal brûlées en cardio`,
+    unitLabel: (n) => `${n.toLocaleString(dateLocale())} kcal brûlées en cardio`,
     tiers: [
       { threshold: 1000, label: 'Premières calories' },
       { threshold: 5000, label: 'Brûleur régulier' },

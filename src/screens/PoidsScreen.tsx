@@ -5,6 +5,7 @@ import { useWorkoutStore } from '../store/workoutStore';
 import { MiniLineChart } from '../components/MiniLineChart';
 import { MassUnit } from '../data/types';
 import { useScreenClass } from '../hooks/useScreenClass';
+import { dateLocale } from '../i18n';
 
 interface PoidsScreenProps { onBack: () => void; }
 
@@ -14,7 +15,7 @@ const formatDate = (ts: number): string => {
   if (diffDays <= 0) return "Aujourd'hui";
   if (diffDays === 1) return 'Hier';
   if (diffDays < 7) return `Il y a ${diffDays} j`;
-  return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+  return new Date(ts).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' });
 };
 
 const formatMass = (value: number, unit: MassUnit): string => (unit === 'percent' ? `${value} %` : `${value} kg`);

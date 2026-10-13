@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import type { NavTabKey } from '../data/types';
+import { t } from '../i18n';
 import {
 HomeIcon, TargetIcon, CalendarIcon, HeartPulseIcon,
 DumbbellIcon, ScaleIcon, ChartIcon, UserIcon, SlidersIcon, PlusIcon,
@@ -307,7 +308,7 @@ l'animation d'ouverture (sinon les deux se marchent dessus). */}
 <div style={drawerLayer}>
 <div className="navbar-glass nav-drawer-in" style={drawer} role="menu">
 <div style={drawerHandle} aria-hidden="true" />
-<div style={drawerTitle}>Plus</div>
+<div style={drawerTitle}>{t('Plus')}</div>
 <div style={drawerList}>
 {overflowTabs.map((tab, i) => {
 const isActive = tab.id === active;
@@ -323,7 +324,7 @@ style={{
 background: isActive ? 'rgba(var(--brand-1-rgb),0.14)' : 'transparent',
 animationDelay: `${Math.min(i, 8) * 28}ms`,
 }}
-aria-label={tab.label}
+aria-label={t(tab.label)}
 aria-current={isActive ? 'page' : undefined}
 >
 {/* Icône dans une pastille discrète : sur une ligne, le simple
@@ -340,9 +341,9 @@ background: isActive ? 'rgba(var(--brand-1-rgb),0.16)' : 'var(--glass-highlight)
 </span>
 <span style={drawerTexts}>
 <span style={{ ...drawerLabel, color: isActive ? 'var(--brand-1)' : 'var(--text-primary)' }}>
-{tab.label}
+{t(tab.label)}
 </span>
-<span style={drawerHint}>{TAB_HINTS[tab.id]}</span>
+<span style={drawerHint}>{t(TAB_HINTS[tab.id])}</span>
 </span>
 {isActive && (
 <span style={{ color: 'var(--brand-1)', display: 'flex' }}>
@@ -409,7 +410,7 @@ key={tab.id}
 onClick={() => handleNavigate(tab.id)}
 className={isActive ? 'nav-tab-active' : undefined}
 style={tabBtn}
-aria-label={tab.label}
+aria-label={t(tab.label)}
 aria-current={isActive ? 'page' : undefined}
 >
 {/* Présentation façon Apple (tab bar iOS / SF Symbols) : pas de
@@ -421,7 +422,7 @@ Réglages, Musique ou l'App Store sur iPhone. */}
 <Icon size={22} filled={isActive} />
 </span>
 <span style={{ ...tabLabel, color: isActive ? 'var(--brand-1)' : 'var(--text-muted)', fontWeight: isActive ? 700 : 500 }}>
-{tab.label}
+{t(tab.label)}
 </span>
 <span style={{ ...tabDot, background: isActive ? 'var(--brand-1)' : 'transparent' }} aria-hidden="true" />
 </button>
@@ -429,12 +430,12 @@ Réglages, Musique ou l'App Store sur iPhone. */}
 })}
 
 {overflowTabs.length > 0 && (
-<button onClick={() => setMoreOpen((v) => !v)} style={tabBtn} aria-label="Plus d'options" aria-expanded={moreOpen}>
+<button onClick={() => setMoreOpen((v) => !v)} style={tabBtn} aria-label={t("Plus d'options")} aria-expanded={moreOpen}>
 <span style={{ ...iconWrap, color: (moreOpen || isOverflowActive) ? 'var(--brand-1)' : 'var(--text-muted)', transform: moreOpen ? 'rotate(45deg)' : 'rotate(0deg)' }}>
 <PlusIcon size={22} />
 </span>
 <span style={{ ...tabLabel, color: (moreOpen || isOverflowActive) ? 'var(--brand-1)' : 'var(--text-muted)', fontWeight: (moreOpen || isOverflowActive) ? 700 : 500 }}>
-Plus
+{t('Plus')}
 </span>
 <span style={{ ...tabDot, background: isOverflowActive ? 'var(--brand-1)' : 'transparent' }} aria-hidden="true" />
 </button>
@@ -445,8 +446,8 @@ Plus
 <button
 onClick={onStartSession}
 style={startBtn}
-aria-label={hasSessionInProgress ? 'Reprendre la séance' : 'Commencer la séance'}
-title={hasSessionInProgress ? 'Reprendre la séance' : 'Commencer la séance'}
+aria-label={hasSessionInProgress ? t('Reprendre la séance') : t('Commencer la séance')}
+title={hasSessionInProgress ? t('Reprendre la séance') : t('Commencer la séance')}
 >
 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
 <path d="M8 5.6c0-.9 1-1.5 1.8-1L18 11.1a1.1 1.1 0 0 1 0 1.8L9.8 19.4c-.8.5-1.8-.1-1.8-1V5.6Z" />

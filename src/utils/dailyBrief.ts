@@ -9,6 +9,7 @@ import type { HistoryEntry } from '../data/types';
 import type { Program } from '../data/programs';
 import type { CoachAiDaily, DailyContext } from './coachDigest';
 import { bucketByWeek, getLastExerciseSets, suggestNextLoad } from './training';
+import { dateLocale } from '../i18n';
 
 const DAILY_STORAGE = 'ppl-daily-brief';
 
@@ -94,7 +95,7 @@ export const buildDailyPlan = (input: {
   const lastSession = history[0];
   const context: DailyContext = {
     firstName: firstName?.trim() || undefined,
-    weekday: new Date().toLocaleDateString('fr-FR', { weekday: 'long' }),
+    weekday: new Date().toLocaleDateString(dateLocale(), { weekday: 'long' }),
     week: {
       sessions: current?.sessionCount ?? 0,
       goal: weeklySessionGoal,

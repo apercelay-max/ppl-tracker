@@ -7,11 +7,12 @@ import { getAllExercises, getMaxWeightEver, computeTonnage, bucketByWeek, countP
 import { BADGE_CATEGORIES, computeBadgeProgress } from '../data/badges';
 import { MESOCYCLE_WEEKS } from '../data/workouts';
 import { useScreenClass } from '../hooks/useScreenClass';
+import { dateLocale } from '../i18n';
 
 interface ProfilScreenProps { onBack: () => void; }
 
 const formatDate = (ts: number): string =>
-  new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  new Date(ts).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long', year: 'numeric' });
 
 export const ProfilScreen: React.FC<ProfilScreenProps> = ({ onBack }) => {
 const screenClass = useScreenClass();
@@ -100,7 +101,7 @@ const screenClass = useScreenClass();
                 <span style={statLabel}>SÉANCES</span>
               </div>
               <div style={statBlock}>
-                <span style={{ color: 'var(--text-primary)', fontSize: 20, fontWeight: 800 }}>{totalTonnage.toLocaleString('fr-FR')}</span>
+                <span style={{ color: 'var(--text-primary)', fontSize: 20, fontWeight: 800 }}>{totalTonnage.toLocaleString(dateLocale())}</span>
                 <span style={statLabel}>KG SOULEVÉS</span>
               </div>
               <div style={statBlock}>

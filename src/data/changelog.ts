@@ -14,6 +14,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-13',
+    title: 'PPL en anglais (début)',
+    items: [
+      'Nouveau : choix de la langue dans Réglages → Apparence (Auto, Français, English).',
+      'Pour l’instant, la barre de navigation et les Réglages sont traduits ; le reste arrive écran par écran.',
+      'Les dates et les nombres suivent la langue choisie.',
+    ],
+  },
+  {
     id: '2026-10-12',
     title: 'Mode Tableur',
     items: [

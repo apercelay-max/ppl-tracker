@@ -5,6 +5,7 @@ import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore, CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import type { CardioActivityType, CardioStats } from '../data/types';
 import { useScreenClass } from '../hooks/useScreenClass';
+import { dateLocale } from '../i18n';
 
 interface CardioScreenProps { onBack: () => void; onStartActivity?: (mode: CardioActivityType) => void; }
 
@@ -24,7 +25,7 @@ const formatCardioDate = (ts: number): string => {
   if (diffDays <= 0) return "Aujourd'hui";
   if (diffDays === 1) return 'Hier';
   if (diffDays < 7) return `Il y a ${diffDays} j`;
-  return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  return new Date(ts).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
 };
 
 export const CardioScreen: React.FC<CardioScreenProps> = ({ onBack, onStartActivity }) => {
