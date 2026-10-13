@@ -27,11 +27,15 @@ function readPref(): LangPref {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
     if (v === 'fr' || v === 'en' || v === 'auto') return v;
-  } catch { /* stockage indisponible (navigation privée...) : on reste en auto */ }
-  return 'auto';
+  } catch { /* stockage indisponible (navigation privée...) : on reste sur le français */ }
+  // Aucun choix enregistré = installation d'avant les langues (ou nouvelle
+  // installation qui n'a pas encore répondu au quiz) : français, comme toujours.
+  // Un nouvel utilisateur choisit sa langue à la 1re question du quiz ; seul le
+  // choix « Auto » des Réglages suit la langue du téléphone.
+  return 'fr';
 }
 
-function deviceLang(): Lang {
+export function deviceLang(): Lang {
   const l = (typeof navigator !== 'undefined' ? navigator.language : 'fr') || 'fr';
   // Langue pas encore traduite → anglais, plus largement compris que le français.
   return l.toLowerCase().startsWith('fr') ? 'fr' : 'en';

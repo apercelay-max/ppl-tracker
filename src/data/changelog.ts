@@ -18,6 +18,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     title: 'PPL en anglais (début)',
     items: [
       'Nouveau : choix de la langue dans Réglages → Apparence (Auto, Français, English).',
+      'Au tout premier lancement, le quiz commence par demander la langue. Les comptes existants restent en français.',
       'Pour l’instant, la barre de navigation et les Réglages sont traduits ; le reste arrive écran par écran.',
       'Les dates et les nombres suivent la langue choisie.',
     ],
