@@ -167,7 +167,7 @@ document.documentElement.setAttribute('data-theme', theme);
 
 // Mode "Système" (Réglages → Apparence) : on suit en direct les
 // changements de thème clair/sombre du téléphone tant que themeMode reste
-// 'system'. Si Léo a choisi 'light'/'dark' explicitement, ce listener ne
+// 'system'. Si l'utilisateur a choisi 'light'/'dark' explicitement, ce listener ne
 // touche à rien (setThemeMode a déjà fixé `theme` en dur dans ce cas).
 useEffect(() => {
 if (themeMode !== 'system' || typeof window === 'undefined' || !window.matchMedia) return;

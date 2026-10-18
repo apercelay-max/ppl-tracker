@@ -606,7 +606,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
   const continuing = mode === 'chat' && previousId !== '';
 
   // ── Clé d'API ──
-  // Elle n'existe pas encore le temps que Léo la crée : on répond proprement
+  // Elle n'existe pas encore le temps qu'elle soit créée : on répond proprement
   // au lieu de planter, pour que l'UI puisse afficher « pas encore branché »
   // plutôt qu'une erreur 500 illisible.
   // Deux sources possibles, dans cet ordre :

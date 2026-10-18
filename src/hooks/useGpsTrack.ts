@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
  * Suivi GPS d'une sortie à pied (marche ou course).
  *
  * Contrairement au Bluetooth, la géolocalisation EXISTE sur Safari iPhone :
- * c'est donc le seul capteur de l'app qui fonctionne sur le téléphone de Léo.
+ * c'est donc le seul capteur de l'app qui fonctionne sur le téléphone de l'utilisateur.
  * On mesure ici une vraie distance et une vraie allure, au lieu de l'estimation
  * durée × kcal/h utilisée jusqu'à présent.
  */

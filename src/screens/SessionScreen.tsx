@@ -744,7 +744,7 @@ const restBarLabel = nextInfo.exercise
 ? (stayingSameExercise ? `Série ${nextInfo.setNumber}` : `Ensuite : ${nextInfo.exercise.name}`)
 : undefined;
 // Quand on change d'exercice, on affiche la note technique du prochain
-// exercice pendant le repos, pour que Léo la lise avant d'attaquer.
+// exercice pendant le repos, pour que l'utilisateur la lise avant d'attaquer.
 const restBarNote = !stayingSameExercise ? nextInfo.exercise?.notes : undefined;
 
 const restBarNode = timerIsRunning ? (

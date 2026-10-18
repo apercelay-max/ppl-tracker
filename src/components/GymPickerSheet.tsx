@@ -8,7 +8,7 @@ import {
 
 // ─── « Tu es dans quelle salle ? » ─────────────────────────────────────────
 // S'ouvre au démarrage d'une séance, uniquement à partir de deux salles
-// enregistrées (choix de Léo : tant qu'il n'y en a qu'une, on ne lui demande
+// enregistrées (choix de l'utilisateur : tant qu'il n'y en a qu'une, on ne lui demande
 // rien). La salle utilisée la dernière fois est présélectionnée, donc dans le
 // cas courant c'est un simple appui sur « Démarrer ».
 //

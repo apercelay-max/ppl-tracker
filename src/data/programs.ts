@@ -6,20 +6,8 @@ import { APP_LIBRARY_PROGRAMS } from './appLibraryPrograms';
 
 // ─── Programmes sélectionnables (Réglages → Programme d'entraînement) ─────
 // "Strict V4.3" est le programme historique de l'appli (ex-V10, ex-V11),
-// toujours présent en premier — c'est le programme réellement suivi par
-// Antoine, mis à jour au fil des versions envoyées (V10 → V11 le 19/07/2026,
-// puis V11 → V2.2 « Phase 1 Sèche » le 19/08/2026, puis V2.2 → V2.5 le
-// 24/08/2026 — corrections de repos réel uniquement — puis V2.5 → V3.0 le
-// 30/08/2026 — jambes sorties de fin de séance, 4 séances → 6 — puis
-// V3.0 → V3.2 le 13/09/2026 — pause épaule partielle (douleur deltoïde
-// antérieur/latéral, Sem 7-8) + jambes reconstruites en rééducation genou
-// pure sur demande d'Antoine — puis V3.2 → V4.0 le 16/09/2026 : épaule
-// déclarée muette (retour à charge pleine + réintroduction de l'antérieur),
-// contrainte matérielle actée (poids du corps + haltères ≤ 25 kg/pièce,
-// volume à 4 séries en compensation), jambes reconduites à l'identique —
-// puis V4.0 → V4.2 le 05/10/2026 : latéral en tête (V4.1, 29/09), double
-// progression un cran à la fois (V4.2, 30/09), puis V4.2 → V4.3 le 08/10/2026 :
-// fin de sèche repoussée au 21/10, Sem 12 et 13 — cf. src/data/workouts.ts pour le détail. Son id reste 'strict-v10'
+// toujours présent en premier. L'historique des versions est dans
+// src/data/workouts.ts. Son id reste 'strict-v10'
 // pour ne pas casser les réglages déjà enregistrés sur l'appareil. Les autres
 // sont des trames additionnelles, proposées en plus — changer de programme
 // actif ne supprime jamais les autres, ni l'historique déjà enregistré
@@ -40,15 +28,15 @@ export interface Program {
 export const STRICT_V10_PROGRAM: Program = {
   id: 'strict-v10',
   name: 'Strict V4.3',
-  focusLabel: 'Strict V4.3 · Épaules priorité 1 + rééduc. genou',
-  shortDescription: 'Sem 9-13 : épaule muette → retour à charge pleine, deltoïde latéral en tête (18 séries/rotation), poids du corps + haltères ≤ 25 kg, double progression (un cran à la fois), jambes en rééducation genou inchangée — 6 séances, fin de Phase 1 — Sèche (21/10).',
-  source: 'Le programme d\'Antoine, mis à jour de V4.2 vers V4.3 le 08/10/2026 (fichier « programme_hypertrophie_PPL_Strict_Phase1_V4.3_S9-S13.xlsx »).',
+  focusLabel: 'Strict V4.3 · Épaules priorité 1',
+  shortDescription: 'Sem 9-13 : retour à la charge pleine, deltoïde latéral en tête (18 séries/rotation), poids du corps + haltères ≤ 25 kg, double progression (un cran à la fois), jambes en mobilité/activation — 6 séances, fin de Phase 1 (21/10).',
+  source: 'Programme Strict, version V4.3 (mise à jour du 08/10/2026).',
   workouts: WORKOUTS,
   // Les clés 'legs-a'/'legs-b' (sans suffixe) sont les anciennes séances
   // Legs V11 (avant le 19/08/2026) ; 'legs-a-v3'/'legs-b-v3' celles de la
   // V3.0 (30/08 → 13/09/2026, tri-sets hypertrophie) ; 'legs-a-rehab'/
   // 'legs-b-rehab' sont les séances actives depuis le 13/09/2026
-  // (rééducation genou). Les trois générations sont gardées pour que
+  // (mobilité et activation). Les trois générations sont gardées pour que
   // l'historique déjà enregistré reste coloré/étiqueté correctement.
   dayAccents: {
     'pull-a': '#7c6fcd', 'push-a': '#e03030', 'legs-a': '#e8a020',
@@ -98,15 +86,14 @@ export const FORCE_5X5_PROGRAM: Program = {
 };
 
 // Programme de consolidation du poignet : 5 séances/semaine (bas du corps,
-// vélo, gainage sans appui sur les mains) — importé du fichier Excel de
-// Léo en juillet 2026, pour continuer à s'entraîner pendant la guérison
-// sans solliciter le poignet.
+// vélo, gainage sans appui sur les mains) — ajouté en juillet 2026, pour
+// s'entraîner sans solliciter le poignet.
 export const WRIST_CONSOLIDATION_PROGRAM: Program = {
   id: 'poignet-consolidation',
   name: 'Consolidation Poignet',
   focusLabel: 'Consolidation Poignet · Reprise en douceur',
   shortDescription: '5 séances/semaine (jambes, vélo, gainage) — aucun exercice ne sollicite le poignet.',
-  source: 'Programme de Léo, importé depuis son fichier Excel "Programme musculation poignet consolidation".',
+  source: 'Programme de reprise sans appui sur les poignets, ajouté en juillet 2026.',
   workouts: WRIST_CONSOLIDATION_WORKOUTS,
   dayAccents: {
     'poignet-lundi': '#e8a020', 'poignet-mardi': '#2563eb', 'poignet-mercredi': '#16a34a',

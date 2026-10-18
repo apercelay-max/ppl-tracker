@@ -3,7 +3,7 @@ import type { Program } from './programs';
 
 // Programmes repris des bibliothèques de routines des autres apps de sport
 // (Hevy, JEFIT, Liftosaur, Strong, Boostcamp), d'après l'analyse comparative
-// de leurs bases de données fournie par Léo en septembre 2026.
+// de leurs bases de données fournie en septembre 2026.
 //
 // Précision importante, dans la lignée de catalogPrograms.ts : ces apps ne
 // publient aucune base de programmes réutilisable. Ce qui est repris ici, ce

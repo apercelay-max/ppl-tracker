@@ -198,8 +198,8 @@ export const LEGACY_LEGS_WORKOUTS: WorkoutDay[] = [
 // ─── Anciennes journées Legs (Strict V3.0, 30/08 → 13/09/2026) ───────────────
 // V3.0 avait sorti les jambes de fin de séance (Pull/Push) pour en faire 2
 // séances autonomes en tri-sets, ids 'legs-a-v3'/'legs-b-v3'. Le 13/09/2026
-// (V3.2), sur demande d'Antoine, ces deux séances sont intégralement
-// reconstruites en rééducation genou (voir 'legs-a-rehab'/'legs-b-rehab'
+// (V3.2), ces deux séances sont intégralement
+// reconstruites en mobilité/activation (voir 'legs-a-rehab'/'legs-b-rehab'
 // dans workouts.ts) : contenu totalement différent (mobilité/activation vs
 // tri-sets chargés). On garde la définition V3.0 ici uniquement pour que
 // l'historique déjà enregistré sous 'legs-a-v3'/'legs-b-v3' (Sem 7, avant le

@@ -243,7 +243,7 @@ const fittingSlots = barWidth > 0
 : slotCount;
 const crowded = barWidth > 0 && slotCount > fittingSlots;
 
-// Signature de la config actuelle : si Léo ignore le bandeau puis rajoute
+// Signature de la config actuelle : si l'utilisateur ignore le bandeau puis rajoute
 // des onglets plus tard, le bandeau revient (la signature a changé).
 const pinnedSig = useMemo(() => pinnedTabs.map((t) => t.id).join(','), [pinnedTabs]);
 const showCrowdedBanner = crowded && !moreOpen && dismissedSig !== pinnedSig;

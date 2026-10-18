@@ -306,7 +306,7 @@ button { cursor: pointer; }
 
 /* ─── Barre de navigation liquid glass ──────────────────────────────────── */
 /* Base : flou dépoli classique, fonctionne sur tous les navigateurs (c'est
-   ce que verra Léo sur iPhone — voir NavBar.tsx pour l'explication). */
+   ce que verra l'utilisateur sur iPhone — voir NavBar.tsx pour l'explication). */
 .navbar-glass {
   backdrop-filter: blur(18px) saturate(180%) brightness(1.05);
   -webkit-backdrop-filter: blur(18px) saturate(180%) brightness(1.05);
@@ -704,7 +704,7 @@ button { cursor: pointer; }
 /* ─── Grands écrans (iPad, desktop) ──────────────────────────────────────── */
 /* Chaque écran limite son propre contenu à 480px de large (confort mobile)
    via un style inline "maxWidth: 480" — sur iPad/desktop ça laisse une
-   énorme bande noire de chaque côté (voir capture Léo, app coincée au
+   énorme bande noire de chaque côté (voir capture de l'utilisateur, app coincée au
    centre). On élargit cette même limite ici, globalement, plutôt que
    d'aller toucher un par un chacun des ~15 fichiers d'écran qui répètent
    ce même motif — un seul point de correction, plus simple à maintenir. */

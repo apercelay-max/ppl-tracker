@@ -24,7 +24,7 @@ import { roundToAchievable, roundToIncrement } from './plates';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-/** Articulations que Léo peut signaler comme sensibles avant une séance. */
+/** Articulations que l'utilisateur peut signaler comme sensibles avant une séance. */
 export type SoreZone = 'epaule' | 'coude-poignet' | 'lombaires' | 'genou';
 
 export interface GymProfile {
@@ -41,7 +41,7 @@ export interface GymProfile {
   /**
    * Vrai quand la liste ci-dessus est exhaustive. Tant que c'est faux, la
    * liste est purement indicative : on ne va pas déclarer un exercice
-   * infaisable juste parce que Léo n'a pas fini de saisir ses machines.
+   * infaisable juste parce que l'utilisateur n'a pas fini de saisir ses machines.
    */
   machinesListComplete?: boolean;
   /**

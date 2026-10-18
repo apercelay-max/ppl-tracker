@@ -254,9 +254,8 @@ notes: 'Une seule série de 5 (contrairement aux autres) — mouvement très exi
 ];
 
 // ─── Consolidation Poignet : 5 séances/semaine, aucun appui/charge sur le
-// poignet (import du fichier Excel de Léo, juillet 2026) ───────────────────
-// Objectif : continuer à s'entraîner pendant la consolidation d'une
-// blessure au poignet, sans aucun exercice qui sollicite l'appui ou la
+// poignet (juillet 2026) ───────────────────
+// Objectif : continuer à s'entraîner sans aucun exercice qui sollicite l'appui ou la
 // préhension lourde (pas de pompes, pas de développé barre/haltères, pas de
 // tirage à charge lourde) — uniquement bas du corps, gainage sans appui sur
 // les mains, et cardio vélo (pédales, pas de poids du buste sur les mains).

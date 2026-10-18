@@ -571,7 +571,7 @@ export const getMuscleGroupsStatus = (history: HistoryEntry[]): MuscleGroupStatu
 // ─── Temps de récupération par muscle ────────────────────────────────────────
 
 // Heures de récupération recommandées par groupe musculaire (source: image
-// envoyée par Léo — "Temps de récupération par muscle"). Les groupes "jambes"
+// envoyée par l'utilisateur — "Temps de récupération par muscle"). Les groupes "jambes"
 // du programme (quadriceps / ischios-fessiers / fessiers / mollets) partagent
 // tous la valeur "Jambes" de l'image, qui ne les détaille pas séparément.
 const RECOVERY_HOURS_BY_GROUP: Record<string, number> = {

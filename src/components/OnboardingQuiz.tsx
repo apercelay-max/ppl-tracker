@@ -22,7 +22,7 @@ import {
  *
  * Il remplace l'ancien mini-choix "personnalisation ou simplicité" (qui est
  * devenu l'avant-dernière question) : au lieu de lâcher l'utilisateur sur le
- * programme par défaut de Léo, on lui pose les questions d'un vrai entretien
+ * programme par défaut de l'utilisateur, on lui pose les questions d'un vrai entretien
  * de coach — objectif, expérience, condition physique, temps disponible,
  * matériel, blessures — puis on construit un programme réel avec le
  * générateur existant (utils/workoutGenerator.ts), en montrant l'aperçu
@@ -241,7 +241,7 @@ export const OnboardingQuiz: React.FC<OnboardingQuizProps> = ({ initialProfile, 
                 type="text"
                 value={draft.firstName}
                 onChange={(e) => set('firstName', e.target.value)}
-                placeholder="ex : Léo"
+                placeholder="ex : Alex"
                 style={textInput}
               />
               <div style={introList}>

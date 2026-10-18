@@ -200,7 +200,7 @@ export const useBikeSensor = () => {
       }
       setStatus('connected');
     } catch (err: any) {
-      // NotFoundError = Léo a simplement fermé la fenêtre de choix.
+      // NotFoundError = l'utilisateur a simplement fermé la fenêtre de choix.
       if (err?.name !== 'NotFoundError') setError(err?.message ?? 'Erreur Bluetooth');
       setStatus('idle');
     }

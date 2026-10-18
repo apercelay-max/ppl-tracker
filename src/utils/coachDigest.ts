@@ -10,7 +10,7 @@
 //  1. tout ce qui est chiffré ici sort de utils/training.ts, jamais d'un
 //     calcul improvisé — sinon deux endroits de l'appli donneraient deux
 //     réponses différentes à la même question ;
-//  2. c'est un RÉSUMÉ. L'historique brut de Léo fait ~200 Ko de séries : on
+//  2. c'est un RÉSUMÉ. L'historique brut de l'utilisateur fait ~200 Ko de séries : on
 //     l'envoie agrégé et arrondi, autour de 2 à 4 Ko. Un digest plus gros
 //     coûte des jetons, ralentit la réponse, et noie l'information utile.
 //

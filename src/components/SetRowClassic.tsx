@@ -386,7 +386,7 @@ const inputField: React.CSSProperties = { flex: 1, background: 'none', color: 'v
 const inputUnit: React.CSSProperties = { color: 'rgba(var(--brand-1-rgb),0.5)', fontSize: 11, marginLeft: 4, flexShrink: 0, display: 'inline-block', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
 const inputUnitBtn: React.CSSProperties = { color: 'rgba(var(--brand-1-rgb),0.85)', fontSize: 10, fontWeight: 800, letterSpacing: 0.4, marginLeft: 4, flexShrink: 0, background: 'rgba(var(--brand-1-rgb),0.14)', border: '1px solid rgba(var(--brand-1-rgb),0.35)', borderRadius: 6, padding: '4px 7px', textTransform: 'uppercase' };
 // Boutons − / + rapides pour le poids : zone d'action groupée avec le
-// bouton valider côté droit de la carte (Léo tient son téléphone de la
+// bouton valider côté droit de la carte (l'utilisateur tient son téléphone de la
 // main droite pendant une série).
 const weightStepBtn: React.CSSProperties = { width: 22, height: 22, borderRadius: 7, flexShrink: 0, background: 'rgba(var(--brand-1-rgb),0.14)', border: '1px solid rgba(var(--brand-1-rgb),0.32)', color: 'var(--brand-1)', fontSize: 14, fontWeight: 800, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 };
 // Agrandi (42→44) pour une cible tactile plus fiable à une main en fin de série.

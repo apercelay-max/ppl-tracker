@@ -2,7 +2,7 @@
 //
 // Tout est stocké en interne en kg (SetEntry.weight, tonnage, calculs de
 // utils/training.ts...) — ce fichier ne sert qu'à la conversion d'AFFICHAGE
-// et de SAISIE quand Léo choisit "lbs" dans Réglages (voir
+// et de SAISIE quand l'utilisateur choisit "lbs" dans Réglages (voir
 // workoutStore.weightUnit / setWeightUnit). Les valeurs non numériques
 // ("PDC", vide, etc.) sont toujours retournées inchangées.
 

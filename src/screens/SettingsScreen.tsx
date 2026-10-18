@@ -145,7 +145,7 @@ const CATEGORY_ORDER: CategoryId[] = ['seance', 'apparence', 'objectifs', 'donne
 // retrouver une catégorie à partir d'un mot qui n'apparaît pas forcément
 // dans son nom affiché (ex: "repos" → Séance, "couleur" → Apparence). Pas
 // besoin d'être exhaustif : l'objectif est de retomber sur la bonne
-// catégorie pour les mots que Léo taperait naturellement.
+// catégorie pour les mots que l'utilisateur taperait naturellement.
 const CATEGORY_KEYWORDS: Record<CategoryId, string[]> = {
 seance: [
 'programme', 'entrainement', 'repos', 'minuteur', 'temps', 'chrono', 'bip', 'son', 'volume',
@@ -360,7 +360,7 @@ return haystack.includes(normalizedQuery);
 };
 const visibleCategoryCount = CATEGORY_ORDER.filter(categoryMatchesQuery).length;
 
-// Navigation rapide entre catégories (demande de Léo) : sur écran large/
+// Navigation rapide entre catégories (demande de l'utilisateur) : sur écran large/
 // horizontal (tablette, ordi navigateur), une vraie barre latérale à
 // gauche liste les 4 catégories et fait défiler jusqu'à la bonne section.
 // Sur téléphone (écran étroit/vertical), on remplace le scroll par des

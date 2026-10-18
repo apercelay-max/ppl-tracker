@@ -188,11 +188,11 @@ const DEFAULT_HOME_ORDER: HomeSectionKey[] = [
 // La « partie simple » de l'accueil : les blocs qui restent affichés en
 // permanence. Les autres ne sont NI retirés NI déplacés dans les réglages —
 // ils attendent derrière le bouton « Tout voir » en bas de l'écran, à un tap.
-// Léo compose lui-même cette liste depuis le mode édition de l'accueil
+// L'utilisateur compose lui-même cette liste depuis le mode édition de l'accueil
 // (l'étoile sur chaque widget), d'où un réglage persisté plutôt qu'une
 // constante figée.
 //
-// Trois blocs seulement, choisis par Léo : ce qu'il vient faire (la prochaine
+// Trois blocs seulement, choisis par l'utilisateur : ce qu'il vient faire (la prochaine
 // séance), ce que le coach a repéré, et où il en est de sa semaine. Le cycle
 // et la liste des séances passent derrière « Tout voir » — c'est ce qui
 // occupait le plus de hauteur pour de l'information qu'on ne relit pas à
@@ -237,7 +237,7 @@ exercices: true, catalogue: true, poids: true, dashboard: true, coach: true, pro
 
 // Parmi les onglets activés, ceux qui restent épinglés directement dans la
 // barre plutôt que derrière le bouton + (voir Réglages → Apparence → Barre
-// de menus). Tout épinglé par défaut : rien ne change tant que Léo ne
+// de menus). Tout épinglé par défaut : rien ne change tant que l'utilisateur ne
 // personnalise pas la répartition lui-même.
 const DEFAULT_NAV_TABS_PINNED: Record<NavTabKey, boolean> = {
 // Seuls l'essentiel est épinglé d'origine (Accueil, Historique, Stats, et
@@ -262,7 +262,7 @@ const DEFAULT_GYM_PROFILE: GymProfile = {
 };
 
 /**
- * Salle créée d'office : tant que Léo n'en a qu'une, rien ne lui est demandé
+ * Salle créée d'office : tant que l'utilisateur n'en a qu'une, rien ne lui est demandé
  * au démarrage d'une séance. Identifiant fixe pour la toute première, pour
  * qu'une sauvegarde d'avant les salles multiples y retombe naturellement.
  */
@@ -291,7 +291,7 @@ timer: TimerState;
 currentWeek: number;
 history: HistoryEntry[];
 theme: 'dark' | 'light';
-// Préférence d'apparence choisie par Léo (Réglages → Apparence) : 'system'
+// Préférence d'apparence choisie par l'utilisateur (Réglages → Apparence) : 'system'
 // suit le thème du téléphone (clair/sombre) et se met à jour tout seul si
 // l'appareil change d'heure/luminosité ; 'light'/'dark' est un choix figé
 // qui prend le dessus. `theme` ci-dessus reste la valeur RÉSOLUE utilisée
@@ -375,7 +375,7 @@ ultraTransitionStyle: 'bounce' | 'slide' | 'zoom' | 'flip';
 // distingue une toute nouvelle installation (false → montre l'écran de
 // choix) d'une installation déjà existante avant l'ajout de cet écran (voir
 // merge() plus bas : grandfathered à true/false=simplicityMode pour ne rien
-// changer au comportement déjà en place chez Léo).
+// changer au comportement déjà en place chez l'utilisateur).
 hasCompletedOnboarding: boolean;
 // true = "simplicité" choisi — masque les réglages de personnalisation
 // cosmétique (couleurs, icônes, animations, barre de menus, accueil) dans
@@ -761,7 +761,7 @@ get().skipTimer();
 // Raccourcir la séance en retard : coupe tous les exercices non essentiels
 // (voir Exercise.essential) qui n'ont pas encore été entamés — un exercice
 // déjà commencé (au moins une série faite) n'est jamais coupé, même non
-// essentiel, pour ne pas revenir en arrière sur ce que Léo est en train de
+// essentiel, pour ne pas revenir en arrière sur ce que l'utilisateur est en train de
 // faire. La position courante est recalculée sur le premier exercice qui
 // reste réellement à faire, plutôt que de s'appuyer sur getNextStep (pensé
 // pour n'avancer que d'une série à la fois, pas pour sauter plusieurs
@@ -934,7 +934,7 @@ pauseSession: () => {
 const { session, sessionPausedAt, timer } = get();
 if (!session || session.isComplete || sessionPausedAt !== null) return;
 // Le repos en cours se met en pause avec la séance — sinon il continuerait
-// de tourner pendant que Léo est parti.
+// de tourner pendant que l'utilisateur est parti.
 if (timer.isRunning && !timer.isPaused) get().pauseTimer();
 set({ sessionPausedAt: Date.now() });
 },
@@ -1523,7 +1523,7 @@ merged.bestWeekStreak = p.bestWeekStreak ?? computeCurrentWeekStreak(baseHistory
 merged.hapticsEnabled = p.hapticsEnabled ?? true;
 // Ultra animations — désactivé par défaut (opt-in), contrairement
 // aux autres retours sensoriels : c'est un effet plus voyant que
-// Léo doit choisir d'activer, pas quelque chose qu'on impose.
+// L'utilisateur doit choisir d'activer, pas quelque chose qu'on impose.
 merged.ultraAnimationsEnabled = p.ultraAnimationsEnabled ?? false;
 merged.ultraAnimationStyle = p.ultraAnimationStyle ?? 'confetti';
 merged.ultraTransitionStyle = p.ultraTransitionStyle ?? 'bounce';
@@ -1534,7 +1534,7 @@ merged.themeMode = p.themeMode ?? 'dark';
 // Une installation qui avait déjà un state sauvegardé (hadPriorState)
 // est considérée comme ayant déjà "choisi" Personnalisation — c'est le
 // comportement historique, tous les réglages restent visibles, rien ne
-// change pour Léo. Seule une toute nouvelle installation (aucun state
+// change pour l'utilisateur. Seule une toute nouvelle installation (aucun state
 // du tout) verra l'écran de choix au premier lancement.
 merged.hasCompletedOnboarding = p.hasCompletedOnboarding ?? hadPriorState;
 merged.weightUnit = p.weightUnit ?? 'kg';
