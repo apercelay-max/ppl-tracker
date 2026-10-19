@@ -44,6 +44,12 @@ const SLIDES: Slide[] = [
     detail: 'Quelques questions pour construire ton programme. Tu verras tout avant de valider.' },
 ];
 
+// Dernier écran pour qui a déjà passé le quiz : pas de quiz à enchaîner.
+const REPLAY_LAST: Slide = {
+  chapter: 'À toi de jouer', title: 'C’est parti',
+  detail: 'Tu peux refaire le quiz à tout moment : Réglages → Séance → « Refaire le quiz ».',
+};
+
 // ─── Réglages de l'animation ─────────────────────────────────────────────────
 
 const GRID = 5;          // pas de la grille de points, en px
@@ -112,13 +118,15 @@ const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t 
 interface OnboardingIntroProps {
   /** Vrai une fois le splash disparu : l'intro attend son tour derrière lui. */
   start: boolean;
+  /** Vrai pour qui a déjà fait le quiz : on le lui rappelle au lieu de l'enchaîner. */
+  replay?: boolean;
   onDone: () => void;
 }
 
-export const OnboardingIntro: React.FC<OnboardingIntroProps> = ({ start, onDone }) => {
+export const OnboardingIntro: React.FC<OnboardingIntroProps> = ({ start, replay, onDone }) => {
   const [index, setIndex] = useState(0);
-  const slide = SLIDES[index];
   const isLast = index === SLIDES.length - 1;
+  const slide = replay && isLast ? REPLAY_LAST : SLIDES[index];
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -273,7 +281,7 @@ export const OnboardingIntro: React.FC<OnboardingIntroProps> = ({ start, onDone 
               onClick={(ev) => { ev.stopPropagation(); onDone(); }}
               style={startBtn}
             >
-              Commencer
+              {replay ? 'Fermer' : 'Commencer'}
             </button>
           )}
         </div>
@@ -293,7 +301,8 @@ export const OnboardingIntro: React.FC<OnboardingIntroProps> = ({ start, onDone 
 // de l'appli, un thème clair rendrait le texte invisible.
 
 const overlay: React.CSSProperties = {
-  position: 'fixed', inset: 0, zIndex: 400, background: '#000', cursor: 'pointer',
+  // Au-dessus des Nouveautés (z-index 1000) : celles-ci attendent la fin de l'intro.
+  position: 'fixed', inset: 0, zIndex: 1100, background: '#000', cursor: 'pointer',
   display: 'flex', justifyContent: 'center', overflow: 'hidden',
 };
 const canvasStyle: React.CSSProperties = {

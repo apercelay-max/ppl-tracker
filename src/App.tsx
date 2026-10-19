@@ -47,6 +47,7 @@ type View =
 // (voir .splash-fade dans index.css). Volontairement court pour ne pas
 // ralentir l'ouverture de l'appli à chaque fois.
 const NEWS_SEEN_KEY = 'ppl-news-seen';
+const INTRO_SEEN_KEY = 'ppl-intro-seen';
 const SPLASH_VISIBLE_MS = 2900;
 const SPLASH_FADE_MS = 450;
 
@@ -93,10 +94,18 @@ const uiStyle = useWorkoutStore((s) => s.uiStyle);
 const hasCompletedOnboarding = useWorkoutStore((s) => s.hasCompletedOnboarding);
 const trainingProfile = useWorkoutStore((s) => s.trainingProfile);
 const [quizOpen, setQuizOpen] = useState(false);
-// Intro animée (« ce que PPL fait, pourquoi elle existe ») avant le quiz, au
-// tout premier lancement seulement. Pas persistée : tant que le quiz n'est pas
-// terminé, elle se rejoue — voir OnboardingIntro.tsx.
-const [introDone, setIntroDone] = useState(false);
+// Intro animée (« ce que PPL fait, pourquoi elle existe ») : avant le quiz au
+// tout premier lancement, et une seule fois pour ceux qui l'ont déjà passé —
+// voir OnboardingIntro.tsx. Le « déjà vue » est rangé à part dans le
+// localStorage (comme les nouveautés) plutôt que dans le store : pas de champ
+// persisté à migrer, et chaque téléphone la voit une fois.
+const [introSeen, setIntroSeen] = useState(() => {
+try { return localStorage.getItem(INTRO_SEEN_KEY) === '1'; } catch { return false; }
+});
+const closeIntro = () => {
+try { localStorage.setItem(INTRO_SEEN_KEY, '1'); } catch { /* ignoré */ }
+setIntroSeen(true);
+};
 // Résumé du jour (Gemini) : préparé en arrière-plan dès l'ouverture, affiché
 // en touchant le prénom sur l'accueil.
 const [summaryOpen, setSummaryOpen] = useState(false);
@@ -387,8 +396,8 @@ hasSessionInProgress={!!session && !session.isComplete}
 <DailySummarySheet firstName={trainingProfile?.firstName} state={dailyBrief} onClose={() => setSummaryOpen(false)} />
 )}
 {splashVisible && <SplashScreen fadingOut={splashFading} firstName={trainingProfile?.firstName} />}
-{!hasCompletedOnboarding && !quizOpen && !introDone && (
-<OnboardingIntro start={!splashVisible} onDone={() => setIntroDone(true)} />
+{!quizOpen && !introSeen && (
+<OnboardingIntro start={!splashVisible} replay={hasCompletedOnboarding} onDone={closeIntro} />
 )}
 {(!hasCompletedOnboarding || quizOpen) && (
 <OnboardingQuiz
