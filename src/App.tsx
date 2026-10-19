@@ -26,6 +26,7 @@ import { useDailyBrief } from './hooks/useDailyBrief';
 import { SyncConflictModal } from './components/SyncConflictModal';
 import { maybeAutoBackup } from './lib/localBackups';
 import { OnboardingQuiz } from './components/OnboardingQuiz';
+import { OnboardingIntro } from './components/OnboardingIntro';
 import { WhatsNewSheet } from './components/WhatsNewSheet';
 import { CHANGELOG, type ChangelogEntry } from './data/changelog';
 import { useWorkoutStore } from './store/workoutStore';
@@ -92,6 +93,10 @@ const uiStyle = useWorkoutStore((s) => s.uiStyle);
 const hasCompletedOnboarding = useWorkoutStore((s) => s.hasCompletedOnboarding);
 const trainingProfile = useWorkoutStore((s) => s.trainingProfile);
 const [quizOpen, setQuizOpen] = useState(false);
+// Intro animée (« ce que PPL fait, pourquoi elle existe ») avant le quiz, au
+// tout premier lancement seulement. Pas persistée : tant que le quiz n'est pas
+// terminé, elle se rejoue — voir OnboardingIntro.tsx.
+const [introDone, setIntroDone] = useState(false);
 // Résumé du jour (Gemini) : préparé en arrière-plan dès l'ouverture, affiché
 // en touchant le prénom sur l'accueil.
 const [summaryOpen, setSummaryOpen] = useState(false);
@@ -382,6 +387,9 @@ hasSessionInProgress={!!session && !session.isComplete}
 <DailySummarySheet firstName={trainingProfile?.firstName} state={dailyBrief} onClose={() => setSummaryOpen(false)} />
 )}
 {splashVisible && <SplashScreen fadingOut={splashFading} firstName={trainingProfile?.firstName} />}
+{!hasCompletedOnboarding && !quizOpen && !introDone && (
+<OnboardingIntro start={!splashVisible} onDone={() => setIntroDone(true)} />
+)}
 {(!hasCompletedOnboarding || quizOpen) && (
 <OnboardingQuiz
 initialProfile={trainingProfile}
