@@ -119,7 +119,9 @@ export const buildTableurWorkbook = async (
       for (const cell of r.cells) {
         const w = cell ? parseFloat(cell.weight.replace(',', '.')) : NaN;
         // Un nombre reste un nombre dans la feuille (sommes, graphiques) ; « PDC » reste du texte.
-        line.push(cell ? (isNaN(w) || String(w) !== cell.weight.trim() ? cell.weight : w) : '');
+        // Comparer après avoir remplacé la virgule : sinon "22,5" (saisie française) ne matchait
+        // jamais String(22.5) === "22.5" et finissait toujours en texte.
+        line.push(cell ? (isNaN(w) || String(w) !== cell.weight.trim().replace(',', '.') ? cell.weight : w) : '');
         const n = cell ? parseInt(cell.reps, 10) : NaN;
         line.push(cell ? (isNaN(n) || String(n) !== cell.reps.trim() ? cell.reps : n) : '');
       }
