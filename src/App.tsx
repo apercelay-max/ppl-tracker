@@ -396,7 +396,7 @@ hasSessionInProgress={!!session && !session.isComplete}
 <DailySummarySheet firstName={trainingProfile?.firstName} state={dailyBrief} onClose={() => setSummaryOpen(false)} />
 )}
 {splashVisible && <SplashScreen fadingOut={splashFading} firstName={trainingProfile?.firstName} />}
-{!quizOpen && !introSeen && (
+{!splashVisible && !quizOpen && !introSeen && (
 <OnboardingIntro start={!splashVisible} replay={hasCompletedOnboarding} onDone={closeIntro} />
 )}
 {(!hasCompletedOnboarding || quizOpen) && (
