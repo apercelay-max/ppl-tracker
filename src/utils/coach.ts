@@ -26,6 +26,7 @@
 import { isPerformedSet } from './weight';
 import type { HistoryEntry, SetEntry, WorkoutDay } from '../data/types';
 import { computeTonnage, parseRepRange, detectPlateaus, getEffectiveWeeklySets, suggestNextLoad } from './training';
+import { dateLocale } from '../i18n';
 
 export const COACH_LIMITS = {
   /** Séries effectives / muscle / semaine — sous ce seuil, c'est trop peu pour progresser. (NSCA, Lloyd 2014) */
@@ -290,7 +291,7 @@ export const getCoachBrief = (
       if (pct < 0) tonnageDropPct = -pct;
     }
   }
-  const recap = `${name}, ${agoLabel(last.date)} : ${sets} ${serieLabel(sets)}, ${tonnage.toLocaleString('fr-FR')} kg${deltaLabel}.`;
+  const recap = `${name}, ${agoLabel(last.date)} : ${sets} ${serieLabel(sets)}, ${tonnage.toLocaleString(dateLocale())} kg${deltaLabel}.`;
 
   // ── Ligne 2 et 3 : un seul point, le plus prioritaire ──
 

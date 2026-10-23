@@ -26,6 +26,7 @@ import { useShakeToValidate } from '../hooks/useShakeToValidate';
 import { computeTonnage, computeTrainingLoad, compareSessionToHistory, getWorkoutBodyIntensity, getMaxWeightEver } from '../utils/training';
 import { SetEntry, Exercise, ExerciseProgress, HistoryEntry } from '../data/types';
 import { InfoTip } from '../components/InfoTip';
+import { dateLocale } from '../i18n';
 
 interface SessionScreenProps { dayId: string; onBack: () => void; onOpenSettings: () => void; }
 
@@ -1404,7 +1405,7 @@ const completedSetsCount = Object.values(session.exerciseProgress).reduce(
 0
 );
 const tonnageDisplayShare = toDisplayTonnage(tonnage);
-const dateLabel = new Date(session.startTime).toLocaleDateString('fr-FR', {
+const dateLabel = new Date(session.startTime).toLocaleDateString(dateLocale(), {
 weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
 });
 const blob = await buildSessionRecapImage({

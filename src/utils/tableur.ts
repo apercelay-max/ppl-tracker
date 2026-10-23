@@ -1,6 +1,7 @@
 import type { HistoryEntry, WorkoutDay } from '../data/types';
 import { getWorkout } from '../data/workouts';
 import { formatWeightForDisplay, isPerformedSet, type WeightUnit } from './weight';
+import { dateLocale } from '../i18n';
 
 // Mode « Tableur » : chaque séance du programme présentée comme une feuille Excel — une ligne par
 // série, un bloc de colonnes (poids + reps) par fois où la séance a été faite. Rien n'est saisi ici :
@@ -85,7 +86,7 @@ export const buildTableurSheet = (dayId: string, history: HistoryEntry[], unit: 
 };
 
 export const formatTableurDate = (ts: number): string =>
-  new Date(ts).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+  new Date(ts).toLocaleDateString(dateLocale(), { day: '2-digit', month: '2-digit' });
 
 const INVALID_SHEET_CHARS = /[:\\/?*[\]]/g;
 

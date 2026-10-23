@@ -17,6 +17,7 @@ import {
   computeTrainingStatus, computeReadiness, weeklyLoads, STATUS_LABEL, READINESS_LABEL,
   type TrainingStatus, type TrainingStatusKey, type Readiness, type ReadinessLevel, type LoadZone,
 } from '../utils/trainingStatus';
+import { dateLocale } from '../i18n';
 
 interface DashboardScreenProps { onBack: () => void; }
 
@@ -26,7 +27,7 @@ const formatDate = (ts: number): string => {
   if (diffDays <= 0) return "Aujourd'hui";
   if (diffDays === 1) return 'Hier';
   if (diffDays < 7) return `Il y a ${diffDays} j`;
-  return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  return new Date(ts).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
 };
 
 const formatAxisValue = (v: number): string => {
@@ -120,9 +121,9 @@ const ProgressionChart: React.FC<{ history: HistoryEntry[] }> = ({ history }) =>
     const trendUp = last.maxWeight >= first.maxWeight;
     const lineColor = trendUp ? '#4CAF50' : '#f5a623';
     const midVal = (min + max) / 2;
-    const dateFmt = (ts: number) => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    const dateFmt = (ts: number) => new Date(ts).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
     // Plage étroite (ex. 80 → 82,5 kg) : une décimale, sinon repères identiques.
-    const axisFmt = (v: number) => (range < 6 ? (Math.round(v * 10) / 10).toLocaleString('fr-FR') : String(Math.round(v)));
+    const axisFmt = (v: number) => (range < 6 ? (Math.round(v * 10) / 10).toLocaleString(dateLocale()) : String(Math.round(v)));
 
     svgContent = (
       <>
@@ -217,7 +218,7 @@ const MuscleGroupVolumeChart: React.FC<{ history: HistoryEntry[] }> = ({ history
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700 }}>{v.group}</span>
                     <span style={{ color: 'var(--text-dim)', fontSize: 11, fontWeight: 700 }}>
-                      {isZero ? 'pas travaillé' : `${val.toLocaleString('fr-FR')} ${unit === 'kg' ? 'kg' : 'reps'}`}
+                      {isZero ? 'pas travaillé' : `${val.toLocaleString(dateLocale())} ${unit === 'kg' ? 'kg' : 'reps'}`}
                     </span>
                   </div>
                   <div style={{ height: 7, borderRadius: 4, background: 'var(--bg-elevated)', overflow: 'hidden' }}>
@@ -274,7 +275,7 @@ const EffectiveSetsChart: React.FC<{ history: HistoryEntry[] }> = ({ history }) 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700 }}>{v.group}</span>
                   <span style={{ color: colorFor(v.perWeek), fontSize: 11, fontWeight: 700 }}>
-                    {v.perWeek.toLocaleString('fr-FR')} séries
+                    {v.perWeek.toLocaleString(dateLocale())} séries
                   </span>
                 </div>
                 <div style={{ position: 'relative', height: 7, borderRadius: 4, background: 'var(--bg-elevated)', overflow: 'hidden' }}>
@@ -441,7 +442,7 @@ const screenClass = useScreenClass();
                 <span style={statLabel}>SÉANCES</span>
               </div>
               <div style={statBlock}>
-                <span style={{ color: 'var(--text-primary)', fontSize: 20, fontWeight: 800 }}>{totalTonnage.toLocaleString('fr-FR')}</span>
+                <span style={{ color: 'var(--text-primary)', fontSize: 20, fontWeight: 800 }}>{totalTonnage.toLocaleString(dateLocale())}</span>
                 <span style={statLabel}>KG SOULEVÉS</span>
               </div>
               <div style={statBlock}>

@@ -10,10 +10,11 @@ import {
   type QuizPlace, type QuizSex, type TrainingProfile,
 } from '../utils/onboardingQuiz';
 import type { SplitKind } from '../utils/workoutGenerator';
+import { LANGUAGES, deviceLang, useLangStore, type Lang } from '../i18n';
 import {
   IconActivity, IconAlert, IconArrowLeft, IconBattery, IconBiceps, IconCalendar,
   IconCheck, IconClock, IconClose, IconDumbbell, IconFlame, IconHandWave, IconHeart,
-  IconHome, IconPalette, IconScale, IconSparkles, IconTarget, IconTrendingUp,
+  IconGlobe, IconHome, IconPalette, IconScale, IconSparkles, IconTarget, IconTrendingUp,
   IconTrophy, IconUser, IconWalk, IconWind, IconZap,
 } from './Icons';
 
@@ -119,12 +120,12 @@ const toProfile = (d: Draft): TrainingProfile => ({
 // ─── Étapes ──────────────────────────────────────────────────────────────────
 
 const STEPS = [
-  'intro', 'objectif', 'experience', 'forme', 'souffle', 'frequence', 'duree',
+  'langue', 'intro', 'objectif', 'experience', 'forme', 'souffle', 'frequence', 'duree',
   'organisation', 'lieu', 'materiel', 'priorites', 'sensible', 'toi', 'reglages', 'recap',
 ] as const;
 type StepId = typeof STEPS[number];
 // Parcours « Démarrer vite » : 4 questions, le reste prend les valeurs par défaut.
-const QUICK_STEPS: readonly StepId[] = ['intro', 'objectif', 'experience', 'frequence', 'lieu', 'recap'];
+const QUICK_STEPS: readonly StepId[] = ['langue', 'intro', 'objectif', 'experience', 'frequence', 'lieu', 'recap'];
 
 const SORE_ZONES: SoreZone[] = ['epaule', 'coude-poignet', 'lombaires', 'genou'];
 
@@ -146,7 +147,14 @@ export const OnboardingQuiz: React.FC<OnboardingQuizProps> = ({ initialProfile, 
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1_000_000) + 1);
   const [activate, setActivate] = useState(true);
 
-  const steps: readonly StepId[] = quick ? QUICK_STEPS : STEPS;
+  // La langue se demande une seule fois, au tout premier lancement. Quand on
+  // rejoue le quiz depuis les Réglages (canDismiss), elle y est déjà réglable.
+  const withoutLang = (list: readonly StepId[]) => (canDismiss ? list.filter((s) => s !== 'langue') : list);
+  const steps: readonly StepId[] = withoutLang(quick ? QUICK_STEPS : STEPS);
+  // Langue proposée d'office : celle du téléphone (français ou anglais), ou celle déjà réglée au rejeu.
+  const setLangPref = useLangStore((s) => s.setPref);
+  const [langPick, setLangPick] = useState<Lang>(() => (canDismiss ? useLangStore.getState().lang : deviceLang()));
+  const chooseLang = (l: Lang) => { setLangPick(l); setLangPref(l); };
   const step: StepId = steps[stepIndex];
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
@@ -205,7 +213,7 @@ export const OnboardingQuiz: React.FC<OnboardingQuizProps> = ({ initialProfile, 
 
   const startQuick = () => { setQuick(true); goNext(); };
   // Depuis le récap rapide : on rouvre les questions sautées (à partir de « forme »).
-  const refine = () => { setQuick(false); setStepIndex(STEPS.indexOf('forme')); };
+  const refine = () => { setQuick(false); setStepIndex(withoutLang(STEPS).indexOf('forme')); };
 
   const progress = (stepIndex / (steps.length - 1)) * 100;
   const hello = draft.firstName.trim() !== '' ? `, ${draft.firstName.trim()}` : '';
@@ -230,6 +238,24 @@ export const OnboardingQuiz: React.FC<OnboardingQuizProps> = ({ initialProfile, 
 
         {/* ── Corps ─────────────────────────────────────────────────────── */}
         <div style={body} key={step} className="fade-in">
+          {step === 'langue' && (
+            <Step
+              icon={<IconGlobe size={26} />}
+              title="Langue · Language"
+              subtitle="Dans quelle langue veux-tu utiliser l'appli ? · Which language do you want to use?"
+            >
+              {LANGUAGES.map((l) => (
+                <OptionCard
+                  key={l.id}
+                  icon={<IconGlobe size={20} />} label={l.label}
+                  desc={l.id === 'fr' ? 'Utiliser l\'appli en français' : 'Use the app in English'}
+                  active={langPick === l.id} onClick={() => chooseLang(l.id)}
+                />
+              ))}
+              <p style={honestNote}>Tu pourras la changer plus tard : Réglages → Apparence. · You can change it later in Settings → Appearance.</p>
+            </Step>
+          )}
+
           {step === 'intro' && (
             <Step
               icon={<IconHandWave size={26} />}
@@ -722,6 +748,8 @@ export const OnboardingQuiz: React.FC<OnboardingQuizProps> = ({ initialProfile, 
           )}
           {step === 'recap' ? (
             <button onClick={finish} style={primaryBtn}>C'est parti, j'enregistre</button>
+          ) : step === 'langue' ? (
+            <button onClick={() => { setLangPref(langPick); goNext(); }} style={primaryBtn}>Continuer · Continue</button>
           ) : step === 'intro' ? (
             <button onClick={startQuick} style={primaryBtn}>Démarrer vite</button>
           ) : (

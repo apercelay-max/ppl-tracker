@@ -4,6 +4,7 @@ import { computeTonnage } from '../utils/training';
 import { useWorkoutStore } from '../store/workoutStore';
 import { kgToLbs } from '../utils/weight';
 import type { ExerciseProgress, HistoryEntry } from '../data/types';
+import { dateLocale } from '../i18n';
 
 interface Props {
   startTime: number;
@@ -27,9 +28,9 @@ export const SportLiveStats: React.FC<Props> = ({ startTime, pausedAt, exerciseP
   // Tonnage stocké en kg : affiché dans l'unité choisie (comme l'onglet Stats).
   const weightUnit = useWorkoutStore((s) => s.weightUnit);
   const fmt = (kg: number) => (weightUnit === 'lbs'
-    ? { v: Math.round(kgToLbs(kg)).toLocaleString('fr-FR'), u: 'lbs' }
+    ? { v: Math.round(kgToLbs(kg)).toLocaleString(dateLocale()), u: 'lbs' }
     : kg >= 1000
-    ? { v: (kg / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 }), u: 't' }
+    ? { v: (kg / 1000).toLocaleString(dateLocale(), { maximumFractionDigits: 1 }), u: 't' }
     : { v: String(Math.round(kg)), u: 'kg' });
   const t = fmt(tonnage);
 

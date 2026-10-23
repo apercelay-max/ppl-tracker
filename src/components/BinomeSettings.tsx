@@ -4,6 +4,7 @@ import {
   acceptInvite, createInvite, formatCode, inviteLink, leaveBinome, previewInvite,
 } from '../lib/binome';
 import { clearPendingInvite, getPendingInvite, refreshBinome, useBinome } from '../hooks/useBinome';
+import { dateLocale } from '../i18n';
 
 // ─── Réglages → Données & compte → Binôme ──────────────────────────────────
 // Tout ce qui MODIFIE le binôme se passe ici : créer son lien, accepter une
@@ -133,7 +134,7 @@ export const BinomeSettings: React.FC<Props> = ({ signedIn, onOpenAccount }) => 
   // ── En binôme ──
   if (state.en_binome) {
     const p = state.partenaire;
-    const depuis = new Date(state.depuis).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+    const depuis = new Date(state.depuis).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' });
     return (
       <div style={wrap}>
         {header}
@@ -233,7 +234,7 @@ export const BinomeSettings: React.FC<Props> = ({ signedIn, onOpenAccount }) => 
   // ── Pas encore en binôme : créer son lien ──
   const inv = state.invitation;
   const link = inv ? inviteLink(inv.code) : null;
-  const expires = inv ? new Date(inv.expires_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : '';
+  const expires = inv ? new Date(inv.expires_at).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long' }) : '';
 
   const share = async () => {
     if (!link) return;

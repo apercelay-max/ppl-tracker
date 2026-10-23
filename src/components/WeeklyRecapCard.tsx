@@ -1,6 +1,7 @@
 import React from 'react';
 import type { HistoryEntry } from '../data/types';
 import { bucketByWeek, getMostRecentPersonalRecord } from '../utils/training';
+import { dateLocale } from '../i18n';
 
 interface Props { history: HistoryEntry[]; weeklySessionGoal: number; }
 
@@ -34,7 +35,7 @@ export const WeeklyRecapCard: React.FC<Props> = ({ history, weeklySessionGoal })
       <p style={{ color: streak > 0 ? 'var(--h-text)' : 'var(--h-muted)', fontSize: 14, fontWeight: streak > 0 ? 700 : 500 }}>{streakLine}</p>
       <div className="home-big">
         <b>{current.sessionCount}</b>
-        <i>/ {weeklySessionGoal} séances · {Math.round(current.tonnage).toLocaleString('fr-FR')} kg</i>
+        <i>/ {weeklySessionGoal} séances · {Math.round(current.tonnage).toLocaleString(dateLocale())} kg</i>
       </div>
       {weekPr && (
         <p className="home-small">

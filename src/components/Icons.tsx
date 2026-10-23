@@ -249,6 +249,14 @@ export const IconSave: React.FC<IconProps> = ({ size = 18, color = 'currentColor
   </svg>
 );
 
+export const IconGlobe: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
+    <circle cx="12" cy="12" r="10" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+  </svg>
+);
+
 export const IconSearch: React.FC<IconProps> = ({ size = 18, color = 'currentColor' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke={color}>
     <circle cx="11" cy="11" r="8" />

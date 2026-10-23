@@ -10,6 +10,7 @@ import { EmptyState } from '../components/EmptyState';
 import { IconArrowLeft, IconCalendar, IconClose, IconDumbbell, IconSearch, IconZap } from '../components/Icons';
 import { GlassIcon } from '../components/GlassIcon';
 import { useScreenClass } from '../hooks/useScreenClass';
+import { dateLocale } from '../i18n';
 
 interface HistoryScreenProps { onBack: () => void; }
 
@@ -20,7 +21,7 @@ const formatDate = (ts: number): string => {
   if (diffDays <= 0) return "Aujourd'hui";
   if (diffDays === 1) return 'Hier';
   if (diffDays < 7) return `Il y a ${diffDays} j`;
-  return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(ts).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long', year: 'numeric' });
 };
 
 const WEEKDAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
@@ -59,7 +60,7 @@ const MonthCalendar: React.FC<{ history: HistoryEntry[] }> = ({ history }) => {
     }
   }
 
-  const monthLabel = viewDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const monthLabel = viewDate.toLocaleDateString(dateLocale(), { month: 'long', year: 'numeric' });
   const sessionsThisMonth = Object.values(sessionsByDay).reduce((n, list) => n + list.length, 0);
 
   return (

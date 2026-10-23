@@ -7,6 +7,7 @@ import { solvePlates, describePlates } from '../utils/plates';
 import { usesBarbell } from '../utils/gymAdapt';
 import { MiniLineChart } from '../components/MiniLineChart';
 import { useScreenClass } from '../hooks/useScreenClass';
+import { dateLocale } from '../i18n';
 
 interface ExercicesScreenProps { onBack: () => void; }
 
@@ -20,7 +21,7 @@ const formatLastDate = (ts: number): string => {
   if (diffDays <= 0) return "aujourd'hui";
   if (diffDays === 1) return 'hier';
   if (diffDays < 7) return `il y a ${diffDays} j`;
-  return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  return new Date(ts).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
 };
 
 // Traduit un effort visé (RPE, ou répétitions gardées en réserve) en charge à

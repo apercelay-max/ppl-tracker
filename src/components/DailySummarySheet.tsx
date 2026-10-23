@@ -4,6 +4,7 @@ import { useWorkoutStore } from '../store/workoutStore';
 import { getWorkout } from '../data/workouts';
 import { formatWeightForDisplay, weightUnitLabel } from '../utils/weight';
 import { getMuscleRecoverySummary } from '../utils/training';
+import { dateLocale } from '../i18n';
 
 interface DailySummarySheetProps {
   firstName?: string;
@@ -66,7 +67,7 @@ export const DailySummarySheet: React.FC<DailySummarySheetProps> = ({ firstName,
       <div style={scroll}>
         <div style={column}>
           <p className="daily-in" style={{ ...eyebrow, ...step() }}>
-            {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {new Date().toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
           <h1 className="daily-in" style={{ ...title, ...step() }}>{firstName ? `Bonjour ${firstName}` : 'Bonjour'}</h1>
 
