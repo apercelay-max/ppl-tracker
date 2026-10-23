@@ -688,11 +688,18 @@ export const getMuscleGroupVolume = (history: HistoryEntry[], weeks = 4): Muscle
   const cutoff = Date.now() - weeks * WEEK_MS;
   const tonnageByGroup: Record<string, number> = {};
   const repsByGroup: Record<string, number> = {};
+  // Groupes hors programme (ex: un import) réellement travaillés dans la
+  // période — groupsForHistory ne convient pas ici : depuis qu'il ne renvoie
+  // plus que les groupes déjà travaillés (voir plus haut), s'en servir ferait
+  // disparaître de ce graphique tout groupe du programme jamais travaillé,
+  // au lieu de la barre à 0 que cette fonction doit toujours afficher pour lui.
+  const extraGroups: string[] = [];
   for (const entry of history) {
     if (entry.date < cutoff) continue;
     for (const [exId, sets] of Object.entries(entry.exerciseProgress)) {
       const group = primaryGroupOf(exId);
       if (!group) continue;
+      if (!ALL_MUSCLE_GROUPS.includes(group) && !extraGroups.includes(group)) extraGroups.push(group);
       for (const s of sets) {
         if (!s.completed) continue;
         const w = parseFloat(s.weight);
@@ -706,7 +713,7 @@ export const getMuscleGroupVolume = (history: HistoryEntry[], weeks = 4): Muscle
       }
     }
   }
-  return groupsForHistory(history)
+  return [...ALL_MUSCLE_GROUPS, ...extraGroups]
     .map((group) => ({
       group,
       tonnage: Math.round(tonnageByGroup[group] ?? 0),
