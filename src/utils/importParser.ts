@@ -132,7 +132,9 @@ const rowsToDays = (
       // 0 série (ou négatif) ferait un exercice vide, impossible à valider.
       sets: sets !== undefined && Number.isFinite(sets) && sets > 0 ? sets : undefined,
       reps: reps || undefined,
-      restSeconds: restRaw !== undefined && Number.isFinite(restRaw) && restRaw > 0 ? restRaw : undefined,
+      // 0 est une valeur de repos valide (pas de pause entre les séries) :
+      // seul un nombre négatif ou absent doit retomber sur le défaut (90 s).
+      restSeconds: restRaw !== undefined && Number.isFinite(restRaw) && restRaw >= 0 ? restRaw : undefined,
     });
   }
   return Array.from(dayMap.values());
