@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { Exercise, ExerciseProgress } from '../data/types';
+import type { ExerciseProgress } from '../data/types';
 import { useSessionChrono } from '../hooks/useSessionChrono';
 import { useWorkoutStore } from '../store/workoutStore';
 import { computeTonnage } from '../utils/training';
@@ -21,16 +21,24 @@ import { kgToLbs } from '../utils/weight';
 
 export type DeckSheet = 'stats' | 'programme';
 
+// Une carte du deck : l'intro (échauffement et muscles) puis un exercice par carte.
+export interface DeckCard {
+  key: string;
+  title: string;
+  chip: string;
+  chipOk?: boolean;
+  meta?: string;
+}
+
 interface SessionDeckProps {
-  exercises: Exercise[];
+  cards: DeckCard[];
   currentIndex: number;
   progress: ExerciseProgress;
   startTime: number;
   pausedAt: number | null;
-  nameOf: (exercise: Exercise) => string;
-  // Carte d'un exercice : `preview` = aperçu muet (voisin), sinon carte vivante.
-  renderCard: (exerciseIndex: number, preview: boolean) => React.ReactNode;
-  onSwitch: (exerciseIndex: number) => void;
+  // Contenu d'une carte : `preview` = aperçu muet (voisin), sinon carte vivante.
+  renderCard: (cardIndex: number, preview: boolean) => React.ReactNode;
+  onSwitch: (cardIndex: number) => void;
   onTogglePause: () => void;
   onStop: () => void;
   statsSheet: React.ReactNode;
@@ -103,7 +111,7 @@ const Chevron: React.FC<{ up?: boolean }> = ({ up }) => (
 );
 
 export const SessionDeck: React.FC<SessionDeckProps> = ({
-  exercises, currentIndex, progress, startTime, pausedAt, nameOf, renderCard,
+  cards, currentIndex, progress, startTime, pausedAt, renderCard,
   onSwitch, onTogglePause, onStop, statsSheet, renderProgramme,
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -128,7 +136,7 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
     return () => window.clearTimeout(id);
   }, []);
 
-  const slotOf = (i: number) => (exercises[i] ? slotRefs.current.get(exercises[i].id) : undefined);
+  const slotOf = (i: number) => (cards[i] ? slotRefs.current.get(cards[i].key) : undefined);
 
   // Remet tout à l'état de repos : les positions viennent alors du CSS, qui
   // correspond exactement à la dernière image de l'animation (pas de saut).
@@ -175,7 +183,7 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
 
   // Aperçus voisins et écrans fermés : hors de portée du clavier et du toucher.
   useLayoutEffect(() => {
-    exercises.forEach((ex, i) => slotRefs.current.get(ex.id)?.toggleAttribute('inert', i !== currentIndex));
+    cards.forEach((c, i) => slotRefs.current.get(c.key)?.toggleAttribute('inert', i !== currentIndex));
     (Object.keys(sheetEls.current) as DeckSheet[]).forEach((k) => sheetEls.current[k]?.toggleAttribute('inert', sheet !== k));
   });
 
@@ -192,7 +200,39 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
     root.querySelectorAll('.deck-slot, .deck-slot-inner').forEach((n) => ro.observe(n));
     update();
     return () => ro.disconnect();
-  }, [currentIndex, exercises.length]);
+  }, [currentIndex, cards.length]);
+
+  // Agrandit la carte du centre selon la place disponible (un iPad en fenêtre
+  // ne mesure parfois que ~1000 × 550 px). Le facteur ne dépend que de la taille
+  // de l'écran, jamais du contenu : la carte ne change pas de taille quand une
+  // barre de repos apparaît. Une carte plus haute que l'écran défile.
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const fit = () => {
+      const cw = Math.min(860, root.clientWidth - 300);
+      const z = clamp(Math.min(cw / 560, (root.clientHeight - 70) / 480), 1, 1.5);
+      root.style.setProperty('--deck-z', String(Math.round(z * 100) / 100));
+    };
+    fit();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(fit);
+    ro.observe(root);
+    return () => ro.disconnect();
+  }, []);
+
+  // Carte plus haute que l'écran : à chaque série validée ou exercice changé, on
+  // la fait défiler jusqu'au bouton Valider pour qu'il reste sous le pouce.
+  const doneSets = Object.values(progress).reduce((n, list) => n + list.filter((e) => e.completed).length, 0);
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => {
+      const slot = rootRef.current?.querySelector<HTMLElement>('.deck-slot.is-center');
+      if (!slot || slot.dataset.scroll !== '1') return;
+      const btn = Array.from(slot.querySelectorAll('button')).find((b) => /valider/i.test(b.textContent ?? ''));
+      btn?.scrollIntoView({ block: 'nearest', behavior: reduceMotion() ? 'auto' : 'smooth' });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [currentIndex, doneSets]);
 
   useEffect(() => {
     if (!sheet) return;
@@ -204,7 +244,7 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
 
   // ── Exercice voisin ──────────────────────────────────────────────────────
   const hasPrev = currentIndex > 0;
-  const hasNext = currentIndex < exercises.length - 1;
+  const hasNext = currentIndex < cards.length - 1;
 
   const posX = (d: Drag, raw: number) => {
     // Pas d'exercice de ce côté : la carte résiste (effet élastique).
@@ -248,7 +288,7 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
   const goNeighbour = (dir: 1 | -1) => {
     if (busy.current || sheet) return;
     const target = currentIndex + dir;
-    if (target < 0 || target >= exercises.length) return;
+    if (target < 0 || target >= cards.length) return;
     const w = (slotOf(currentIndex)?.offsetWidth ?? 700) + GAP;
     const p = slotOf(currentIndex - 1); if (p) p.style.transform = tx('x', -w);
     const n = slotOf(currentIndex + 1); if (n) n.style.transform = tx('x', w);
@@ -370,22 +410,18 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
     }
   };
 
-  const total = (ex: Exercise) => progress[ex.id]?.length ?? ex.sets;
-  const done = (ex: Exercise) => (progress[ex.id] ?? []).filter((s) => s.completed).length;
-
   const side = (i: number, dir: 'prev' | 'next') => {
-    const ex = exercises[i];
-    if (!ex) return null;
-    const d = done(ex), t = total(ex);
+    const c = cards[i];
+    if (!c) return null;
     return (
       <button type="button" className={`deck-side deck-side-${dir}`} onClick={() => goNeighbour(dir === 'next' ? 1 : -1)}
-        aria-label={`${dir === 'prev' ? 'Exercice précédent' : 'Exercice suivant'} : ${nameOf(ex)}`}>
+        aria-label={`${dir === 'prev' ? 'Carte précédente' : 'Carte suivante'} : ${c.title}`}>
         <span className="deck-side-inner">
           <span className="deck-lbl">{dir === 'prev' ? '‹ Précédent' : 'Suivant ›'}</span>
-          <span className="deck-side-name">{nameOf(ex)}</span>
+          <span className="deck-side-name">{c.title}</span>
           <span className="deck-side-meta">
-            <span className={`deck-chip${d === t && t > 0 ? ' ok' : ''}`}>{d === t && t > 0 ? '✓ ' : ''}{d}/{t} séries</span>
-            <span>{ex.sets} × {ex.targetReps}</span>
+            <span className={`deck-chip${c.chipOk ? ' ok' : ''}`}>{c.chipOk ? '✓ ' : ''}{c.chip}</span>
+            {c.meta && <span>{c.meta}</span>}
           </span>
         </span>
       </button>
@@ -426,13 +462,13 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
       {side(currentIndex - 1, 'prev')}
       {side(currentIndex + 1, 'next')}
 
-      {exercises.map((ex, i) => {
+      {cards.map((c, i) => {
         const rel = i - currentIndex;
         if (Math.abs(rel) > 1) return null;
         return (
           <div
-            key={ex.id}
-            ref={(el) => { if (el) slotRefs.current.set(ex.id, el); else slotRefs.current.delete(ex.id); }}
+            key={c.key}
+            ref={(el) => { if (el) slotRefs.current.set(c.key, el); else slotRefs.current.delete(c.key); }}
             className={`deck-slot ${rel === 0 ? 'is-center' : rel < 0 ? 'is-prev' : 'is-next'}`}
           >
             <div className="deck-slot-inner">{renderCard(i, rel !== 0)}</div>

@@ -15,7 +15,7 @@ import { ConfettiBurst } from '../components/ConfettiBurst';
 import { SessionTabBar } from '../components/SessionTabBar';
 import { SessionStatsBig } from '../components/SessionStatsBig';
 import { SessionProgramme } from '../components/SessionProgramme';
-import { SessionDeck } from '../components/SessionDeck';
+import { SessionDeck, type DeckCard } from '../components/SessionDeck';
 import { SessionRestBig } from '../components/SessionRestBig';
 import { buildSessionRecapImage, shareOrDownloadRecapImage } from '../utils/shareImage';
 import { weightUnitLabel, kgToLbs, formatWeightForDisplay } from '../utils/weight';
@@ -112,6 +112,12 @@ const setWakeLockEnabled = useWorkoutStore((s) => s.setWakeLockEnabled);
 const [isWide, setIsWide] = useState(() => window.innerWidth >= 700);
 // iPad en paysage (et plus large) : séance en cartes avec glissements, voir SessionDeck.
 const [isDeck, setIsDeck] = useState(() => window.innerWidth >= 1000);
+// Vue iPad : la première carte est « Échauffement et muscles », le premier exercice
+// est la 2e. On y atterrit au début de la séance, pas en la reprenant en cours.
+const [onIntro, setOnIntro] = useState(() => {
+  const st = useWorkoutStore.getState().session;
+  return !(st && Object.values(st.exerciseProgress).flat().some((e) => e.completed));
+});
 // Secousse du téléphone = valider la série en cours (mains prises). On
 // n'appelle pas directement completeSet ici : le poids et les reps en cours
 // de saisie vivent dans la SetRow active, c'est elle qui sait quoi valider.
@@ -766,9 +772,10 @@ onTogglePause={handleToggleRestPause}
 />
 ) : null;
 
-// Bannières d'avant-séance (séance adaptée, note de la dernière fois, muscles,
-// échauffement) : les mêmes dans la liste d'exercices et dans la vue iPad.
-const sessionBanners = (
+// Bannières d'avant-séance : la séance adaptée reste affichée toute la séance ;
+// la note de la dernière fois, les muscles et l'échauffement ne servent qu'au début
+// (dans la vue iPad, ils sont dans la première carte, toujours accessible).
+const adaptationBannerNode = (
 <>
 {/* Séance adaptée : on rappelle en permanence qu'on ne fait pas la
 séance du programme, avec le détail des modifications au tap. Sans ce
@@ -794,13 +801,17 @@ devient incompréhensible. */}
 )}
 </div>
 )}
-{lastSessionNote && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
+</>
+);
+const preSessionNode = (
+<>
+{lastSessionNote && (isDeck || (completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0)) && (
 <div className="glass-card" style={lastNoteBanner}>
 <p style={lastNoteLabel}>Note de la dernière fois</p>
 <p style={lastNoteText}>{lastSessionNote}</p>
 </div>
 )}
-{bodyDiagramEnabled && bodyDiagramVisible && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
+{bodyDiagramEnabled && bodyDiagramVisible && (isDeck || (completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0)) && (
 <div className="glass-card" style={bodyDiagramCard}>
 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
 <p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5 }}>MUSCLES SOLLICITÉS</p>
@@ -809,7 +820,7 @@ devient incompréhensible. */}
 <BodyDiagram intensity={bodyIntensity} />
 </div>
 )}
-{cardioVisible && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
+{cardioVisible && (isDeck || (completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0)) && (
 <div className="glass-card glass-blue" style={cardioCard}>
 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: cardioRunning ? 10 : 6 }}>
 <span style={{ display: 'inline-flex' }}><IconActivity size={20} color="#5560cc" /></span>
@@ -837,11 +848,34 @@ devient incompréhensible. */}
 )}
 </>
 );
+const sessionBanners = (
+<>
+{adaptationBannerNode}
+{preSessionNode}
+</>
+);
+
+const nothingToPrepare = !lastSessionNote && !(bodyDiagramEnabled && bodyDiagramVisible) && !cardioVisible;
+const introCard = (
+<div className="glass-card sv2-card" style={{ marginBottom: 12 }}>
+<div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+<span className="sv2-eyebrow">Avant la séance</span>
+<p className="sv2-card-name">Échauffement et muscles</p>
+</div>
+{preSessionNode}
+{nothingToPrepare && (
+<p style={{ margin: 0, color: 'var(--h-muted, var(--text-muted))', fontSize: 14, lineHeight: '20px' }}>Tout est prêt : glisse vers la gauche pour commencer le premier exercice.</p>
+)}
+<button onClick={() => setOnIntro(false)} className="sv2-validate" style={{ background: 'var(--grad, linear-gradient(135deg, var(--brand-1), var(--brand-2)))' }}>Commencer le premier exercice</button>
+</div>
+);
 
 // Vue iPad (SessionDeck) : carte d'un exercice. L'exercice au centre est
 // toujours l'exercice en cours ; les voisins sont des aperçus muets (mêmes
 // cartes, aucun bouton actif) qui glissent vers le centre pendant un geste.
-const deckCard = (exIdx: number, preview: boolean) => {
+const deckCard = (cardIdx: number, preview: boolean) => {
+const exIdx = cardIdx - 1;
+if (exIdx < 0) return introCard;
 const exercise = exercises[exIdx];
 const entries = session.exerciseProgress[exercise.id] ?? [];
 const displayExercise = session.exerciseNameOverrides?.[exercise.id] ? { ...exercise, name: session.exerciseNameOverrides[exercise.id] } : exercise;
@@ -859,6 +893,10 @@ onSetComplete={noop}
 onSkipSet={noop}
 onSkipExercise={noop}
 onAddSet={noop}
+// Même signal que la carte vivante : une SetRow qui reçoit « undefined » puis un
+// nombre en devenant la carte du centre prend ce changement pour une secousse
+// et valide la série toute seule (voir le commentaire dans SetRow.tsx).
+validateSignal={shakeSignal}
 />
 );
 }
@@ -890,18 +928,37 @@ validateSignal={shakeSignal}
 );
 };
 
+const deckCards: DeckCard[] = [
+{ key: 'intro', title: 'Échauffement et muscles', chip: cardioVisible ? 'À faire' : 'Fait', chipOk: !cardioVisible },
+...exercises.map((ex) => {
+const entries = session.exerciseProgress[ex.id] ?? [];
+const doneN = entries.filter((e) => e.completed).length;
+const n = entries.length || ex.sets;
+return {
+key: ex.id,
+title: session.exerciseNameOverrides?.[ex.id] ?? ex.name,
+chip: `${doneN}/${n} séries`,
+chipOk: n > 0 && doneN === n,
+meta: `${ex.sets} × ${ex.targetReps}`,
+};
+}),
+];
+
 const deckNode = (
 <>
-<div className="deck-banners">{sessionBanners}</div>
+<div className="deck-banners">{adaptationBannerNode}</div>
 <SessionDeck
-exercises={exercises}
-currentIndex={currentExIdx}
+cards={deckCards}
+currentIndex={onIntro ? 0 : currentExIdx + 1}
 progress={session.exerciseProgress}
 startTime={session.startTime}
 pausedAt={sessionPausedAt}
-nameOf={(ex) => session.exerciseNameOverrides?.[ex.id] ?? ex.name}
 renderCard={deckCard}
-onSwitch={(i) => switchToExercise(exercises[i].id)}
+onSwitch={(i) => {
+if (i === 0) { setOnIntro(true); return; }
+setOnIntro(false);
+if (i - 1 !== currentExIdx) switchToExercise(exercises[i - 1].id);
+}}
 onTogglePause={() => (sessionPausedAt !== null ? resumeSession() : pauseSession())}
 onStop={handleAbandon}
 statsSheet={
@@ -920,7 +977,7 @@ renderProgramme={(close) => (
 <SessionProgramme
 workout={workout}
 session={session}
-onSwitchTo={(exerciseId) => { switchToExercise(exerciseId); close(); }}
+onSwitchTo={(exerciseId) => { setOnIntro(false); switchToExercise(exerciseId); close(); }}
 onToggleSupersetRest={toggleSupersetRest}
 onSetNameOverride={setExerciseNameOverride}
 />

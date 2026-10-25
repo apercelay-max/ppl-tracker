@@ -1247,8 +1247,10 @@ button { cursor: pointer; }
 /* Voir components/SessionDeck.tsx. Les positions de repos sont ici ; pendant un
    geste, le composant n'écrit que des `transform` en ligne par-dessus. */
 .deck {
-  --deck-cw: min(700px, calc(100% - 360px));
+  --deck-cw: min(860px, calc(100% - 300px));
   --deck-r: 28px;
+  /* partie visible d'une carte voisine, de chaque côté de la carte du centre */
+  --deck-peek: calc((100% - var(--deck-cw)) / 2 - 12px);
   position: relative; flex: 1; min-height: 0; overflow: hidden; isolation: isolate;
   touch-action: none;
 }
@@ -1264,27 +1266,28 @@ button { cursor: pointer; }
 }
 .deck-slot::-webkit-scrollbar { display: none; }
 .deck-slot[data-scroll="1"] { touch-action: pan-y; }
-.deck-slot-inner { width: 100%; margin: auto 0; }
+/* `zoom` agrandit tout le contenu de la carte (texte, champs, boutons) : le facteur est calculé par SessionDeck selon la place. */
+.deck-slot-inner { width: 100%; margin: auto 0; zoom: var(--deck-z, 1); }
 .deck-slot.is-prev { transform: translate3d(calc(-100% - 56px), 0, 0); visibility: hidden; }
 .deck-slot.is-next { transform: translate3d(calc(100% + 56px), 0, 0); visibility: hidden; }
 .deck[data-moving] .deck-slot { visibility: visible; }
 
 /* cartes voisines : inclinées vers le centre, à moitié cachées derrière */
 .deck-side {
-  position: absolute; z-index: 1; top: calc(50% - 150px); width: 360px; height: 240px; padding: 0;
+  position: absolute; z-index: 1; top: calc(50% - 150px); width: calc(var(--deck-peek) + 190px); height: 240px; padding: 0;
   border: 1px solid var(--h-hero-line, var(--border)); border-radius: var(--deck-r);
   background: var(--h-surface, var(--bg-card-solid)); color: var(--h-text, var(--text-primary));
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5); text-align: left; cursor: pointer;
   opacity: calc(1 - var(--deck-p, 0) * 0.85); transition: opacity 0.25s;
 }
 .deck[data-dragging] .deck-side { transition: none; }
-.deck-side-prev { right: calc(50% + var(--deck-cw) / 2 - 180px); transform-origin: 100% 50%; transform: perspective(1100px) rotateY(30deg) rotate(3deg); }
-.deck-side-next { left: calc(50% + var(--deck-cw) / 2 - 180px); transform-origin: 0 50%; transform: perspective(1100px) rotateY(-30deg) rotate(-3deg); text-align: right; }
+.deck-side-prev { right: calc(50% + var(--deck-cw) / 2 - 190px); transform-origin: 100% 50%; transform: perspective(1100px) rotateY(30deg) rotate(3deg); }
+.deck-side-next { left: calc(50% + var(--deck-cw) / 2 - 190px); transform-origin: 0 50%; transform: perspective(1100px) rotateY(-30deg) rotate(-3deg); text-align: right; }
 .deck-side:focus-visible { outline: 3px solid var(--brand-1); outline-offset: 3px; }
 .deck-side-inner { height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 9px; }
-.deck-side-prev .deck-side-inner { padding: 20px 190px 20px 24px; }
-.deck-side-next .deck-side-inner { padding: 20px 24px 20px 190px; align-items: flex-end; }
-.deck-side-name { font-family: var(--h-cond, inherit); font-size: 21px; font-weight: 700; text-transform: uppercase; line-height: 1.02; text-wrap: balance; overflow-wrap: anywhere; }
+.deck-side-prev .deck-side-inner { padding: 20px 200px 20px 18px; }
+.deck-side-next .deck-side-inner { padding: 20px 18px 20px 200px; align-items: flex-end; }
+.deck-side-name { font-family: var(--h-cond, inherit); font-size: clamp(15px, calc(var(--deck-peek) / 6), 21px); font-weight: 700; text-transform: uppercase; line-height: 1.02; text-wrap: balance; overflow-wrap: anywhere; }
 .deck-side-meta { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; font-size: 12px; color: var(--h-muted, var(--text-muted)); }
 .deck-side-next .deck-side-meta { justify-content: flex-end; }
 .deck-lbl { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--h-muted, var(--text-muted)); }
