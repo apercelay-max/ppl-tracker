@@ -130,6 +130,14 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
   const prevIndex = useRef(currentIndex);
   const drag = useRef<Drag | null>(null);
   const suppressClick = useRef(false);
+  const sideEls = useRef<Record<'prev' | 'next', HTMLButtonElement | null>>({ prev: null, next: null });
+  const scrimRef = useRef<HTMLDivElement>(null);
+  // Écrits directement sur les éléments concernés : une variable CSS posée sur la
+  // racine forcerait le recalcul du style de toutes les cartes à chaque image.
+  const setSideOpacity = (v: number) => {
+    (['prev', 'next'] as const).forEach((k) => { const el = sideEls.current[k]; if (el) el.style.opacity = String(v); });
+  };
+  const setScrim = (v: number) => { if (scrimRef.current) scrimRef.current.style.opacity = String(v); };
 
   useEffect(() => {
     const id = window.setTimeout(() => setSheetsReady(true), 700);
@@ -152,8 +160,8 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
     });
     delete root.dataset.dragging;
     delete root.dataset.moving;
-    root.style.removeProperty('--deck-p');
-    root.style.removeProperty('--deck-sp');
+    (['prev', 'next'] as const).forEach((k) => { const el = sideEls.current[k]; if (el) el.style.opacity = ''; });
+    if (scrimRef.current) scrimRef.current.style.opacity = '';
     busy.current = false;
     sheetBusy.current = false;
   };
@@ -257,7 +265,7 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
     if (p) p.style.transform = tx('x', x - d.w);
     const n = slotOf(currentIndex + 1);
     if (n) n.style.transform = tx('x', x + d.w);
-    rootRef.current?.style.setProperty('--deck-p', String(Math.min(1, Math.abs(x) / (d.w * 0.6))));
+    setSideOpacity(1 - Math.min(1, Math.abs(x) / (d.w * 0.6)) * 0.85);
   };
 
   const settleX = (dir: 1 | -1, commit: boolean, x: number, w: number, speed: number) => {
@@ -266,7 +274,8 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
     busy.current = true;
     delete root.dataset.dragging;
     root.dataset.moving = '1';
-    root.style.setProperty('--deck-p', '0');
+    // Les cartes voisines s'effacent pendant le changement ; les nouvelles apparaissent en fondu.
+    setSideOpacity(commit ? 0 : 1);
     const target = currentIndex + dir;
     const center = slotOf(currentIndex);
     const nb = slotOf(target);
@@ -316,7 +325,7 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
     d.po = po;
     const el = sheetEls.current[name];
     if (el) el.style.transform = tx('y', closedY(name, d.h) * (1 - po));
-    rootRef.current?.style.setProperty('--deck-sp', String(po));
+    setScrim(po * 0.55);
   };
 
   const settleY = (name: DeckSheet, open: boolean, po: number, h: number, speed: number) => {
@@ -326,7 +335,7 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
     sheetBusy.current = true;
     delete root.dataset.dragging;
     root.dataset.moving = '1';
-    root.style.setProperty('--deck-sp', open ? '1' : '0');
+    setScrim(open ? 0.55 : 0);
     const el = sheetEls.current[name];
     const v = Math.max(speed, 0.9);
     const from = closedY(name, h) * (1 - po);
@@ -380,6 +389,8 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
       if (Math.max(ax, ay) < AXIS_LOCK) return;
       if (d.startedOpen && ay <= ax) { drag.current = null; return; }
       d.axis = ax > ay ? 'x' : 'y';
+      // Le mouvement part de zéro au verrouillage : sinon la carte saute des 8 px de seuil.
+      d.x = e.clientX; d.y = e.clientY; d.dx = 0; d.dy = 0;
       d.w = (slotOf(currentIndex)?.offsetWidth ?? 700) + GAP;
       d.h = root.clientHeight;
       try { root.setPointerCapture(e.pointerId); } catch { /* le geste continue sans capture */ }
@@ -414,7 +425,7 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
     const c = cards[i];
     if (!c) return null;
     return (
-      <button type="button" className={`deck-side deck-side-${dir}`} onClick={() => goNeighbour(dir === 'next' ? 1 : -1)}
+      <button type="button" key={`${dir}-${c.key}`} ref={(el) => { sideEls.current[dir] = el; }} className={`deck-side deck-side-${dir}`} onClick={() => goNeighbour(dir === 'next' ? 1 : -1)}
         aria-label={`${dir === 'prev' ? 'Carte précédente' : 'Carte suivante'} : ${c.title}`}>
         <span className="deck-side-inner">
           <span className="deck-lbl">{dir === 'prev' ? '‹ Précédent' : 'Suivant ›'}</span>
@@ -494,7 +505,7 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
       <div className="deck-edge deck-edge-t"><button type="button" className="deck-pill" onClick={() => openSheet('stats')}><Chevron />Stats</button></div>
       <div className="deck-edge deck-edge-b"><button type="button" className="deck-pill" onClick={() => openSheet('programme')}><Chevron up />Exercices</button></div>
 
-      <div className="deck-scrim" aria-hidden="true" />
+      <div ref={scrimRef} className="deck-scrim" aria-hidden="true" />
       {sheetShell('stats', 'Glisse vers le haut pour revenir', 'Fermer', statsSheet)}
       {sheetShell('programme', 'Glisse vers le bas pour revenir', 'Fermer', renderProgramme(closeSheet))}
     </div>

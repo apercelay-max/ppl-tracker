@@ -1252,7 +1252,7 @@ button { cursor: pointer; }
   /* partie visible d'une carte voisine, de chaque côté de la carte du centre */
   --deck-peek: calc((100% - var(--deck-cw)) / 2 - 12px);
   position: relative; flex: 1; min-height: 0; overflow: hidden; isolation: isolate;
-  touch-action: none;
+  touch-action: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none;
 }
 .ui-sport .deck { --deck-r: 12px; }
 .deck[data-dragging] { user-select: none; -webkit-user-select: none; }
@@ -1262,15 +1262,15 @@ button { cursor: pointer; }
   left: calc(50% - var(--deck-cw) / 2); width: var(--deck-cw);
   padding: 34px 0 40px; display: flex;
   overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
-  scrollbar-width: none; touch-action: none; will-change: transform;
+  scrollbar-width: none; touch-action: none; will-change: transform, opacity; backface-visibility: hidden;
 }
 .deck-slot::-webkit-scrollbar { display: none; }
 .deck-slot[data-scroll="1"] { touch-action: pan-y; }
 /* `zoom` agrandit tout le contenu de la carte (texte, champs, boutons) : le facteur est calculé par SessionDeck selon la place. */
 .deck-slot-inner { width: 100%; margin: auto 0; zoom: var(--deck-z, 1); }
-.deck-slot.is-prev { transform: translate3d(calc(-100% - 56px), 0, 0); visibility: hidden; }
-.deck-slot.is-next { transform: translate3d(calc(100% + 56px), 0, 0); visibility: hidden; }
-.deck[data-moving] .deck-slot { visibility: visible; }
+.deck-slot.is-prev { transform: translate3d(calc(-100% - 56px), 0, 0); opacity: 0; pointer-events: none; }
+.deck-slot.is-next { transform: translate3d(calc(100% + 56px), 0, 0); opacity: 0; pointer-events: none; }
+.deck[data-moving] .deck-slot { opacity: 1; }
 
 /* cartes voisines : inclinées vers le centre, à moitié cachées derrière */
 .deck-side {
@@ -1278,7 +1278,7 @@ button { cursor: pointer; }
   border: 1px solid var(--h-hero-line, var(--border)); border-radius: var(--deck-r);
   background: var(--h-surface, var(--bg-card-solid)); color: var(--h-text, var(--text-primary));
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5); text-align: left; cursor: pointer;
-  opacity: calc(1 - var(--deck-p, 0) * 0.85); transition: opacity 0.25s;
+  transition: opacity 0.25s ease;
 }
 .deck[data-dragging] .deck-side { transition: none; }
 .deck-side-prev { right: calc(50% + var(--deck-cw) / 2 - 190px); transform-origin: 100% 50%; transform: perspective(1100px) rotateY(30deg) rotate(3deg); }
@@ -1294,11 +1294,12 @@ button { cursor: pointer; }
 .deck-chip { font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--h-line, var(--border)); color: var(--h-text2, var(--text-secondary)); }
 .ui-sport .deck-chip { border-radius: 6px; }
 .deck-chip.ok { border-color: rgba(108, 203, 148, 0.5); color: var(--h-good, #6ccb94); }
+/* Les cartes voisines sont recréées à chaque changement d'exercice : elles apparaissent en fondu.
+   (`backwards` : l'animation ne garde pas la main ensuite, l'opacité en ligne du glissement reprend.) */
 @media (prefers-reduced-motion: no-preference) {
-  .deck-side-inner { animation: deckFloat 7s ease-in-out infinite; }
-  .deck-side-next .deck-side-inner { animation-delay: -3.5s; }
+  .deck-side { animation: deckSideIn 0.32s ease-out 0.08s backwards; }
 }
-@keyframes deckFloat { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(0, -8px, 0); } }
+@keyframes deckSideIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* sous « précédent » : durée et tonnage ; sous « suivant » : pause et stop */
 .deck-info, .deck-ctl { position: absolute; z-index: 2; top: calc(50% + 112px); }
@@ -1319,14 +1320,14 @@ button { cursor: pointer; }
 .deck-pill:focus-visible { outline: 2px solid var(--brand-1); outline-offset: 2px; }
 
 /* écrans qui glissent : Stats (depuis le haut), Programme (depuis le bas) */
-.deck-scrim { position: absolute; inset: 0; z-index: 20; background: #000; pointer-events: none; opacity: calc(var(--deck-sp, 0) * 0.55); transition: opacity 0.3s; }
+.deck-scrim { position: absolute; inset: 0; z-index: 20; background: #000; pointer-events: none; opacity: 0; transition: opacity 0.3s; }
 .deck.is-sheet-open .deck-scrim { opacity: 0.55; }
 .deck[data-dragging] .deck-scrim { transition: none; }
-.deck-sheet { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; background: var(--h-bg, var(--bg-base)); box-shadow: 0 0 60px rgba(0, 0, 0, 0.6); visibility: hidden; will-change: transform; }
+.deck-sheet { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; background: var(--h-bg, var(--bg-base)); box-shadow: 0 0 60px rgba(0, 0, 0, 0.6); opacity: 0; pointer-events: none; will-change: transform, opacity; backface-visibility: hidden; }
 .deck-sheet-stats { transform: translate3d(0, -100%, 0); }
 .deck-sheet-programme { transform: translate3d(0, 100%, 0); }
-.deck-sheet.is-open { transform: none; visibility: visible; }
-.deck[data-moving] .deck-sheet { visibility: visible; }
+.deck-sheet.is-open { transform: none; opacity: 1; pointer-events: auto; }
+.deck[data-moving] .deck-sheet { opacity: 1; pointer-events: auto; }
 .deck-sheet-body { flex: 1; min-height: 0; display: flex; flex-direction: column; touch-action: pan-y; }
 .deck-sheet-bar { flex: none; display: flex; align-items: center; gap: 14px; padding: 10px 20px; touch-action: none; border-color: var(--h-line, var(--border)); }
 .deck-sheet-stats .deck-sheet-bar { border-top: 1px solid var(--h-line, var(--border)); }
