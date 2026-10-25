@@ -14,6 +14,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-25',
+    title: 'Séance sur iPad',
+    items: [
+      'Sur iPad en paysage, la série en cours est au centre, avec l’exercice précédent et le suivant en cartes inclinées derrière.',
+      'Glisse à gauche ou à droite pour changer d’exercice, vers le bas pour les stats, vers le haut pour voir tous les exercices.',
+      'La barre du bas disparaît : durée et poids soulevé sont sous la carte « précédent », pause et stop sous la carte « suivant ».',
+    ],
+  },
+  {
     id: '2026-10-12',
     title: 'Mode Tableur',
     items: [

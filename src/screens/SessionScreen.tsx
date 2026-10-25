@@ -15,6 +15,7 @@ import { ConfettiBurst } from '../components/ConfettiBurst';
 import { SessionTabBar } from '../components/SessionTabBar';
 import { SessionStatsBig } from '../components/SessionStatsBig';
 import { SessionProgramme } from '../components/SessionProgramme';
+import { SessionDeck } from '../components/SessionDeck';
 import { SessionRestBig } from '../components/SessionRestBig';
 import { buildSessionRecapImage, shareOrDownloadRecapImage } from '../utils/shareImage';
 import { weightUnitLabel, kgToLbs, formatWeightForDisplay } from '../utils/weight';
@@ -109,6 +110,8 @@ const shakeToValidateEnabled = useWorkoutStore((s) => s.shakeToValidateEnabled);
 const sessionAdaptation = useWorkoutStore((s) => s.sessionAdaptation);
 const setWakeLockEnabled = useWorkoutStore((s) => s.setWakeLockEnabled);
 const [isWide, setIsWide] = useState(() => window.innerWidth >= 700);
+// iPad en paysage (et plus large) : séance en cartes avec glissements, voir SessionDeck.
+const [isDeck, setIsDeck] = useState(() => window.innerWidth >= 1000);
 // Secousse du téléphone = valider la série en cours (mains prises). On
 // n'appelle pas directement completeSet ici : le poids et les reps en cours
 // de saisie vivent dans la SetRow active, c'est elle qui sait quoi valider.
@@ -241,7 +244,7 @@ advanceSession();
 }, [advanceSession]);
 
 useEffect(() => {
-const h = () => setIsWide(window.innerWidth >= 700);
+const h = () => { setIsWide(window.innerWidth >= 700); setIsDeck(window.innerWidth >= 1000); };
 window.addEventListener('resize', h);
 return () => window.removeEventListener('resize', h);
 }, []);
@@ -763,6 +766,169 @@ onTogglePause={handleToggleRestPause}
 />
 ) : null;
 
+// Bannières d'avant-séance (séance adaptée, note de la dernière fois, muscles,
+// échauffement) : les mêmes dans la liste d'exercices et dans la vue iPad.
+const sessionBanners = (
+<>
+{/* Séance adaptée : on rappelle en permanence qu'on ne fait pas la
+séance du programme, avec le détail des modifications au tap. Sans ce
+rappel, un « tiens, il manque un exercice » deux semaines plus tard
+devient incompréhensible. */}
+{sessionAdaptation && sessionAdaptation.summary.length > 0 && (
+<div style={adaptBanner}>
+<button onClick={() => setAdaptBannerOpen((v) => !v)} style={adaptBannerHead}>
+<span style={{ flex: 1, textAlign: 'left' }}>
+<span style={adaptBannerTitle}>Séance adaptée</span>
+<span style={adaptBannerSub}>
+{sessionAdaptation.baseMin} min → {sessionAdaptation.estimatedMin} min · {sessionAdaptation.summary.length} modification{sessionAdaptation.summary.length > 1 ? 's' : ''}
+</span>
+</span>
+<span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{adaptBannerOpen ? '▾' : '▸'}</span>
+</button>
+{adaptBannerOpen && (
+<ul style={{ listStyle: 'none', margin: '8px 0 0', padding: 0 }}>
+{sessionAdaptation.summary.map((line, i) => (
+<li key={i} style={adaptBannerLine}>· {line}</li>
+))}
+</ul>
+)}
+</div>
+)}
+{lastSessionNote && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
+<div className="glass-card" style={lastNoteBanner}>
+<p style={lastNoteLabel}>Note de la dernière fois</p>
+<p style={lastNoteText}>{lastSessionNote}</p>
+</div>
+)}
+{bodyDiagramEnabled && bodyDiagramVisible && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
+<div className="glass-card" style={bodyDiagramCard}>
+<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+<p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5 }}>MUSCLES SOLLICITÉS</p>
+<button onClick={() => setBodyDiagramVisible(false)} style={bodyDiagramCloseBtn}><IconClose size={14} /></button>
+</div>
+<BodyDiagram intensity={bodyIntensity} />
+</div>
+)}
+{cardioVisible && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
+<div className="glass-card glass-blue" style={cardioCard}>
+<div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: cardioRunning ? 10 : 6 }}>
+<span style={{ display: 'inline-flex' }}><IconActivity size={20} color="#5560cc" /></span>
+<div style={{ flex: 1 }}>
+<p style={{ color: '#5560cc', fontSize: 12, fontWeight: 800, letterSpacing: 0.5 }}>ÉCHAUFFEMENT CARDIO</p>
+<p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>3 minutes avant d'attaquer, pour monter en température.</p>
+</div>
+</div>
+{cardioRunning ? (
+<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+<span style={{ fontSize: 26, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: cardioSeconds === 0 ? '#4CAF50' : '#5560cc', flex: 1, textAlign: 'center' }}>
+{cardioSeconds === 0 ? "C'est bon 💪" : `${Math.floor(cardioSeconds / 60)}:${(cardioSeconds % 60).toString().padStart(2, '0')}`}
+</span>
+<button onClick={() => setCardioVisible(false)} style={cardioBtnPrimary}>
+{cardioSeconds === 0 ? 'Commencer la séance' : 'Passer'}
+</button>
+</div>
+) : (
+<div style={{ display: 'flex', gap: 8 }}>
+<button onClick={() => setCardioRunning(true)} style={cardioBtnPrimary}>▶ Démarrer</button>
+<button onClick={() => setCardioVisible(false)} style={cardioBtnGhost}>Passer</button>
+</div>
+)}
+</div>
+)}
+</>
+);
+
+// Vue iPad (SessionDeck) : carte d'un exercice. L'exercice au centre est
+// toujours l'exercice en cours ; les voisins sont des aperçus muets (mêmes
+// cartes, aucun bouton actif) qui glissent vers le centre pendant un geste.
+const deckCard = (exIdx: number, preview: boolean) => {
+const exercise = exercises[exIdx];
+const entries = session.exerciseProgress[exercise.id] ?? [];
+const displayExercise = session.exerciseNameOverrides?.[exercise.id] ? { ...exercise, name: session.exerciseNameOverrides[exercise.id] } : exercise;
+if (preview) {
+const firstOpen = entries.findIndex((e) => !e.completed);
+const noop = () => {};
+return (
+<Card
+exercise={displayExercise}
+setEntries={entries}
+currentSetIndex={firstOpen === -1 ? Math.max(0, entries.length - 1) : firstOpen}
+isActive
+currentWeek={currentWeek}
+onSetComplete={noop}
+onSkipSet={noop}
+onSkipExercise={noop}
+onAddSet={noop}
+/>
+);
+}
+// La barre de repos est rattachée à la série qui l'a lancée. Si la séance a déjà
+// avancé (déblocage anticipé pendant le repos), cette série est sur une carte
+// voisine, invisible ici : on la montre alors sur la carte du centre.
+const restElsewhere = restBarNode !== null && restRefExIdx !== currentExIdx && exIdx === currentExIdx;
+const isRestTarget = exercise.id === restBarTargetExerciseId || restElsewhere;
+const group = exercise.restMode === 'superset' && exercise.supersetGroupId ? exercises.filter((e) => e.supersetGroupId === exercise.supersetGroupId) : null;
+return (
+<Card
+exercise={displayExercise}
+setEntries={entries}
+currentSetIndex={currentSetIdx}
+isActive
+groupActive={group ? group.some((e) => exercises.indexOf(e) === currentExIdx) : undefined}
+currentWeek={currentWeek}
+onSetComplete={(setIndex, entry) => handleSetComplete(exercise.id, setIndex, entry)}
+onEditSet={(setIndex) => handleEditSet(exercise.id, setIndex)}
+onSkipSet={handleSkipSet}
+onSkipExercise={handleSkipExercise}
+onAddSet={() => addSet(exercise.id)}
+onWeightStart={(setIndex) => handleWeightEntered(exercise.id, setIndex)}
+onSwitchTo={() => switchToExercise(exercise.id)}
+restBar={isRestTarget ? restBarNode : null}
+restBarIndex={isRestTarget ? (restElsewhere ? currentSetIdx : restBarTargetIndex) : undefined}
+validateSignal={shakeSignal}
+/>
+);
+};
+
+const deckNode = (
+<>
+<div className="deck-banners">{sessionBanners}</div>
+<SessionDeck
+exercises={exercises}
+currentIndex={currentExIdx}
+progress={session.exerciseProgress}
+startTime={session.startTime}
+pausedAt={sessionPausedAt}
+nameOf={(ex) => session.exerciseNameOverrides?.[ex.id] ?? ex.name}
+renderCard={deckCard}
+onSwitch={(i) => switchToExercise(exercises[i].id)}
+onTogglePause={() => (sessionPausedAt !== null ? resumeSession() : pauseSession())}
+onStop={handleAbandon}
+statsSheet={
+<SessionStatsBig
+session={session}
+workout={workout}
+completedSets={completedSets}
+totalSets={totalSets}
+progressPct={progressPct}
+bodyIntensity={bodyIntensity}
+prList={sessionPRs}
+history={history}
+/>
+}
+renderProgramme={(close) => (
+<SessionProgramme
+workout={workout}
+session={session}
+onSwitchTo={(exerciseId) => { switchToExercise(exerciseId); close(); }}
+onToggleSupersetRest={toggleSupersetRest}
+onSetNameOverride={setExerciseNameOverride}
+/>
+)}
+/>
+</>
+);
+
 return (
 <div className={isSport ? 'session-v2 ui-sport' : isEpure ? 'session-v2 ui-epure' : isNewStyle ? 'session-v2' : 'screen-ambient'} style={{ ...container, flexDirection: isWide ? 'row' : 'column' }}>
 {confettiBurst && <ConfettiBurst style={ultraAnimationStyle} />}
@@ -959,73 +1125,10 @@ style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
 </>
 )}
 
+{isDeck ? deckNode : (
 <div style={scrollArea}>
 <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 16px 80px' }}>
-{/* Séance adaptée : on rappelle en permanence qu'on ne fait pas la
-séance du programme, avec le détail des modifications au tap. Sans ce
-rappel, un « tiens, il manque un exercice » deux semaines plus tard
-devient incompréhensible. */}
-{sessionAdaptation && sessionAdaptation.summary.length > 0 && (
-<div style={adaptBanner}>
-<button onClick={() => setAdaptBannerOpen((v) => !v)} style={adaptBannerHead}>
-<span style={{ flex: 1, textAlign: 'left' }}>
-<span style={adaptBannerTitle}>Séance adaptée</span>
-<span style={adaptBannerSub}>
-{sessionAdaptation.baseMin} min → {sessionAdaptation.estimatedMin} min · {sessionAdaptation.summary.length} modification{sessionAdaptation.summary.length > 1 ? 's' : ''}
-</span>
-</span>
-<span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{adaptBannerOpen ? '▾' : '▸'}</span>
-</button>
-{adaptBannerOpen && (
-<ul style={{ listStyle: 'none', margin: '8px 0 0', padding: 0 }}>
-{sessionAdaptation.summary.map((line, i) => (
-<li key={i} style={adaptBannerLine}>· {line}</li>
-))}
-</ul>
-)}
-</div>
-)}
-{lastSessionNote && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
-<div className="glass-card" style={lastNoteBanner}>
-<p style={lastNoteLabel}>Note de la dernière fois</p>
-<p style={lastNoteText}>{lastSessionNote}</p>
-</div>
-)}
-{bodyDiagramEnabled && bodyDiagramVisible && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
-<div className="glass-card" style={bodyDiagramCard}>
-<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-<p style={{ color: 'var(--text-dim)', fontSize: 10, fontWeight: 700, letterSpacing: 1.5 }}>MUSCLES SOLLICITÉS</p>
-<button onClick={() => setBodyDiagramVisible(false)} style={bodyDiagramCloseBtn}><IconClose size={14} /></button>
-</div>
-<BodyDiagram intensity={bodyIntensity} />
-</div>
-)}
-{cardioVisible && completedSets === 0 && currentExIdx === 0 && currentSetIdx === 0 && (
-<div className="glass-card glass-blue" style={cardioCard}>
-<div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: cardioRunning ? 10 : 6 }}>
-<span style={{ display: 'inline-flex' }}><IconActivity size={20} color="#5560cc" /></span>
-<div style={{ flex: 1 }}>
-<p style={{ color: '#5560cc', fontSize: 12, fontWeight: 800, letterSpacing: 0.5 }}>ÉCHAUFFEMENT CARDIO</p>
-<p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>3 minutes avant d'attaquer, pour monter en température.</p>
-</div>
-</div>
-{cardioRunning ? (
-<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-<span style={{ fontSize: 26, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: cardioSeconds === 0 ? '#4CAF50' : '#5560cc', flex: 1, textAlign: 'center' }}>
-{cardioSeconds === 0 ? "C'est bon 💪" : `${Math.floor(cardioSeconds / 60)}:${(cardioSeconds % 60).toString().padStart(2, '0')}`}
-</span>
-<button onClick={() => setCardioVisible(false)} style={cardioBtnPrimary}>
-{cardioSeconds === 0 ? 'Commencer la séance' : 'Passer'}
-</button>
-</div>
-) : (
-<div style={{ display: 'flex', gap: 8 }}>
-<button onClick={() => setCardioRunning(true)} style={cardioBtnPrimary}>▶ Démarrer</button>
-<button onClick={() => setCardioVisible(false)} style={cardioBtnGhost}>Passer</button>
-</div>
-)}
-</div>
-)}
+{sessionBanners}
 {groupedExercises.map((item) => {
 if (Array.isArray(item)) {
 // Groupe superset → encadré rouge foncé
@@ -1096,10 +1199,11 @@ validateSignal={exIdx === currentExIdx ? shakeSignal : undefined}
 })}
 </div>
 </div>
+)}
 </div>
 
 )}
-        {sessionTab === 'exercise' && (
+        {sessionTab === 'exercise' && !isDeck && (
           <StatsPanel startTime={session.startTime} compact={!isWide} />
         )}
         {sessionTab === 'stats' && (
@@ -1141,7 +1245,8 @@ validateSignal={exIdx === currentExIdx ? shakeSignal : undefined}
         {shakeToast && (
           <div className="fade-in" style={shakeToastStyle}>Série validée — secousse détectée</div>
         )}
-        <SessionTabBar
+        {!isDeck && (
+<SessionTabBar
 active={sessionTab}
 onChange={setSessionTab}
 restActive={timerIsRunning}
@@ -1149,6 +1254,7 @@ isPaused={sessionPausedAt !== null}
 onTogglePause={() => (sessionPausedAt !== null ? resumeSession() : pauseSession())}
 onStop={handleAbandon}
 />
+)}
 {stopSheetOpen && (
 <div style={stopOverlay} onClick={() => setStopSheetOpen(false)}>
 <div style={stopSheet} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Arrêter la séance">
