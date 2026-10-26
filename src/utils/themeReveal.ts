@@ -16,10 +16,13 @@ if (typeof window !== 'undefined') {
   window.addEventListener('pointerdown', (e) => { lastTap = { x: e.clientX, y: e.clientY, t: Date.now() }; }, { capture: true, passive: true });
 }
 
-export function revealTheme(apply: () => void): void {
+export function revealTheme(applyTheme: () => void): void {
   const start = (document as unknown as { startViewTransition?: StartViewTransition }).startViewTransition;
   const reduced = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!start || reduced) { apply(); return; }
+  if (!start || reduced) { applyTheme(); return; }
+  // Appliqué une seule fois, que ce soit par le navigateur ou par le filet de sécurité.
+  let applied = false;
+  const apply = () => { if (applied) return; applied = true; applyTheme(); };
 
   // Un changement de thème sans toucher récent (suivi du mode « Système », par
   // exemple) part du centre plutôt que d'un vieux point sans rapport.
@@ -29,11 +32,17 @@ export function revealTheme(apply: () => void): void {
   // Rayon qui atteint le coin le plus éloigné : le cercle couvre tout l'écran à la fin.
   const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
 
-  const transition = start.call(document, apply);
+  // vt-theme : voir index.css, la coupure du fondu par défaut ne vaut QUE pour ce
+  // cas (la navigation entre écrans garde son fondu).
+  document.documentElement.classList.add('vt-theme');
+  const transition = start.call(document, apply) as ViewTransitionLike & { finished?: Promise<void> };
+  transition.finished?.then(() => {}, () => {}).then(() => document.documentElement.classList.remove('vt-theme'));
+  // Même filet que utils/viewTransition.ts : sans image affichée, le thème doit changer quand même.
+  window.setTimeout(() => { apply(); document.documentElement.classList.remove('vt-theme'); }, 1500);
   transition.ready.then(() => {
     document.documentElement.animate(
       { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
       { duration: 650, easing: 'cubic-bezier(0.65, 0, 0.35, 1)', pseudoElement: '::view-transition-new(root)' },
     );
-  }).catch(() => { /* transition annulée (autre changement en cours) : le thème est déjà appliqué */ });
+  }).catch(() => { /* transition annulée (autre changement en cours) : le thème est appliqué quand même */ });
 }

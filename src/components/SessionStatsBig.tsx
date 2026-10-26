@@ -8,6 +8,7 @@ import { computeTonnage, BodyRegionKey } from '../utils/training';
 import { kgToLbs, weightUnitLabel } from '../utils/weight';
 import { WorkoutSession, WorkoutDay, HistoryEntry } from '../data/types';
 import { SessionTimingCard } from './SessionTimingCard';
+import { FlipClock } from './FlipClock';
 
 interface SessionStatsBigProps {
   session: WorkoutSession;
@@ -61,7 +62,7 @@ export const SessionStatsBig: React.FC<SessionStatsBigProps> = ({
 
         <div style={card}>
           <p style={label}>DURÉE</p>
-          <p style={{ ...bigNum, color: '#4CAF50' }}>{chrono}</p>
+          <p style={{ ...bigNum, color: '#4CAF50' }}><FlipClock value={chrono} /></p>
         </div>
 
         <div style={card}>

@@ -39,6 +39,7 @@ import { getAccent, hexToRgbTriplet } from './data/accents';
 import { getProgram } from './data/programs';
 import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 import { revealTheme } from './utils/themeReveal';
+import { transitionTo } from './utils/viewTransition';
 
 type View =
 | 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'historique'
@@ -232,6 +233,7 @@ document.documentElement.setAttribute('data-contrast', highContrast ? 'high' : '
 const handleSelectDay = (dayId: string) => {
 const state = useWorkoutStore.getState();
 const hasResumableSession = state.session && state.session.dayId === dayId && !state.session.isComplete;
+transitionTo(() => {
 setSelectedDayId(dayId);
 if (hasResumableSession) {
 // Séance déjà en cours pour ce jour : on reprend direct, pas besoin
@@ -243,6 +245,7 @@ setView('session');
 // Démarrer.
 setView('intro');
 }
+});
 };
 
 // L'écran d'aperçu peut renvoyer un plan d'adaptation (temps dispo, forme

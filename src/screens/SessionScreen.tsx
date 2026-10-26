@@ -30,6 +30,7 @@ import { computeTonnage, computeTrainingLoad, compareSessionToHistory, getWorkou
 import { SetEntry, Exercise, ExerciseProgress, HistoryEntry } from '../data/types';
 import { InfoTip } from '../components/InfoTip';
 import { RecordMedal } from '../components/RecordMedal';
+import { RollNumber } from '../components/RollNumber';
 
 interface SessionScreenProps { dayId: string; onBack: () => void; onOpenSettings: () => void; }
 
@@ -1317,7 +1318,12 @@ validateSignal={exIdx === currentExIdx ? shakeSignal : undefined}
           />
         )}
         {shakeToast && (
-          <div className="fade-in" style={shakeToastStyle}>Série validée — secousse détectée</div>
+          <>
+            <div className="shake-flash" aria-hidden="true" />
+            <div className="fade-in" style={shakeToastStyle}>
+              <span className="shake-ico" aria-hidden="true"><IconVibrate size={15} /></span> Série validée — secousse détectée
+            </div>
+          </>
         )}
         {!isDeck && (
 <SessionTabBar
@@ -1627,30 +1633,30 @@ className={ultraAnimationsEnabled ? 'ultra-pop-glow' : undefined}
 </div>
 
 <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-<div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
+<div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : 'bilan-in'}>
 <span style={{ display: 'inline-flex' }}><IconClock size={22} color="#4CAF50" /></span>
-<span style={{ color: '#4CAF50', fontSize: 20, fontWeight: 200 }}>{durationMin}<span style={{ fontSize: 11 }}> min</span></span>
+<span style={{ color: '#4CAF50', fontSize: 20, fontWeight: 200 }}><RollNumber value={String(durationMin)} animate delay={200} /><span style={{ fontSize: 11 }}> min</span></span>
 <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>DURÉE</span>
 </div>
-<div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.08s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
+<div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.08s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : 'bilan-in'}>
 <span style={{ display: 'inline-flex' }}><IconFlame size={22} color="#e8a020" /></span>
-<span style={{ color: '#e8a020', fontSize: 20, fontWeight: 200 }}>{cal}<span style={{ fontSize: 11 }}> kcal</span></span>
+<span style={{ color: '#e8a020', fontSize: 20, fontWeight: 200 }}><RollNumber value={String(cal)} animate delay={300} /><span style={{ fontSize: 11 }}> kcal</span></span>
 <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>CALORIES</span>
 </div>
-<div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.16s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
+<div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.16s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : 'bilan-in'}>
 <span style={{ display: 'inline-flex' }}><IconDumbbell size={22} color="#9b27af" /></span>
-<span style={{ color: '#9b27af', fontSize: 20, fontWeight: 200 }}>{totalSets}</span>
+<span style={{ color: '#9b27af', fontSize: 20, fontWeight: 200 }}><RollNumber value={String(totalSets)} animate delay={400} /></span>
 <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>SÉRIES</span>
 </div>
 {totalRestSeconds > 0 && (
-<div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.20s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
+<div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.20s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : 'bilan-in'}>
 <span style={{ display: 'inline-flex' }}><IconMoon size={22} color="#4fa8e0" /></span>
-<span style={{ color: '#4fa8e0', fontSize: 20, fontWeight: 200 }}>{restMin}<span style={{ fontSize: 11 }}> min</span></span>
+<span style={{ color: '#4fa8e0', fontSize: 20, fontWeight: 200 }}><RollNumber value={String(restMin)} animate delay={500} /><span style={{ fontSize: 11 }}> min</span></span>
 <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>REPOS</span>
 </div>
 )}
 {tonnage > 0 && (
-<div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.24s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : undefined}>
+<div style={ultraAnimationsEnabled ? { ...statBlock, animationDelay: '0.24s' } : statBlock} className={ultraAnimationsEnabled ? 'ultra-stat-in' : 'bilan-in'}>
 <span style={{ display: 'inline-flex' }}><IconPlate size={22} color="#5560cc" /></span>
 <span style={{ color: '#5560cc', fontSize: 20, fontWeight: 200 }}>{toDisplayTonnage(tonnage)}<span style={{ fontSize: 11 }}> {weightUnitLabel(weightUnit)}</span></span>
 <span style={{ color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1 }}>TONNAGE</span>

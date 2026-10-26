@@ -14,6 +14,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-26-mouvement-3',
+    title: 'Séance plus vivante',
+    items: [
+      'Le titre de la séance glisse de l’accueil vers l’écran d’aperçu quand tu la touches.',
+      'Le chrono de la séance se retourne comme un tableau de gare, et le bilan de fin de séance se pose chiffre après chiffre.',
+      'Quand tu valides par secousse, le bord de l’écran s’éclaire et le téléphone vibre à l’écran. Un exercice terminé se tasse d’un cran, le questionnaire de départ et la jauge de charge bougent aussi.',
+    ],
+  },
+  {
     id: '2026-10-26-mouvement-2',
     title: 'Encore plus de vie',
     items: [

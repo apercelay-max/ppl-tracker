@@ -1601,9 +1601,9 @@ button[data-switch][data-on="true"]:active > span { transform: translateX(10px);
 /* ─── Changement de thème en cercle (utils/themeReveal.ts) ───────────────── */
 /* Le navigateur fond par défaut l'ancien écran vers le nouveau : on coupe ça,
    c'est le cercle animé en JS qui révèle le nouveau thème par-dessus l'ancien. */
-::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
-::view-transition-old(root) { z-index: 1; }
-::view-transition-new(root) { z-index: 2; }
+html.vt-theme::view-transition-old(root), html.vt-theme::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+html.vt-theme::view-transition-old(root) { z-index: 1; }
+html.vt-theme::view-transition-new(root) { z-index: 2; }
 
 /* ─── Objectif de la semaine atteint (GoalNumber) ────────────────────────── */
 @keyframes goalPop { 0% { transform: scale(1); } 40% { transform: scale(1.38); } 100% { transform: scale(1); } }
@@ -1726,3 +1726,40 @@ button[data-switch][data-on="true"]:active > span { transform: translateX(10px);
 @keyframes gaugeFill { from { transform: scaleX(0); } 60% { transform: scaleX(1.04); } to { transform: scaleX(1); } }
 .gauge-fill { transform-origin: left; animation: gaugeFill 1s var(--m-spring, ease-out) 0.2s both; }
 @media (prefers-reduced-motion: reduce) { .quiz-opt[data-active="true"] .quiz-mark, .gauge-fill { animation: none; } }
+
+/* ─── Titre de la séance qui voyage de l'accueil à l'écran d'aperçu ───────── */
+/* Même view-transition-name sur les deux écrans : le navigateur déplace et agrandit
+   le titre de l'un à l'autre (voir utils/viewTransition.ts). */
+.home-hero-title { view-transition-name: day-title; }
+::view-transition-group(day-title) { animation-duration: 0.5s; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* ─── Chrono à palettes (FlipClock) ──────────────────────────────────────── */
+@keyframes fdTop { from { transform: rotateX(0deg); } to { transform: rotateX(-90deg); } }
+@keyframes fdBottom { from { transform: rotateX(90deg); } to { transform: rotateX(0deg); } }
+.fclock { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; vertical-align: middle; }
+.fclock-sep { font-size: 30px; font-weight: 500; opacity: 0.7; line-height: 1; }
+.fd { position: relative; display: inline-block; width: 26px; height: 40px; perspective: 200px; font-size: 30px; font-weight: 600; color: inherit; }
+.fd-h { position: absolute; left: 0; right: 0; height: 50%; overflow: hidden; background: var(--bg-elevated); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.fd-t { top: 0; border-radius: 6px 6px 0 0; border-bottom: 1px solid var(--bg-card); transform-origin: bottom; }
+.fd-b { bottom: 0; border-radius: 0 0 6px 6px; border-top: 1px solid var(--bg-card); transform-origin: top; }
+.fd-h i { position: absolute; left: 0; right: 0; height: 200%; line-height: 40px; text-align: center; font-style: normal; }
+.fd-t i { top: 0; } .fd-b i { bottom: 0; }
+.fd-f1 { z-index: 2; animation: fdTop 0.2s ease-in both; }
+.fd-f2 { z-index: 2; animation: fdBottom 0.2s ease-out 0.2s both; }
+@media (prefers-reduced-motion: reduce) { .fd-f1, .fd-f2 { animation: none; } .fd-f1 { display: none; } }
+
+/* ─── Secousse qui valide : flash du bord de l'écran et téléphone qui vibre ─ */
+@keyframes shakeFlash { 0% { box-shadow: inset 0 0 0 0 rgba(224, 48, 48, 0); } 30% { box-shadow: inset 0 0 70px 8px rgba(224, 48, 48, 0.5); } 100% { box-shadow: inset 0 0 0 0 rgba(224, 48, 48, 0); } }
+@keyframes shakeIco { 0%, 100% { transform: rotate(0deg); } 20% { transform: rotate(-16deg); } 40% { transform: rotate(14deg); } 60% { transform: rotate(-10deg); } 80% { transform: rotate(6deg); } }
+.shake-flash { position: fixed; inset: 0; z-index: 59; pointer-events: none; animation: shakeFlash 0.8s ease-out both; }
+.shake-ico { display: inline-block; animation: shakeIco 0.7s ease-in-out both; }
+@media (prefers-reduced-motion: reduce) { .shake-flash, .shake-ico { animation: none; } .shake-flash { display: none; } }
+
+/* ─── Bilan de fin de séance et fin d'exercice ───────────────────────────── */
+@keyframes bilanIn { 0% { opacity: 0; transform: translateY(-40px) rotateX(-60deg) scale(0.92); } 65% { opacity: 1; transform: translateY(3px) rotateX(6deg); } 100% { opacity: 1; transform: translateY(0) rotateX(0deg); } }
+.bilan-in { transform-origin: top; animation: bilanIn 0.65s var(--m-spring, ease-out) both; }
+.bilan-in:nth-child(2) { animation-delay: 0.1s; } .bilan-in:nth-child(3) { animation-delay: 0.2s; } .bilan-in:nth-child(4) { animation-delay: 0.3s; } .bilan-in:nth-child(5) { animation-delay: 0.4s; }
+/* Un exercice terminé se tasse d'un cran, comme un poids qu'on repose. */
+@keyframes cardSettle { 0% { transform: scale(1); } 35% { transform: scale(0.975); } 100% { transform: scale(1); } }
+.exercise-card.is-done, .sv2-card.is-done { animation: cardSettle 0.5s var(--m-spring, ease-out); }
+@media (prefers-reduced-motion: reduce) { .bilan-in, .exercise-card.is-done, .sv2-card.is-done { animation: none; } }
