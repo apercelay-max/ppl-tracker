@@ -1338,3 +1338,88 @@ button { cursor: pointer; }
 .ui-sport .deck-sheet-close { border-radius: 8px; }
 .deck-banners { max-width: 720px; width: 100%; margin: 0 auto; padding: 8px 16px 0; max-height: 45vh; overflow-y: auto; flex: none; }
 .deck-banners:empty { display: none; }
+
+
+/* ─── Anneaux de la semaine (ProgressRings) ──────────────────────────────── */
+/* Même dessin pour les 4 styles : seuls l'épaisseur, le bout des traits, les
+   couleurs, le halo et la COURBE DE MOUVEMENT changent, via .pr--<style>.
+   Les durées (--pr-dur, --pr-stagger) sont posées par le composant, parce que
+   les compteurs de chiffres doivent finir en même temps que les arcs.
+   Les --h-* n'existent pas dans l'accueil Classique, d'où les valeurs de secours. */
+.pr {
+  --pr-w: 11; --pr-cap: round; --pr-glow: none;
+  --pr-ease: cubic-bezier(0.34, 1.45, 0.5, 1);
+  display: flex; align-items: center; gap: 22px; padding: 18px 20px; margin-bottom: 16px;
+  cursor: pointer; user-select: none; -webkit-user-select: none;
+  transition: transform 0.25s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+.pr:active { transform: scale(0.985); }
+.pr:focus-visible { outline: 2px solid var(--brand-1); outline-offset: 3px; }
+.pr-svg { width: 124px; height: 124px; flex: none; overflow: visible; }
+.pr-ring { transform-origin: 70px 70px; transform-box: view-box; }
+.pr-track { stroke: var(--h-off, var(--border-subtle)); stroke-width: var(--pr-w); }
+.pr-seances { --pr-c: var(--brand-1); }
+.pr-repos { --pr-c: var(--brand-2); }
+.pr-charge { --pr-c: var(--h-good, #4caf50); }
+.pr-arc {
+  stroke: var(--pr-c); stroke-width: var(--pr-w); stroke-linecap: var(--pr-cap); filter: var(--pr-glow);
+  transition: stroke-dasharray var(--pr-dur) var(--pr-ease) calc(var(--i) * var(--pr-stagger));
+}
+/* Point lumineux au bout de l'arc : même durée, même courbe, donc il reste collé au trait. */
+.pr-head { transform-origin: 70px 70px; transform-box: view-box; transform: rotate(var(--a, 0deg)); transition: transform var(--pr-dur) var(--pr-ease) calc(var(--i) * var(--pr-stagger)); }
+.pr-head circle { fill: #fff; filter: drop-shadow(0 0 3px var(--pr-c)); }
+
+.pr-legend { list-style: none; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.pr-legend li { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 10px; font-size: 13px; color: var(--h-text2, var(--text-secondary)); }
+.pr-legend i { width: 10px; height: 10px; border-radius: 50%; background: var(--pr-c); }
+.pr-legend b { font-size: 17px; font-weight: 700; color: var(--h-text, var(--text-primary)); font-variant-numeric: tabular-nums; }
+
+/* Anneau complet : l'arc s'illumine et se gonfle un instant dès qu'il se ferme. */
+@keyframes pr-flash {
+  0% { filter: drop-shadow(0 0 0 transparent); }
+  35% { filter: drop-shadow(0 0 10px var(--pr-c)); }
+  100% { filter: var(--pr-glow); }
+}
+@keyframes pr-pop { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.04); } }
+@keyframes pr-dot { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.7); } }
+@keyframes pr-breathe {
+  from { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--pr-c) 45%, transparent)); }
+  to { filter: drop-shadow(0 0 9px color-mix(in srgb, var(--pr-c) 90%, transparent)); }
+}
+.pr-ring.is-full { --pr-fin: calc(var(--i) * var(--pr-stagger) + var(--pr-dur) * 0.85); }
+.pr-ring.is-full .pr-arc { animation: pr-flash 0.9s ease-out var(--pr-fin) backwards; }
+.pr-ring.is-full { animation: pr-pop 0.55s cubic-bezier(0.3, 1.4, 0.5, 1) var(--pr-fin) backwards; }
+.pr-legend li.is-full i { animation: pr-dot 0.55s cubic-bezier(0.3, 1.4, 0.5, 1) calc(var(--i) * var(--pr-stagger) + var(--pr-dur) * 0.85) backwards; }
+
+/* Classique : verre, halo de couleur qui respire une fois les arcs en place. */
+.pr--classique { --pr-ease: cubic-bezier(0.22, 1, 0.36, 1); --pr-glow: drop-shadow(0 0 5px color-mix(in srgb, var(--pr-c) 70%, transparent)); }
+.pr--classique .pr-arc { animation: pr-breathe 4.5s ease-in-out calc(var(--pr-dur) + 300ms) infinite alternate backwards; }
+.pr--classique .pr-ring.is-full .pr-arc {
+  animation: pr-flash 0.9s ease-out var(--pr-fin) backwards, pr-breathe 4.5s ease-in-out calc(var(--pr-dur) + 1200ms) infinite alternate backwards;
+}
+.pr--classique .pr-legend i { box-shadow: 0 0 8px var(--pr-c); }
+
+/* Sport pro : traits fins, bouts carrés, mouvement sec et mécanique, sans rebond. */
+.pr--sport { --pr-w: 6; --pr-cap: butt; --pr-ease: cubic-bezier(0.4, 0, 0.1, 1); padding: 16px; gap: 18px; }
+.pr--sport .pr-head { display: none; }
+.pr--sport .pr-ring.is-full { animation: none; }
+.pr--sport .pr-legend li { font-family: var(--sp-mono, ui-monospace, monospace); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--h-muted); }
+.pr--sport .pr-legend b { font-family: var(--h-cond); font-size: 22px; letter-spacing: -0.01em; }
+.pr--sport .pr-legend i { border-radius: 2px; width: 10px; height: 4px; }
+
+/* Épuré : noir et blanc, sans cadre (le style retire déjà la carte), lent et calme. */
+.pr--epure { --pr-w: 4; --pr-ease: cubic-bezier(0.16, 1, 0.3, 1); padding: 8px 0 22px; }
+.pr--epure .pr-seances { --pr-c: var(--h-text); }
+.pr--epure .pr-repos { --pr-c: var(--h-muted); }
+.pr--epure .pr-charge { --pr-c: var(--h-off); }
+.pr--epure .pr-charge .pr-arc { stroke: var(--h-text2); opacity: 0.55; }
+.pr--epure .pr-head circle { fill: var(--h-text); filter: none; }
+.pr--epure .pr-ring.is-full, .pr--epure .pr-ring.is-full .pr-arc, .pr--epure .pr-legend li.is-full i { animation: none; }
+.pr--epure .pr-legend li { font-size: 14px; }
+.pr--epure .pr-legend b { font-weight: 500; }
+.pr--epure .pr-legend i { width: 6px; height: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pr, .pr-arc, .pr-head { transition: none; }
+  .pr-ring, .pr-ring .pr-arc, .pr-legend i, .pr--classique .pr-arc { animation: none !important; }
+}

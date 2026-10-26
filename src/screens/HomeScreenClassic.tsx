@@ -20,6 +20,7 @@ import type { CoachTone } from '../utils/coach';
 import type { CardioActivityType } from '../data/types';
 import { refreshBinome, useBinome } from '../hooks/useBinome';
 import { markNudgesSeen, sendNudge } from '../lib/binome';
+import { ProgressRings } from '../components/ProgressRings';
 import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconGauge, IconLightbulb, IconMoon, IconPMark, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
@@ -967,6 +968,8 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
             </div>
           </div>
         </div>
+
+        {history.length > 0 && <ProgressRings history={history} cardioHistory={cardioHistory} weeklySessionGoal={weeklySessionGoal} variant="classique" />}
 
         {/* Récupération musculaire — même règle que les blocs promus : elle
             reste consultable sous « Tout voir », et ne s'invite dans la partie
