@@ -25,6 +25,7 @@ import { isVoiceSupported, primeVoice, speak, stopVoice } from '../utils/voiceCo
 import { IconActivity, IconArrowRight, IconBarChart, IconBook, IconBounce, IconCalendar, IconCheck, IconClose, IconDownload, IconDumbbell, IconFireworks, IconHome, IconMonitor, IconMoon, IconPalette, IconPartyPopper, IconRefreshCw, IconRotateCcw, IconSave, IconScale, IconSearch, IconSparkles, IconSun, IconTable, IconTarget, IconUpload, IconUser } from '../components/Icons';
 import { useScreenClass } from '../hooks/useScreenClass';
 import { LiquidPill } from '../components/LiquidPill';
+import { SyncStatusIcon } from '../components/SyncStatusIcon';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -1813,7 +1814,8 @@ enregistrées sur cet appareil : pense à faire une sauvegarde depuis « Donnée
 <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
 {user.email}
 </p>
-<p style={{ color: SYNC_STATUS_META[syncStatus ?? 'idle'].color, fontSize: 11, marginTop: 2 }}>
+<p style={{ color: SYNC_STATUS_META[syncStatus ?? 'idle'].color, fontSize: 11, marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+<SyncStatusIcon status={syncStatus ?? 'idle'} />
 {syncStatus && syncStatus !== 'idle'
 ? SYNC_STATUS_META[syncStatus].label
 : 'Connecté.'}

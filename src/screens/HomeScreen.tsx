@@ -21,6 +21,7 @@ import { refreshBinome, useBinome } from '../hooks/useBinome';
 import { markNudgesSeen, sendNudge } from '../lib/binome';
 import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconGauge, IconLightbulb, IconMoon, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
 import { useFlip } from '../hooks/useFlip';
+import { GoalNumber } from '../components/GoalNumber';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -642,7 +643,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
       <div className="glass-card home-card" style={homeSectionColors.weeklyGoal ? { borderColor: goalColor } : undefined}>
         <span className="home-eyebrow">Semaine</span>
         <div className="home-big">
-          <b style={{ color: goalReached ? 'var(--h-good)' : 'var(--h-text)' }}>{sessionsThisWeek}</b>
+          <GoalNumber value={sessionsThisWeek} reached={goalReached} style={{ color: goalReached ? 'var(--h-good)' : 'var(--h-text)' }} />
           <i>/ {weeklySessionGoal} séances</i>
         </div>
         <div className="home-days" style={homeSectionColors.weeklyGoal ? { ['--brand-1' as string]: homeSectionColors.weeklyGoal } : undefined}>

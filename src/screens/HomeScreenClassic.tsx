@@ -21,6 +21,7 @@ import type { CardioActivityType } from '../data/types';
 import { refreshBinome, useBinome } from '../hooks/useBinome';
 import { markNudgesSeen, sendNudge } from '../lib/binome';
 import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconGauge, IconLightbulb, IconMoon, IconPMark, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
+import { GoalNumber } from '../components/GoalNumber';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -613,7 +614,7 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
         </svg>
         <div>
           <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 800 }}>
-            {sessionsThisWeek} / {weeklySessionGoal} <span style={{ fontWeight: 500, color: 'var(--text-muted)', fontSize: 12 }}>séances cette semaine</span>
+            <GoalNumber value={sessionsThisWeek} reached={goalReached} style={{ fontWeight: 800 }} /> / {weeklySessionGoal} <span style={{ fontWeight: 500, color: 'var(--text-muted)', fontSize: 12 }}>séances cette semaine</span>
           </p>
           <p style={{ color: goalReached ? '#4CAF50' : 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>
             {goalReached ? 'Objectif atteint 💪' : `Encore ${weeklySessionGoal - sessionsThisWeek} pour l'objectif`}

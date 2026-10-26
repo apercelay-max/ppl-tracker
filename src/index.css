@@ -1600,3 +1600,30 @@ button[data-switch][data-on="true"]:active > span { transform: translateX(10px);
 ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 ::view-transition-old(root) { z-index: 1; }
 ::view-transition-new(root) { z-index: 2; }
+
+/* ─── Objectif de la semaine atteint (GoalNumber) ────────────────────────── */
+@keyframes goalPop { 0% { transform: scale(1); } 40% { transform: scale(1.38); } 100% { transform: scale(1); } }
+@keyframes goalRip { 0% { opacity: 0.7; transform: scale(0.4); } 100% { opacity: 0; transform: scale(2.8); } }
+.goal-pop { display: inline-block; animation: goalPop 650ms var(--m-spring, ease-out) 200ms both; }
+/* Trois anneaux vert décalés qui partent du chiffre, comme une onde de choc. */
+.goal-rip { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+.goal-rip i { position: absolute; left: -24px; top: -24px; width: 48px; height: 48px; border-radius: 50%; border: 2.5px solid var(--h-good, #4caf50); opacity: 0; animation: goalRip 1.1s cubic-bezier(0.2, 0.7, 0.3, 1) 250ms both; }
+.goal-rip i:nth-child(2) { animation-delay: 420ms; }
+.goal-rip i:nth-child(3) { animation-delay: 590ms; }
+
+/* ─── Icône d'état de la synchro (SyncStatusIcon) ────────────────────────── */
+/* pathLength={100} : un seul dasharray pour tous les tracés, quelle que soit leur longueur. */
+@keyframes syMarch { to { stroke-dashoffset: -100; } }
+@keyframes syBob { 0%, 100% { transform: translateY(1.5px); opacity: 0.35; } 50% { transform: translateY(-1.5px); opacity: 1; } }
+@keyframes syShake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-2px); } 40% { transform: translateX(2px); } 60% { transform: translateX(-1.5px); } 80% { transform: translateX(1px); } }
+@keyframes syDraw { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+.sy { flex: none; }
+.sy-run .sy-cloud { stroke-dasharray: 30 70; animation: syMarch 1s linear infinite; }
+.sy-run .sy-arrow { animation: syBob 0.8s ease-in-out infinite; }
+.sy-err { animation: syShake 0.5s ease-out 1; }
+.sy-draw .sy-ring { animation: syDraw 0.42s var(--m-out, ease-out) both; }
+.sy-draw .sy-check { animation: syDraw 0.3s var(--m-out, ease-out) 0.3s both; }
+@media (prefers-reduced-motion: reduce) {
+  .goal-pop, .goal-rip i, .sy-run .sy-cloud, .sy-run .sy-arrow, .sy-err, .sy-draw .sy-ring, .sy-draw .sy-check { animation: none; }
+  .sy-run .sy-cloud { stroke-dasharray: none; }
+}
