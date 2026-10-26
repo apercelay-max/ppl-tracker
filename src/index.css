@@ -1581,3 +1581,15 @@ button[data-switch][data-on="true"]:active > span { transform: translateX(10px);
 .lp > button { position: relative; z-index: 1; }
 .lp > button[aria-pressed="true"] { background: transparent !important; box-shadow: none !important; }
 @media (prefers-reduced-motion: reduce) { button[data-switch] > span { transition: none; } }
+
+/* ─── Schéma du corps : les muscles se remplissent de bas en haut ────────── */
+/* clip-path: inset() sur un élément SVG se mesure sur la forme elle-même : la
+   couche colorée est dévoilée du bas vers le haut, muscle après muscle (--bd-delay). */
+@keyframes bdRise { to { clip-path: inset(0 0 0 0); } }
+@keyframes bdUncover { to { fill-opacity: 0; } }
+.bd-fill { clip-path: inset(100% 0 0 0); animation: bdRise 900ms var(--m-out, ease-out) var(--bd-delay, 0ms) forwards; }
+.bd-covered { animation: bdUncover 240ms linear calc(var(--bd-delay, 0ms) + 900ms) forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .bd-fill { animation: none; clip-path: none; }
+  .bd-covered { animation: none; fill-opacity: 0; }
+}
