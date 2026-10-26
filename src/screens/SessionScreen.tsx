@@ -1084,7 +1084,8 @@ return <div key={ex.id} style={{ flex: n }}><i style={{ width: `${Math.min(100, 
 })}
 </div>
 </div>
-{isSport && (
+{/* Vue iPad : durée et tonnage sont déjà sous la carte « précédent » (SessionDeck). */}
+{isSport && !isDeck && (
 <SportLiveStats startTime={session.startTime} pausedAt={sessionPausedAt} exerciseProgress={session.exerciseProgress} dayId={session.dayId} history={history} />
 )}
 </div>
