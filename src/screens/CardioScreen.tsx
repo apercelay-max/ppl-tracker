@@ -5,6 +5,7 @@ import { GlassIcon } from '../components/GlassIcon';
 import { useWorkoutStore, CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import type { CardioActivityType, CardioStats } from '../data/types';
 import { useScreenClass } from '../hooks/useScreenClass';
+import { removeRow } from '../utils/removeRow';
 
 interface CardioScreenProps { onBack: () => void; onStartActivity?: (mode: CardioActivityType) => void; }
 
@@ -158,7 +159,7 @@ const screenClass = useScreenClass();
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {cardioHistory.map((entry) => (
-              <div key={entry.id} style={{ ...row, flexWrap: 'wrap' }}>
+              <div key={entry.id} data-row style={{ ...row, flexWrap: 'wrap' }}>
                 <span style={{ display: 'inline-flex', color: 'var(--text-muted)' }}><DataIcon name={CARDIO_TYPE_LABELS[entry.type].icon} size={18} /></span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700 }}>{CARDIO_TYPE_LABELS[entry.type].label}</p>
@@ -166,7 +167,7 @@ const screenClass = useScreenClass();
                     {formatCardioDate(entry.date)} · {entry.durationMin} min · {entry.calories} kcal{entry.rpe ? ` · RPE ${entry.rpe}` : ''}
                   </p>
                 </div>
-                <button onClick={() => deleteCardioEntry(entry.id)} style={deleteBtn} aria-label="Supprimer"><IconClose size={13} /></button>
+                <button onClick={(e) => removeRow(e.currentTarget, '[data-row]', () => deleteCardioEntry(entry.id))} style={deleteBtn} aria-label="Supprimer"><IconClose size={13} /></button>
 
                 {/* Ce que les capteurs ont mesuré. Jusqu'ici c'était enregistré
                     mais affiché nulle part. Chaque tuile n'apparaît que si la

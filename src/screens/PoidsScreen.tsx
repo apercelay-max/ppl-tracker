@@ -5,6 +5,8 @@ import { useWorkoutStore } from '../store/workoutStore';
 import { MiniLineChart } from '../components/MiniLineChart';
 import { MassUnit } from '../data/types';
 import { useScreenClass } from '../hooks/useScreenClass';
+import { removeRow } from '../utils/removeRow';
+import { WeightGauge } from '../components/WeightGauge';
 
 interface PoidsScreenProps { onBack: () => void; }
 
@@ -74,6 +76,13 @@ const screenClass = useScreenClass();
   // autres historiques de l'appli) — on inverse pour le graphique.
   const chartPoints = [...bodyWeightHistory].reverse().map((e) => ({ date: e.date, value: e.weightKg }));
   const last = bodyWeightHistory[0];
+  // Bornes du cadran : la plage des pesées avec un quart de marge de chaque côté.
+  const allWeights = bodyWeightHistory.map((e) => e.weightKg);
+  const lowest = allWeights.length ? Math.min(...allWeights) : 0;
+  const highest = allWeights.length ? Math.max(...allWeights) : 0;
+  const margin = Math.max(6, highest - lowest) * 0.25;
+  const gaugeMin = Math.floor(lowest - margin);
+  const gaugeMax = Math.ceil(highest + margin);
 
   return (
     <div className={screenClass} style={container}>
@@ -130,6 +139,7 @@ const screenClass = useScreenClass();
 
           {last && (
             <div style={{ marginTop: 12 }}>
+              <WeightGauge key={last.id} weight={last.weightKg} min={gaugeMin} max={gaugeMax} />
               <p style={{ color: 'var(--text-dim)', fontSize: 11 }}>
                 Dernière pesée : <strong style={{ color: 'var(--text-secondary)' }}>{last.weightKg} kg</strong> ({formatDate(last.date)})
               </p>
@@ -163,7 +173,7 @@ const screenClass = useScreenClass();
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {bodyWeightHistory.map((entry) => (
-              <div key={entry.id} style={row}>
+              <div key={entry.id} data-row style={row}>
                 <div style={{ flex: 1 }}>
                   <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 700 }}>{entry.weightKg} kg</p>
                   {(entry.bodyFat || entry.muscleMass) && (
@@ -175,7 +185,7 @@ const screenClass = useScreenClass();
                   )}
                   <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>{formatDate(entry.date)}</p>
                 </div>
-                <button onClick={() => deleteBodyWeightEntry(entry.id)} style={deleteBtn}><IconClose size={14} /></button>
+                <button onClick={(e) => removeRow(e.currentTarget, '[data-row]', () => deleteBodyWeightEntry(entry.id))} style={deleteBtn} aria-label="Supprimer cette pesée"><IconClose size={14} /></button>
               </div>
             ))}
           </div>

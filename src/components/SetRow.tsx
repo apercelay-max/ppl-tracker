@@ -6,6 +6,8 @@ import { SetEntry } from '../data/types';
 import { useWorkoutStore, useActiveGym } from '../store/workoutStore';
 import { formatWeightForDisplay, parseWeightInputToKg, weightUnitLabel, cleanWeightInput, cleanRepsInput, isValidSetInput } from '../utils/weight';
 import { solvePlates, nearestAchievable, describePlates, formatKg } from '../utils/plates';
+import type { PlatePair } from '../utils/plates';
+import { PlatesViz } from './PlatesViz';
 import type { CoachTip } from '../utils/coach';
 
 interface SetRowProps {
@@ -179,11 +181,14 @@ export const SetRow: React.FC<SetRowProps> = ({
   const gym = useActiveGym();
   const plateHelperEnabled = useWorkoutStore((s) => s.plateHelperEnabled);
   let plateHint: { text: string; warn: boolean } | null = null;
+  // Disques d'un côté, pour le dessin de la barre (seulement quand la charge est faisable).
+  let platePerSide: PlatePair[] | null = null;
   if (barKg && plateHelperEnabled && isCurrent && !entry.completed) {
     const kg = parseFloat(parseWeightInputToKg(weight, weightUnit));
     if (!isNaN(kg) && kg >= barKg) {
       const solved = solvePlates(kg, barKg, gym.plates);
       if (solved && solved.exact) {
+        platePerSide = solved.perSide;
         plateHint = {
           text: solved.perSide.length === 0
             ? `Barre à vide (${formatKg(barKg)} kg)`
@@ -360,6 +365,7 @@ export const SetRow: React.FC<SetRowProps> = ({
             {plateHint.warn ? '⚠ ' : '⚖ '}{plateHint.text}
           </p>
         )}
+        {platePerSide && platePerSide.length > 0 && <PlatesViz key={platePerSide.map((p) => `${p.count}x${p.plate}`).join('+')} perSide={platePerSide} />}
         {(lastTimeHint || liveDeltaBadge) && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             {lastTimeHint && <p style={{ fontSize: 12, color: 'var(--h-muted)' }}>{lastTimeHint}</p>}

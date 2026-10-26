@@ -18,6 +18,7 @@ import {
 } from '../utils/coachAi';
 import type { CachedBrief, ChatNewProgram, ChatProposal, ChatState } from '../utils/coachAi';
 import { useScreenClass } from '../hooks/useScreenClass';
+import { WordReveal } from '../components/WordReveal';
 
 interface CoachScreenProps { onBack: () => void; }
 
@@ -70,6 +71,9 @@ const screenClass = useScreenClass();
   const [question, setQuestion] = useState('');
   const [chat, setChat] = useState<ChatState>(readChat);
   const [asking, setAsking] = useState(false);
+  // Nombre de messages déjà là à l'ouverture : seules les réponses ARRIVÉES ensuite
+  // s'écrivent mot à mot, l'historique s'affiche d'un bloc.
+  const initialMessageCount = useRef(chat.messages.length);
   // Dernier état de la conversation. Les gestionnaires lisent celui-ci plutôt que
   // `chat` : pendant l'attente d'une réponse, le `chat` capturé au clic serait
   // périmé et la réponse écraserait une proposition traitée entre-temps (qui
@@ -444,7 +448,9 @@ const screenClass = useScreenClass();
               {chat.messages.map((message, i) => (
                 <React.Fragment key={i}>
                   <div style={message.role === 'moi' ? bubbleMineWrap : bubbleCoachWrap}>
-                    <div style={message.role === 'moi' ? bubbleMine : bubbleCoach}>{message.text}</div>
+                    <div style={message.role === 'moi' ? bubbleMine : bubbleCoach}>
+                      {message.role === 'moi' ? message.text : <WordReveal text={message.text} animate={i >= initialMessageCount.current} />}
+                    </div>
                   </div>
 
                   {message.nouveauProgramme && (
@@ -578,7 +584,9 @@ const screenClass = useScreenClass();
               ))}
               {asking && (
                 <div style={bubbleCoachWrap}>
-                  <div style={{ ...bubbleCoach, color: 'var(--text-dim)' }}>Le coach réfléchit…</div>
+                  <div style={{ ...bubbleCoach, color: 'var(--text-dim)' }} role="status" aria-label="Le coach réfléchit">
+                    <span className="think-dots" aria-hidden="true"><i /><i /><i /></span>
+                  </div>
                 </div>
               )}
               <div ref={chatEndRef} />

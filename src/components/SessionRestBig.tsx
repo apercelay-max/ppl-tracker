@@ -21,13 +21,15 @@ export const SessionRestBig: React.FC<SessionRestBigProps> = ({
   const usesBrand = !finished && progress > 0.5;
   const accentColor = finished ? '#4CAF50' : usesBrand ? 'var(--brand-1)' : progress > 0.25 ? '#FF9800' : '#e03030';
   const fillPct = Math.max(0, Math.min(100, progress * 100));
+  // Même pulsation finale que InlineRestBar : 3 dernières secondes, puis « GO ».
+  const final = !finished && !isPaused && secondsLeft > 0 && secondsLeft <= 3;
 
   return (
     <div style={scrollArea}>
       <div style={inner}>
         <p style={screenTitle}>REPOS EN COURS</p>
         <div style={{ ...timeCard, borderColor: accentColor + '55' }}>
-          <p style={{ ...bigTime, color: accentColor }}>{finished ? '0:00' : formattedTime}</p>
+          <p key={final ? `f${secondsLeft}` : finished ? 'go' : 'run'} className={final ? 'rest-final' : finished ? 'rest-go' : undefined} style={{ ...bigTime, color: accentColor }}>{finished ? '0:00' : formattedTime}</p>
           <p style={nextLabelStyle}>{isPaused ? 'En pause' : finished ? 'On repart !' : (nextLabel ?? 'Repos')}</p>
           <div style={track}>
             <div style={{ ...fillBar, width: fillPct + '%', background: accentColor }} />

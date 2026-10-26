@@ -63,7 +63,8 @@ const WeeklyBarChart: React.FC<{
           return (
             <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
               <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', width: '100%' }}>
-                <div style={{
+                <div className="bar-rise" style={{
+                  ['--k' as string]: i,
                   width: '100%', height: h, borderRadius: 4,
                   background: v > 0 ? color : 'var(--bg-elevated)',
                   opacity: isCurrent ? 1 : 0.75,

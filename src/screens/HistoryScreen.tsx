@@ -78,16 +78,20 @@ const MonthCalendar: React.FC<{ history: HistoryEntry[] }> = ({ history }) => {
           <span key={i} style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: 9, fontWeight: 700 }}>{d}</span>
         ))}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+      <div key={monthOffset} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
         {Array.from({ length: startOffset }, (_, i) => <div key={`empty-${i}`} />)}
         {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
           const sessions = sessionsByDay[day];
           const isToday = monthOffset === 0 && day === now.getDate();
           const accent = sessions ? getDayMeta(sessions[0].dayId, customPrograms).accent : undefined;
+          // Rang dans la vague : les jours s'allument en diagonale (colonne + ligne).
+          const slot = startOffset + day - 1;
           return (
             <div
               key={day}
+              className={`cal-day${isToday ? ' cal-today' : ''}`}
               style={{
+                ['--w' as string]: (slot % 7) + Math.floor(slot / 7),
                 aspectRatio: '1', borderRadius: 8,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: accent ? `${accent}25` : 'var(--bg-elevated)',

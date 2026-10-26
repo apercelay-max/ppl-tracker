@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { IconClose, IconDumbbell, IconHeart, IconSearch } from './Icons';
 import { createPortal } from 'react-dom';
 import { useWorkoutStore } from '../store/workoutStore';
@@ -12,6 +12,7 @@ import {
 // utils/catalogMatch.ts (code pur, utilisable hors React) ; on le re-exporte
 // ici pour ne pas casser les imports existants (ProgrammesPanel notamment).
 import { normalize, findCatalogExercise } from '../utils/catalogMatch';
+import { useFlip } from '../hooks/useFlip';
 export { findCatalogExercise };
 
 /**
@@ -86,13 +87,18 @@ export const ExerciseCatalog: React.FC = () => {
     (group ? 1 : 0) + (equipment ? 1 : 0) + (type !== 'Tous' ? 1 : 0) +
     (level !== 'Tous' ? 1 : 0) + (essentialsOnly ? 1 : 0) + (favsOnly ? 1 : 0);
 
+  // Quand la recherche ou un filtre change, les exercices restants glissent à leur
+  // nouvelle place au lieu de sauter (voir hooks/useFlip.ts).
+  const listRef = useRef<HTMLDivElement>(null);
+  useFlip(listRef, results.map((r) => r.id).join(','));
+
   const resetFilters = () => {
     setGroup(null); setEquipment(null); setType('Tous');
     setLevel('Tous'); setEssentialsOnly(false); setFavsOnly(false);
   };
 
   return (
-    <div>
+    <div ref={listRef}>
       <div style={searchWrap}>
         <span style={{ display: 'inline-flex', opacity: 0.7 }}><IconSearch size={14} /></span>
         <input
@@ -173,13 +179,14 @@ export const ExerciseCatalog: React.FC = () => {
           <p style={sectionLabel}>{g} · {items.length}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {items.map((ex) => (
-              <ExerciseRow
-                key={ex.id}
-                ex={ex}
-                isFav={favs.includes(ex.id)}
-                onToggleFav={() => toggleFav(ex.id)}
-                onOpen={() => setOpenEx(ex)}
-              />
+              <div key={ex.id} data-flip={ex.id}>
+                <ExerciseRow
+                  ex={ex}
+                  isFav={favs.includes(ex.id)}
+                  onToggleFav={() => toggleFav(ex.id)}
+                  onOpen={() => setOpenEx(ex)}
+                />
+              </div>
             ))}
           </div>
         </div>

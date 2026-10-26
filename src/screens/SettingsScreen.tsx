@@ -1807,7 +1807,11 @@ La synchronisation entre appareils n'est pas disponible pour le moment. Tes donn
 enregistrées sur cet appareil : pense à faire une sauvegarde depuis « Données ».
 </p>
 ) : authLoading ? (
-<p style={{ color: 'var(--text-dim)', fontSize: 12 }}>Vérification de la session...</p>
+<div role="status" aria-label="Vérification de la session">
+<p style={{ color: 'var(--text-dim)', fontSize: 12, marginBottom: 8 }}>Vérification de la session...</p>
+<div className="skeleton" style={{ width: '70%', height: 12 }} />
+<div className="skeleton" style={{ width: '45%', height: 12, marginTop: 8 }} />
+</div>
 ) : user ? (
 <div style={{ ...toggleRow, marginBottom: 0 }}>
 <div style={{ flex: 1, minWidth: 0 }}>

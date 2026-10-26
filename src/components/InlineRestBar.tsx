@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
+import { fireShockwave } from '../utils/shockwave';
 
 interface InlineRestBarProps {
   secondsLeft: number;
@@ -19,7 +20,7 @@ interface InlineRestBarProps {
 // chose qu'on regarde entre deux séries, souvent posé sur un banc à un mètre
 // du téléphone. Styles dans index.css (.sv2-rest…).
 export const InlineRestBar: React.FC<InlineRestBarProps> = ({
-  formattedTime, progress, finished, nextLabel, nextNote, onSkip, onReduce, onAdd,
+  secondsLeft, formattedTime, progress, finished, nextLabel, nextNote, onSkip, onReduce, onAdd,
   isPaused, onTogglePause,
 }) => {
   // La barre se remplit à mesure que le repos avance (progress va de 1 à 0).
@@ -27,13 +28,27 @@ export const InlineRestBar: React.FC<InlineRestBarProps> = ({
   const status = isPaused ? 'Repos en pause' : finished ? 'Repos terminé' : 'Repos';
   const isSport = useWorkoutStore((s) => s.uiStyle) === 'sport';
 
+  // Les 3 dernières secondes : le chiffre pulse en rouge à chaque seconde (la clé
+  // change, donc l'animation repart). À zéro, « GO » claque et une onde part du
+  // chrono. `key` ne change qu'en fin de repos, pas à chaque seconde du reste.
+  const final = !finished && !isPaused && secondsLeft > 0 && secondsLeft <= 3;
+  const clockKey = final ? `f${secondsLeft}` : finished ? 'go' : 'run';
+  const clockClass = final ? ' rest-final' : finished ? ' rest-go' : '';
+  const rootRef = useRef<HTMLDivElement>(null);
+  const wasFinished = useRef(finished);
+  useEffect(() => {
+    // Onde seulement quand on VOIT le repos finir, pas si on arrive sur un repos déjà fini.
+    if (finished && !wasFinished.current) fireShockwave(rootRef.current);
+    wasFinished.current = finished;
+  }, [finished]);
+
   // Style « Sport pro » : le repos dans un anneau, façon cadran de montre,
   // les commandes à côté. Mêmes boutons, même logique.
   if (isSport) {
     const R = 52;
     const C = 2 * Math.PI * R;
     return (
-      <div className={`sv2-rest sp-rest fade-in${finished ? ' over rest-bar-blink' : ''}`} role="timer" aria-live="off">
+      <div ref={rootRef} className={`sv2-rest sp-rest fade-in${finished ? ' over rest-bar-blink' : ''}${final ? ' is-final' : ''}`} role="timer" aria-live="off">
         <div className="sp-ring">
           <svg viewBox="0 0 120 120" aria-hidden="true">
             <circle cx="60" cy="60" r={R} fill="none" stroke="var(--h-hero-line)" strokeWidth="8" />
@@ -41,7 +56,7 @@ export const InlineRestBar: React.FC<InlineRestBarProps> = ({
               strokeDasharray={C} strokeDashoffset={C * (1 - (finished ? 100 : elapsedPct) / 100)} style={{ transition: 'stroke-dashoffset 1s linear' }} />
           </svg>
           <div>
-            <span className="sp-num" style={{ color: finished ? 'var(--h-good)' : undefined }}>{finished ? 'GO' : formattedTime}</span>
+            <span key={clockKey} className={`sp-num${clockClass}`} style={{ color: finished ? 'var(--h-good)' : undefined }}>{finished ? 'GO' : formattedTime}</span>
             <span className="sp-lbl">{isPaused ? 'Pause' : 'Repos'}</span>
           </div>
         </div>
@@ -62,9 +77,9 @@ export const InlineRestBar: React.FC<InlineRestBarProps> = ({
   }
 
   return (
-    <div className={`sv2-rest fade-in${finished ? ' over rest-bar-blink' : ''}`} role="timer" aria-live="off">
+    <div ref={rootRef} className={`sv2-rest fade-in${finished ? ' over rest-bar-blink' : ''}${final ? ' is-final' : ''}`} role="timer" aria-live="off">
       <span className="sv2-eyebrow">{status}</span>
-      <span className="sv2-rest-clock">{finished ? 'Go' : formattedTime}</span>
+      <span key={clockKey} className={`sv2-rest-clock${clockClass}`}>{finished ? 'Go' : formattedTime}</span>
       <div className="sv2-rest-bar"><i style={{ width: `${finished ? 100 : elapsedPct}%` }} /></div>
       {nextLabel && <span className="sv2-rest-next">{nextLabel}</span>}
       <div className="sv2-rest-ctrls">

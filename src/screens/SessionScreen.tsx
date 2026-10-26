@@ -29,6 +29,7 @@ import { useShakeToValidate } from '../hooks/useShakeToValidate';
 import { computeTonnage, computeTrainingLoad, compareSessionToHistory, getWorkoutBodyIntensity, getMaxWeightEver } from '../utils/training';
 import { SetEntry, Exercise, ExerciseProgress, HistoryEntry } from '../data/types';
 import { InfoTip } from '../components/InfoTip';
+import { RecordMedal } from '../components/RecordMedal';
 
 interface SessionScreenProps { dayId: string; onBack: () => void; onOpenSettings: () => void; }
 
@@ -1004,7 +1005,7 @@ return (
 {confettiBurst && <ConfettiBurst style={ultraAnimationStyle} />}
 {prBanner && (
 <div style={prBannerStyle} className={ultraAnimationsEnabled ? 'ultra-pop-glow' : 'fade-in'}>
-<span style={{ display: 'inline-flex' }}><IconTrophy size={20} /></span>
+<RecordMedal size={36} />
 <div>
 <p style={{ color: '#fff', fontSize: 13, fontWeight: 800 }}>Nouveau record !</p>
 <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11 }}>{prBanner}</p>

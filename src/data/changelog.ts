@@ -14,6 +14,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-26-mouvement-2',
+    title: 'Encore plus de vie',
+    items: [
+      'Repos : les 3 dernières secondes pulsent en rouge, puis « GO » claque avec une onde.',
+      'Nouveau record : la médaille tourne sur elle-même, avec un reflet et des étincelles.',
+      'Les courbes se dessinent, les barres montent, le calendrier s’allume en vague et la pesée a son cadran.',
+      'Sous le poids d’une barre, les disques se chargent comme en vrai. Supprimer une pesée ou une séance de cardio se fait en douceur, et le coach écrit sa réponse mot à mot.',
+    ],
+  },
+  {
     id: '2026-10-26-mouvement',
     title: 'Une appli qui bouge mieux',
     items: [
