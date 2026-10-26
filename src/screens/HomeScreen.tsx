@@ -1,5 +1,5 @@
 import { isPerformedSet } from '../utils/weight';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { DataIcon } from '../components/DataIcon';
 import { MESOCYCLE_WEEKS, getProgressionWeek, getWorkout } from '../data/workouts';
 import { getProgram } from '../data/programs';
@@ -20,6 +20,7 @@ import { WeeklyRecapCard } from '../components/WeeklyRecapCard';
 import { refreshBinome, useBinome } from '../hooks/useBinome';
 import { markNudgesSeen, sendNudge } from '../lib/binome';
 import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconGauge, IconLightbulb, IconMoon, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
+import { useFlip } from '../hooks/useFlip';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -1053,9 +1054,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
     setHomeSectionOrder(order);
   };
 
+  // Les blocs glissent vers leur nouvelle place quand on les réordonne (flèches ▲▼
+  // du mode édition) ou qu'on déplie « Tout voir », au lieu de sauter d'un coup.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useFlip(scrollRef, shownKeys.join(','));
+
   return (
     <div className={isSport ? 'home-v2 ui-sport' : isEpure ? 'home-v2 ui-epure' : 'home-v2'} style={container}>
-      <div style={{ ...scroll, maxWidth: wideLayout ? 1180 : 560, paddingBottom: navBarEnabled ? 112 : 80 }}>
+      <div ref={scrollRef} style={{ ...scroll, maxWidth: wideLayout ? 1180 : 560, paddingBottom: navBarEnabled ? 112 : 80 }}>
 
         {/* Header */}
         <div style={headerSection}>
@@ -1197,7 +1203,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
           const renderBlock = (key: HomeSectionKey, idx: number) => {
             const meta = HOME_SECTION_META[key];
             return (
-              <div key={key} style={{ position: 'relative' }}>
+              <div key={key} data-flip={key} style={{ position: 'relative' }}>
                 {homeEditMode && (
                   <div style={widgetCtrlCluster}>
                     <button
