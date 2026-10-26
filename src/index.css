@@ -1268,6 +1268,9 @@ button { cursor: pointer; }
 .deck-slot[data-scroll="1"] { touch-action: pan-y; }
 /* `zoom` agrandit tout le contenu de la carte (texte, champs, boutons) : le facteur est calculé par SessionDeck selon la place. */
 .deck-slot-inner { width: 100%; margin: auto 0; zoom: var(--deck-z, 1); }
+/* Fond plein derrière la carte (souvent en verre translucide) : les cartes voisines passent derrière, sans se voir au travers. */
+.deck-slot-inner { position: relative; isolation: isolate; }
+.deck-slot-inner::before { content: ""; position: absolute; inset: 0 0 12px 0; z-index: -1; border-radius: var(--deck-r); background: var(--h-bg, var(--bg-base)); }
 .deck-slot.is-prev { transform: translate3d(calc(-100% - 56px), 0, 0); opacity: 0; pointer-events: none; }
 .deck-slot.is-next { transform: translate3d(calc(100% + 56px), 0, 0); opacity: 0; pointer-events: none; }
 .deck[data-moving] .deck-slot { opacity: 1; }
@@ -1338,3 +1341,33 @@ button { cursor: pointer; }
 .ui-sport .deck-sheet-close { border-radius: 8px; }
 .deck-banners { max-width: 720px; width: 100%; margin: 0 auto; padding: 8px 16px 0; max-height: 45vh; overflow-y: auto; flex: none; }
 .deck-banners:empty { display: none; }
+
+/* ─── Barre du repos en cours (vue iPad) et onde de choc ──────────────────── */
+.deck-restbar {
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  padding: 8px 14px; border-radius: 999px;
+  border: 1px solid var(--h-line, var(--border)); background: var(--h-surface, var(--bg-card-solid));
+  transform-origin: 50% 0;
+}
+.ui-sport .deck-restbar { border-radius: 8px; }
+.deck-restbar-lbl { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--h-muted, var(--text-muted)); white-space: nowrap; }
+.deck-restbar-track { flex: 1; height: 8px; border-radius: 4px; background: var(--h-off, var(--bg-elevated)); overflow: hidden; }
+.deck-restbar-track > i { display: block; height: 100%; border-radius: 4px; background: var(--grad, linear-gradient(90deg, var(--brand-1), var(--brand-2))); box-shadow: 0 0 10px rgba(var(--brand-1-rgb), 0.45); transition: width 1s linear; }
+.deck-restbar-time { font-family: var(--h-cond, inherit); font-size: 22px; font-weight: 700; line-height: 1; min-width: 3.2ch; text-align: right; color: var(--h-text, var(--text-primary)); }
+.deck-restbar.is-over .deck-restbar-track > i { background: var(--h-good, #6ccb94); box-shadow: none; }
+.deck-restbar.is-over .deck-restbar-time { color: var(--h-good, #6ccb94); }
+/* Elle se pose d'en haut : un petit écrasement à l'impact, puis elle se redresse. */
+@media (prefers-reduced-motion: no-preference) {
+  .deck-restbar { animation: deckRestDrop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+}
+@keyframes deckRestDrop {
+  0% { transform: translateY(-26px) scaleY(0.5); opacity: 0; }
+  60% { transform: translateY(0) scaleY(1.2); opacity: 1; }
+  80% { transform: translateY(0) scaleY(0.94); }
+  100% { transform: translateY(0) scaleY(1); }
+}
+/* L'anneau de l'onde de choc (créé par utils/shockwave.ts, retiré à la fin). */
+.shock-ring {
+  position: fixed; z-index: 9999; border-radius: 50%; pointer-events: none; will-change: transform, opacity;
+  background: radial-gradient(closest-side, transparent 0, transparent 90%, rgba(var(--brand-1-rgb), 0.35) 95%, rgba(255, 255, 255, 0.8) 98.5%, transparent 100%);
+}

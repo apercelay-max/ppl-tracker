@@ -16,6 +16,7 @@ import { SessionTabBar } from '../components/SessionTabBar';
 import { SessionStatsBig } from '../components/SessionStatsBig';
 import { SessionProgramme } from '../components/SessionProgramme';
 import { SessionDeck, type DeckCard } from '../components/SessionDeck';
+import { DeckRestBar } from '../components/DeckRestBar';
 import { SessionRestBig } from '../components/SessionRestBig';
 import { buildSessionRecapImage, shareOrDownloadRecapImage } from '../utils/shareImage';
 import { weightUnitLabel, kgToLbs, formatWeightForDisplay } from '../utils/weight';
@@ -117,6 +118,10 @@ const [isWide, setIsWide] = useState(() => window.innerWidth >= 700);
 const [isDeck, setIsDeck] = useState(() => window.innerWidth >= 900);
 // Vue iPad : la première carte est « Échauffement et muscles », le premier exercice
 // est la 2e. On y atterrit au début de la séance, pas en la reprenant en cours.
+// Pendant le repos qui suit la dernière série d'un exercice, la vue iPad reste sur cet
+// exercice (la séance, elle, a déjà avancé au suivant). Si on glisse ailleurs avant la
+// fin, on mémorise ce repos-là pour ne pas y revenir.
+const [releasedRestKey, setReleasedRestKey] = useState<string | null>(null);
 const [onIntro, setOnIntro] = useState(() => {
   const st = useWorkoutStore.getState().session;
   return !(st && Object.values(st.exerciseProgress).flat().some((e) => e.completed));
@@ -906,30 +911,41 @@ validateSignal={shakeSignal}
 // La barre de repos est rattachée à la série qui l'a lancée. Si la séance a déjà
 // avancé (déblocage anticipé pendant le repos), cette série est sur une carte
 // voisine, invisible ici : on la montre alors sur la carte du centre.
-const restElsewhere = restBarNode !== null && restRefExIdx !== currentExIdx && exIdx === currentExIdx;
+const isCur = exIdx === currentExIdx;
+const restElsewhere = restBarNode !== null && restRefExIdx !== currentExIdx && isCur;
 const isRestTarget = exercise.id === restBarTargetExerciseId || restElsewhere;
 const group = exercise.restMode === 'superset' && exercise.supersetGroupId ? exercises.filter((e) => e.supersetGroupId === exercise.supersetGroupId) : null;
 return (
 <Card
 exercise={displayExercise}
 setEntries={entries}
-currentSetIndex={currentSetIdx}
-isActive
+currentSetIndex={isCur ? currentSetIdx : 0}
+isActive={isCur}
 groupActive={group ? group.some((e) => exercises.indexOf(e) === currentExIdx) : undefined}
 currentWeek={currentWeek}
 onSetComplete={(setIndex, entry) => handleSetComplete(exercise.id, setIndex, entry)}
 onEditSet={(setIndex) => handleEditSet(exercise.id, setIndex)}
-onSkipSet={handleSkipSet}
-onSkipExercise={handleSkipExercise}
+onSkipSet={isCur ? handleSkipSet : undefined}
+onSkipExercise={isCur ? handleSkipExercise : undefined}
 onAddSet={() => addSet(exercise.id)}
 onWeightStart={(setIndex) => handleWeightEntered(exercise.id, setIndex)}
 onSwitchTo={() => switchToExercise(exercise.id)}
 restBar={isRestTarget ? restBarNode : null}
 restBarIndex={isRestTarget ? (restElsewhere ? currentSetIdx : restBarTargetIndex) : undefined}
-validateSignal={shakeSignal}
+validateSignal={isCur ? shakeSignal : undefined}
 />
 );
 };
+
+const restKeyNow = pendingRestKey ? `${pendingRestKey.exerciseId}:${pendingRestKey.setIndex}` : null;
+const restExIdx = timerIsRunning && restRefExIdx >= 0 && restRefExIdx !== currentExIdx ? restRefExIdx : null;
+const pinRest = restExIdx !== null && releasedRestKey !== restKeyNow;
+const deckExIdx = pinRest ? (restExIdx as number) : currentExIdx;
+
+// Vue iPad : barre du repos en cours, au-dessus de la progression de la séance.
+const deckRestBar = isDeck && timerIsRunning ? (
+<DeckRestBar formattedTime={formattedTime} progress={progress} finished={secondsLeft <= 0} isPaused={isPaused} />
+) : null;
 
 const deckCards: DeckCard[] = [
 { key: 'intro', title: 'Échauffement et muscles', chip: cardioVisible ? 'À faire' : 'Fait', chipOk: !cardioVisible },
@@ -952,12 +968,13 @@ const deckNode = (
 <div className="deck-banners">{adaptationBannerNode}</div>
 <SessionDeck
 cards={deckCards}
-currentIndex={onIntro ? 0 : currentExIdx + 1}
+currentIndex={onIntro ? 0 : deckExIdx + 1}
 progress={session.exerciseProgress}
 startTime={session.startTime}
 pausedAt={sessionPausedAt}
 renderCard={deckCard}
 onSwitch={(i) => {
+if (pinRest) setReleasedRestKey(restKeyNow);
 if (i === 0) { setOnIntro(true); return; }
 setOnIntro(false);
 if (i - 1 !== currentExIdx) switchToExercise(exercises[i - 1].id);
@@ -1072,6 +1089,7 @@ style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
 </div>
 <button onClick={onOpenSettings} className="sv2-round" title="Réglages (sans quitter la séance)" aria-label="Réglages"><IconSettings size={17} /></button>
 </div>
+{deckRestBar}
 {/* Progression : un segment par exercice, à la largeur de son nombre de séries. */}
 <div className="sv2-prog">
 <strong>{completedSets}<i> / {totalSets} séries</i></strong>
@@ -1105,6 +1123,7 @@ return <div key={ex.id} style={{ flex: n }}><i style={{ width: `${Math.min(100, 
 <span style={{ color: 'var(--text-dim)', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{Math.round(progressPct)}%</span>
 </div>
 
+{deckRestBar}
 {/* Boutons d'action rapide — accès direct à quelques réglages fréquents
 sans quitter la séance (thème, bip, vibrations, écran allumé). Le ⚙️
 ci-dessus reste disponible pour tout le reste des Réglages. */}
