@@ -7,6 +7,7 @@ import { ExerciseCard } from '../components/ExerciseCard';
 import { ExerciseCardClassic } from '../components/ExerciseCardClassic';
 import { InlineRestBar } from '../components/InlineRestBar';
 import { useScreenClass } from '../hooks/useScreenClass';
+import { useScreenMode } from '../hooks/useDeckMode';
 import { SportLiveStats } from '../components/SportLiveStats';
 import { InlineRestBarClassic } from '../components/InlineRestBarClassic';
 import { StatsPanel } from '../components/StatsPanel';
@@ -110,12 +111,10 @@ const wakeLockEnabled = useWorkoutStore((s) => s.wakeLockEnabled);
 const shakeToValidateEnabled = useWorkoutStore((s) => s.shakeToValidateEnabled);
 const sessionAdaptation = useWorkoutStore((s) => s.sessionAdaptation);
 const setWakeLockEnabled = useWorkoutStore((s) => s.setWakeLockEnabled);
-const [isWide, setIsWide] = useState(() => window.innerWidth >= 700);
 // iPad en paysage (et plus large) : séance en cartes avec glissements, voir SessionDeck.
-// Deux seuils (on entre à 900 px, on sort sous 840 px) : une largeur qui oscille autour
-// d'un seul seuil (barre latérale de Safari, clavier, fenêtre iPad) ferait basculer
-// l'écran d'un design à l'autre en pleine séance.
-const [isDeck, setIsDeck] = useState(() => window.innerWidth >= 900);
+// La décision est prise par useScreenMode, qui la rend insensible aux à-coups de mesure
+// (zoom, clavier, barre de Safari) : elle ne doit jamais basculer en pleine séance.
+const { isWide, isDeck } = useScreenMode();
 // Vue iPad : la première carte est « Échauffement et muscles », le premier exercice
 // est la 2e. On y atterrit au début de la séance, pas en la reprenant en cours.
 // Pendant le repos qui suit la dernière série d'un exercice, la vue iPad reste sur cet
@@ -256,12 +255,6 @@ const handleDeloadFinish = useCallback(() => {
 setDeloadActive(false);
 advanceSession();
 }, [advanceSession]);
-
-useEffect(() => {
-const h = () => { setIsWide(window.innerWidth >= 700); setIsDeck((on) => window.innerWidth >= (on ? 840 : 900)); };
-window.addEventListener('resize', h);
-return () => window.removeEventListener('resize', h);
-}, []);
 
 // Rechargement pile après la dernière série : tout est validé mais la séance
 // n'a pas été clôturée (l'écran de retour au calme n'est pas persisté). On la
@@ -1019,7 +1012,7 @@ return (
 </div>
 )}
 {sessionTab === 'exercise' && (
-        <div style={isWide ? mainArea : { display: 'contents' }}>
+        <div className={isDeck ? 'deck-screen' : undefined} style={isWide ? mainArea : { display: 'contents' }}>
 {isNewStyle ? (
 <div className="sv2-header">
 <div className="sv2-header-row">

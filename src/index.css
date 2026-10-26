@@ -1256,11 +1256,13 @@ button { cursor: pointer; }
 }
 .ui-sport .deck { --deck-r: 12px; }
 .deck[data-dragging] { user-select: none; -webkit-user-select: none; }
+/* Un glissement parti de l'en-tête (tout en haut de l'écran) ne doit pas sélectionner son texte. */
+body:has(.deck[data-dragging]) { user-select: none; -webkit-user-select: none; }
 
 .deck-slot {
   position: absolute; top: 0; bottom: 0; z-index: 3;
   left: calc(50% - var(--deck-cw) / 2); width: var(--deck-cw);
-  padding: 34px 0 40px; display: flex;
+  padding: 34px 0 44px; display: flex;
   overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
   scrollbar-width: none; touch-action: none; will-change: transform, opacity; backface-visibility: hidden;
 }
@@ -1273,7 +1275,7 @@ button { cursor: pointer; }
 .deck-slot-inner::before { content: ""; position: absolute; inset: 0 0 12px 0; z-index: -1; border-radius: var(--deck-r); background: var(--h-bg, var(--bg-base)); }
 .deck-slot.is-prev { transform: translate3d(calc(-100% - 56px), 0, 0); opacity: 0; pointer-events: none; }
 .deck-slot.is-next { transform: translate3d(calc(100% + 56px), 0, 0); opacity: 0; pointer-events: none; }
-.deck[data-moving] .deck-slot { opacity: 1; }
+.deck[data-moving]:not([data-moving="drawer"]) .deck-slot { opacity: 1; }
 
 /* cartes voisines : inclinées vers le centre, à moitié cachées derrière */
 .deck-side {
@@ -1323,6 +1325,12 @@ button { cursor: pointer; }
 .deck-pill:focus-visible { outline: 2px solid var(--brand-1); outline-offset: 2px; }
 
 /* écrans qui glissent : Stats (depuis le haut), Programme (depuis le bas) */
+/* Vue iPad : l'en-tête ne défile pas, le navigateur n'a donc rien à y faire d'un glissement ;
+   `touch-action: none` l'empêche (Safari) de prendre un glissement parti du tout haut de l'écran.
+   Les zones qui défilent (carte, bandeaux, écrans) gardent leur propre touch-action. */
+.deck-screen { touch-action: none; }
+/* Bande du bas (44 px, comme EDGE dans SessionDeck.tsx) : même rôle, sous la carte qui défile. */
+.deck-zone-b { position: absolute; left: 0; right: 0; bottom: 0; height: 44px; z-index: 5; touch-action: none; }
 .deck-scrim { position: absolute; inset: 0; z-index: 20; background: #000; pointer-events: none; opacity: 0; transition: opacity 0.3s; }
 .deck.is-sheet-open .deck-scrim { opacity: 0.55; }
 .deck[data-dragging] .deck-scrim { transition: none; }
@@ -1330,7 +1338,7 @@ button { cursor: pointer; }
 .deck-sheet-stats { transform: translate3d(0, -100%, 0); }
 .deck-sheet-programme { transform: translate3d(0, 100%, 0); }
 .deck-sheet.is-open { transform: none; opacity: 1; pointer-events: auto; }
-.deck[data-moving] .deck-sheet { opacity: 1; pointer-events: auto; }
+.deck[data-moving="sheet"] .deck-sheet { opacity: 1; pointer-events: auto; }
 .deck-sheet-body { flex: 1; min-height: 0; display: flex; flex-direction: column; touch-action: pan-y; }
 .deck-sheet-bar { flex: none; display: flex; align-items: center; gap: 14px; padding: 10px 20px; touch-action: none; border-color: var(--h-line, var(--border)); }
 .deck-sheet-stats .deck-sheet-bar { border-top: 1px solid var(--h-line, var(--border)); }
@@ -1339,6 +1347,24 @@ button { cursor: pointer; }
 .deck-sheet-hint { flex: 1; font-size: 12px; color: var(--h-muted, var(--text-muted)); }
 .deck-sheet-close { height: 40px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--h-line, var(--border)); background: transparent; color: var(--h-text2, var(--text-secondary)); font-size: 13px; font-weight: 600; cursor: pointer; }
 .ui-sport .deck-sheet-close { border-radius: 8px; }
+/* Barre latérale « toutes les stats » (glissement parti du coin haut-gauche). Opaque, plus large
+   que la partie visible de la carte « précédent » (≈ 340 px) pour la cacher entièrement. */
+.deck-drawer-scrim { position: absolute; inset: 0; z-index: 24; background: #000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.deck.is-drawer-open .deck-drawer-scrim { opacity: 0.5; pointer-events: auto; }
+.deck[data-dragging] .deck-drawer-scrim { transition: none; }
+.deck-drawer {
+  position: absolute; top: 0; bottom: 0; left: 0; z-index: 26; width: clamp(380px, 38vw, 440px); max-width: 92%;
+  display: flex; flex-direction: column; background: var(--h-bg, var(--bg-base));
+  border-right: 1px solid var(--h-line, var(--border)); box-shadow: 0 0 50px rgba(0, 0, 0, 0.55);
+  transform: translate3d(-100%, 0, 0); opacity: 0; pointer-events: none;
+  will-change: transform, opacity; backface-visibility: hidden;
+}
+.deck-drawer.is-open { transform: none; opacity: 1; pointer-events: auto; }
+.deck[data-moving="drawer"] .deck-drawer { opacity: 1; pointer-events: auto; }
+.deck-drawer-bar { flex: none; display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-bottom: 1px solid var(--h-line, var(--border)); touch-action: none; }
+.deck-drawer-body { flex: 1; min-height: 0; display: flex; flex-direction: column; touch-action: pan-y; overscroll-behavior: contain; }
+/* La colonne de stats défile en hauteur seulement : un glissement horizontal sert à fermer la barre. */
+.deck-drawer-body > div { touch-action: pan-y; overscroll-behavior: contain; }
 .deck-banners { max-width: 720px; width: 100%; margin: 0 auto; padding: 8px 16px 0; max-height: 45vh; overflow-y: auto; flex: none; }
 .deck-banners:empty { display: none; }
 

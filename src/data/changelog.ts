@@ -14,6 +14,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-26',
+    title: 'Séance sur iPad : nouveaux gestes',
+    items: [
+      'Les stats s’ouvrent en glissant vers le bas depuis tout en haut de l’écran, la liste des exercices en glissant vers le haut depuis tout en bas. Au milieu, le glissement vertical fait seulement défiler la carte.',
+      'Nouveau : glisse depuis le coin haut-gauche vers le milieu pour ouvrir une barre latérale avec toutes les stats de la séance. Touche à côté, « Fermer » ou glisse-la vers la gauche pour la refermer.',
+      'La vue iPad ne bascule plus vers l’ancienne liste en pleine séance, même si l’iPad zoome ou si le clavier apparaît.',
+    ],
+  },
+  {
     id: '2026-10-25',
     title: 'Séance sur iPad',
     items: [

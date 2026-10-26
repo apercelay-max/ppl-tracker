@@ -8,8 +8,13 @@ import { kgToLbs } from '../utils/weight';
 // Séance sur grand écran (iPad en paysage) : l'exercice en cours au centre, le
 // précédent et le suivant en cartes inclinées derrière, et trois gestes.
 //   · glisser à gauche / à droite : passer à l'exercice voisin (il suit le doigt) ;
-//   · glisser vers le bas : l'écran Stats descend du haut ;
-//   · glisser vers le haut : le programme (tous les exercices) monte du bas.
+//   · glisser vers le bas depuis le TOUT HAUT de l'écran : l'écran Stats descend ;
+//   · glisser vers le haut depuis le TOUT BAS de l'écran : le programme (tous les
+//     exercices) monte ;
+//   · glisser vers la droite depuis le COIN HAUT-GAUCHE : une barre latérale couvre la
+//     carte « précédent » et affiche toutes les stats de la séance.
+// Les départs verticaux sont limités à une bande près du bord : au milieu de l'écran,
+// le glissement vertical sert à faire défiler la carte et ne déclenche plus rien.
 // Cela remplace la barre du bas : durée et tonnage sont sous la carte
 // « précédent », pause et stop sous la carte « suivant ».
 //
@@ -47,6 +52,10 @@ interface SessionDeckProps {
 
 const GAP = 56;          // espace entre deux cartes pendant le glissement (px)
 const AXIS_LOCK = 8;     // distance avant de décider horizontal / vertical (px)
+// Zones de départ des glissements spéciaux, mesurées depuis les bords de l'ÉCRAN.
+const EDGE = 44;         // bande du haut (Stats) et du bas (Programme), en px
+const CORNER_W = 72;     // coin haut-gauche (barre latérale) : largeur depuis le bord gauche, en px
+const CORNER_H = 1 / 3;  // … et hauteur : le tiers supérieur de l'écran
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -65,18 +74,23 @@ const slide = (el: HTMLElement | null | undefined, axis: 'x' | 'y', from: number
   return a.finished.then(() => undefined, () => undefined);
 };
 
+// x = changer d'exercice, y = écran Stats / Programme, d = barre latérale (drawer).
+type DragKind = 'x' | 'y' | 'd';
+
 interface Drag {
   id: number;
   x: number; y: number;
-  axis: 'x' | 'y' | null;
+  axis: DragKind | null;
   dx: number; dy: number;
   vx: number; vy: number;       // vitesse du doigt (px/ms), lissée
   lx: number; ly: number; lt: number;
   w: number; h: number;
   lastX: number;
-  startedOpen: DeckSheet | null;
+  startedOpen: DeckSheet | 'drawer' | null;
   sheet: DeckSheet | null;      // écran en train d'être tiré
-  po: number;                   // ouverture de cet écran, de 0 (fermé) à 1 (ouvert)
+  only: DeckSheet | null;       // écran que la zone de départ autorise (haut = stats, bas = programme)
+  po: number;                   // ouverture de l'écran / de la barre, de 0 (fermé) à 1 (ouvert)
+  zone: { corner: boolean; top: boolean; bottom: boolean; inRoot: boolean };
 }
 
 // Durée et tonnage : composant à part, le chrono bat chaque seconde et ne doit
@@ -121,6 +135,9 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
   // Les deux écrans sont lourds : on les monte un instant après l'ouverture de
   // la séance, pour que le premier geste ne déclenche pas leur construction.
   const [sheetsReady, setSheetsReady] = useState(false);
+  // Barre latérale « toutes les stats » : même idée, montée un peu plus tard.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerReady, setDrawerReady] = useState(false);
   const busy = useRef(false);
   // Vrai pendant l'ouverture / fermeture d'un écran : un changement d'exercice
   // en même temps (choix dans le programme) ne doit pas couper cette animation,
@@ -132,16 +149,20 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
   const suppressClick = useRef(false);
   const sideEls = useRef<Record<'prev' | 'next', HTMLButtonElement | null>>({ prev: null, next: null });
   const scrimRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const drawerScrimRef = useRef<HTMLDivElement>(null);
   // Écrits directement sur les éléments concernés : une variable CSS posée sur la
   // racine forcerait le recalcul du style de toutes les cartes à chaque image.
   const setSideOpacity = (v: number) => {
     (['prev', 'next'] as const).forEach((k) => { const el = sideEls.current[k]; if (el) el.style.opacity = String(v); });
   };
   const setScrim = (v: number) => { if (scrimRef.current) scrimRef.current.style.opacity = String(v); };
+  const setDrawerScrim = (v: number) => { if (drawerScrimRef.current) drawerScrimRef.current.style.opacity = String(v); };
 
   useEffect(() => {
     const id = window.setTimeout(() => setSheetsReady(true), 700);
-    return () => window.clearTimeout(id);
+    const id2 = window.setTimeout(() => setDrawerReady(true), 1400);
+    return () => { window.clearTimeout(id); window.clearTimeout(id2); };
   }, []);
 
   const slotOf = (i: number) => (cards[i] ? slotRefs.current.get(cards[i].key) : undefined);
@@ -162,6 +183,8 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
     delete root.dataset.moving;
     (['prev', 'next'] as const).forEach((k) => { const el = sideEls.current[k]; if (el) el.style.opacity = ''; });
     if (scrimRef.current) scrimRef.current.style.opacity = '';
+    if (drawerRef.current) { drawerRef.current.getAnimations?.().forEach((a) => a.cancel()); drawerRef.current.style.transform = ''; }
+    if (drawerScrimRef.current) drawerScrimRef.current.style.opacity = '';
     busy.current = false;
     sheetBusy.current = false;
   };
@@ -187,12 +210,13 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex]);
 
-  useLayoutEffect(() => { cleanup(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [sheet]);
+  useLayoutEffect(() => { cleanup(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [sheet, drawerOpen]);
 
   // Aperçus voisins et écrans fermés : hors de portée du clavier et du toucher.
   useLayoutEffect(() => {
     cards.forEach((c, i) => slotRefs.current.get(c.key)?.toggleAttribute('inert', i !== currentIndex));
     (Object.keys(sheetEls.current) as DeckSheet[]).forEach((k) => sheetEls.current[k]?.toggleAttribute('inert', sheet !== k));
+    drawerRef.current?.toggleAttribute('inert', !drawerOpen);
   });
 
   // Une carte plus haute que l'écran (beaucoup de séries, barre de repos) doit
@@ -243,12 +267,12 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
   }, [currentIndex, doneSets]);
 
   useEffect(() => {
-    if (!sheet) return;
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeSheet(); };
+    if (!sheet && !drawerOpen) return;
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (drawerOpen) closeDrawer(); else closeSheet(); } };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sheet]);
+  }, [sheet, drawerOpen]);
 
   // ── Exercice voisin ──────────────────────────────────────────────────────
   const hasPrev = currentIndex > 0;
@@ -273,7 +297,7 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
     if (!root) return;
     busy.current = true;
     delete root.dataset.dragging;
-    root.dataset.moving = '1';
+    root.dataset.moving = 'x';
     // Les cartes voisines s'effacent pendant le changement ; les nouvelles apparaissent en fondu.
     setSideOpacity(commit ? 0 : 1);
     const target = currentIndex + dir;
@@ -295,7 +319,7 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
 
   // Même mouvement sans doigt (touche sur une carte voisine).
   const goNeighbour = (dir: 1 | -1) => {
-    if (busy.current || sheet) return;
+    if (busy.current || sheet || drawerOpen) return;
     const target = currentIndex + dir;
     if (target < 0 || target >= cards.length) return;
     const w = (slotOf(currentIndex)?.offsetWidth ?? 700) + GAP;
@@ -310,16 +334,14 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
   const posY = (d: Drag, raw: number) => {
     let name: DeckSheet;
     let po: number;
-    if (d.startedOpen) {
+    if (d.startedOpen && d.startedOpen !== 'drawer') {
       name = d.startedOpen;
       po = 1 - clamp((name === 'stats' ? -raw : raw) / d.h, 0, 1);
     } else {
-      name = raw > 0 ? 'stats' : 'programme';
-      po = clamp(Math.abs(raw) / d.h, 0, 1);
-    }
-    if (d.sheet && d.sheet !== name) {
-      const other = sheetEls.current[d.sheet];
-      if (other) other.style.transform = '';
+      // La zone de départ décide de l'écran : le haut ne sert qu'aux Stats, le bas qu'au
+      // Programme. Revenir en arrière avec le doigt le referme, il ne bascule pas sur l'autre.
+      name = d.only ?? 'stats';
+      po = clamp((name === 'stats' ? raw : -raw) / d.h, 0, 1);
     }
     d.sheet = name;
     d.po = po;
@@ -334,7 +356,7 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
     busy.current = true;
     sheetBusy.current = true;
     delete root.dataset.dragging;
-    root.dataset.moving = '1';
+    root.dataset.moving = 'sheet';
     setScrim(open ? 0.55 : 0);
     const el = sheetEls.current[name];
     const v = Math.max(speed, 0.9);
@@ -348,7 +370,7 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
   };
 
   const openSheet = (name: DeckSheet) => {
-    if (busy.current || sheet) return;
+    if (busy.current || sheet || drawerOpen) return;
     const h = rootRef.current?.clientHeight ?? 700;
     settleY(name, true, 0, h, 1.2);
   };
@@ -358,19 +380,103 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
     settleY(sheet, false, 1, h, 1.2);
   };
 
+  // ── Barre latérale « toutes les stats » (coin haut-gauche) ───────────────
+  // Elle entre par la gauche et reste collée au doigt. Opaque et plus large que la
+  // partie visible de la carte « précédent » : elle la cache entièrement.
+  const posD = (d: Drag, raw: number) => {
+    const reveal = d.startedOpen === 'drawer' ? clamp(d.w + raw, 0, d.w) : clamp(raw, 0, d.w);
+    d.po = reveal / d.w;
+    const el = drawerRef.current;
+    if (el) el.style.transform = tx('x', reveal - d.w);
+    setDrawerScrim(d.po * 0.5);
+  };
+
+  const settleD = (open: boolean, po: number, w: number, speed: number) => {
+    const root = rootRef.current;
+    if (!root) return;
+    busy.current = true;
+    sheetBusy.current = true;
+    delete root.dataset.dragging;
+    root.dataset.moving = 'drawer';
+    setDrawerScrim(open ? 0.5 : 0);
+    const v = Math.max(speed, 0.9);
+    const from = -w * (1 - po);
+    const to = open ? 0 : -w;
+    const ms = clamp(Math.abs(to - from) / v, 200, 400);
+    slide(drawerRef.current, 'x', from, to, ms).then(() => {
+      if (open !== drawerOpen) setDrawerOpen(open);
+      window.setTimeout(cleanup, 80);
+    });
+  };
+
+  const closeDrawer = () => {
+    if (busy.current || !drawerOpen) return;
+    settleD(false, 1, drawerRef.current?.offsetWidth ?? 420, 1.2);
+  };
+
   // ── Doigt ────────────────────────────────────────────────────────────────
-  const onPointerDown = (e: React.PointerEvent) => {
-    if (busy.current || (e.pointerType === 'mouse' && e.button !== 0)) return;
-    // Écran ouvert : seule la poignée sert à le refermer au doigt, le contenu défile.
-    if (sheet && !(e.target as HTMLElement).closest('[data-deck-grab]')) return;
+  // Écouteurs sur la FENÊTRE : le bord haut de l'écran est dans l'en-tête, en dehors du
+  // deck. Ils sont posés une fois ; ils appellent la version à jour des fonctions
+  // ci-dessous (qui lisent l'exercice courant, l'écran ouvert, etc.).
+  const live = useRef({
+    down: (_e: PointerEvent) => {}, move: (_e: PointerEvent) => {}, up: (_e: PointerEvent) => {}, click: (_e: MouseEvent) => {},
+  });
+
+  const onPointerDown = (e: PointerEvent) => {
+    const root = rootRef.current;
+    if (!root || busy.current || !e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    const target = e.target as HTMLElement | null;
+    // Seulement ce qui est dans l'écran de séance : une feuille « Arrêter la séance ? » ou
+    // une fenêtre par-dessus ne doit rien déclencher.
+    const screen = root.parentElement;
+    if (!target || !screen || !screen.contains(target)) return;
+    const inRoot = root.contains(target);
+    const rect = root.getBoundingClientRect();
+    const x = e.clientX, y = e.clientY;
+    const zone = {
+      corner: x <= CORNER_W && y <= rect.bottom * CORNER_H,
+      top: y <= EDGE,
+      bottom: y >= rect.bottom - EDGE,
+      inRoot,
+    };
+    let startedOpen: Drag['startedOpen'] = null;
+    if (sheet) {
+      // Écran ouvert : seule la poignée sert à le refermer au doigt, le contenu défile.
+      if (!inRoot || !target.closest('[data-deck-grab]')) return;
+      startedOpen = sheet;
+    } else if (drawerOpen) {
+      // Barre ouverte : on la referme en la glissant vers la gauche.
+      if (!target.closest('.deck-drawer')) return;
+      startedOpen = 'drawer';
+    } else if (!zone.corner && !zone.top && !zone.bottom && !inRoot) {
+      return;
+    }
     drag.current = {
-      id: e.pointerId, x: e.clientX, y: e.clientY, axis: null, dx: 0, dy: 0, vx: 0, vy: 0,
-      lx: e.clientX, ly: e.clientY, lt: performance.now(), w: 0, h: 0, lastX: 0,
-      startedOpen: sheet, sheet: null, po: 0,
+      id: e.pointerId, x, y, axis: null, dx: 0, dy: 0, vx: 0, vy: 0,
+      lx: x, ly: y, lt: performance.now(), w: 0, h: 0, lastX: 0,
+      startedOpen, sheet: null, only: null, po: 0, zone,
     };
   };
 
-  const onPointerMove = (e: React.PointerEvent) => {
+  // À quel geste correspond le premier mouvement ? null = aucun, on laisse faire le navigateur.
+  const lockKind = (d: Drag): DragKind | null => {
+    const ax = Math.abs(d.dx), ay = Math.abs(d.dy);
+    if (d.startedOpen === 'drawer') return d.dx < 0 && ax > ay ? 'd' : null;
+    if (d.startedOpen) return ay > ax ? 'y' : null;
+    const z = d.zone;
+    // Coin haut-gauche : départ exclusif de la barre latérale (vers la droite, droit ou en
+    // diagonale vers le milieu). Un glissement droit vers le bas depuis le bord du haut
+    // reste celui de l'écran Stats ; tout le reste du coin ne fait rien.
+    if (z.corner && d.dx > 0 && d.dx >= ay * 0.5) return 'd';
+    if (z.top && d.dy > 0 && ay > ax) { d.only = 'stats'; return 'y'; }
+    if (z.bottom && d.dy < 0 && ay > ax) { d.only = 'programme'; return 'y'; }
+    // Ailleurs : seul le glissement horizontal sert (changer d'exercice). Le vertical
+    // appartient à la carte (défilement).
+    if (ax > ay && z.inRoot && !z.corner) return 'x';
+    return null;
+  };
+
+  const onPointerMove = (e: PointerEvent) => {
     const d = drag.current;
     const root = rootRef.current;
     if (!d || !root || d.id !== e.pointerId) return;
@@ -385,23 +491,25 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
     d.lx = e.clientX; d.ly = e.clientY; d.lt = now;
 
     if (!d.axis) {
-      const ax = Math.abs(d.dx), ay = Math.abs(d.dy);
-      if (Math.max(ax, ay) < AXIS_LOCK) return;
-      if (d.startedOpen && ay <= ax) { drag.current = null; return; }
-      d.axis = ax > ay ? 'x' : 'y';
+      if (Math.max(Math.abs(d.dx), Math.abs(d.dy)) < AXIS_LOCK) return;
+      const kind = lockKind(d);
+      if (!kind) { drag.current = null; return; }
+      d.axis = kind;
       // Le mouvement part de zéro au verrouillage : sinon la carte saute des 8 px de seuil.
       d.x = e.clientX; d.y = e.clientY; d.dx = 0; d.dy = 0;
-      d.w = (slotOf(currentIndex)?.offsetWidth ?? 700) + GAP;
+      d.w = kind === 'd' ? (drawerRef.current?.offsetWidth ?? 420) : (slotOf(currentIndex)?.offsetWidth ?? 700) + GAP;
       d.h = root.clientHeight;
       try { root.setPointerCapture(e.pointerId); } catch { /* le geste continue sans capture */ }
       root.dataset.dragging = '1';
-      root.dataset.moving = '1';
+      root.dataset.moving = kind === 'x' ? 'x' : kind === 'y' ? 'sheet' : 'drawer';
       suppressClick.current = true;
     }
-    if (d.axis === 'x') posX(d, d.dx); else posY(d, d.dy);
+    if (d.axis === 'x') posX(d, d.dx);
+    else if (d.axis === 'd') posD(d, d.dx);
+    else posY(d, d.dy);
   };
 
-  const endDrag = (e: React.PointerEvent) => {
+  const endDrag = (e: PointerEvent) => {
     const d = drag.current;
     if (!d || d.id !== e.pointerId) return;
     drag.current = null;
@@ -413,6 +521,11 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
       const has = dir === 1 ? hasNext : hasPrev;
       const fast = Math.abs(d.vx) > 0.45 && Math.sign(d.vx) === Math.sign(d.dx);
       settleX(dir, has && (Math.abs(d.dx) > d.w * 0.28 || fast), d.lastX, d.w, Math.abs(d.vx));
+    } else if (d.axis === 'd') {
+      const closing = d.startedOpen === 'drawer';
+      const fast = (closing ? -d.vx : d.vx) > 0.5;
+      const open = closing ? !(d.po < 0.78 || (fast && d.po < 1)) : (d.po > 0.22 || fast);
+      settleD(open, d.po, d.w, Math.abs(d.vx));
     } else if (d.sheet) {
       const toward = d.startedOpen ? (d.sheet === 'stats' ? -d.vy : d.vy) : (d.sheet === 'stats' ? d.vy : -d.vy);
       const fast = toward > 0.5;
@@ -420,6 +533,31 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
       settleY(d.sheet, open, d.po, d.h, Math.abs(d.vy));
     }
   };
+
+  // Un clic qui suit un vrai glissement n'en est pas un (le doigt a fini sur un bouton).
+  const onClickCapture = (e: MouseEvent) => {
+    if (suppressClick.current) { e.stopPropagation(); e.preventDefault(); }
+  };
+
+  live.current = { down: onPointerDown, move: onPointerMove, up: endDrag, click: onClickCapture };
+  useEffect(() => {
+    const down = (e: PointerEvent) => live.current.down(e);
+    const move = (e: PointerEvent) => live.current.move(e);
+    const up = (e: PointerEvent) => live.current.up(e);
+    const click = (e: MouseEvent) => live.current.click(e);
+    window.addEventListener('pointerdown', down, true);
+    window.addEventListener('pointermove', move, { passive: true });
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    window.addEventListener('click', click, true);
+    return () => {
+      window.removeEventListener('pointerdown', down, true);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      window.removeEventListener('click', click, true);
+    };
+  }, []);
 
   const side = (i: number, dir: 'prev' | 'next') => {
     const c = cards[i];
@@ -463,12 +601,7 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
   return (
     <div
       ref={rootRef}
-      className={`deck${sheet ? ' is-sheet-open' : ''}`}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
-      onClickCapture={(e) => { if (suppressClick.current) { e.stopPropagation(); e.preventDefault(); } }}
+      className={`deck${sheet ? ' is-sheet-open' : ''}${drawerOpen ? ' is-drawer-open' : ''}`}
     >
       {side(currentIndex - 1, 'prev')}
       {side(currentIndex + 1, 'next')}
@@ -505,9 +638,21 @@ export const SessionDeck: React.FC<SessionDeckProps> = ({
       <div className="deck-edge deck-edge-t"><button type="button" className="deck-pill" onClick={() => openSheet('stats')}><Chevron />Stats</button></div>
       <div className="deck-edge deck-edge-b"><button type="button" className="deck-pill" onClick={() => openSheet('programme')}><Chevron up />Exercices</button></div>
 
+      {/* Bande du bas : capte le glissement vers le haut (Programme) même quand la carte défile. */}
+      <div className="deck-zone-b" aria-hidden="true" />
+
       <div ref={scrimRef} className="deck-scrim" aria-hidden="true" />
       {sheetShell('stats', 'Glisse vers le haut pour revenir', 'Fermer', statsSheet)}
       {sheetShell('programme', 'Glisse vers le bas pour revenir', 'Fermer', renderProgramme(closeSheet))}
+
+      <div ref={drawerScrimRef} className="deck-drawer-scrim" onClick={closeDrawer} aria-hidden="true" />
+      <div ref={drawerRef} className={`deck-drawer${drawerOpen ? ' is-open' : ''}`} role="dialog" aria-label="Toutes les stats de la séance" aria-hidden={!drawerOpen}>
+        <div className="deck-drawer-bar">
+          <span className="deck-sheet-hint">Glisse vers la gauche pour fermer</span>
+          <button type="button" className="deck-sheet-close" onClick={closeDrawer}>Fermer</button>
+        </div>
+        <div className="deck-drawer-body">{drawerReady || drawerOpen ? statsSheet : null}</div>
+      </div>
     </div>
   );
 };
