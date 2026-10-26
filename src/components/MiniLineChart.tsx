@@ -71,10 +71,14 @@ export const MiniLineChart: React.FC<MiniLineChartProps> = ({
             </g>
           );
         })}
-        <polyline points={path} fill="none" stroke={lineColor} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        {/* Tracé qui se dessine de gauche à droite ; l'aire se teinte en fin de course,
+            chaque point apparaît quand la ligne le traverse, et le dernier pulse. */}
+        <polygon className="chart-area" points={`${coords[0].x},${CHART_H - PAD_BOTTOM} ${path} ${coords[coords.length - 1].x},${CHART_H - PAD_BOTTOM}`} fill={lineColor} />
+        <polyline className="chart-draw" pathLength={100} points={path} fill="none" stroke={lineColor} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
         {coords.map((c, i) => (
-          <circle key={i} cx={c.x} cy={c.y} r={i === coords.length - 1 ? 3.5 : 2} fill={lineColor} />
+          <circle key={i} className="chart-dot" style={{ '--f': i / (coords.length - 1) } as React.CSSProperties} cx={c.x} cy={c.y} r={i === coords.length - 1 ? 3.5 : 2} fill={lineColor} />
         ))}
+        <circle className="chart-pulse" cx={coords[coords.length - 1].x} cy={coords[coords.length - 1].y} r={3.5} fill={lineColor} />
         <text x={plotX0} y={CHART_H - 4} textAnchor="start" fontSize="8" fill="var(--text-dim)">{dateFmt(first.date)}</text>
         <text x={CHART_W} y={CHART_H - 4} textAnchor="end" fontSize="8" fill="var(--text-dim)">{dateFmt(last.date)}</text>
       </svg>

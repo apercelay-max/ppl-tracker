@@ -869,8 +869,16 @@ button { cursor: pointer; }
 
 .home-days { display: flex; gap: 4px; }
 .home-days > div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.home-days > div > i { width: 100%; height: 6px; border-radius: 3px; background: var(--h-off); }
-.home-days > div.done > i { background: var(--brand-1); }
+.home-days > div > i { position: relative; overflow: hidden; width: 100%; height: 6px; border-radius: 3px; background: var(--h-off); }
+/* Semaine en chaîne : chaque jour validé se remplit de gauche à droite, l'un
+   après l'autre (--k = rang du jour), comme des dominos qui tombent. */
+.home-days > div.done > i::after { content: ''; position: absolute; inset: 0; background: var(--brand-1); transform-origin: left; animation: dayFill 460ms var(--m-out, ease-out) calc(var(--k, 0) * 90ms + 150ms) both; }
+.home-days > div:nth-child(1) { --k: 0; } .home-days > div:nth-child(2) { --k: 1; } .home-days > div:nth-child(3) { --k: 2; }
+.home-days > div:nth-child(4) { --k: 3; } .home-days > div:nth-child(5) { --k: 4; } .home-days > div:nth-child(6) { --k: 5; } .home-days > div:nth-child(7) { --k: 6; }
+/* Aujourd'hui, pas encore fait : la case respire doucement pour appeler la séance. */
+.home-days > div.today:not(.done) > i { animation: dayBreath 2.4s ease-in-out 1.2s infinite; }
+@keyframes dayFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes dayBreath { 0%, 100% { background: var(--h-off); } 50% { background: color-mix(in srgb, var(--brand-1) 45%, var(--h-off)); } }
 .home-days > div > span { font-size: 10px; font-weight: 600; color: var(--h-muted); text-transform: uppercase; }
 .home-days > div.today > span { color: var(--h-text); }
 
@@ -1254,7 +1262,9 @@ button { cursor: pointer; }
 .ep-item > b { font-weight: 500; color: var(--h-text); text-align: right; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ep-dots { display: inline-flex; gap: 5px; margin-right: 8px; vertical-align: 1px; }
 .ep-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--h-off); }
-.ep-dots i.on { background: var(--h-text); }
+.ep-dots i.on { background: var(--h-text); animation: epDot 380ms var(--m-spring, ease-out) calc(var(--k, 0) * 90ms + 150ms) both; }
+.ep-dots i:nth-child(1) { --k: 0; } .ep-dots i:nth-child(2) { --k: 1; } .ep-dots i:nth-child(3) { --k: 2; } .ep-dots i:nth-child(4) { --k: 3; } .ep-dots i:nth-child(n+5) { --k: 4; }
+@keyframes epDot { from { transform: scale(0.2); opacity: 0.3; } to { transform: scale(1); opacity: 1; } }
 .ep-item > span { flex-shrink: 0; }
 .ui-epure .home-big i { font-family: var(--h-cond); font-weight: 300; }
 
@@ -1530,4 +1540,26 @@ body:has(.deck[data-dragging]) { user-select: none; -webkit-user-select: none; }
 @media (prefers-reduced-motion: reduce) {
   .roll-strip { transition: none; }
   .dc-draw .dc-ring, .dc-draw .dc-check, .sv2-set.fresh, .sv2-set.fresh::after, .row-fresh, .row-fresh::after { animation: none; }
+}
+
+/* ─── Courbes qui se dessinent ──────────────────────────────────────────── */
+/* pathLength={100} dit au navigateur que le tracé « mesure 100 » : un seul
+   dasharray/dashoffset vaut pour toutes les courbes, quelle que soit leur longueur. */
+@keyframes chartDraw { to { stroke-dashoffset: 0; } }
+@keyframes chartDot { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+@keyframes chartPulse { 0% { opacity: 0.55; transform: scale(1); } 100% { opacity: 0; transform: scale(3.4); } }
+@keyframes chartArea { from { opacity: 0; } to { opacity: 0.14; } }
+.chart-draw { stroke-dasharray: 100; stroke-dashoffset: 100; animation: chartDraw var(--chart-dur, 900ms) var(--m-out, ease-out) 80ms forwards; }
+/* Chaque point apparaît quand la ligne le traverse : --f vaut 0 au premier point, 1 au dernier. */
+.chart-dot { transform-box: fill-box; transform-origin: center; opacity: 0; animation: chartDot 300ms var(--m-spring, ease-out) calc(80ms + var(--f, 0) * var(--chart-dur, 900ms)) forwards; }
+.chart-pulse { transform-box: fill-box; transform-origin: center; opacity: 0; animation: chartPulse 1.3s ease-out calc(var(--chart-dur, 900ms) + 250ms) 2 both; }
+.chart-area { opacity: 0; animation: chartArea 700ms ease-out calc(var(--chart-dur, 900ms) * 0.55) forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .chart-draw { animation: none; stroke-dashoffset: 0; }
+  .chart-dot { animation: none; opacity: 1; }
+  .chart-pulse { animation: none; opacity: 0; }
+  .chart-area { animation: none; opacity: 0.14; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-days > div.done > i::after, .home-days > div.today:not(.done) > i, .ep-dots i.on { animation: none; }
 }

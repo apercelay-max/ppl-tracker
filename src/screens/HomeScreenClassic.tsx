@@ -738,7 +738,7 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
         </div>
         {trend.length >= 2 ? (
           <svg width="100%" height="36" viewBox="0 0 280 36" preserveAspectRatio="none" style={{ display: 'block' }}>
-            <polyline points={sparklinePoints(trend, 280, 36)} fill="none" stroke="var(--brand-1)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+            <polyline className="chart-draw" pathLength={100} points={sparklinePoints(trend, 280, 36)} fill="none" stroke="var(--brand-1)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         ) : (
           <p style={{ color: 'var(--text-dim)', fontSize: 11 }}>Ajoute une autre pesée pour voir la tendance.</p>
@@ -786,7 +786,7 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
           </span>
         </div>
         <svg width="100%" height="36" viewBox="0 0 280 36" preserveAspectRatio="none" style={{ display: 'block' }}>
-          <polyline points={sparklinePoints(trend, 280, 36)} fill="none" stroke="var(--brand-1)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+          <polyline className="chart-draw" pathLength={100} points={sparklinePoints(trend, 280, 36)} fill="none" stroke="var(--brand-1)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
     );
