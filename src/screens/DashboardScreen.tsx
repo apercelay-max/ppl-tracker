@@ -329,7 +329,7 @@ const LoadGauge: React.FC<{ status: TrainingStatus; color: string }> = ({ status
     <div style={{ marginTop: 12 }}>
       <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'var(--bg-elevated)' }}>
         <div style={{ position: 'absolute', left: pct(status.optimalRange.min), width: `calc(${pct(status.optimalRange.max)} - ${pct(status.optimalRange.min)})`, top: 0, bottom: 0, background: 'rgba(76,175,80,0.28)', borderRadius: 4 }} />
-        <div style={{ position: 'absolute', left: 0, width: pct(status.acuteLoad), top: 2, bottom: 2, background: color, borderRadius: 4 }} />
+        <div className="gauge-fill" style={{ position: 'absolute', left: 0, width: pct(status.acuteLoad), top: 2, bottom: 2, background: color, borderRadius: 4 }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
         <span style={axisLabel}>0</span>

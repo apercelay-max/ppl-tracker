@@ -762,13 +762,13 @@ const OptionCard: React.FC<{
   icon: React.ReactNode; label: string; desc: string;
   active: boolean; onClick: () => void; multi?: boolean;
 }> = ({ icon, label, desc, active, onClick, multi }) => (
-  <button onClick={onClick} style={{ ...optionCard, ...(active ? optionCardActive : {}) }}>
+  <button onClick={onClick} className="quiz-opt" data-active={active} style={{ ...optionCard, ...(active ? optionCardActive : {}) }}>
     <span style={{ ...optionIcon, ...(active ? optionIconActive : {}) }}>{icon}</span>
     <span style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
       <span style={optionLabel}>{label}</span>
       <span style={optionDesc}>{desc}</span>
     </span>
-    <span style={{ ...optionMark, borderRadius: multi ? 6 : 999, ...(active ? optionMarkActive : {}) }}>
+    <span className="quiz-mark" style={{ ...optionMark, borderRadius: multi ? 6 : 999, ...(active ? optionMarkActive : {}) }}>
       {active && <IconCheck size={11} color="#fff" />}
     </span>
   </button>
@@ -880,7 +880,8 @@ const optionCard: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 12, width: '100%',
   padding: '13px 14px', marginBottom: 9, borderRadius: 16, cursor: 'pointer',
   background: 'var(--bg-card)', border: '1px solid var(--border-mid)',
-  transition: 'border-color 0.15s, background 0.15s',
+  // transform : le choix touché grossit avec un léger rebond (voir .quiz-opt dans index.css).
+  transition: 'border-color 0.15s, background 0.15s, transform 0.45s cubic-bezier(0.34, 1.35, 0.5, 1)',
 };
 const optionCardActive: React.CSSProperties = {
   background: 'var(--bg-elevated)', border: '1px solid var(--brand-1)',
