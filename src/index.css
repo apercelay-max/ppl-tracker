@@ -1593,3 +1593,10 @@ button[data-switch][data-on="true"]:active > span { transform: translateX(10px);
   .bd-fill { animation: none; clip-path: none; }
   .bd-covered { animation: none; fill-opacity: 0; }
 }
+
+/* ─── Changement de thème en cercle (utils/themeReveal.ts) ───────────────── */
+/* Le navigateur fond par défaut l'ancien écran vers le nouveau : on coupe ça,
+   c'est le cercle animé en JS qui révèle le nouveau thème par-dessus l'ancien. */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 2; }

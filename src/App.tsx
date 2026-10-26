@@ -38,6 +38,7 @@ import type { GymProfile } from './utils/gymAdapt';
 import { getAccent, hexToRgbTriplet } from './data/accents';
 import { getProgram } from './data/programs';
 import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
+import { revealTheme } from './utils/themeReveal';
 
 type View =
 | 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'historique'
@@ -176,7 +177,12 @@ setNews([]);
 };
 
 useEffect(() => {
-document.documentElement.setAttribute('data-theme', theme);
+const root = document.documentElement;
+const apply = () => root.setAttribute('data-theme', theme);
+// Premier affichage (aucun thème posé) ou thème inchangé : pas d'animation.
+// Un vrai changement part en révélation circulaire depuis le bouton touché.
+if (!root.getAttribute('data-theme') || root.getAttribute('data-theme') === theme) { apply(); return; }
+revealTheme(apply);
 }, [theme]);
 
 // Mode "Système" (Réglages → Apparence) : on suit en direct les
