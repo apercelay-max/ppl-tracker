@@ -91,8 +91,8 @@ export const SessionAdaptSheet: React.FC<Props> = ({ workout, onClose, onStart }
   const baseMin = estimateWorkoutMinutes(workout.exercises);
 
   return (
-    <div style={backdrop} onClick={onClose}>
-      <div style={sheet} onClick={(e) => e.stopPropagation()}>
+    <div className="m-backdrop" style={backdrop} onClick={onClose}>
+      <div className="m-sheet" style={sheet} onClick={(e) => e.stopPropagation()}>
         <div style={handle} />
         <h2 style={title}>Adapter la séance</h2>
         <p style={subtitle}>

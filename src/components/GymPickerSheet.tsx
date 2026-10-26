@@ -42,8 +42,8 @@ export const GymPickerSheet: React.FC<Props> = ({ workout, onClose, onStart }) =
   if (!gym) return null;
 
   return (
-    <div style={backdrop} onClick={onClose}>
-      <div style={sheet} onClick={(e) => e.stopPropagation()}>
+    <div className="m-backdrop" style={backdrop} onClick={onClose}>
+      <div className="m-sheet" style={sheet} onClick={(e) => e.stopPropagation()}>
         <div style={handle} />
         <h2 style={title}>Tu es dans quelle salle ?</h2>
         <p style={subtitle}>{workout.name} · {workout.exercises.length} exercices</p>

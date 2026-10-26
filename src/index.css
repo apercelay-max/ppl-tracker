@@ -50,6 +50,14 @@
   --glass-bg: rgba(40,40,52,0.55);
   --glass-border: rgba(255,255,255,0.14);
   --glass-highlight: rgba(255,255,255,0.18);
+  /* Langage de mouvement commun : tout ce qui bouge dans l'appli puise ici, pour
+     que les durées et les courbes restent cohérentes d'un écran à l'autre. */
+  --m-fast: 120ms;   /* retour au toucher */
+  --m-base: 260ms;   /* apparition d'un écran, d'une fenêtre */
+  --m-slow: 420ms;   /* feuille qui monte depuis le bas */
+  --m-out: cubic-bezier(0.22, 1, 0.36, 1);       /* arrivée douce, sans rebond */
+  --m-spring: cubic-bezier(0.34, 1.35, 0.5, 1);  /* léger dépassement, pour ce qui « pop » */
+  --m-press: 0.97;   /* échelle d'un bouton pressé */
 }
 
 [data-theme="light"] {
@@ -172,16 +180,23 @@ button { cursor: pointer; }
 /* ─── Animations ─────────────────────────────────────────────────────────── */
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-.fade-in { animation: fadeIn 0.25s cubic-bezier(0.34, 1.2, 0.64, 1); }
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(24px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.slide-up { animation: slideUp 0.3s cubic-bezier(0.34, 1.2, 0.64, 1) both; }
+/* Pas de scale ici : sur un écran entier il floute le texte pendant l'animation. */
+.fade-in { animation: fadeIn var(--m-base) var(--m-out) both; }
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.slide-up { animation: slideUp var(--m-base) var(--m-out) both; }
+/* Cascade : les éléments d'une liste arrivent l'un après l'autre. */
+.slide-up:nth-child(2) { animation-delay: 50ms; }
+.slide-up:nth-child(3) { animation-delay: 100ms; }
+.slide-up:nth-child(4) { animation-delay: 150ms; }
+.slide-up:nth-child(5) { animation-delay: 200ms; }
+.slide-up:nth-child(n+6) { animation-delay: 250ms; }
 
 @keyframes checkPop {
   0% { transform: scale(0.4); opacity: 0; }
@@ -1396,4 +1411,26 @@ body:has(.deck[data-dragging]) { user-select: none; -webkit-user-select: none; }
 .shock-ring {
   position: fixed; z-index: 9999; border-radius: 50%; pointer-events: none; will-change: transform, opacity;
   background: radial-gradient(closest-side, transparent 0, transparent 90%, rgba(var(--brand-1-rgb), 0.35) 95%, rgba(255, 255, 255, 0.8) 98.5%, transparent 100%);
+}
+
+/* ─── Mouvement commun : toucher, fenêtres, feuilles ─────────────────────── */
+/* :where() = spécificité nulle : toute règle plus précise de l'appli (ses
+   propres :active, ses transform) garde la priorité, rien ne saute. */
+:where(button, [role="button"], summary):not(:disabled) { transition: transform var(--m-fast) var(--m-out); }
+:where(button, [role="button"], summary):not(:disabled):active { transform: scale(var(--m-press)); }
+
+@keyframes mBackdropIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mSheetIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes mModalIn { from { opacity: 0; transform: translateY(14px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.m-backdrop { animation: mBackdropIn var(--m-base) ease both; }
+.m-sheet { animation: mSheetIn var(--m-slow) var(--m-out) both; }
+.m-modal { animation: mModalIn var(--m-base) var(--m-spring) both; }
+
+/* Chaque style a son caractère : Sport pro est sec, Épuré est lent et calme. */
+.ui-sport { --m-fast: 90ms; --m-base: 190ms; --m-slow: 300ms; --m-out: cubic-bezier(0.4, 0, 0.1, 1); --m-spring: cubic-bezier(0.4, 0, 0.1, 1); --m-press: 0.98; }
+.ui-epure { --m-fast: 160ms; --m-base: 380ms; --m-slow: 560ms; --m-out: cubic-bezier(0.16, 1, 0.3, 1); --m-spring: cubic-bezier(0.16, 1, 0.3, 1); --m-press: 0.985; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in, .slide-up, .m-backdrop, .m-sheet, .m-modal { animation: none; }
+  :where(button, [role="button"], summary) { transition: none; }
 }

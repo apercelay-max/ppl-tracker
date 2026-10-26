@@ -9,8 +9,8 @@ interface WhatsNewSheetProps {
 // Écran « Nouveautés » : affiché une fois après une mise à jour, par-dessus
 // l'écran d'accueil. Voir data/changelog.ts pour le contenu.
 export const WhatsNewSheet: React.FC<WhatsNewSheetProps> = ({ entries, onClose }) => (
-  <div style={overlay} role="dialog" aria-modal="true" aria-label="Nouveautés">
-    <div style={card}>
+  <div className="m-backdrop" style={overlay} role="dialog" aria-modal="true" aria-label="Nouveautés">
+    <div className="m-modal" style={card}>
       <h2 style={heading}>Nouveautés</h2>
       <div style={list}>
         {entries.map((entry) => (

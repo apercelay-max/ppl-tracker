@@ -14,6 +14,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-26-mouvement',
+    title: 'Une appli qui bouge mieux',
+    items: [
+      'Les boutons réagissent au toucher : ils s’enfoncent légèrement quand tu appuies dessus.',
+      'Les écrans, les listes et les fenêtres apparaissent en douceur, avec le même rythme partout.',
+      'Chaque style a son caractère : Sport pro est plus sec, Épuré plus calme. Rien ne bouge si tu as réglé « réduire les animations » sur ton téléphone.',
+    ],
+  },
+  {
     id: '2026-10-26',
     title: 'Séance sur iPad : nouveaux gestes',
     items: [

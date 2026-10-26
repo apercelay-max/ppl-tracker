@@ -12,8 +12,8 @@ export const SyncConflictModal: React.FC<SyncConflictModalProps> = ({ remoteUpda
   });
 
   return (
-    <div style={overlay}>
-      <div style={card}>
+    <div className="m-backdrop" style={overlay}>
+      <div className="m-modal" style={card}>
         <h2 style={title}>Données trouvées dans le cloud</h2>
         <p style={text}>
           Ce compte a déjà des données enregistrées (dernière synchro : {dateLabel}).
