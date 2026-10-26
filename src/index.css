@@ -1494,3 +1494,40 @@ body:has(.deck[data-dragging]) { user-select: none; -webkit-user-select: none; }
   .nav-bubble.is-ready, .nav-bubble.is-ready .nav-lens, .nav-bubble.is-ready .nav-lens-zoom { transition: none; }
 }
 [data-contrast="high"] .nav-capsule { background: var(--bg-elevated); }
+
+/* ─── Validation d'une série : coche dessinée, verrou, chiffres qui roulent ─ */
+/* Compteur façon odomètre (RollNumber) : chaque colonne glisse jusqu'à son chiffre. */
+.roll { display: inline-flex; vertical-align: bottom; font-variant-numeric: tabular-nums; }
+.roll-col { display: inline-block; height: 1.15em; line-height: 1.15em; overflow: hidden; }
+.roll-strip {
+  display: flex; flex-direction: column;
+  transform: translateY(calc(var(--d, 0) * -1.15em));
+  transition: transform calc(var(--m-slow, 420ms) + 300ms) var(--m-out, cubic-bezier(0.22, 1, 0.36, 1)) var(--roll-delay, 0ms);
+}
+.roll-strip > span { display: block; height: 1.15em; line-height: 1.15em; }
+
+/* Coche : l'anneau se referme, puis le trait de la coche se dessine. */
+.dc { display: block; margin: 0 auto; }
+@keyframes dcRing { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+@keyframes dcCheck { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+.dc-draw .dc-ring { animation: dcRing 0.38s var(--m-out, ease-out) both; }
+.dc-draw .dc-check { animation: dcCheck 0.28s var(--m-out, ease-out) 0.3s both; }
+
+/* Verrou : une onde verte traverse la ligne, qui s'enfonce d'un cran, comme
+   une goupille qui se met en place. */
+@keyframes setLockSweep {
+  0% { transform: translateX(-105%); opacity: 0.9; }
+  70% { opacity: 0.9; }
+  100% { transform: translateX(105%); opacity: 0; }
+}
+@keyframes setLockThump { 0%, 100% { transform: translateY(0); } 35% { transform: translateY(2px); } 65% { transform: translateY(-0.5px); } }
+.sv2-set.fresh, .row-fresh { position: relative; overflow: hidden; animation: setLockThump 0.34s var(--m-out, ease-out) 0.28s both; }
+.sv2-set.fresh::after, .row-fresh::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--h-good, #4caf50) 38%, transparent) 50%, transparent);
+  animation: setLockSweep 0.8s var(--m-out, ease-out) 0.28s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .roll-strip { transition: none; }
+  .dc-draw .dc-ring, .dc-draw .dc-check, .sv2-set.fresh, .sv2-set.fresh::after, .row-fresh, .row-fresh::after { animation: none; }
+}

@@ -2,6 +2,8 @@
 // Style de l'interface → Classique. Le style actuel est dans SetRow.tsx.
 import React, { useState, useEffect, useRef } from 'react';
 import { IconCheck } from './Icons';
+import { RollNumber } from './RollNumber';
+import { DrawnCheck } from './DrawnCheck';
 import { SetEntry } from '../data/types';
 import { useWorkoutStore, useActiveGym } from '../store/workoutStore';
 import { formatWeightForDisplay, parseWeightInputToKg, weightUnitLabel, cleanWeightInput, cleanRepsInput, isValidSetInput } from '../utils/weight';
@@ -73,6 +75,15 @@ export const SetRowClassic: React.FC<SetRowProps> = ({
     return range ? String(range[0]) : '';
   };
   const [reps, setReps] = useState(entry.reps || defaultReps());
+  // Série validée SOUS NOS YEUX : seule celle-là rejoue coche, verrou et chiffres
+  // (voir SetRow.tsx : état dérivé pendant le rendu, pour que le premier
+  // affichage de la ligne validée porte déjà l'animation).
+  const [prevCompleted, setPrevCompleted] = useState(entry.completed);
+  const [justValidated, setJustValidated] = useState(false);
+  if (entry.completed !== prevCompleted) {
+    setPrevCompleted(entry.completed);
+    setJustValidated(entry.completed);
+  }
   // Ne déclenche onWeightStart qu'une fois par série active (reset dès
   // qu'on quitte la série active, ex. après validation ou passage suivant).
   const weightStartFiredRef = useRef(false);
@@ -251,14 +262,14 @@ export const SetRowClassic: React.FC<SetRowProps> = ({
     const outOfRange = isRepOutOfRange(entry.reps, targetReps);
     return (
       <div style={rowWrap}>
-        <div style={rowDone}>
+        <div style={rowDone} className={justValidated ? 'row-fresh' : undefined}>
           <div style={doneNumBadge}>
             <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>S</span>
             <span style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontSize: 13, fontWeight: 800 }}>{setNumber}</span>
           </div>
           <div style={donePillWeight}>
             <span style={{ color: 'var(--text-muted)', fontSize: 9, letterSpacing: 0.5 }}>{weightUnitLabel(weightUnit).toUpperCase()}</span>
-            <span style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 15 }}>{entry.weight ? formatWeightForDisplay(entry.weight, weightUnit) : '—'}</span>
+            <span style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 15 }}>{entry.weight ? <RollNumber value={formatWeightForDisplay(entry.weight, weightUnit)} animate={justValidated} /> : '—'}</span>
           </div>
           <div style={{
             ...donePillReps,
@@ -267,12 +278,12 @@ export const SetRowClassic: React.FC<SetRowProps> = ({
           }}>
             <span style={{ color: outOfRange ? '#a06a00' : '#3a7a3a', fontSize: 9, letterSpacing: 0.5 }}>REPS</span>
             <span className={outOfRange ? 'amber-pulse' : ''} style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontWeight: 700, fontSize: 15 }}>
-              {entry.reps}
+              <RollNumber value={entry.reps} animate={justValidated} delay={140} />
               {outOfRange && <span style={{ fontSize: 9, marginLeft: 2, verticalAlign: 'super' }}>⚠</span>}
             </span>
           </div>
-          <span className="check-pop" style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontSize: 13, width: 20, textAlign: 'center', flexShrink: 0, fontWeight: 700 }}>
-            {outOfRange ? '!' : '✓'}
+          <span className={justValidated ? 'check-pop' : undefined} style={{ color: outOfRange ? '#f5a623' : '#4CAF50', fontSize: 13, width: 20, textAlign: 'center', flexShrink: 0, fontWeight: 700 }}>
+            {outOfRange ? '!' : <DrawnCheck draw={justValidated} />}
           </span>
           {onEdit && <button onClick={onEdit} style={editBtn} title="Modifier cette série">✎</button>}
         </div>

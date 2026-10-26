@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { IconCheck } from './Icons';
+import { RollNumber } from './RollNumber';
+import { DrawnCheck } from './DrawnCheck';
 import { SetEntry } from '../data/types';
 import { useWorkoutStore, useActiveGym } from '../store/workoutStore';
 import { formatWeightForDisplay, parseWeightInputToKg, weightUnitLabel, cleanWeightInput, cleanRepsInput, isValidSetInput } from '../utils/weight';
@@ -71,6 +73,16 @@ export const SetRow: React.FC<SetRowProps> = ({
     return range ? String(range[0]) : '';
   };
   const [reps, setReps] = useState(entry.reps || defaultReps());
+  // Série validée SOUS NOS YEUX (et non déjà faite à l'ouverture de la séance) :
+  // seule celle-là rejoue la coche, le verrou et le roulement des chiffres.
+  // État dérivé pendant le rendu plutôt que dans un effet : l'effet arriverait
+  // après le premier affichage de la ligne, qui apparaîtrait alors sans animation.
+  const [prevCompleted, setPrevCompleted] = useState(entry.completed);
+  const [justValidated, setJustValidated] = useState(false);
+  if (entry.completed !== prevCompleted) {
+    setPrevCompleted(entry.completed);
+    setJustValidated(entry.completed);
+  }
   // Ne déclenche onWeightStart qu'une fois par série active (reset dès
   // qu'on quitte la série active, ex. après validation ou passage suivant).
   const weightStartFiredRef = useRef(false);
@@ -260,10 +272,10 @@ export const SetRow: React.FC<SetRowProps> = ({
     const w = weightDisplay(entry.weight);
     return (
       <div className="sv2-setwrap">
-        <div className={`sv2-set done${outOfRange ? ' warn' : ''}`}>
-          <span className="n check-pop">{outOfRange ? '!' : '✓'}</span>
+        <div className={`sv2-set done${outOfRange ? ' warn' : ''}${justValidated ? ' fresh' : ''}`}>
+          <span className={`n${justValidated ? ' check-pop' : ''}`}>{outOfRange ? '!' : <DrawnCheck draw={justValidated} />}</span>
           <span className="v">
-            {w ? `${w} ${weightUnitLabel(weightUnit)}` : 'PDC'} × <b className={outOfRange ? 'amber-pulse' : undefined}>{entry.reps}</b>
+            {w ? <><RollNumber value={w} animate={justValidated} /> {weightUnitLabel(weightUnit)}</> : 'PDC'} × <b className={outOfRange ? 'amber-pulse' : undefined}><RollNumber value={entry.reps} animate={justValidated} delay={140} /></b>
             {outOfRange && <span style={{ color: 'var(--h-warn)', fontSize: 12, fontWeight: 500 }}> · hors fourchette</span>}
           </span>
           {onEdit ? <button onClick={onEdit} className="sv2-edit" title="Modifier cette série">Modifier</button> : <span />}
