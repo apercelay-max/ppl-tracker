@@ -111,7 +111,10 @@ const sessionAdaptation = useWorkoutStore((s) => s.sessionAdaptation);
 const setWakeLockEnabled = useWorkoutStore((s) => s.setWakeLockEnabled);
 const [isWide, setIsWide] = useState(() => window.innerWidth >= 700);
 // iPad en paysage (et plus large) : séance en cartes avec glissements, voir SessionDeck.
-const [isDeck, setIsDeck] = useState(() => window.innerWidth >= 1000);
+// Deux seuils (on entre à 900 px, on sort sous 840 px) : une largeur qui oscille autour
+// d'un seul seuil (barre latérale de Safari, clavier, fenêtre iPad) ferait basculer
+// l'écran d'un design à l'autre en pleine séance.
+const [isDeck, setIsDeck] = useState(() => window.innerWidth >= 900);
 // Vue iPad : la première carte est « Échauffement et muscles », le premier exercice
 // est la 2e. On y atterrit au début de la séance, pas en la reprenant en cours.
 const [onIntro, setOnIntro] = useState(() => {
@@ -250,7 +253,7 @@ advanceSession();
 }, [advanceSession]);
 
 useEffect(() => {
-const h = () => { setIsWide(window.innerWidth >= 700); setIsDeck(window.innerWidth >= 1000); };
+const h = () => { setIsWide(window.innerWidth >= 700); setIsDeck((on) => window.innerWidth >= (on ? 840 : 900)); };
 window.addEventListener('resize', h);
 return () => window.removeEventListener('resize', h);
 }, []);
