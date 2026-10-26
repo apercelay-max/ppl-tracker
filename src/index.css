@@ -1563,3 +1563,21 @@ body:has(.deck[data-dragging]) { user-select: none; -webkit-user-select: none; }
 @media (prefers-reduced-motion: reduce) {
   .home-days > div.done > i::after, .home-days > div.today:not(.done) > i, .ep-dots i.on { animation: none; }
 }
+
+/* ─── Interrupteurs et sélecteurs liquides (Réglages) ────────────────────── */
+/* Les interrupteurs positionnaient la pastille par justify-content, qu'aucune
+   transition ne sait animer. On la place maintenant par transform, selon
+   data-on (posé par SettingsScreen), pour qu'elle glisse avec un léger rebond. */
+button[data-switch] { justify-content: flex-start !important; }
+button[data-switch] > span { transition: transform 0.45s var(--m-spring, cubic-bezier(0.34, 1.35, 0.5, 1)), width 0.2s var(--m-out, ease-out); }
+button[data-switch][data-on="true"] > span { transform: translateX(16px); }
+/* Comme sur iOS : la pastille s'allonge sous le doigt (elle reste collée au bord choisi). */
+button[data-switch]:active > span { width: 26px; }
+button[data-switch][data-on="true"]:active > span { transform: translateX(10px); }
+
+/* Sélecteur en pastille : la bulle glisse sous le choix actif (LiquidPill.tsx).
+   Le bouton actif perd son propre fond, c'est la bulle qui le porte. */
+.lp-bubble { position: absolute; top: 3px; bottom: 3px; left: 0; width: 0; border-radius: 9px; background: var(--bg-base); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); pointer-events: none; }
+.lp > button { position: relative; z-index: 1; }
+.lp > button[aria-pressed="true"] { background: transparent !important; box-shadow: none !important; }
+@media (prefers-reduced-motion: reduce) { button[data-switch] > span { transition: none; } }

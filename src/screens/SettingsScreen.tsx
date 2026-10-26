@@ -24,6 +24,7 @@ import type { VoiceVerbosity } from '../store/workoutStore';
 import { isVoiceSupported, primeVoice, speak, stopVoice } from '../utils/voiceCoach';
 import { IconActivity, IconArrowRight, IconBarChart, IconBook, IconBounce, IconCalendar, IconCheck, IconClose, IconDownload, IconDumbbell, IconFireworks, IconHome, IconMonitor, IconMoon, IconPalette, IconPartyPopper, IconRefreshCw, IconRotateCcw, IconSave, IconScale, IconSearch, IconSparkles, IconSun, IconTable, IconTarget, IconUpload, IconUser } from '../components/Icons';
 import { useScreenClass } from '../hooks/useScreenClass';
+import { LiquidPill } from '../components/LiquidPill';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -794,6 +795,7 @@ Joue un bip quand le repos se termine, en plus de la vibration/notification.
 </div>
 <button
 onClick={() => setBeepEnabled(!beepEnabled)}
+data-switch data-on={String(!!(beepEnabled))}
 style={{
 ...switchTrack,
 background: beepEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
@@ -853,6 +855,7 @@ Petite vibration à chaque série validée, fin de repos et fin de séance.
 </div>
 <button
 onClick={() => setHapticsEnabled(!hapticsEnabled)}
+data-switch data-on={String(!!(hapticsEnabled))}
 style={{
 ...switchTrack,
 background: hapticsEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
@@ -912,6 +915,7 @@ Le corps face/dos affiché en début de séance avec les muscles travaillés.
 </div>
 <button
 onClick={() => setBodyDiagramEnabled(!bodyDiagramEnabled)}
+data-switch data-on={String(!!(bodyDiagramEnabled))}
 style={{
 ...switchTrack,
 background: bodyDiagramEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
@@ -946,6 +950,7 @@ if (!ok) { setShakeError("Autorisation refusée. Sur iPhone : Réglages → Safa
 setShakeError(null);
 setShakeToValidateEnabled(true);
 }}
+data-switch data-on={String(!!(shakeToValidateEnabled))}
 style={{
 ...switchTrack,
 background: shakeToValidateEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
@@ -988,6 +993,7 @@ setVoiceCoachEnabled(next);
 if (next) { primeVoice(); speak('Coach vocal activé.', { rate: voiceRate }); }
 else stopVoice();
 }}
+data-switch data-on={String(!!(voiceCoachEnabled))}
 style={{
 ...switchTrack,
 background: voiceCoachEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
@@ -1138,6 +1144,7 @@ Désactive pour ne garder que les réglages essentiels et masquer couleurs, icô
 </div>
 <button
 onClick={() => setSimplicityMode(!simplicityMode)}
+data-switch data-on={String(!!(!simplicityMode))}
 style={{
 ...switchTrack,
 background: !simplicityMode ? 'var(--brand-1)' : 'var(--bg-elevated)',
@@ -1237,11 +1244,12 @@ menu de réglages Claude, distincte des segmentBtn colorés
 utilisés ailleurs (transitions, effets...). Reste visible même
 en mode simplifié : c'est un réglage essentiel, pas un gadget. */}
 <p style={{ ...subLabel, marginTop: 20 }}>APPARENCE</p>
-<div style={themeModePill}>
+<LiquidPill style={themeModePill}>
 {THEME_MODES.map((m) => (
 <button
 key={m.id}
 onClick={() => setThemeMode(m.id)}
+aria-pressed={themeMode === m.id}
 title={m.label}
 style={{
 ...themeModeBtn,
@@ -1254,13 +1262,13 @@ boxShadow: themeMode === m.id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
 <span style={{ fontSize: 10, fontWeight: 700 }}>{m.label}</span>
 </button>
 ))}
-</div>
+</LiquidPill>
 
 {/* Style de l'interface : l'accueil et l'écran de séance existent en deux
     versions. Visible même en mode simplifié, comme l'apparence : c'est ce
     qui décide à quoi ressemble l'app au quotidien. */}
 <p style={{ ...subLabel, marginTop: 20 }}>STYLE DE L'INTERFACE</p>
-<div style={themeModePill} role="group" aria-label="Style de l'interface">
+<LiquidPill style={themeModePill} role="group" aria-label="Style de l'interface">
 {([
 { id: 'nouveau', label: 'Nouveau', hint: 'Surfaces pleines, gros chiffres' },
 { id: 'classique', label: 'Classique', hint: 'Verre et halo de couleur' },
@@ -1283,7 +1291,7 @@ boxShadow: uiStyle === opt.id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
 <span style={{ fontSize: 10, fontWeight: 500, opacity: 0.8 }}>{opt.hint}</span>
 </button>
 ))}
-</div>
+</LiquidPill>
 <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 6, lineHeight: '15px' }}>
 S'applique à l'accueil et à l'écran de séance.
 </p>
@@ -1303,6 +1311,7 @@ S'applique à l'accueil et à l'écran de séance.
 </div>
 <button
 onClick={() => setAmoledMode(!amoledMode)}
+data-switch data-on={String(!!(amoledMode))}
 style={{
 ...switchTrack,
 background: amoledMode ? 'var(--brand-1)' : 'var(--bg-elevated)',
@@ -1392,6 +1401,7 @@ Transitions rebondissantes entre les écrans, confettis sur les records et à la
 </div>
 <button
 onClick={() => setUltraAnimationsEnabled(!ultraAnimationsEnabled)}
+data-switch data-on={String(!!(ultraAnimationsEnabled))}
 style={{
 ...switchTrack,
 background: ultraAnimationsEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
@@ -1468,6 +1478,7 @@ Textes et bordures plus marqués, pour mieux distinguer les éléments.
 </div>
 <button
 onClick={() => setHighContrast(!highContrast)}
+data-switch data-on={String(!!(highContrast))}
 style={{
 ...switchTrack,
 background: highContrast ? 'var(--brand-1)' : 'var(--bg-elevated)',
@@ -1491,6 +1502,7 @@ Barre flottante et translucide en bas de l'écran, pour naviguer entre l'accueil
 </div>
 <button
 onClick={() => setNavBarEnabled(!navBarEnabled)}
+data-switch data-on={String(!!(navBarEnabled))}
 style={{
 ...switchTrack,
 background: navBarEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
@@ -1532,6 +1544,7 @@ title={pinned ? "Dans la barre — appuie pour mettre dans le +" : "Dans le + �
 )}
 <button
 onClick={() => setNavBarTabEnabled(tab.id, !enabled)}
+data-switch data-on={String(!!(enabled))}
 style={{
 ...switchTrack,
 background: enabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
@@ -1603,6 +1616,7 @@ title="Revenir à la couleur par défaut"
 {meta.toggleable ? (
 <button
 onClick={() => setHomeSectionVisible(key as keyof typeof homeSections, !visible)}
+data-switch data-on={String(!!(visible))}
 style={{
 ...switchTrack,
 background: visible ? 'var(--brand-1)' : 'var(--bg-elevated)',
@@ -1642,6 +1656,7 @@ Paliers de progression (séances, régularité, cardio, poids, records) sur l'é
 </div>
 <button
 onClick={() => setBadgesEnabled(!badgesEnabled)}
+data-switch data-on={String(!!(badgesEnabled))}
 style={{
 ...switchTrack,
 background: badgesEnabled ? 'var(--brand-1)' : 'var(--bg-elevated)',
@@ -1948,7 +1963,9 @@ transition: 'background 0.2s',
 };
 const switchThumb: React.CSSProperties = {
 width: 20, height: 20, borderRadius: '50%', background: '#fff',
-boxShadow: '0 1px 3px rgba(0,0,0,0.3)', transition: 'transform 0.2s',
+// La transition vient de index.css (button[data-switch] > span) : un style en
+// ligne l'écraserait, et la pastille ne glisserait plus avec son rebond.
+boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
 };
 const reorderCol: React.CSSProperties = {
 display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0,
