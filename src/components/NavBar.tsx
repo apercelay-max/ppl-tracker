@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import type { NavTabKey } from '../data/types';
 import {
@@ -278,6 +278,55 @@ try { localStorage.removeItem(DISMISS_KEY); } catch { /* stockage indisponible *
 setDismissedSig(null);
 };
 
+// ── Bulle mobile avec lentille ────────────────────────────────────────────
+// Une seule bulle glisse derrière l'onglet ouvert. À l'intérieur, une copie
+// agrandie des icônes (la « lentille ») glisse en sens inverse pour rester
+// alignée avec la vraie barre : on voit les icônes grossies à travers le verre.
+// C'est la seule façon d'avoir une déformation sur iPhone, où le filtre SVG
+// de backdrop-filter n'existe pas. La position est mesurée (et non calculée)
+// parce que la largeur des onglets dépend de leur nombre.
+const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+const bubbleRef = useRef<HTMLDivElement>(null);
+const prevSlot = useRef<number | null>(null);
+const [geo, setGeo] = useState<{ x: number; y: number; w: number; h: number; cw: number; ch: number } | null>(null);
+const [bubbleReady, setBubbleReady] = useState(false);
+const plusSlot = overflowTabs.length > 0 ? pinnedTabs.length : -1;
+const pinnedActive = pinnedTabs.findIndex((t) => t.id === active);
+const activeSlot = pinnedActive !== -1 ? pinnedActive : (plusSlot !== -1 && (moreOpen || isOverflowActive)) ? plusSlot : -1;
+// Une fois la bulle posée au bon endroit, on active ses transitions : sans ça
+// elle glisserait depuis le coin à l'ouverture de l'appli.
+useLayoutEffect(() => {
+  const cap = glassRef.current;
+  const btn = activeSlot >= 0 ? tabRefs.current[activeSlot] : null;
+  if (!cap || !btn) return;
+  const OVER = 3; // la bulle déborde de l'onglet pour paraître plus grosse (sans être rognée par la capsule)
+  setGeo({ x: btn.offsetLeft - OVER, y: btn.offsetTop - 4, w: btn.offsetWidth + OVER * 2, h: btn.offsetHeight + 8, cw: cap.clientWidth, ch: cap.clientHeight });
+}, [activeSlot, barWidth, pinnedSig, slotCount]);
+useEffect(() => {
+  if (!geo || bubbleReady) return;
+  const id = requestAnimationFrame(() => setBubbleReady(true));
+  return () => cancelAnimationFrame(id);
+}, [geo, bubbleReady]);
+// Étirement façon goutte pendant le trajet, puis léger rebond à l'arrivée.
+// Plus l'onglet visé est loin, plus la bulle s'étire.
+useEffect(() => {
+  const prev = prevSlot.current;
+  prevSlot.current = activeSlot;
+  const el = bubbleRef.current;
+  if (!el || prev === null || prev < 0 || activeSlot < 0 || prev === activeSlot) return;
+  if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  const stretch = Math.min(0.5, 0.16 * Math.abs(activeSlot - prev));
+  el.animate(
+    [
+      { scale: '1 1' },
+      { scale: `${1 + stretch} 0.9`, offset: 0.35 },
+      { scale: `${1 - stretch * 0.25} 1.06`, offset: 0.7 },
+      { scale: '1 1' },
+    ],
+    { duration: 720, easing: 'cubic-bezier(0.3, 0, 0.3, 1)' },
+  );
+}, [activeSlot]);
+
 const handleNavigate = (view: NavView) => {
 setMoreOpen(false);
 onNavigate(view);
@@ -400,14 +449,45 @@ willChange: 'transform',
 {/* Bruit très fin (2-3% d'opacité) pour casser l'aspect trop lisse du flou */}
 <div style={{ ...noiseLayer, backgroundImage: `url("${NOISE_URL}")` }} />
 
+{geo && (
+<div
+ref={bubbleRef}
+className={`nav-bubble${bubbleReady ? ' is-ready' : ''}`}
+style={{ '--nb-x': `${geo.x}px`, '--nb-y': `${geo.y}px`, '--nb-w': `${geo.w}px`, '--nb-h': `${geo.h}px`, '--nb-cw': `${geo.cw}px`, '--nb-ch': `${geo.ch}px`, opacity: activeSlot >= 0 ? 1 : 0 } as React.CSSProperties}
+aria-hidden="true"
+>
+<div className="nav-lens">
+<div className="nav-lens-zoom" style={{ ...lensRow }}>
 {pinnedTabs.map((tab) => {
+const Icon = TAB_ICONS[tab.id];
+return (
+<span key={tab.id} style={lensTab}>
+<span style={{ ...iconWrap, color: 'var(--brand-1)' }}><Icon size={22} filled /></span>
+<span style={{ ...tabLabel, color: 'var(--brand-1)', fontWeight: 700 }}>{tab.label}</span>
+<span style={{ ...tabDot, background: 'var(--brand-1)' }} />
+</span>
+);
+})}
+{overflowTabs.length > 0 && (
+<span style={lensTab}>
+<span style={{ ...iconWrap, color: 'var(--brand-1)' }}><PlusIcon size={22} /></span>
+<span style={{ ...tabLabel, color: 'var(--brand-1)', fontWeight: 700 }}>Plus</span>
+<span style={{ ...tabDot, background: 'transparent' }} />
+</span>
+)}
+</div>
+</div>
+</div>
+)}
+
+{pinnedTabs.map((tab, idx) => {
 const isActive = tab.id === active;
 const Icon = TAB_ICONS[tab.id];
 return (
 <button
 key={tab.id}
+ref={(el) => { tabRefs.current[idx] = el; }}
 onClick={() => handleNavigate(tab.id)}
-className={isActive ? 'nav-tab-active' : undefined}
 style={tabBtn}
 aria-label={tab.label}
 aria-current={isActive ? 'page' : undefined}
@@ -417,10 +497,10 @@ pastille colorée, pas d'agrandissement — juste l'icône qui passe
 d'outline à filled et se teinte en couleur d'accent, le libellé
 toujours visible sous chaque icône (jamais masqué), comme dans
 Réglages, Musique ou l'App Store sur iPhone. */}
-<span style={{ ...iconWrap, color: isActive ? 'var(--brand-1)' : 'var(--text-muted)' }}>
+<span style={{ ...iconWrap, color: isActive ? 'var(--brand-1)' : 'var(--text-secondary)' }}>
 <Icon size={22} filled={isActive} />
 </span>
-<span style={{ ...tabLabel, color: isActive ? 'var(--brand-1)' : 'var(--text-muted)', fontWeight: isActive ? 700 : 500 }}>
+<span style={{ ...tabLabel, color: isActive ? 'var(--brand-1)' : 'var(--text-secondary)', fontWeight: isActive ? 700 : 600 }}>
 {tab.label}
 </span>
 <span style={{ ...tabDot, background: isActive ? 'var(--brand-1)' : 'transparent' }} aria-hidden="true" />
@@ -429,11 +509,11 @@ Réglages, Musique ou l'App Store sur iPhone. */}
 })}
 
 {overflowTabs.length > 0 && (
-<button onClick={() => setMoreOpen((v) => !v)} style={tabBtn} aria-label="Plus d'options" aria-expanded={moreOpen}>
-<span style={{ ...iconWrap, color: (moreOpen || isOverflowActive) ? 'var(--brand-1)' : 'var(--text-muted)', transform: moreOpen ? 'rotate(45deg)' : 'rotate(0deg)' }}>
+<button ref={(el) => { tabRefs.current[pinnedTabs.length] = el; }} onClick={() => setMoreOpen((v) => !v)} style={tabBtn} aria-label="Plus d'options" aria-expanded={moreOpen}>
+<span style={{ ...iconWrap, color: (moreOpen || isOverflowActive) ? 'var(--brand-1)' : 'var(--text-secondary)', transform: moreOpen ? 'rotate(45deg)' : 'rotate(0deg)' }}>
 <PlusIcon size={22} />
 </span>
-<span style={{ ...tabLabel, color: (moreOpen || isOverflowActive) ? 'var(--brand-1)' : 'var(--text-muted)', fontWeight: (moreOpen || isOverflowActive) ? 700 : 500 }}>
+<span style={{ ...tabLabel, color: (moreOpen || isOverflowActive) ? 'var(--brand-1)' : 'var(--text-secondary)', fontWeight: (moreOpen || isOverflowActive) ? 700 : 600 }}>
 Plus
 </span>
 <span style={{ ...tabDot, background: isOverflowActive ? 'var(--brand-1)' : 'transparent' }} aria-hidden="true" />
@@ -526,6 +606,13 @@ boxShadow: '0 10px 26px rgba(var(--brand-1-rgb),0.45), inset 0 1px 0 rgba(255,25
 transition: 'transform 0.18s cubic-bezier(0.34,1.5,0.64,1)',
 };
 
+// La lentille reproduit exactement la disposition de la capsule (mêmes marges,
+// même écart, onglets de même largeur) : c'est ce qui la garde alignée avec la
+// vraie barre quand elle glisse en sens inverse de la bulle.
+const lensRow: React.CSSProperties = {
+position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', gap: 3, padding: '6px 6px',
+};
+
 // Point sous l'onglet ouvert (variante « dock » du labo).
 const tabDot: React.CSSProperties = {
 width: 4, height: 4, borderRadius: '50%', marginTop: 1,
@@ -580,6 +667,9 @@ border: 'none',
 cursor: 'pointer',
 };
 
+// Copie d'onglet pour la lentille : déclarée après tabBtn dont elle hérite.
+const lensTab: React.CSSProperties = { ...tabBtn, pointerEvents: 'none' };
+
 // Pas de fond/pastille (contrairement à avant) : uniquement l'icône et sa
 // couleur qui changent, comme sur une tab bar iOS.
 const iconWrap: React.CSSProperties = {
@@ -588,7 +678,7 @@ transition: 'color 0.15s ease, transform 0.28s cubic-bezier(0.34, 1.4, 0.64, 1)'
 };
 
 const tabLabel: React.CSSProperties = {
-fontSize: 9,
+fontSize: 10,
 letterSpacing: 0.1,
 lineHeight: 1,
 maxWidth: '100%',

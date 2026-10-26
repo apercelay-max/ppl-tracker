@@ -1434,3 +1434,63 @@ body:has(.deck[data-dragging]) { user-select: none; -webkit-user-select: none; }
   .fade-in, .slide-up, .m-backdrop, .m-sheet, .m-modal { animation: none; }
   :where(button, [role="button"], summary) { transition: none; }
 }
+
+/* ─── Barre du bas : bulle mobile avec lentille ──────────────────────────── */
+/* La bulle glisse derrière l'onglet ouvert ; la lentille qu'elle contient
+   glisse en sens inverse (même durée, même courbe) pour rester alignée avec la
+   vraie barre. Le fond de la bulle est OPAQUE : il masque l'icône d'origine,
+   sinon on verrait deux icônes superposées. */
+.nav-bubble {
+  --nb-dur: var(--m-slow, 420ms);
+  --nb-ease: cubic-bezier(0.34, 1.25, 0.5, 1);
+  position: absolute; left: 0; top: 0; z-index: 1; pointer-events: none;
+  translate: var(--nb-x) var(--nb-y);
+  width: var(--nb-w); height: var(--nb-h);
+  border-radius: 999px; overflow: hidden;
+  background-color: #34344a;
+  background-image: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.06) 55%, rgba(255,255,255,0.12));
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,0.5),
+    inset 0 -1.5px 0 rgba(255,255,255,0.16),
+    inset 0 0 0 1.5px rgba(var(--brand-1-rgb), 0.65),
+    0 6px 16px rgba(0,0,0,0.35);
+}
+.nav-bubble.is-ready { transition: translate var(--nb-dur) var(--nb-ease), width var(--nb-dur) var(--nb-ease), height var(--nb-dur) var(--nb-ease), opacity 0.2s ease; }
+.nav-lens {
+  position: absolute; left: 0; top: 0; width: var(--nb-cw); height: var(--nb-ch);
+  translate: calc(var(--nb-x) * -1) calc(var(--nb-y) * -1);
+}
+.nav-bubble.is-ready .nav-lens { transition: translate var(--nb-dur) var(--nb-ease); }
+/* Grossissement centré sur la bulle + léger décalage rouge/bleu sur les bords,
+   comme la lumière qui se sépare en traversant du verre. */
+.nav-lens-zoom {
+  transform: scale(1.14);
+  /* Origine un peu sous le centre : le libellé est en bas de l'onglet, un
+     grossissement centré le ferait sortir de la bulle. */
+  transform-origin: calc(var(--nb-x) + var(--nb-w) / 2) calc(var(--nb-y) + var(--nb-h) / 2 + 6px);
+  filter: drop-shadow(0.7px 0 0 rgba(255, 60, 90, 0.55)) drop-shadow(-0.7px 0 0 rgba(60, 170, 255, 0.55));
+}
+.nav-bubble.is-ready .nav-lens-zoom { transition: transform-origin var(--nb-dur) var(--nb-ease); }
+[data-theme="light"] .nav-bubble {
+  background-color: #ffffff;
+  background-image: linear-gradient(180deg, rgba(255,255,255,1), rgba(240,240,248,1));
+  box-shadow: inset 0 1.5px 0 #fff, inset 0 0 0 1.5px rgba(var(--brand-1-rgb), 0.55), 0 6px 16px rgba(40,40,80,0.22);
+}
+
+/* Contraste de la capsule : fond plus dense, bord plus net. */
+.nav-capsule { border-color: rgba(255,255,255,0.26) !important; }
+.nav-capsule {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02) 45%, rgba(0,0,0,0.18)),
+    rgba(14, 14, 20, 0.82);
+}
+[data-theme="light"] .nav-capsule {
+  border-color: rgba(30,30,60,0.14) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.6) 45%, rgba(255,255,255,0.78)),
+    rgba(255,255,255,0.9);
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-bubble.is-ready, .nav-bubble.is-ready .nav-lens, .nav-bubble.is-ready .nav-lens-zoom { transition: none; }
+}
+[data-contrast="high"] .nav-capsule { background: var(--bg-elevated); }
