@@ -99,7 +99,7 @@ export const ExerciseCatalog: React.FC = () => {
 
   return (
     <div ref={listRef}>
-      <div style={searchWrap}>
+      <div className="cat-search" style={searchWrap}>
         <span style={{ display: 'inline-flex', opacity: 0.7 }}><IconSearch size={14} /></span>
         <input
           type="text"
@@ -109,7 +109,7 @@ export const ExerciseCatalog: React.FC = () => {
           style={searchInput}
         />
         {query !== '' && (
-          <button onClick={() => setQuery('')} style={clearBtn} aria-label="Effacer"><IconClose size={14} /></button>
+          <button onClick={() => setQuery('')} className="cat-clear" style={clearBtn} aria-label="Effacer"><IconClose size={14} /></button>
         )}
       </div>
 

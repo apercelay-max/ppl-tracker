@@ -137,7 +137,7 @@ const screenClass = useScreenClass();
           </div>
         </div>
 
-            <div style={searchWrap}>
+            <div className="cat-search" style={searchWrap}>
               <span style={searchIcon}><IconSearch size={14} /></span>
               <input
                 type="text"
@@ -147,7 +147,7 @@ const screenClass = useScreenClass();
                 style={searchInput}
               />
               {query !== '' && (
-                <button onClick={() => setQuery('')} style={searchClearBtn} aria-label="Effacer"><IconClose size={14} /></button>
+                <button onClick={() => setQuery('')} className="cat-clear" style={searchClearBtn} aria-label="Effacer"><IconClose size={14} /></button>
               )}
             </div>
 

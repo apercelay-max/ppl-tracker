@@ -1763,3 +1763,27 @@ html.vt-theme::view-transition-new(root) { z-index: 2; }
 @keyframes cardSettle { 0% { transform: scale(1); } 35% { transform: scale(0.975); } 100% { transform: scale(1); } }
 .exercise-card.is-done, .sv2-card.is-done { animation: cardSettle 0.5s var(--m-spring, ease-out); }
 @media (prefers-reduced-motion: reduce) { .bilan-in, .exercise-card.is-done, .sv2-card.is-done { animation: none; } }
+
+/* ─── Barre chargée de tonnage (TonnageBar) ──────────────────────────────── */
+.tb { margin-top: 10px; }
+.tb-row { position: relative; height: 52px; display: flex; align-items: center; gap: 2px; padding-left: 16px; }
+.tb-bar { position: absolute; left: 0; right: 0; top: 50%; height: 6px; margin-top: -3px; border-radius: 3px; background: var(--border-strong); }
+.tb-collar { position: absolute; left: 8px; top: 50%; width: 8px; height: 26px; margin-top: -13px; border-radius: 2px; background: var(--text-muted); }
+.tb-plate { position: relative; flex: none; display: block; width: 9px; border-radius: 3px; background: var(--brand-1); animation: tbIn 0.55s var(--m-spring, ease-out) calc(var(--i, 0) * 90ms) both; }
+.tb-plate:nth-of-type(3n+2) { background: var(--brand-2); }
+@keyframes tbIn { from { opacity: 0; transform: translateX(44px); } to { opacity: 1; transform: translateX(0); } }
+.tb-legend { margin-top: 2px; font-size: 11px; color: var(--text-dim); }
+
+/* ─── Lien entre les membres d'un superset ───────────────────────────────── */
+.ss-link { position: relative; height: 16px; margin: -2px 0 4px; }
+.ss-link::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; border-radius: 1px; background: #7a1010; }
+.ss-link i { position: absolute; left: 50%; top: 0; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: #e03030; opacity: 0; }
+.ss-link[data-play="true"] i { animation: ssDot 1.4s ease-in-out infinite; }
+@keyframes ssDot { 0% { top: 0; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { top: 8px; opacity: 0; } }
+
+/* ─── Champs de recherche : halo au toucher, bouton d'effacement qui pop ──── */
+.cat-search { transition: border-color 0.2s, box-shadow 0.25s, transform 0.3s var(--m-spring, ease-out); }
+.cat-search:focus-within { border-color: var(--brand-1) !important; box-shadow: 0 0 0 4px rgba(var(--brand-1-rgb), 0.18); transform: scale(1.012); }
+@keyframes catClear { from { opacity: 0; transform: scale(0.4) rotate(-90deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
+.cat-clear { animation: catClear 0.3s var(--m-spring, ease-out) both; }
+@media (prefers-reduced-motion: reduce) { .tb-plate, .ss-link[data-play="true"] i, .cat-clear { animation: none; } .cat-search { transition: none; } .cat-search:focus-within { transform: none; } }

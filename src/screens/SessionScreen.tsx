@@ -1222,8 +1222,10 @@ const exIdx = exercises.indexOf(exercise);
 const isRestTarget = exercise.id === restBarTargetExerciseId;
 const displayExercise = session.exerciseNameOverrides?.[exercise.id] ? { ...exercise, name: session.exerciseNameOverrides[exercise.id] } : exercise;
 return (
+<React.Fragment key={exercise.id}>
+{/* Lien entre les membres du superset : une bille y circule tant que le groupe est en cours. */}
+{idx > 0 && <div className="ss-link" data-play={groupIsInPlay} aria-hidden="true"><i /></div>}
 <Card
-key={exercise.id}
 exercise={displayExercise}
 setEntries={session.exerciseProgress[exercise.id] ?? []}
 currentSetIndex={exIdx === currentExIdx ? currentSetIdx : 0}
@@ -1241,6 +1243,7 @@ restBar={isRestTarget ? restBarNode : null}
 restBarIndex={isRestTarget ? restBarTargetIndex : undefined}
 validateSignal={exIdx === currentExIdx ? shakeSignal : undefined}
 />
+</React.Fragment>
 );
 })}
 </div>

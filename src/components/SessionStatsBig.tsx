@@ -9,6 +9,7 @@ import { kgToLbs, weightUnitLabel } from '../utils/weight';
 import { WorkoutSession, WorkoutDay, HistoryEntry } from '../data/types';
 import { SessionTimingCard } from './SessionTimingCard';
 import { FlipClock } from './FlipClock';
+import { TonnageBar } from './TonnageBar';
 
 interface SessionStatsBigProps {
   session: WorkoutSession;
@@ -76,6 +77,7 @@ export const SessionStatsBig: React.FC<SessionStatsBigProps> = ({
         <div style={card}>
           <p style={label}>TONNAGE SOULEVÉ</p>
           <p style={bigNum}>{tonnageDisplay} <span style={unitSpan}>{weightUnitLabel(weightUnit)}</span></p>
+          <TonnageBar tonnageKg={tonnageKg} />
         </div>
 
         {previousEntry && previousTonnageKg > 0 && (
