@@ -22,12 +22,16 @@ export const PlatesViz: React.FC<PlatesVizProps> = ({ perSide }) => {
   // Les disques partent « dehors » puis rentrent : sans cet état de départ, la
   // transition CSS ne se jouerait pas (ils apparaîtraient déjà en place).
   const [loaded, setLoaded] = useState(false);
+  // Signature de contenu plutôt que la référence du tableau : `perSide` est
+  // recréé à chaque rendu du parent (ex. frappe dans le champ RPE), ce qui
+  // relançait l'animation de chargement même quand la charge n'avait pas changé.
+  const signature = perSide.map((p) => `${p.count}x${p.plate}`).join('+');
   useEffect(() => {
     setLoaded(false);
     let b = 0;
     const a = requestAnimationFrame(() => { b = requestAnimationFrame(() => setLoaded(true)); });
     return () => { cancelAnimationFrame(a); cancelAnimationFrame(b); };
-  }, [perSide]);
+  }, [signature]);
 
   if (plates.length === 0) return null;
   return (
