@@ -16,6 +16,9 @@ interface InlineRestBarProps {
   onTogglePause: () => void;
 }
 
+// Nombre de points de l'anneau du style Points.
+const DOT_RING = 44;
+
 // Le repos prend la place de la série en cours, en grand : c'est la seule
 // chose qu'on regarde entre deux séries, souvent posé sur un banc à un mètre
 // du téléphone. Styles dans index.css (.sv2-rest…).
@@ -26,7 +29,9 @@ export const InlineRestBar: React.FC<InlineRestBarProps> = ({
   // La barre se remplit à mesure que le repos avance (progress va de 1 à 0).
   const elapsedPct = Math.max(0, Math.min(100, (1 - progress) * 100));
   const status = isPaused ? 'Repos en pause' : finished ? 'Repos terminé' : 'Repos';
-  const isSport = useWorkoutStore((s) => s.uiStyle) === 'sport';
+  const uiStyle = useWorkoutStore((s) => s.uiStyle);
+  const isSport = uiStyle === 'sport';
+  const isDots = uiStyle === 'points';
 
   // Les 3 dernières secondes : le chiffre pulse en rouge à chaque seconde (la clé
   // change, donc l'animation repart). À zéro, « GO » claque et une onde part du
@@ -44,16 +49,30 @@ export const InlineRestBar: React.FC<InlineRestBarProps> = ({
 
   // Style « Sport pro » : le repos dans un anneau, façon cadran de montre,
   // les commandes à côté. Mêmes boutons, même logique.
-  if (isSport) {
+  if (isSport || isDots) {
     const R = 52;
     const C = 2 * Math.PI * R;
     return (
       <div ref={rootRef} className={`sv2-rest sp-rest fade-in${finished ? ' over rest-bar-blink' : ''}${final ? ' is-final' : ''}`} role="timer" aria-live="off">
         <div className="sp-ring">
           <svg viewBox="0 0 120 120" aria-hidden="true">
-            <circle cx="60" cy="60" r={R} fill="none" stroke="var(--h-hero-line)" strokeWidth="8" />
-            <circle cx="60" cy="60" r={R} fill="none" stroke={finished ? 'var(--h-good)' : 'var(--brand-1)'} strokeWidth="8" strokeLinecap="round"
-              strokeDasharray={C} strokeDashoffset={C * (1 - (finished ? 100 : elapsedPct) / 100)} style={{ transition: 'stroke-dashoffset 1s linear' }} />
+            {isDots ? (
+              // Style Points : l'anneau est fait de petits points qui s'allument au fil du repos.
+              Array.from({ length: DOT_RING }, (_, i) => {
+                const a = (i / DOT_RING) * Math.PI * 2;
+                const on = i < Math.round(DOT_RING * ((finished ? 100 : elapsedPct) / 100));
+                return (
+                  <circle key={i} className={on ? 'dp-rd on' : 'dp-rd'} cx={60 + R * Math.cos(a)} cy={60 + R * Math.sin(a)} r={3.6}
+                    fill={on ? (finished ? 'var(--h-good)' : 'var(--brand-1)') : 'var(--h-hero-line)'} style={{ animationDelay: `${i * 45}ms` }} />
+                );
+              })
+            ) : (
+              <>
+                <circle cx="60" cy="60" r={R} fill="none" stroke="var(--h-hero-line)" strokeWidth="8" />
+                <circle cx="60" cy="60" r={R} fill="none" stroke={finished ? 'var(--h-good)' : 'var(--brand-1)'} strokeWidth="8" strokeLinecap="round"
+                  strokeDasharray={C} strokeDashoffset={C * (1 - (finished ? 100 : elapsedPct) / 100)} style={{ transition: 'stroke-dashoffset 1s linear' }} />
+              </>
+            )}
           </svg>
           <div>
             <span key={clockKey} className={`sp-num${clockClass}`} style={{ color: finished ? 'var(--h-good)' : undefined }}>{finished ? 'GO' : formattedTime}</span>

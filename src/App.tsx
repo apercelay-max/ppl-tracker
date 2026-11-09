@@ -40,6 +40,7 @@ import { getProgram } from './data/programs';
 import { ICON_SHAPE_RADIUS } from './data/iconPrefs';
 import { revealTheme } from './utils/themeReveal';
 import { transitionTo } from './utils/viewTransition';
+import { DotEngine } from './components/DotEngine';
 
 type View =
 | 'home' | 'intro' | 'session' | 'dashboard' | 'settings' | 'objectifs' | 'historique'
@@ -390,6 +391,7 @@ const transitionClass = !ultraAnimationsEnabled
 
 return (
 <>
+<DotEngine />
 <div key={view} className={transitionClass} style={{ height: '100%' }}>
 {screen}
 </div>

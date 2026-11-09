@@ -14,6 +14,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-09-points',
+    title: 'Nouveau style : Points',
+    items: [
+      'Un cinquième style, identique aux autres pour la présentation, où les titres, les gros chiffres et la barre du bas sont dessinés en petits points lumineux.',
+      'Dans Réglages, choisis la densité (minimaliste ou ultra complet), la taille des points et leur animation. Les points du texte restent posés pendant la séance pour ne jamais gêner la lecture.',
+      'Le repos devient un anneau de points qui s’allument, les barres de progression sont en points et les icônes de la barre du bas gardent seulement leur contour.',
+    ],
+  },
+  {
     id: '2026-10-26-mouvement-3',
     title: 'Séance plus vivante',
     items: [

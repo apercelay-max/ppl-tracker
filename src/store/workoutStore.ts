@@ -83,7 +83,12 @@ export type BeepTone = 'doux' | 'classique' | 'urgent' | 'melodique' | 'cloche';
  *  contexte et les encouragements. Au bout de trois séances la plupart des gens
  *  passent en 'court' — d'où le réglage. */
 export type VoiceVerbosity = 'court' | 'complet';
-export type UiStyle = 'nouveau' | 'classique' | 'sport' | 'epure';
+export type UiStyle = 'nouveau' | 'classique' | 'sport' | 'epure' | 'points';
+// Style « Points » : même interface que « Nouveau », mais le texte important et les
+// icônes sont dessinés en petits points lumineux (voir components/DotEngine.tsx).
+export type DotDensity = 'minimal' | 'complet';
+export type DotSize = 'm' | 'l' | 'xl';
+export type DotAnimation = 'none' | 'pop' | 'scan' | 'pulse' | 'wave' | 'ripple' | 'twinkle';
 let audioCtx: AudioContext | null = null;
 
 interface BeepNote { freq: number; delay: number; dur: number; }
@@ -340,6 +345,9 @@ plateHelperEnabled: boolean;
 // « epure » (noir et blanc, sans cadres, une seule police).
 // Réglages → Apparence.
 uiStyle: UiStyle;
+dotDensity: DotDensity;
+dotSize: DotSize;
+dotAnimation: DotAnimation;
 // Ancien réglage unique, conservé le temps de la migration des sauvegardes.
 gymProfile: GymProfile;
 // Valider une série en secouant le téléphone (mains prises/pleines de magnésie).
@@ -457,6 +465,9 @@ setNavBarTabPinned: (key: NavTabKey, pinned: boolean) => void;
 setGymProfile: (patch: Partial<GymProfile>) => void;
 setPlateHelperEnabled: (enabled: boolean) => void;
 setUiStyle: (style: UiStyle) => void;
+setDotDensity: (d: DotDensity) => void;
+setDotSize: (z: DotSize) => void;
+setDotAnimation: (a: DotAnimation) => void;
 addGym: (name: string) => string;
 updateGym: (id: string, patch: Partial<Gym>) => void;
 removeGym: (id: string) => void;
@@ -587,6 +598,9 @@ gyms: [{ ...INITIAL_GYM }],
 activeGymId: INITIAL_GYM.id,
 plateHelperEnabled: true,
 uiStyle: 'nouveau',
+dotDensity: 'minimal',
+dotSize: 'l',
+dotAnimation: 'pulse',
 gymProfile: { ...DEFAULT_GYM_PROFILE },
 shakeToValidateEnabled: false,
 sessionAdaptation: null,
@@ -1193,6 +1207,9 @@ setShakeToValidateEnabled: (enabled) => set({ shakeToValidateEnabled: enabled })
 
 setPlateHelperEnabled: (enabled) => set({ plateHelperEnabled: enabled }),
 setUiStyle: (style) => set({ uiStyle: style }),
+setDotDensity: (dotDensity) => set({ dotDensity }),
+setDotSize: (dotSize) => set({ dotSize }),
+setDotAnimation: (dotAnimation) => set({ dotAnimation }),
 
 addGym: (name) => {
 const gym = makeDefaultGym(name.trim() || 'Nouvelle salle');
@@ -1406,6 +1423,9 @@ gyms: state.gyms,
 activeGymId: state.activeGymId,
 plateHelperEnabled: state.plateHelperEnabled,
 uiStyle: state.uiStyle,
+dotDensity: state.dotDensity,
+dotSize: state.dotSize,
+dotAnimation: state.dotAnimation,
 gymProfile: state.gymProfile,
 shakeToValidateEnabled: state.shakeToValidateEnabled,
 sessionAdaptation: state.sessionAdaptation,

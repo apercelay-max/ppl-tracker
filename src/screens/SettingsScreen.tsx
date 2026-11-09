@@ -26,6 +26,7 @@ import { IconActivity, IconArrowRight, IconBarChart, IconBook, IconBounce, IconC
 import { useScreenClass } from '../hooks/useScreenClass';
 import { LiquidPill } from '../components/LiquidPill';
 import { SyncStatusIcon } from '../components/SyncStatusIcon';
+import { DotSettings } from '../components/DotSettings';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -1275,6 +1276,7 @@ boxShadow: themeMode === m.id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
 { id: 'classique', label: 'Classique', hint: 'Verre et halo de couleur' },
 { id: 'sport', label: 'Sport pro', hint: 'Noir, dense en chiffres' },
 { id: 'epure', label: 'Épuré', hint: 'Noir et blanc, sans cadres' },
+{ id: 'points', label: 'Points', hint: 'Texte en petits points' },
 ] as const).map((opt) => (
 <button
 key={opt.id}
@@ -1296,6 +1298,7 @@ boxShadow: uiStyle === opt.id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
 <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 6, lineHeight: '15px' }}>
 S'applique à l'accueil et à l'écran de séance.
 </p>
+{uiStyle === 'points' && <DotSettings />}
 
 {!simplicityMode && (
 <>
