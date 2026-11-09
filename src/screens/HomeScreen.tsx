@@ -19,6 +19,7 @@ import type { CardioActivityType } from '../data/types';
 import { WeeklyRecapCard } from '../components/WeeklyRecapCard';
 import { refreshBinome, useBinome } from '../hooks/useBinome';
 import { markNudgesSeen, sendNudge } from '../lib/binome';
+import { ProgressRings } from '../components/ProgressRings';
 import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconGauge, IconLightbulb, IconMoon, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
 import { useFlip } from '../hooks/useFlip';
 import { GoalNumber } from '../components/GoalNumber';
@@ -1137,6 +1138,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
           </div>
         </div>
 
+        {!homeEditMode && history.length > 0 && <ProgressRings history={history} cardioHistory={cardioHistory} weeklySessionGoal={weeklySessionGoal} variant={uiStyle} />}
         {isSport && sportSummary}
         {isEpure && epureSummary}
 

@@ -14,6 +14,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-09-anneaux',
+    title: 'Ta semaine en anneaux',
+    items: [
+      'Sur l’accueil, trois anneaux résument ta semaine : tes séances, ta récupération et ta charge. Ils se remplissent au démarrage, et toucher la carte rejoue l’animation.',
+      'L’anneau de charge est plein quand ta semaine est bien dosée par rapport à d’habitude, et il se vide si tu en fais trop peu ou beaucoup trop.',
+    ],
+  },
+  {
     id: '2026-11-09-points',
     title: 'Nouveau style : Points',
     items: [
