@@ -1787,3 +1787,19 @@ html.vt-theme::view-transition-new(root) { z-index: 2; }
 @keyframes catClear { from { opacity: 0; transform: scale(0.4) rotate(-90deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
 .cat-clear { animation: catClear 0.3s var(--m-spring, ease-out) both; }
 @media (prefers-reduced-motion: reduce) { .tb-plate, .ss-link[data-play="true"] i, .cat-clear { animation: none; } .cat-search { transition: none; } .cat-search:focus-within { transform: none; } }
+
+/* ─── Sortie des fenêtres et feuilles (hooks/useSheetExit.ts) ────────────── */
+/* À l'entrée on animait déjà (.m-backdrop / .m-sheet / .m-modal) ; la fermeture,
+   elle, était instantanée. is-closing joue la sortie avant que le parent ne retire la fenêtre. */
+@keyframes mBackdropOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes mSheetOut { from { transform: translateY(0); } to { transform: translateY(100%); } }
+@keyframes mModalOut { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(10px) scale(0.97); } }
+.m-backdrop.is-closing { animation: mBackdropOut 0.26s ease-in both; pointer-events: none; }
+.m-sheet.is-closing { animation: mSheetOut 0.26s cubic-bezier(0.4, 0, 1, 1) both; }
+.m-modal.is-closing { animation: mModalOut 0.24s ease-in both; }
+
+/* ─── États vides : l'icône apparaît en pop puis flotte doucement ────────── */
+@keyframes emptyIn { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+@keyframes emptyFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.empty-ico { animation: emptyIn 0.5s var(--m-spring, ease-out) both, emptyFloat 3.4s ease-in-out 0.6s infinite; }
+@media (prefers-reduced-motion: reduce) { .m-backdrop.is-closing, .m-sheet.is-closing, .m-modal.is-closing, .empty-ico { animation: none; } }

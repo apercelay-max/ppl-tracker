@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ChangelogEntry } from '../data/changelog';
+import { useSheetExit } from '../hooks/useSheetExit';
 
 interface WhatsNewSheetProps {
   entries: ChangelogEntry[];
@@ -8,9 +9,11 @@ interface WhatsNewSheetProps {
 
 // Écran « Nouveautés » : affiché une fois après une mise à jour, par-dessus
 // l'écran d'accueil. Voir data/changelog.ts pour le contenu.
-export const WhatsNewSheet: React.FC<WhatsNewSheetProps> = ({ entries, onClose }) => (
-  <div className="m-backdrop" style={overlay} role="dialog" aria-modal="true" aria-label="Nouveautés">
-    <div className="m-modal" style={card}>
+export const WhatsNewSheet: React.FC<WhatsNewSheetProps> = ({ entries, onClose }) => {
+  const { closing, close } = useSheetExit(onClose);
+  return (
+  <div className={`m-backdrop${closing ? ' is-closing' : ''}`} style={overlay} role="dialog" aria-modal="true" aria-label="Nouveautés">
+    <div className={`m-modal${closing ? ' is-closing' : ''}`} style={card}>
       <h2 style={heading}>Nouveautés</h2>
       <div style={list}>
         {entries.map((entry) => (
@@ -24,10 +27,11 @@ export const WhatsNewSheet: React.FC<WhatsNewSheetProps> = ({ entries, onClose }
           </section>
         ))}
       </div>
-      <button style={btn} onClick={onClose}>C’est parti</button>
+      <button style={btn} onClick={close}>C’est parti</button>
     </div>
   </div>
-);
+  );
+};
 
 const overlay: React.CSSProperties = {
   position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 1000,

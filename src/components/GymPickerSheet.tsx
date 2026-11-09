@@ -5,6 +5,7 @@ import {
   buildAdaptation, applyAdaptation, isAdaptationActive, EMPTY_OPTIONS,
   type Gym, type SessionAdaptation,
 } from '../utils/gymAdapt';
+import { useSheetExit } from '../hooks/useSheetExit';
 
 // ─── « Tu es dans quelle salle ? » ─────────────────────────────────────────
 // S'ouvre au démarrage d'une séance, uniquement à partir de deux salles
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export const GymPickerSheet: React.FC<Props> = ({ workout, onClose, onStart }) => {
+  const { closing, close } = useSheetExit(onClose);
   const gyms = useWorkoutStore((s) => s.gyms);
   const activeGymId = useWorkoutStore((s) => s.activeGymId);
   const history = useWorkoutStore((s) => s.history);
@@ -42,8 +44,8 @@ export const GymPickerSheet: React.FC<Props> = ({ workout, onClose, onStart }) =
   if (!gym) return null;
 
   return (
-    <div className="m-backdrop" style={backdrop} onClick={onClose}>
-      <div className="m-sheet" style={sheet} onClick={(e) => e.stopPropagation()}>
+    <div className={`m-backdrop${closing ? ' is-closing' : ''}`} style={backdrop} onClick={close}>
+      <div className={`m-sheet${closing ? ' is-closing' : ''}`} style={sheet} onClick={(e) => e.stopPropagation()}>
         <div style={handle} />
         <h2 style={title}>Tu es dans quelle salle ?</h2>
         <p style={subtitle}>{workout.name} · {workout.exercises.length} exercices</p>
@@ -92,7 +94,7 @@ export const GymPickerSheet: React.FC<Props> = ({ workout, onClose, onStart }) =
         </div>
 
         <div style={actions}>
-          <button onClick={onClose} style={ghostBtn}>Annuler</button>
+          <button onClick={close} style={ghostBtn}>Annuler</button>
           {aDesChangements ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
               <button onClick={() => onStart(adaptation, gym.id)} style={primaryBtn}>

@@ -8,6 +8,7 @@ import {
   type SessionAdaptation, type SoreZone,
 } from '../utils/gymAdapt';
 import { CATALOG_EQUIPMENT, type Equipment } from '../data/exercisesCatalog';
+import { useSheetExit } from '../hooks/useSheetExit';
 
 
 // ─── « Adapter la séance » ─────────────────────────────────────────────────
@@ -28,6 +29,7 @@ const TIME_CHOICES: (number | null)[] = [null, 30, 40, 50, 60];
 const ZONES: SoreZone[] = ['epaule', 'coude-poignet', 'lombaires', 'genou'];
 
 export const SessionAdaptSheet: React.FC<Props> = ({ workout, onClose, onStart }) => {
+  const { closing, close } = useSheetExit(onClose);
   const history = useWorkoutStore((s) => s.history);
   const gyms = useWorkoutStore((s) => s.gyms);
   const activeGym = useActiveGym();
@@ -91,8 +93,8 @@ export const SessionAdaptSheet: React.FC<Props> = ({ workout, onClose, onStart }
   const baseMin = estimateWorkoutMinutes(workout.exercises);
 
   return (
-    <div className="m-backdrop" style={backdrop} onClick={onClose}>
-      <div className="m-sheet" style={sheet} onClick={(e) => e.stopPropagation()}>
+    <div className={`m-backdrop${closing ? ' is-closing' : ''}`} style={backdrop} onClick={close}>
+      <div className={`m-sheet${closing ? ' is-closing' : ''}`} style={sheet} onClick={(e) => e.stopPropagation()}>
         <div style={handle} />
         <h2 style={title}>Adapter la séance</h2>
         <p style={subtitle}>
@@ -207,7 +209,7 @@ export const SessionAdaptSheet: React.FC<Props> = ({ workout, onClose, onStart }
         </div>
 
         <div style={actions}>
-          <button onClick={onClose} style={ghostBtn}>Annuler</button>
+          <button onClick={close} style={ghostBtn}>Annuler</button>
           <button
             onClick={() => onStart(active ? adaptation : null, gym.id, isPassage ? passageProfile : null)}
             style={primaryBtn}

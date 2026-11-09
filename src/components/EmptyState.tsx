@@ -10,7 +10,7 @@ interface EmptyStateProps {
 // des objectifs.
 export const EmptyState: React.FC<EmptyStateProps> = ({ icon, text }) => (
   <div style={wrapper}>
-    <div style={iconWrap}>{icon}</div>
+    <div className="empty-ico" style={iconWrap}>{icon}</div>
     <p style={textStyle}>{text}</p>
   </div>
 );
