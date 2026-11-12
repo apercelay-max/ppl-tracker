@@ -17,9 +17,40 @@ export interface SyncConflict {
 // choix — et si elle était synchronisée, un autre appareil "hériterait"
 // à tort d'un choix qui ne le concerne pas.
 const RESOLVED_KEY = 'ppl-tracker-sync-resolved-user';
+// Clé locale (jamais synchronisée) : date `updated_at` du cloud telle que cet
+// appareil l'a vue à sa dernière synchro réussie (lecture appliquée ou envoi).
+// Au démarrage, si le cloud a une autre date, une autre séance y a été
+// enregistrée depuis : pousser nos données l'écraserait.
+const SEEN_KEY = 'ppl-tracker-sync-seen-updated-at';
 const PUSH_DEBOUNCE_MS = 2500;
 /** Nouvelle lecture du cloud après un échec (réseau coupé au démarrage). */
 const READ_RETRY_MS = 30_000;
+
+const readSeen = (userId: string): string | null => {
+  try {
+    const raw = localStorage.getItem(SEEN_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { userId?: string; at?: string };
+    return parsed.userId === userId && typeof parsed.at === 'string' ? parsed.at : null;
+  } catch { return null; }
+};
+
+const writeSeen = (userId: string, at: string) => {
+  try { localStorage.setItem(SEEN_KEY, JSON.stringify({ userId, at })); } catch { /* stockage indisponible */ }
+};
+
+/** Le cloud a-t-il changé depuis notre dernière synchro ? On compare les instants
+ *  (Supabase et notre horloge n'écrivent pas la date avec le même format) et on
+ *  teste « différent » plutôt que « plus récent » : l'horloge d'un autre appareil
+ *  peut être en retard. Sans date mémorisée (appareil resté sur l'ancienne
+ *  version), on ne sait pas : par prudence on considère que le cloud a changé. */
+const cloudChangedSince = (remoteUpdatedAt: string, seen: string | null): boolean => {
+  if (!seen) return true;
+  const remote = Date.parse(remoteUpdatedAt);
+  const last = Date.parse(seen);
+  if (Number.isNaN(remote) || Number.isNaN(last)) return true;
+  return remote !== last;
+};
 
 export function useCloudSync() {
   const { user } = useAuth();
@@ -77,25 +108,26 @@ export function useCloudSync() {
       if (!remote) {
         // Rien dans le cloud pour ce compte → première synchro, on y
         // envoie les données de cet appareil.
-        const ok = await pushRemoteData(userId, getLocalSnapshot());
+        const pushedAt = await pushRemoteData(userId, getLocalSnapshot());
         localStorage.setItem(RESOLVED_KEY, userId);
-        setStatus(ok ? 'synced' : 'error');
-        if (ok) setLastSyncedAt(Date.now());
+        if (pushedAt) { writeSeen(userId, pushedAt); setLastSyncedAt(Date.now()); }
+        setStatus(pushedAt ? 'synced' : 'error');
         return;
       }
 
-      if (alreadyResolved) {
-        // Déjà résolu sur cet appareil pour ce compte lors d'une session
-        // précédente → cet appareil pousse simplement son état actuel.
-        const ok = await pushRemoteData(userId, getLocalSnapshot());
-        setStatus(ok ? 'synced' : 'error');
-        if (ok) setLastSyncedAt(Date.now());
+      if (alreadyResolved && !cloudChangedSince(remote.updated_at, readSeen(userId))) {
+        // Déjà résolu sur cet appareil ET le cloud n'a pas bougé depuis notre
+        // dernière synchro → cet appareil pousse simplement son état actuel.
+        const pushedAt = await pushRemoteData(userId, getLocalSnapshot());
+        if (pushedAt) { writeSeen(userId, pushedAt); setLastSyncedAt(Date.now()); }
+        setStatus(pushedAt ? 'synced' : 'error');
         return;
       }
 
-      // Des données existent déjà dans le cloud et ce n'est pas encore
-      // résolu ici → on laisse l'utilisateur choisir plutôt que d'écraser
-      // silencieusement l'un ou l'autre.
+      // Des données existent déjà dans le cloud et soit ce n'est pas encore
+      // résolu ici, soit le cloud a été modifié ailleurs pendant que cet
+      // appareil était fermé → on laisse l'utilisateur choisir plutôt que
+      // d'écraser silencieusement l'un ou l'autre.
       setConflict({ remoteUpdatedAt: remote.updated_at });
       setStatus('conflict');
     })();
@@ -122,6 +154,7 @@ export function useCloudSync() {
       // Les données de cet appareil vont être remplacées : on en garde une copie.
       await saveBackup('safety', 'Avant remplacement par les données du cloud');
       applyRemoteSnapshot(remote.data);
+      writeSeen(user.id, remote.updated_at);
     }
     localStorage.setItem(RESOLVED_KEY, user.id);
     setReadOk(true);
@@ -133,14 +166,15 @@ export function useCloudSync() {
   const resolveUseDevice = useCallback(async () => {
     if (!user) return;
     setStatus('syncing');
-    const ok = await pushRemoteData(user.id, getLocalSnapshot());
+    const pushedAt = await pushRemoteData(user.id, getLocalSnapshot());
+    if (pushedAt) writeSeen(user.id, pushedAt);
     localStorage.setItem(RESOLVED_KEY, user.id);
     // Choix explicite de l'utilisateur ("garder cet appareil") : il vaut
     // comme lecture confirmée, même sans nouvelle lecture du cloud.
     setReadOk(true);
     setConflict(null);
-    setStatus(ok ? 'synced' : 'error');
-    if (ok) setLastSyncedAt(Date.now());
+    setStatus(pushedAt ? 'synced' : 'error');
+    if (pushedAt) setLastSyncedAt(Date.now());
   }, [user]);
 
   // Une fois résolu, chaque changement du store déclenche un envoi vers
@@ -156,9 +190,9 @@ export function useCloudSync() {
       if (pushTimer.current) clearTimeout(pushTimer.current);
       pushTimer.current = setTimeout(() => {
         setStatus('syncing');
-        pushRemoteData(userId, getLocalSnapshot()).then((ok) => {
-          setStatus(ok ? 'synced' : 'error');
-          if (ok) setLastSyncedAt(Date.now());
+        pushRemoteData(userId, getLocalSnapshot()).then((pushedAt) => {
+          if (pushedAt) { writeSeen(userId, pushedAt); setLastSyncedAt(Date.now()); }
+          setStatus(pushedAt ? 'synced' : 'error');
         });
       }, PUSH_DEBOUNCE_MS);
     });

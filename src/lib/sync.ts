@@ -58,19 +58,22 @@ export const fetchRemoteData = async (userId: string): Promise<RemoteRow | null>
   return (data as RemoteRow | null) ?? null;
 };
 
-export const pushRemoteData = async (userId: string, data: Record<string, unknown>): Promise<boolean> => {
-  if (!supabase) return false;
+/** Envoie les données au cloud. Renvoie la date `updated_at` écrite (pour que
+ *  l'appareil sache qu'il est à jour avec le cloud), ou `null` si l'envoi a échoué. */
+export const pushRemoteData = async (userId: string, data: Record<string, unknown>): Promise<string | null> => {
+  if (!supabase) return null;
   try {
+    const updatedAt = new Date().toISOString();
     const { error } = await supabase
       .from('app_data')
-      .upsert({ user_id: userId, data, updated_at: new Date().toISOString() });
+      .upsert({ user_id: userId, data, updated_at: updatedAt });
     if (error) {
       console.error('pushRemoteData', error);
-      return false;
+      return null;
     }
-    return true;
+    return updatedAt;
   } catch (err) {
     console.error('pushRemoteData', err);
-    return false;
+    return null;
   }
 };
