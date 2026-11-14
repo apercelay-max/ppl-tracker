@@ -970,7 +970,7 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
           </div>
         </div>
 
-        {history.length > 0 && <ProgressRings history={history} cardioHistory={cardioHistory} weeklySessionGoal={weeklySessionGoal} variant="classique" />}
+        {!homeEditMode && history.length > 0 && <ProgressRings history={history} cardioHistory={cardioHistory} weeklySessionGoal={weeklySessionGoal} variant="classique" />}
 
         {/* Récupération musculaire — même règle que les blocs promus : elle
             reste consultable sous « Tout voir », et ne s'invite dans la partie
