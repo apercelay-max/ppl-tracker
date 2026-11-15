@@ -315,9 +315,9 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
   );
 
   const seancesSection = (
-    <div key="seances">
+    <div key="seances" className="home-seances">
       <p style={{ ...sectionLabel, marginBottom: 10 }}>SÉANCES</p>
-      <div>
+      <div className="home-seances-list">
         {activeProgram.workouts.map((workout, idx) => {
           const accent = activeProgram.dayAccents[workout.id] ?? FALLBACK_ACCENT;
           const typeLabel = activeProgram.dayTypeLabels[workout.id] ?? '';
@@ -926,7 +926,7 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
 
   return (
     <div className="screen-ambient" style={container}>
-      <div style={{ ...scroll, maxWidth: wideLayout ? 1180 : 480, paddingBottom: navBarEnabled ? 112 : 80 }}>
+      <div style={{ ...scroll, maxWidth: wideLayout ? 1500 : 480, paddingBottom: navBarEnabled ? 112 : 80 }}>
 
         {/* Header */}
         <div style={headerSection}>
@@ -1088,7 +1088,7 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
         {shownKeys.filter((key) => !(wideLayout && key === 'nextSession')).map((key, idx) => {
           const meta = HOME_SECTION_META[key];
           return (
-            <div key={key} style={{ position: 'relative', marginBottom: HOME_BLOCK_GAP }}>
+            <div key={key} data-block={key} style={{ position: 'relative', marginBottom: HOME_BLOCK_GAP }}>
               {homeEditMode && (
                 <div style={widgetCtrlCluster}>
                   <button

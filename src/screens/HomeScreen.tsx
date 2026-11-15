@@ -314,9 +314,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
   );
 
   const seancesSection = (
-    <div key="seances">
+    <div key="seances" className="home-seances">
       <p style={{ ...sectionLabel, marginBottom: 10 }}>SÉANCES</p>
-      <div>
+      <div className="home-seances-list">
         {activeProgram.workouts.map((workout, idx) => {
           const accent = activeProgram.dayAccents[workout.id] ?? FALLBACK_ACCENT;
           const typeLabel = activeProgram.dayTypeLabels[workout.id] ?? '';
@@ -1109,7 +1109,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
 
   return (
     <div className={isSport ? 'home-v2 ui-sport' : isEpure ? 'home-v2 ui-epure' : 'home-v2'} style={container}>
-      <div ref={scrollRef} style={{ ...scroll, maxWidth: wideLayout ? 1180 : 560, paddingBottom: navBarEnabled ? 112 : 80 }}>
+      <div ref={scrollRef} style={{ ...scroll, maxWidth: wideLayout ? 1500 : 560, paddingBottom: navBarEnabled ? 112 : 80 }}>
 
         {/* Header */}
         <div style={headerSection}>
