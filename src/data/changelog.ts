@@ -14,6 +14,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-15-accueil-ipad',
+    title: 'Un accueil pensé pour l’iPad',
+    items: [
+      'Sur iPad, la séance du jour passe en grand avec son programme : tu vois les exercices, les séries et les répétitions avant même de commencer.',
+      'À côté, tes anneaux de la semaine et la récupération muscle par muscle ; en dessous, toutes tes autres cartes sur plusieurs colonnes.',
+      'En paysage comme en portrait, et dans les cinq styles (Nouveau, Points, Sport, Épuré, Classique pour l’instant inchangé). Sur téléphone, rien ne change.',
+    ],
+  },
+  {
     id: '2026-11-14-strict-v5-3',
     title: 'Programme Strict V5.3 : prise de masse',
     items: [

@@ -54,6 +54,17 @@ const sparklinePoints = (values: number[], w: number, h: number, padY = 4): stri
     .join(' ');
 };
 
+// Noms d'exercices pour la liste « Au programme » de l'accueil large : sans
+// la précision entre parenthèses (« mains ≈ 1,5 × largeur d'épaules »), qui
+// est utile en séance mais allonge la ligne pour rien ici.
+const shortExerciseName = (name: string) => name.replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+// Les groupes musculaires sont stockés en capitales (« DOS — FINITION »).
+const sentenceCase = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
+const formatReps = (reps: string) => reps.replace(/(\d)-(\d)/g, '$1–$2');
+const recoveryPctColor = (p: number) => (p >= 0.8 ? 'var(--h-good)' : p >= 0.5 ? 'var(--h-warn)' : 'var(--h-bad)');
+// Combien d'exercices montrer dans « Au programme » avant « + N autres ».
+const PROGRAM_PREVIEW_MAX = 6;
+
 // Au-delà de ce seuil (en jours), un groupe musculaire est considéré
 // "en retard" — le cycle PPL Strict V10 repasse sur chaque groupe tous les
 // 4 à 8 jours environ, donc 9 jours laisse une vraie marge avant d'alerter.
@@ -213,10 +224,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
   // vraiment quelque chose à récupérer.
   const needsRecovery = leastRecovered && leastRecovered.pct < 1 ? leastRecovered : null;
 
-  // ── Mise en page large (Mac, iPad paysage) ───────────────────────────────
-  // Au-delà de 1000 px, la séance du jour prend la colonne de gauche et les
-  // autres blocs passent à droite, au lieu d'une seule colonne étirée.
-  const wideQuery = '(min-width: 1000px)';
+  // ── Mise en page large (iPad, Mac) : le « cockpit » ──────────────────────
+  // Dès 700 px (iPad tenu droit), la séance du jour s'étale sur toute la
+  // largeur avec son programme ; à partir de 1000 px (iPad en paysage) elle
+  // passe à gauche, les anneaux et la récupération à droite, et les autres
+  // cartes en dessous. Les colonnes se règlent en CSS (.home-wide) : ici on
+  // décide seulement quelle structure afficher.
+  const wideQuery = '(min-width: 700px)';
   const [isWide, setIsWide] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia(wideQuery).matches);
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
@@ -678,28 +692,54 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
     : 'Ce sera ta première séance';
   const playIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5Z" /></svg>;
 
+  // Sur grand écran la séance montre aussi son programme (la place est là) ;
+  // en mode édition, on garde la colonne simple, donc pas de liste.
+  const showProgram = isWide && !homeEditMode;
+
   const nextSessionSection = homeSections.nextSession && !resumeWorkout && nextWorkout && (
     <section key="nextSession" className="glass-card home-hero" aria-label="Prochaine séance">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div className="home-hero-head">
-          <span className="home-eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--h-text2)' }}>
-            <span style={{ width: 8, height: 8, borderRadius: 4, background: dayAccent }} aria-hidden="true" />
-            Prochaine séance
-          </span>
-          <span className="home-small">{[activeProgram.dayTypeLabels[nextWorkout.id], `J${nextWorkout.dayNumber}`].filter(Boolean).join(' · ')}</span>
+      {/* Sur téléphone ce conteneur disparaît de la mise en page (display: contents) : la carte garde ses deux blocs, comme avant. */}
+      <div className="home-hero-left">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="home-hero-head">
+            <span className="home-eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--h-text2)' }}>
+              <span style={{ width: 8, height: 8, borderRadius: 4, background: dayAccent }} aria-hidden="true" />
+              Prochaine séance
+            </span>
+            <span className="home-small">{[activeProgram.dayTypeLabels[nextWorkout.id], `J${nextWorkout.dayNumber}`].filter(Boolean).join(' · ')}</span>
+          </div>
+          <h2 className="home-hero-title">{nextWorkout.name}</h2>
+          <div className="home-chips">
+            {splitGroups(nextWorkout.muscleGroups).map((g) => <span key={g}>{g}</span>)}
+          </div>
+          <p className="home-small">{nextWorkout.exercises.length} exercices{nextWorkout.estimatedDuration ? ` · ${nextWorkout.estimatedDuration}` : ''}</p>
         </div>
-        <h2 className="home-hero-title">{nextWorkout.name}</h2>
-        <div className="home-chips">
-          {splitGroups(nextWorkout.muscleGroups).map((g) => <span key={g}>{g}</span>)}
+        <div className="home-hero-foot">
+          <button className="home-start" style={homeSectionColors.nextSession ? { background: nextColor } : undefined} onClick={() => onSelectDay(nextWorkout.id)}>
+            {playIcon}{isSport ? 'GO' : 'Commencer la séance'}
+          </button>
+          <span className="home-hero-last">{lastSessionLine}</span>
         </div>
-        <p className="home-small">{nextWorkout.exercises.length} exercices{nextWorkout.estimatedDuration ? ` · ${nextWorkout.estimatedDuration}` : ''}</p>
       </div>
-      <div className="home-hero-foot">
-        <button className="home-start" style={homeSectionColors.nextSession ? { background: nextColor } : undefined} onClick={() => onSelectDay(nextWorkout.id)}>
-          {playIcon}{isSport ? 'GO' : 'Commencer la séance'}
-        </button>
-        <span className="home-hero-last">{lastSessionLine}</span>
-      </div>
+      {showProgram && nextWorkout.exercises.length > 0 && (
+        <div className="home-prog">
+          <span className="home-eyebrow">Au programme</span>
+          <ol>
+            {nextWorkout.exercises.slice(0, PROGRAM_PREVIEW_MAX).map((ex, i) => (
+              <li key={ex.id}>
+                <b>{String(i + 1).padStart(2, '0')}</b>
+                <div>
+                  <p>{shortExerciseName(ex.name)}</p>
+                  <span><em>{ex.sets} × {formatReps(ex.targetReps)}</em>{ex.muscleGroup ? ` · ${sentenceCase(ex.muscleGroup)}` : ''}</span>
+                </div>
+              </li>
+            ))}
+          </ol>
+          {nextWorkout.exercises.length > PROGRAM_PREVIEW_MAX && (
+            <span className="home-small">+ {nextWorkout.exercises.length - PROGRAM_PREVIEW_MAX} autres exercices</span>
+          )}
+        </div>
+      )}
     </section>
   );
 
@@ -1038,6 +1078,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
   const sectionsExpanded = homeEditMode || showAllSections;
   const shownKeys = sectionsExpanded ? renderableKeys : renderableKeys.filter(isEssential);
   const wideLayout = isWide && !homeEditMode;
+  // Le cockpit n'a de sens que s'il y a une séance (du jour ou en cours) à
+  // mettre en grand ; sinon on garde la colonne unique. Calculé avant le rendu
+  // car il décide aussi où vont les anneaux et les résumés Sport / Épuré.
+  const heroKey: HomeSectionKey | null = shownKeys.includes('nextSession') && SECTION_MAP.nextSession ? 'nextSession' : null;
+  const cockpit = wideLayout && !!(heroKey || resumeWorkout);
+  // Les muscles les moins reposés, pour la carte Récupération du cockpit
+  // (même calcul que le résumé Sport : seuls les groupes déjà travaillés).
+  const recoveryRows = getMuscleRecoveryStatus(history)
+    .filter((m) => m.hoursSince !== null)
+    .map((m) => ({ group: sentenceCase(m.group), pct: getRecoveryPct(m) }))
+    .sort((a, b) => a.pct - b.pct)
+    .slice(0, 4);
   const availableKeys = homeSectionOrder.filter((key) => {
     const meta = HOME_SECTION_META[key];
     return meta.toggleable && !homeSections[key as keyof typeof homeSections];
@@ -1138,16 +1190,37 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
           </div>
         </div>
 
-        {!homeEditMode && history.length > 0 && <ProgressRings history={history} cardioHistory={cardioHistory} weeklySessionGoal={weeklySessionGoal} variant={uiStyle} />}
-        {isSport && sportSummary}
-        {isEpure && epureSummary}
+        {/* Dans le cockpit, anneaux et résumés vivent dans la colonne de droite (voir plus bas). */}
+        {!homeEditMode && !cockpit && history.length > 0 && <ProgressRings history={history} cardioHistory={cardioHistory} weeklySessionGoal={weeklySessionGoal} variant={uiStyle} />}
+        {isSport && !cockpit && sportSummary}
+        {isEpure && !cockpit && epureSummary}
 
         {(() => {
           // Récupération musculaire — même règle que les blocs promus : elle
           // reste consultable sous « Tout voir », et ne s'invite dans la partie
           // simple que quand un groupe n'est pas encore récupéré. Sans séance
           // dans l'historique elle n'a rien à calculer, donc rien à afficher.
-          const recoveryBlock = !isSport && !isEpure && history.length > 0 && (sectionsExpanded || !!needsRecovery) && (
+          const recoveryBlock = !isSport && !isEpure && history.length > 0 && (cockpit || sectionsExpanded || !!needsRecovery) && (cockpit && recoveryRows.length > 0 ? (
+            // Cockpit : toujours là, avec les muscles les moins reposés en barres
+            // (la place existe, et ça remplace le simple « Priorité : … »).
+            <div key="recovery" className="glass-card home-card">
+              <div className="home-rec-head">
+                <span className="home-eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconBattery size={13} />Récupération</span>
+                <div className="home-big">
+                  <b style={{ color: recoveryColor }}>{Math.round(averagePct * 100)}</b><i>% en moyenne</i>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {recoveryRows.map((m) => (
+                  <div key={m.group} className="home-mr">
+                    <span>{m.group}</span>
+                    <div className="home-bar"><div style={{ width: `${Math.round(m.pct * 100)}%`, background: recoveryPctColor(m.pct) }} /></div>
+                    <em>{Math.round(m.pct * 100)}</em>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
             <div key="recovery" className="glass-card home-card">
               <span className="home-eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconBattery size={13} />Récupération</span>
               <div className="home-big">
@@ -1165,11 +1238,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
                 <span className="home-note">Tous les muscles sont prêts</span>
               )}
             </div>
-          );
+          ));
 
           // Alerte pic de charge d'entraînement
           const loadBlock = loadStatus && (
-            <div key="load" className="glass-card home-card" style={loadStatus.level === 'spike' ? { borderColor: 'var(--h-bad)' } : undefined}>
+            <div key="load" className="glass-card home-card home-span" style={loadStatus.level === 'spike' ? { borderColor: 'var(--h-bad)' } : undefined}>
               <span className="home-eyebrow" style={loadStatus.level === 'spike' ? { color: 'var(--h-bad)' } : undefined}>{loadStatus.label}</span>
               <p className="home-note">{loadStatus.detail}</p>
             </div>
@@ -1178,19 +1251,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
           // Reprise d'une séance en cours : prend la place de la séance du jour.
           const resumeBlock = resumeWorkout && (
             <section key="resume" className="glass-card glass-red home-hero" aria-label="Séance en cours">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div className="home-hero-head">
-                  <span className="home-eyebrow amber-pulse" style={{ color: 'var(--brand-1)' }}>Séance en cours</span>
+              <div className="home-hero-left">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div className="home-hero-head">
+                    <span className="home-eyebrow amber-pulse" style={{ color: 'var(--brand-1)' }}>Séance en cours</span>
+                  </div>
+                  <h2 className="home-hero-title">{resumeWorkout.name}</h2>
+                  <div className="home-chips">
+                    {splitGroups(resumeWorkout.muscleGroups).map((g) => <span key={g}>{g}</span>)}
+                  </div>
                 </div>
-                <h2 className="home-hero-title">{resumeWorkout.name}</h2>
-                <div className="home-chips">
-                  {splitGroups(resumeWorkout.muscleGroups).map((g) => <span key={g}>{g}</span>)}
+                <div className="home-hero-foot">
+                  <button className="home-start" onClick={() => onSelectDay(resumeWorkout.id)}>
+                    {playIcon}Reprendre la séance
+                  </button>
                 </div>
-              </div>
-              <div className="home-hero-foot">
-                <button className="home-start" onClick={() => onSelectDay(resumeWorkout.id)}>
-                  {playIcon}Reprendre la séance
-                </button>
               </div>
             </section>
           );
@@ -1274,20 +1349,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
             </button>
           );
 
-          // Grand écran : la séance du jour (ou celle en cours) à gauche, le
-          // reste à droite dans l'ordre choisi. Sur téléphone, et en mode
-          // édition, une seule colonne comme avant.
-          const heroKey: HomeSectionKey | null = shownKeys.includes('nextSession') && SECTION_MAP.nextSession ? 'nextSession' : null;
-          if (wideLayout && (heroKey || resumeBlock)) {
+          // Grand écran (« cockpit ») : la séance du jour (ou celle en cours) en
+          // grand avec son programme ; à côté, les anneaux et la récupération
+          // (ou le résumé Sport / Épuré) ; dessous, toutes les autres cartes
+          // dans l'ordre choisi. Sur téléphone, et en mode édition, une seule
+          // colonne comme avant.
+          if (cockpit) {
             return (
               <div className="home-wide">
-                <div className="home-col home-col-main">
+                <div className="home-col-main">
                   {resumeBlock}
                   {heroKey && SECTION_MAP[heroKey]}
                 </div>
                 <div className="home-col">
-                  {recoveryBlock}
+                  {history.length > 0 && <ProgressRings history={history} cardioHistory={cardioHistory} weeklySessionGoal={weeklySessionGoal} variant={uiStyle} />}
+                  {isSport ? sportSummary : isEpure ? epureSummary : recoveryBlock}
                   {loadBlock}
+                </div>
+                <div className="home-grid">
                   {shownKeys.filter((k) => k !== heroKey).map((k) => renderBlock(k, shownKeys.indexOf(k)))}
                   {showAllButton}
                 </div>
