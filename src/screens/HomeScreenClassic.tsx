@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { DataIcon } from '../components/DataIcon';
 import { MESOCYCLE_WEEKS, getProgressionWeek, getWorkout } from '../data/workouts';
 import { getProgram } from '../data/programs';
+import { shortExerciseName } from '../utils/homeProgram';
 import { useWorkoutStore, CARDIO_TYPE_LABELS } from '../store/workoutStore';
 import type { HomeSectionKey } from '../store/workoutStore';
 import { ICON_SIZE_PRESETS } from '../data/iconPrefs';
@@ -176,6 +177,22 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
   // persisté : chaque ouverture de l'app repart de l'écran calme, sinon un
   // seul « Tout voir » suffirait à le recharger définitivement.
   const [showAllSections, setShowAllSections] = useState(false);
+
+  // ── Grand écran (iPad, Mac) ──────────────────────────────────────────────
+  // Dès 700 px : la séance du jour passe en bandeau sur toute la largeur et
+  // toutes les autres cartes se rangent en colonnes (2 en portrait, 3 en
+  // paysage) au lieu d'une seule colonne étirée. Sur téléphone rien ne change.
+  // Même seuil que l'accueil du style actuel (HomeScreen.tsx).
+  const wideQuery = '(min-width: 700px)';
+  const [isWide, setIsWide] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia(wideQuery).matches);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia(wideQuery);
+    const onChange = () => setIsWide(mq.matches);
+    mq.addEventListener('change', onChange);
+    window.addEventListener('resize', onChange);
+    return () => { mq.removeEventListener('change', onChange); window.removeEventListener('resize', onChange); };
+  }, []);
 
   // ── Cardio (formulaire rapide d'ajout) ──────────────────────────────────
   const [cardioFormOpen, setCardioFormOpen] = useState(false);
@@ -637,6 +654,12 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
         <p style={{ color: nextColor, fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>PROCHAINE SÉANCE</p>
         <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800 }}>{nextWorkout.name}</p>
         <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>{nextWorkout.muscleGroups}</p>
+        {/* Grand écran : la place est là, on montre le programme d'un coup d'œil. */}
+        {isWide && !homeEditMode && nextWorkout.exercises.length > 0 && (
+          <p style={{ color: 'var(--text-secondary)', fontSize: 12, lineHeight: '18px', marginTop: 8 }}>
+            {nextWorkout.exercises.map((ex) => shortExerciseName(ex.name)).join(' · ')}
+          </p>
+        )}
       </div>
       <span style={{ color: nextColor, fontSize: 22, fontWeight: 200, flexShrink: 0, opacity: 0.8 }}>›</span>
     </button>
@@ -882,9 +905,28 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
     setHomeSectionOrder(order);
   };
 
+  // Grand écran : voir isWide plus haut. En mode édition on garde la colonne
+  // unique, où les flèches ▲▼ et les boutons de chaque bloc restent lisibles.
+  const wideLayout = isWide && !homeEditMode;
+
+  // Reprise d'une séance en cours. Sur téléphone elle garde sa place sous les
+  // cartes de récupération ; sur grand écran elle monte en bandeau, avec la
+  // séance du jour.
+  const resumeBlock = resumeWorkout && (
+    <button className="resume-btn glass-card glass-red" style={resumeCard} onClick={() => onSelectDay(resumeWorkout.id)}>
+      <div style={{ ...resumeIcon, width: iconSizes.resume, height: iconSizes.resume }}><span style={{ fontSize: iconSizes.resume * 0.4 }}>▶</span></div>
+      <div style={{ textAlign: 'left', flex: 1 }}>
+        <p style={{ color: 'var(--brand-1)', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>SÉANCE EN COURS</p>
+        <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800 }}>{resumeWorkout.name}</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>Appuie pour reprendre</p>
+      </div>
+      <span style={{ color: 'var(--brand-1)', fontSize: 22, fontWeight: 200, flexShrink: 0, opacity: 0.8 }}>›</span>
+    </button>
+  );
+
   return (
     <div className="screen-ambient" style={container}>
-      <div style={{ ...scroll, paddingBottom: navBarEnabled ? 112 : 80 }}>
+      <div style={{ ...scroll, maxWidth: wideLayout ? 1180 : 480, paddingBottom: navBarEnabled ? 112 : 80 }}>
 
         {/* Header */}
         <div style={headerSection}>
@@ -970,6 +1012,16 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
           </div>
         </div>
 
+        {/* Grand écran : la séance du jour (ou celle en cours) en bandeau sur toute la largeur. */}
+        {wideLayout && (resumeBlock || (shownKeys.includes('nextSession') && SECTION_MAP.nextSession)) && (
+          <div className="home-band">
+            {resumeBlock}
+            {shownKeys.includes('nextSession') && SECTION_MAP.nextSession}
+          </div>
+        )}
+
+        {/* Grand écran : toutes les autres cartes en colonnes (voir .home-masonry). */}
+        <div className={wideLayout ? 'home-masonry' : undefined}>
         {history.length > 0 && <ProgressRings history={history} cardioHistory={cardioHistory} weeklySessionGoal={weeklySessionGoal} variant="classique" />}
 
         {/* Récupération musculaire — même règle que les blocs promus : elle
@@ -1021,18 +1073,8 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
           </div>
         )}
 
-        {/* Reprise */}
-        {resumeWorkout && (
-          <button className="resume-btn glass-card glass-red" style={resumeCard} onClick={() => onSelectDay(resumeWorkout.id)}>
-            <div style={{ ...resumeIcon, width: iconSizes.resume, height: iconSizes.resume }}><span style={{ fontSize: iconSizes.resume * 0.4 }}>▶</span></div>
-            <div style={{ textAlign: 'left', flex: 1 }}>
-              <p style={{ color: 'var(--brand-1)', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, marginBottom: 3 }}>SÉANCE EN COURS</p>
-              <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 800 }}>{resumeWorkout.name}</p>
-              <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>Appuie pour reprendre</p>
-            </div>
-            <span style={{ color: 'var(--brand-1)', fontSize: 22, fontWeight: 200, flexShrink: 0, opacity: 0.8 }}>›</span>
-          </button>
-        )}
+        {/* Reprise (sur grand écran elle est dans le bandeau du haut) */}
+        {!wideLayout && resumeBlock}
 
         {/* Bandeau mode édition */}
         {homeEditMode && (
@@ -1043,7 +1085,7 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
         )}
 
         {/* Blocs réordonnables selon les réglages */}
-        {shownKeys.map((key, idx) => {
+        {shownKeys.filter((key) => !(wideLayout && key === 'nextSession')).map((key, idx) => {
           const meta = HOME_SECTION_META[key];
           return (
             <div key={key} style={{ position: 'relative', marginBottom: HOME_BLOCK_GAP }}>
@@ -1085,6 +1127,7 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
             </div>
           );
         })}
+        </div>
 
         {/* Tout voir : déplie le reste de l'accueil. Rien n'est supprimé ni
             rangé ailleurs — les blocs sont juste repliés tant qu'on n'en a

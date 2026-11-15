@@ -23,6 +23,7 @@ import { ProgressRings } from '../components/ProgressRings';
 import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconGauge, IconLightbulb, IconMoon, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
 import { useFlip } from '../hooks/useFlip';
 import { GoalNumber } from '../components/GoalNumber';
+import { formatReps, sentenceCase, shortExerciseName } from '../utils/homeProgram';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -54,13 +55,6 @@ const sparklinePoints = (values: number[], w: number, h: number, padY = 4): stri
     .join(' ');
 };
 
-// Noms d'exercices pour la liste « Au programme » de l'accueil large : sans
-// la précision entre parenthèses (« mains ≈ 1,5 × largeur d'épaules »), qui
-// est utile en séance mais allonge la ligne pour rien ici.
-const shortExerciseName = (name: string) => name.replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
-// Les groupes musculaires sont stockés en capitales (« DOS — FINITION »).
-const sentenceCase = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
-const formatReps = (reps: string) => reps.replace(/(\d)-(\d)/g, '$1–$2');
 const recoveryPctColor = (p: number) => (p >= 0.8 ? 'var(--h-good)' : p >= 0.5 ? 'var(--h-warn)' : 'var(--h-bad)');
 // Combien d'exercices montrer dans « Au programme » avant « + N autres ».
 const PROGRAM_PREVIEW_MAX = 6;
@@ -1355,17 +1349,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
           // dans l'ordre choisi. Sur téléphone, et en mode édition, une seule
           // colonne comme avant.
           if (cockpit) {
+            // Tout premier lancement (aucune séance) : ni anneaux ni récupération
+            // à montrer, donc pas de colonne vide à côté de la séance du jour.
+            const hasSide = history.length > 0 || !!loadBlock;
             return (
-              <div className="home-wide">
+              <div className={hasSide ? 'home-wide' : 'home-wide home-solo'}>
                 <div className="home-col-main">
                   {resumeBlock}
                   {heroKey && SECTION_MAP[heroKey]}
                 </div>
-                <div className="home-col">
-                  {history.length > 0 && <ProgressRings history={history} cardioHistory={cardioHistory} weeklySessionGoal={weeklySessionGoal} variant={uiStyle} />}
-                  {isSport ? sportSummary : isEpure ? epureSummary : recoveryBlock}
-                  {loadBlock}
-                </div>
+                {hasSide && (
+                  <div className="home-col">
+                    {history.length > 0 && <ProgressRings history={history} cardioHistory={cardioHistory} weeklySessionGoal={weeklySessionGoal} variant={uiStyle} />}
+                    {isSport ? sportSummary : isEpure ? epureSummary : recoveryBlock}
+                    {loadBlock}
+                  </div>
+                )}
                 <div className="home-grid">
                   {shownKeys.filter((k) => k !== heroKey).map((k) => renderBlock(k, shownKeys.indexOf(k)))}
                   {showAllButton}

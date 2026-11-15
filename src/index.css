@@ -1940,13 +1940,16 @@ html[data-points="on"] .pr-svg {
 .home-wide .home-col > .home-span, .home-wide .home-col > .sp-summary, .home-wide .home-col > .ep-list { grid-column: 1 / -1; }
 .ui-sport .home-wide .home-col > .pr, .ui-epure .home-wide .home-col > .pr { grid-column: 1 / -1; }
 .home-wide .home-col .sp-summary { margin-bottom: 0 !important; }
-.home-wide .home-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
-.home-wide .home-grid > * { min-width: 0; }
-.home-wide .home-grid > button { grid-column: 1 / -1; }
+/* Les autres cartes : colonnes « maçonnées » (chaque carte se range sous la
+   précédente, sans trous quand leurs hauteurs diffèrent). L'ordre choisi dans
+   le mode édition se lit donc colonne par colonne. */
+.home-wide .home-grid { display: block; column-count: 2; column-gap: 16px; }
+.home-wide .home-grid > * { min-width: 0; break-inside: avoid; -webkit-column-break-inside: avoid; margin-bottom: 16px; }
+.home-wide .home-grid > button { column-span: all; margin-bottom: 0; }
 @media (min-width: 1000px) {
   .home-wide { grid-template-columns: minmax(0, 1.68fr) minmax(0, 1fr); }
   .home-wide .home-col { grid-template-columns: minmax(0, 1fr); align-content: stretch; }
-  .home-wide .home-grid { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .home-wide .home-grid { grid-column: 1 / -1; column-count: 3; }
 }
 
 .home-wide .home-title { font-size: 38px; }
@@ -1955,6 +1958,11 @@ html[data-points="on"] .pr-svg {
   padding: 30px; border-radius: 28px; min-height: 0;
 }
 .home-wide .home-hero-left { display: flex; flex-direction: column; justify-content: space-between; gap: 22px; min-width: 0; }
+/* Quand la carte s'étire (colonne de droite plus haute), le vide se partage
+   au-dessus et en dessous du titre au lieu de former un trou au milieu. */
+.home-wide .home-hero-left > div:first-child { flex: 1; display: flex; flex-direction: column; }
+.home-wide .home-hero-title { margin-top: auto; }
+.home-wide .home-hero-left > div:first-child > :last-child { margin-bottom: auto; }
 .home-wide .home-hero-title { font-size: clamp(88px, 11vw, 132px); line-height: 0.82; }
 .home-wide .home-chips span { font-size: 12.5px; padding: 6px 12px; }
 .home-wide .home-hero-foot { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 18px; }
@@ -1965,8 +1973,9 @@ html[data-points="on"] .pr-svg {
 
 /* « Au programme » : les exercices de la séance, à droite du titre. */
 .home-wide .home-prog { display: flex; flex-direction: column; min-width: 0; padding-left: 26px; border-left: 1px solid var(--h-line); }
-.home-prog ol { list-style: none; margin: 14px 0 0; padding: 0; }
-.home-prog li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 4px; padding: 11px 0; border-top: 1px solid var(--h-line); }
+/* La liste prend toute la hauteur de la carte : les lignes se répartissent. */
+.home-prog ol { list-style: none; margin: 14px 0 0; padding: 0; flex: 1; display: flex; flex-direction: column; }
+.home-prog li { flex: 1 1 auto; display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 4px; align-content: center; padding: 11px 0; border-top: 1px solid var(--h-line); }
 .home-prog li b { font: 500 11px/1.9 var(--sp-mono, ui-monospace, monospace); color: var(--h-muted); }
 .home-prog li p {
   margin: 0; font-size: 14px; font-weight: 500; line-height: 1.25; color: var(--h-text);
@@ -1988,3 +1997,26 @@ html[data-points="on"] .pr-svg {
 .ui-sport .home-wide .home-start { min-width: 0; padding: 0 30px; }
 /* La police d'affichage du style Sport est plus large que la condensée : titre moins grand pour tenir sur une ligne. */
 .ui-sport .home-wide .home-hero-title { font-size: clamp(56px, 7vw, 92px); line-height: 0.9; }
+
+/* ─── Accueil Classique sur grand écran ──────────────────────────────────────
+   Bandeau de la séance en haut, puis toutes les cartes en colonnes sans trous
+   (2 en portrait, 3 en paysage). Les cartes du style Classique portent leurs
+   marges en ligne (style=…) : d'où les !important pour les uniformiser. */
+.home-band { display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
+.home-band > * { margin: 0 !important; }
+.home-masonry { column-count: 2; column-gap: 16px; }
+@media (min-width: 1000px) { .home-masonry { column-count: 3; } }
+.home-masonry > * { break-inside: avoid; -webkit-column-break-inside: avoid; margin: 0 0 14px !important; }
+.home-masonry > div > :first-child { margin-top: 0 !important; }
+
+/* Les anneaux n'avaient pas d'arrondi propre (angles droits) : côte à côte avec les autres cartes ça se voit. */
+.home-v2:not(.ui-sport):not(.ui-epure) .home-wide .home-col > .pr { border-radius: 22px; }
+
+/* Épuré : les étiquettes de muscles passent à la ligne sur grand écran ; le point
+   séparateur finit la ligne au lieu de commencer la suivante (sinon il pend en début de ligne). */
+.ui-epure .home-wide .home-chips { row-gap: 4px; }
+.ui-epure .home-wide .home-chips span + span::before { content: none; }
+.ui-epure .home-wide .home-chips span:not(:last-child)::after { content: "·"; margin: 0 8px; color: var(--h-muted); }
+
+/* Sans colonne de droite (premier lancement) : la séance du jour prend toute la largeur. */
+@media (min-width: 1000px) { .home-wide.home-solo { grid-template-columns: minmax(0, 1fr); } }

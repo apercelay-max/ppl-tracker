@@ -19,7 +19,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     items: [
       'Sur iPad, la séance du jour passe en grand avec son programme : tu vois les exercices, les séries et les répétitions avant même de commencer.',
       'À côté, tes anneaux de la semaine et la récupération muscle par muscle ; en dessous, toutes tes autres cartes sur plusieurs colonnes.',
-      'En paysage comme en portrait, et dans les cinq styles (Nouveau, Points, Sport, Épuré, Classique pour l’instant inchangé). Sur téléphone, rien ne change.',
+      'En paysage comme en portrait, et dans les cinq styles (Nouveau, Points, Sport, Épuré, Classique). Sur téléphone, rien ne change.',
     ],
   },
   {
