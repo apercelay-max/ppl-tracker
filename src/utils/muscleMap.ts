@@ -20,7 +20,12 @@
 // triceps et 0,5 pour les épaules.
 
 import { BUILT_IN_PROGRAMS } from '../data/programs';
-import { LEGACY_LEGS_WORKOUTS } from '../data/legacyWorkouts';
+import {
+  LEGACY_LEGS_WORKOUTS,
+  LEGACY_LEGS_V3_WORKOUTS,
+  LEGACY_LEGS_REHAB_WORKOUTS,
+  LEGACY_STRICT_RETIRED_WORKOUTS,
+} from '../data/legacyWorkouts';
 import { findCatalogExercise, normalize } from './catalogMatch';
 
 /** Poids d'un muscle synergiste dans le décompte des séries effectives. */
@@ -84,7 +89,14 @@ for (const program of BUILT_IN_PROGRAMS) {
     }
   }
 }
-for (const workout of LEGACY_LEGS_WORKOUTS) {
+// Générations antérieures des séances Legs + exercices retirés du Strict en
+// V5.3 : leurs ids sont encore dans l'historique enregistré.
+for (const workout of [
+  ...LEGACY_LEGS_WORKOUTS,
+  ...LEGACY_LEGS_V3_WORKOUTS,
+  ...LEGACY_LEGS_REHAB_WORKOUTS,
+  ...LEGACY_STRICT_RETIRED_WORKOUTS,
+]) {
   for (const ex of workout.exercises) {
     if (!EXERCISE_INDEX[ex.id]) {
       EXERCISE_INDEX[ex.id] = { name: ex.name, muscleGroup: ex.muscleGroup };
@@ -139,6 +151,12 @@ const MANUAL_CATALOG_MATCH: Record<string, string> = {
   // Push B (V4.0) — 'push-a-5' y a été déplacé (Pompes diamant, Jour 2 → Jour 5)
   'push-a-5': 'pompes',
   'push-b-2': 'pompes',
+  // Strict V5.3 (14/11/2026) : les deux tirages verticaux barre large, puis les
+  // deux exercices de la séance Legs B qui ont un équivalent catalogue fiable.
+  'pull-a-11': 'tirage-vertical-prise-large',
+  'pull-b-10': 'tirage-vertical-prise-large',
+  'legs-b-v5-3': 'souleve-de-terre-jambes-tendues-halteres',
+  'legs-b-v5-4': 'kickback-fessier-a-la-poulie',
   // Legs — générations antérieures (V2.x pré-19/08/2026, V3.0 30/08→13/09/2026),
   // gardées pour que l'historique déjà enregistré sous ces ids continue de
   // créditer les bons synergistes (voir legacyWorkouts.ts).

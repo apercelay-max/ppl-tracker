@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 import { getWorkout } from '../data/workouts';
 import { getDayMeta } from '../data/programs';
+import { lookupExercise } from '../utils/muscleMap';
 import { computeTonnage } from '../utils/training';
 import { isPerformedSet } from '../utils/weight';
 import { formatWeightForDisplay, weightUnitLabel } from '../utils/weight';
@@ -136,7 +137,7 @@ const screenClass = useScreenClass();
     const workout = getWorkout(entry.dayId);
     if (workout && normalize(workout.name).includes(q)) return true;
     return Object.keys(entry.exerciseProgress).some((exId) => {
-      const exName = entry.exerciseNameOverrides?.[exId] ?? workout?.exercises.find((e) => e.id === exId)?.name ?? exId;
+      const exName = entry.exerciseNameOverrides?.[exId] ?? workout?.exercises.find((e) => e.id === exId)?.name ?? lookupExercise(exId)?.name ?? exId;
       return normalize(exName).includes(q);
     });
   });
@@ -244,7 +245,7 @@ const screenClass = useScreenClass();
                       {Object.entries(entry.exerciseProgress).map(([exId, sets]) => {
                         const done = sets.filter(isPerformedSet);
                         if (done.length === 0) return null;
-                        const name = entry.exerciseNameOverrides?.[exId] ?? workout?.exercises.find((e) => e.id === exId)?.name ?? exId;
+                        const name = entry.exerciseNameOverrides?.[exId] ?? workout?.exercises.find((e) => e.id === exId)?.name ?? lookupExercise(exId)?.name ?? exId;
                         return (
                           <div key={exId} style={{ marginBottom: 8 }}>
                             <p style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 700 }}>{name}</p>

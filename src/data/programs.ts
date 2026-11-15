@@ -11,15 +11,16 @@ import { APP_LIBRARY_PROGRAMS } from './appLibraryPrograms';
 // puis V11 → V2.2 « Phase 1 Sèche » le 19/08/2026, puis V2.2 → V2.5 le
 // 24/08/2026 — corrections de repos réel uniquement — puis V2.5 → V3.0 le
 // 30/08/2026 — jambes sorties de fin de séance, 4 séances → 6 — puis
-// V3.0 → V3.2 le 13/09/2026 — pause épaule partielle (douleur deltoïde
-// antérieur/latéral, Sem 7-8) + jambes reconstruites en rééducation genou
-// pure sur demande d'Antoine — puis V3.2 → V4.0 le 16/09/2026 : épaule
-// déclarée muette (retour à charge pleine + réintroduction de l'antérieur),
+// V3.0 → V3.2 le 13/09/2026 — jambes reconstruites en mobilité et activation
+// — puis V3.2 → V4.0 le 16/09/2026 : retour à charge pleine,
 // contrainte matérielle actée (poids du corps + haltères ≤ 25 kg/pièce,
 // volume à 4 séries en compensation), jambes reconduites à l'identique —
 // puis V4.0 → V4.2 le 05/10/2026 : latéral en tête (V4.1, 29/09), double
 // progression un cran à la fois (V4.2, 30/09), puis V4.2 → V4.3 le 08/10/2026 :
-// fin de sèche repoussée au 21/10, Sem 12 et 13 — cf. src/data/workouts.ts pour le détail. Son id reste 'strict-v10'
+// fin de sèche repoussée au 21/10, Sem 12 et 13 — puis V4.3 → V5.3 le
+// 14/11/2026 : Phase 3, prise de masse (mésocycle 1, 03/11 → 14/12), jambes
+// réintégrées, dos réorienté vers les tractions prise large et le tirage
+// vertical — cf. src/data/workouts.ts pour le détail. Son id reste 'strict-v10'
 // pour ne pas casser les réglages déjà enregistrés sur l'appareil. Les autres
 // sont des trames additionnelles, proposées en plus — changer de programme
 // actif ne supprime jamais les autres, ni l'historique déjà enregistré
@@ -39,28 +40,31 @@ export interface Program {
 
 export const STRICT_V10_PROGRAM: Program = {
   id: 'strict-v10',
-  name: 'Strict V4.3',
-  focusLabel: 'Strict V4.3 · Épaules priorité 1 + rééduc. genou',
-  shortDescription: 'Sem 9-13 : épaule muette → retour à charge pleine, deltoïde latéral en tête (18 séries/rotation), poids du corps + haltères ≤ 25 kg, double progression (un cran à la fois), jambes en rééducation genou inchangée — 6 séances, fin de Phase 1 — Sèche (21/10).',
-  source: 'Le programme d\'Antoine, mis à jour de V4.2 vers V4.3 le 08/10/2026 (fichier « programme_hypertrophie_PPL_Strict_Phase1_V4.3_S9-S13.xlsx »).',
+  name: 'Strict V5.3',
+  focusLabel: 'Strict V5.3 · Prise de masse — mésocycle 1',
+  shortDescription: 'Phase 3, mésocycle 1 (03/11 → 14/12) : 5 semaines de progression + 1 de décharge. Priorités épaules > bras > pecs > dos, volume qui monte en rampe, dos réorienté vers les tractions prise large et le tirage vertical, jambes réintégrées (fessiers et mollets d\'abord), curls en supination stricte — 6 séances.',
+  source: 'Le programme de suivi du binôme, mis à jour de V4.3 vers V5.3 le 14/11/2026.',
   workouts: WORKOUTS,
   // Les clés 'legs-a'/'legs-b' (sans suffixe) sont les anciennes séances
   // Legs V11 (avant le 19/08/2026) ; 'legs-a-v3'/'legs-b-v3' celles de la
   // V3.0 (30/08 → 13/09/2026, tri-sets hypertrophie) ; 'legs-a-rehab'/
-  // 'legs-b-rehab' sont les séances actives depuis le 13/09/2026
-  // (rééducation genou). Les trois générations sont gardées pour que
+  // 'legs-b-rehab' celles de la mobilité et activation (13/09 → 03/11/2026) ;
+  // 'legs-a-v5'/'legs-b-v5' sont les séances actives depuis la V5.3
+  // (hypertrophie). Les quatre générations sont gardées pour que
   // l'historique déjà enregistré reste coloré/étiqueté correctement.
   dayAccents: {
     'pull-a': '#7c6fcd', 'push-a': '#e03030', 'legs-a': '#e8a020',
     'pull-b': '#6a5fc0', 'push-b': '#cc2828', 'legs-b': '#d09018',
     'legs-a-v3': '#e8a020', 'legs-b-v3': '#d09018',
     'legs-a-rehab': '#e8a020', 'legs-b-rehab': '#d09018',
+    'legs-a-v5': '#e8a020', 'legs-b-v5': '#d09018',
   },
   dayTypeLabels: {
     'pull-a': 'PULL', 'push-a': 'PUSH', 'legs-a': 'LEGS',
     'pull-b': 'PULL', 'push-b': 'PUSH', 'legs-b': 'LEGS',
     'legs-a-v3': 'LEGS', 'legs-b-v3': 'LEGS',
     'legs-a-rehab': 'LEGS', 'legs-b-rehab': 'LEGS',
+    'legs-a-v5': 'LEGS', 'legs-b-v5': 'LEGS',
   },
 };
 

@@ -1,5 +1,6 @@
 import type { HistoryEntry } from '../data/types';
 import { getWorkout } from '../data/workouts';
+import { lookupExercise } from './muscleMap';
 
 // Export CSV de l'historique, au format de Strong (colonnes identiques) : les
 // autres apps (Hevy, Strong, tableurs) savent le lire, et PPL Tracker aussi —
@@ -31,7 +32,7 @@ export const historyToCsv = (history: HistoryEntry[]): string => {
     const workout = getWorkout(entry.dayId);
     const sessionName = workout?.name ?? entry.dayId;
     for (const [exId, sets] of Object.entries(entry.exerciseProgress)) {
-      const exName = entry.exerciseNameOverrides?.[exId] ?? workout?.exercises.find((e) => e.id === exId)?.name ?? exId;
+      const exName = entry.exerciseNameOverrides?.[exId] ?? workout?.exercises.find((e) => e.id === exId)?.name ?? lookupExercise(exId)?.name ?? exId;
       let order = 0;
       for (const s of sets) {
         if (!s.completed || s.reps === '—') continue; // série « passée » : rien à exporter

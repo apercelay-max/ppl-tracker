@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { saveBackup } from '../lib/localBackups';
 import { WorkoutSession, ExerciseProgress, SetEntry, HistoryEntry, TimerState, CardioActivityType, CardioEntry, CardioStats, BodyWeightEntry, MassMeasurement, NavTabKey } from '../data/types';
-import { getWorkout, getBaseWorkout, setCustomWorkouts, setSessionWorkoutOverride, MESOCYCLE_WEEKS } from '../data/workouts';
+import { getWorkout, getBaseWorkout, setCustomWorkouts, setSessionWorkoutOverride, MESOCYCLE_WEEKS, MESOCYCLE_ID, getMesocycleWeekForDate } from '../data/workouts';
 import { applyAdaptation, passageAsGym, PASSAGE_GYM_ID, type Gym, type GymProfile, type SessionAdaptation } from '../utils/gymAdapt';
 import { Program } from '../data/programs';
 import { bucketByWeek, computeTonnage } from '../utils/training';
@@ -294,6 +294,10 @@ interface WorkoutStore {
 session: WorkoutSession | null;
 timer: TimerState;
 currentWeek: number;
+// Cycle de semaines auquel se rapporte `currentWeek` (voir MESOCYCLE_ID dans
+// data/workouts.ts) : permet de recaler la semaine d'un téléphone qui avait
+// encore l'ancien compteur quand le programme change de mésocycle.
+mesocycleId: string;
 history: HistoryEntry[];
 theme: 'dark' | 'light';
 // Préférence d'apparence choisie par Léo (Réglages → Apparence) : 'system'
@@ -547,6 +551,7 @@ persist(
 session: null,
 timer: { isRunning: false, endTimestamp: null, totalSeconds: 0 },
 currentWeek: 1,
+mesocycleId: MESOCYCLE_ID,
 history: [],
 theme: 'dark',
 themeMode: 'dark',
@@ -1388,6 +1393,7 @@ sessionPausedAt: state.sessionPausedAt,
 // date absolue, il reste donc juste après un rechargement.
 timer: state.timer,
 currentWeek: state.currentWeek,
+mesocycleId: state.mesocycleId,
 history: state.history,
 theme: state.theme,
 themeMode: state.themeMode,
@@ -1470,6 +1476,14 @@ scheduleRestNotification(Math.ceil((p.timer.endTimestamp - Date.now()) / 1000));
 }
 restTimerRearmed = true;
 const merged = { ...current, ...p };
+// Nouveau mésocycle (Strict V5.3, Phase 3 : 6 semaines) : l'ancien compteur
+// (1-13, sèche) n'a plus de sens. Une sauvegarde qui n'a pas encore l'id du
+// mésocycle en cours est recalée d'après la date du jour ; un tout nouvel
+// utilisateur (aucune sauvegarde) garde la Sem 1.
+if (hadPriorState && p.mesocycleId !== MESOCYCLE_ID) {
+merged.currentWeek = getMesocycleWeekForDate(new Date());
+}
+merged.mesocycleId = MESOCYCLE_ID;
 merged.homeSections = { ...current.homeSections, ...(p.homeSections ?? {}) };
 // Même précaution que pour homeSections : un bloc ajouté plus tard doit
 // apparaître avec sa valeur par défaut au lieu d'être absent du réglage

@@ -14,6 +14,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-14-strict-v5-3',
+    title: 'Programme Strict V5.3 : prise de masse',
+    items: [
+      'Le programme Strict passe en V5.3, Phase 3 : un cycle de 6 semaines (5 de progression + 1 de décharge) du 3 novembre au 14 décembre. Le compteur de semaines repart de 1 et se recale sur la date du jour.',
+      'Les jambes reviennent : échauffement du genou, puis fessiers et mollets en priorité, avec un travail du quadriceps en douceur à charge fixe.',
+      'Le dos change d’exercices : tractions prise large en tête, et un tirage vertical barre large (en version 12-15 au Pull A, en version lourde au Pull B).',
+      'Les curls passent en supination stricte (3 séries), le curl inversé est mis de côté, et la barre droite en pronation remplace la corde au face pull et à l’extension triceps. Tes anciennes séances restent dans l’historique.',
+    ],
+  },
+  {
     id: '2026-11-09-anneaux',
     title: 'Ta semaine en anneaux',
     items: [

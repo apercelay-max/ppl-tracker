@@ -198,9 +198,9 @@ export const LEGACY_LEGS_WORKOUTS: WorkoutDay[] = [
 // ─── Anciennes journées Legs (Strict V3.0, 30/08 → 13/09/2026) ───────────────
 // V3.0 avait sorti les jambes de fin de séance (Pull/Push) pour en faire 2
 // séances autonomes en tri-sets, ids 'legs-a-v3'/'legs-b-v3'. Le 13/09/2026
-// (V3.2), sur demande d'Antoine, ces deux séances sont intégralement
-// reconstruites en rééducation genou (voir 'legs-a-rehab'/'legs-b-rehab'
-// dans workouts.ts) : contenu totalement différent (mobilité/activation vs
+// (V3.2), ces deux séances sont intégralement reconstruites en mobilité et
+// activation du genou (voir 'legs-a-rehab'/'legs-b-rehab' plus bas) :
+// contenu totalement différent (mobilité/activation vs
 // tri-sets chargés). On garde la définition V3.0 ici uniquement pour que
 // l'historique déjà enregistré sous 'legs-a-v3'/'legs-b-v3' (Sem 7, avant le
 // 13/09) continue d'afficher les bons noms d'exercices.
@@ -390,6 +390,271 @@ export const LEGACY_LEGS_V3_WORKOUTS: WorkoutDay[] = [
         supersetOrder: 2,
         defaultWeight: '35',
         notes: "⟳ 3ᵉ et dernier des trois. Anti-extension : bas du dos PLAQUÉ au sol, obligatoire. Tempo iso. RIR 2-3 fixe.",
+      },
+    ],
+  },
+];
+
+// ─── Séances Legs « rééducation » (Strict V3.2 → V4.3, 13/09 → 03/11/2026) ───
+// Remplacées en V5.3 (14/11/2026) par 'legs-a-v5' / 'legs-b-v5' : les jambes
+// redeviennent un travail d'hypertrophie. On garde ces deux séances telles
+// quelles (mêmes ids) pour que l'HISTORIQUE déjà enregistré sous 'legs-a-rehab'
+// / 'legs-b-rehab' continue d'afficher les bons noms d'exercices — voir
+// ALL_KNOWN_WORKOUTS dans workouts.ts et l'index de utils/muscleMap.ts.
+export const LEGACY_LEGS_REHAB_WORKOUTS: WorkoutDay[] = [
+  // ── LEGS A — Rééducation genou / Abdos ──────────────────────────────
+  {
+    id: 'legs-a-rehab',
+    dayNumber: 3,
+    name: 'Legs A',
+    focus: "Rééducation genou pure (mobilité, activation) + abdos — plus d'objectif hypertrophie tant que le genou n'est pas libéré (V3.2, 13/09/2026)",
+    muscleGroups: 'Genou (mobilité / activation) / Abdos',
+    estimatedDuration: '≈ 30 min',
+    exercises: [
+      {
+        id: 'legs-a-rehab-1',
+        name: 'Mobilisation rotulienne auto-appliquée',
+        muscleGroup: 'GENOU — MOBILITÉ',
+        sets: 2,
+        targetReps: '10 /sens ×4 sens',
+        restSeconds: 30,
+        restMode: 'normal',
+        isSuperset: false,
+        defaultWeight: '—',
+        essential: false,
+        notes: "Mobilisation manuelle de la rotule dans ses 4 axes (haut/bas/interne/externe), doigts posés à plat sur les bords, genou détendu en extension complète, quadriceps relâché. Objectif : lever la raideur péri-articulaire avant tout travail actif. Aucune charge, aucun RIR — seul le seuil de douleur <3/10 encadre la série, stable pendant l'exercice et disparue dans l'heure. ⚠ Arrêt immédiat en cas de sensation de blocage ou de craquement DOULOUREUX (un simple crépitement indolore est fréquent après une atteinte du genou et sans gravité). Étape 1/3 du protocole genou : mobilité pure, zéro charge fonctionnelle. Utile aussi hors séance, quotidien, 2 min si le genou est raide un matin donné.",
+      },
+      {
+        id: 'legs-a-rehab-2',
+        name: 'Dorsiflexion cheville au mur',
+        muscleGroup: 'GENOU — MOBILITÉ',
+        sets: 3,
+        targetReps: '10 /jambe',
+        restSeconds: 30,
+        restMode: 'normal',
+        isSuperset: false,
+        defaultWeight: '—',
+        essential: false,
+        notes: "Genou dirigé vers le mur sans décoller le talon, orteils à distance croissante jusqu'à la limite tenable. Compare la distance orteil-mur des deux côtés. Cheville et genou sont mécaniquement couplés dans l'accroupissement : une dorsiflexion limitée pousse le genou à compenser vers l'avant ou fait décoller le talon — c'est pour ça que cet exercice est ici, pas seulement au niveau du genou. Le talon ne doit JAMAIS décoller du sol : c'est le signal que l'amplitude dépasse ce que la cheville peut donner sans compensation. Douleur <3/10 seule limite. Utile aussi hors séance, quotidien, 2 min.",
+      },
+      {
+        id: 'legs-a-rehab-3',
+        name: 'Heel slides',
+        muscleGroup: 'GENOU — MOBILITÉ',
+        sets: 3,
+        targetReps: '12 /jambe',
+        restSeconds: 30,
+        restMode: 'normal',
+        isSuperset: false,
+        defaultWeight: '—',
+        essential: false,
+        notes: "Allongé sur le dos, glisser le talon vers la fesse en fléchissant le genou puis revenir en extension complète, sans forcer au point de blocage. Vise l'amplitude de FLEXION, complémentaire de l'extension travaillée plus loin par le terminal knee extension. Une sensation d'ACCROCHAGE net (différent d'une simple raideur) est un signal d'arrêt, pas un obstacle à pousser. Progression = amplitude atteinte, pas vitesse ni charge. Douleur <3/10 seule limite.",
+      },
+      {
+        id: 'legs-a-rehab-4',
+        name: 'Crunch câble à genoux',
+        muscleGroup: 'ABDOS',
+        sets: 4,
+        targetReps: '12-15',
+        restSeconds: 60,
+        restMode: 'normal',
+        isSuperset: false,
+        defaultWeight: '15',
+        essential: false,
+        notes: "Inchangé depuis la V3.0 — un des 4 exercices abdos qui restent strictement les mêmes. Enrouler la colonne vertèbre par vertèbre, hanches FIXES. Devient un bloc indépendant (n'est plus en tri-set) : la séance passe en rééducation genou, l'attention doit rester sur l'exécution, pas sur l'enchaînement. Sans lien direct avec le genou : la vigilance porte sur le bas du dos. Charge inchangée (15 kg). Tempo 2-1-1. RIR 2-3.",
+      },
+      {
+        id: 'legs-a-rehab-5',
+        name: 'Terminal knee extension élastique',
+        muscleGroup: 'GENOU — ACTIVATION',
+        sets: 3,
+        targetReps: '15-20 /jambe',
+        restSeconds: 45,
+        restMode: 'normal',
+        isSuperset: false,
+        defaultWeight: 'Élastique léger',
+        essential: true,
+        notes: "Le geste d'activation central de cette séance. Élastique fixé bas, boucle derrière le genou tendu : pousser en extension complète contre la résistance et tenir 1 s en verrouillage haut. Cible directement l'inhibition du quadriceps qui suit une atteinte du genou. Charge externe légère plutôt qu'à vide : même faible, une résistance contribue au gain d'amplitude que le travail au poids du corps seul n'apporte pas. Repos à 45 s (sous le plancher habituel de 120 s) : l'objectif est l'activation et l'amplitude, pas la fatigue proche de l'échec. Point de contrôle : le verrouillage COMPLET du genou en fin de mouvement, sans flexion résiduelle — c'est lui, pas la résistance de l'élastique, qui signe le retour de l'activation. Tempo 2-1-2. RIR indicatif 2-3 (repère d'effort, pas d'échec).",
+      },
+      {
+        id: 'legs-a-rehab-6',
+        name: 'Abduction hanche câble unilatéral',
+        muscleGroup: 'GENOU — CONTRÔLE MOTEUR',
+        sets: 3,
+        targetReps: '15-20 /jambe',
+        restSeconds: 45,
+        restMode: 'normal',
+        isSuperset: false,
+        defaultWeight: '5',
+        essential: false,
+        notes: "Reframé le 13/09/2026 en contrôle moteur de la hanche (stabilité du genou en valgus) plutôt qu'en objectif hypertrophie du moyen fessier — moyen fessier : contrôleur du valgus de genou, premier muscle à faire travailler après une blessure de ski. Poulie basse + sangle de cheville, buste stable. Sort du tri-set (bloc indépendant), repos désormais fixé à 45 s. Point de contrôle : le genou ne doit JAMAIS partir en valgus (vers l'intérieur) pendant le mouvement — c'est le seul point qui compte ici. Charge et fourchette inchangées (5 kg), aucune progression tant que le genou n'est pas explicitement libéré. Tempo 2-1-1.",
+      },
+      {
+        id: 'legs-a-rehab-7',
+        name: 'Reverse crunch (enroulement bassin)',
+        muscleGroup: 'ABDOS',
+        sets: 4,
+        targetReps: '12-15',
+        restSeconds: 60,
+        restMode: 'normal',
+        isSuperset: false,
+        defaultWeight: 'PDC',
+        essential: false,
+        notes: "Inchangé depuis la V3.0. Enrouler le bassin vers le sternum, sans élan des jambes. Devient un bloc indépendant, plus de tri-set. Sans lien direct avec le genou : la vigilance porte sur le bas du dos. Tempo 2-1-1. RIR 2-3.",
+      },
+    ],
+  },
+  // ── LEGS B — Rééducation genou / Abdos + anti-rotation ─────────────
+  {
+    id: 'legs-b-rehab',
+    dayNumber: 6,
+    name: 'Legs B',
+    focus: "Rééducation genou pure (souplesse, geste cible) + gainage anti-rotation (V3.2, 13/09/2026)",
+    muscleGroups: 'Genou (souplesse / geste cible) / Abdos',
+    estimatedDuration: '≈ 23 min',
+    exercises: [
+      {
+        id: 'legs-b-rehab-1',
+        name: 'Étirement quadriceps / psoas (couch stretch)',
+        muscleGroup: 'GENOU — SOUPLESSE',
+        sets: 2,
+        targetReps: '45 s /jambe',
+        restSeconds: 20,
+        restMode: 'normal',
+        isSuperset: false,
+        defaultWeight: '45',
+        essential: false,
+        notes: "Genou arrière au sol ou sur coussin, tibia contre un support (canapé, mur), bassin en rétroversion pour isoler le droit fémoral et le psoas plutôt que cambrer le bas du dos. Glisse une serviette pliée sous la rotule si l'appui direct gêne. Étirement doux, jamais poussé jusqu'à la douleur. Pas de progression chronométrée : ajuste le confort de l'appui, pas la durée — l'objectif est l'équilibre de souplesse entre les deux côtés. Douleur au GENOU (à distinguer d'un simple tiraillement musculaire de cuisse) = repositionne l'appui ou arrête. Recommandé aussi hors séance, 3-4×/semaine, 2×30-45 s/jambe.",
+      },
+      {
+        id: 'legs-b-rehab-2',
+        name: 'Étirement ischios doux',
+        muscleGroup: 'GENOU — SOUPLESSE',
+        sets: 2,
+        targetReps: '30 s /jambe',
+        restSeconds: 20,
+        restMode: 'normal',
+        isSuperset: false,
+        defaultWeight: '30',
+        essential: false,
+        notes: "Jambe tendue surélevée (chaise ou sangle au sol), dos plat, bascule du bassin vers l'avant plutôt que dos rond. Doux et progressif : les ischios peuvent freiner par réflexe l'extension complète du genou après une atteinte articulaire, sans en être la cause. Pas de progression chronométrée : ajuste l'amplitude, pas la durée, semaine après semaine, jamais en insistance forcée. Aucune sollicitation directe du genou dans ce mouvement — la vigilance porte sur le bas du dos.",
+      },
+      {
+        id: 'legs-b-rehab-3',
+        name: 'Gainage latéral (oblique)',
+        muscleGroup: 'ABDOS',
+        sets: 3,
+        targetReps: 'Max sec /côté',
+        restSeconds: 60,
+        restMode: 'normal',
+        isSuperset: false,
+        defaultWeight: '30',
+        essential: false,
+        notes: "Inchangé depuis la V3.0. Anti-inclinaison : obliques et carré des lombes, protection lombaire directe aux côtés de l'anti-extension (hollow) et de l'anti-rotation (Pallof, ajouté ci-dessous). Bassin haut, alignement épaule-hanche-cheville. 30 s de départ, +5 s dès que le temps est tenu proprement des deux côtés. Devient un bloc indépendant, plus de tri-set, repos inchangé à 60 s. Tempo iso. RIR 2-3.",
+      },
+      {
+        id: 'legs-b-rehab-4',
+        name: 'Squat profond assisté tenu',
+        muscleGroup: 'GENOU — GESTE CIBLE',
+        sets: 3,
+        targetReps: 'Max sec tenu',
+        restSeconds: 45,
+        restMode: 'normal',
+        isSuperset: false,
+        defaultWeight: '20',
+        essential: true,
+        notes: "Le geste cible lui-même : accroupissement complet, assisté par appui des bras (cadre de porte, rack, table) pour décharger une partie du poids du corps et descendre plus bas que ce que le genou tolérerait seul. Descente lente, arrêt à la profondeur où la douleur reste <3/10, tenue, remontée en s'aidant des bras autant que nécessaire. La profondeur dépend aussi de l'amplitude de cheville et de hanche (d'où la dorsiflexion en Legs A), pas du genou isolément. Progression = profondeur atteinte ET/OU temps tenu, ET réduction progressive de l'appui des bras — ne pas chercher la profondeur maximale d'emblée, exercice qui se gagne sur plusieurs semaines. Arrêt à la première douleur >3/10 ou sensation d'instabilité.",
+      },
+      {
+        id: 'legs-b-rehab-5',
+        name: 'Pallof press poulie basse',
+        muscleGroup: 'ABDOS — ANTI-ROTATION',
+        sets: 3,
+        targetReps: '12 /côté',
+        restSeconds: 60,
+        restMode: 'normal',
+        isSuperset: false,
+        defaultWeight: '10',
+        essential: false,
+        notes: "NOUVEAU (13/09). Anti-rotation : poulie basse, câble tendu perpendiculairement au buste, pousser bras tendus devant soi sans laisser le buste pivoter vers la poulie — c'est la résistance à la rotation qui est l'exercice, pas la poussée. Complète le trio de gainage anti-lombaire de cette séance (avec le gainage latéral et le hollow body hold) : anti-inclinaison et anti-extension étaient déjà couverts, l'anti-rotation manquait. Prescription reprise telle quelle de l'onglet Excel « Conseils — Lombaires ». Sans lien avec le genou : ajouté ici parce que Legs B regroupe déjà le gainage, pas pour une raison articulaire. Charge de départ prudente (10 kg) faute d'historique — ajuster dès Sem 7 si trop facile ou trop dur à charge constante. Tempo 2-1-2. RIR 2-3.",
+      },
+      {
+        id: 'legs-b-rehab-6',
+        name: 'Hollow body hold',
+        muscleGroup: 'ABDOS',
+        sets: 3,
+        targetReps: 'Max sec',
+        restSeconds: 60,
+        restMode: 'normal',
+        isSuperset: false,
+        defaultWeight: '35',
+        essential: false,
+        notes: "Inchangé depuis la V3.0. Anti-extension : protège directement le bas du dos sous charge. Bas du dos PLAQUÉ au sol, obligatoire — dès qu'il décolle, la série est terminée. 35 s de départ, +5 s dès que la série est tenue proprement. Devient un bloc indépendant, repos inchangé à 60 s. Tempo iso. RIR 2-3.",
+      },
+    ],
+  },
+];
+
+// ─── Exercices retirés du programme Strict en V5.3 (14/11/2026) ─────────────
+// Les séances Pull A / Pull B gardent leurs ids, mais quatre exercices en sont
+// sortis : curl marteau et tractions prise serrée (Pull A), tractions prise
+// large en excentrique (Pull B), et le curl inversé, suspendu jusqu'à la fin
+// de la décharge (14/12/2026) — il pourra revenir sous le même id.
+// L'historique enregistré sous ces ids affiche leur nom grâce à cette liste
+// (index de utils/muscleMap.ts) ; ce n'est PAS une séance proposée : son id
+// n'est jamais affiché ni sélectionnable.
+export const LEGACY_STRICT_RETIRED_WORKOUTS: WorkoutDay[] = [
+  {
+    id: 'strict-retired-v43',
+    dayNumber: 0,
+    name: 'Exercices retirés (Strict V4.3)',
+    focus: 'Exercices sortis du programme Strict en V5.3, gardés pour l\'historique',
+    muscleGroups: '',
+    estimatedDuration: '',
+    exercises: [
+      {
+        id: 'pull-a-2',
+        name: 'Curl marteau haltères',
+        muscleGroup: 'BICEPS',
+        sets: 4,
+        targetReps: '12-15',
+        restSeconds: 120,
+        restMode: 'normal',
+        isSuperset: false,
+        notes: 'Retiré en V5.3 : remplacé par le curl debout en supination stricte (id pull-a-10).',
+      },
+      {
+        id: 'pull-a-3',
+        name: 'Curl inversé barre EZ (avant-bras)',
+        muscleGroup: 'AVANT-BRAS / BRACHIAL',
+        sets: 3,
+        targetReps: '15-20',
+        restSeconds: 120,
+        restMode: 'normal',
+        isSuperset: false,
+        notes: 'Suspendu en V5.3 jusqu\'à la fin de la décharge (14/12/2026).',
+      },
+      {
+        id: 'pull-a-4',
+        name: 'Tractions prise serrée pronation (mains largeur épaules)',
+        muscleGroup: 'DOS — FINITION',
+        sets: 3,
+        targetReps: 'AMRAP',
+        restSeconds: 150,
+        restMode: 'normal',
+        isSuperset: false,
+        notes: 'Retiré en V5.3 : remplacé par le tirage vertical barre large (id pull-a-11).',
+      },
+      {
+        id: 'pull-b-3',
+        name: 'Tractions prise large PDC, excentrique 4 s',
+        muscleGroup: 'DOS — FINITION',
+        sets: 3,
+        targetReps: 'AMRAP',
+        restSeconds: 150,
+        restMode: 'normal',
+        isSuperset: false,
+        notes: 'Retiré en V5.3 : remplacé par le tirage vertical lourd à excentrique de 3 s (id pull-b-10).',
       },
     ],
   },
