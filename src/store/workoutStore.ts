@@ -84,6 +84,8 @@ export type BeepTone = 'doux' | 'classique' | 'urgent' | 'melodique' | 'cloche';
  *  passent en 'court' — d'où le réglage. */
 export type VoiceVerbosity = 'court' | 'complet';
 export type UiStyle = 'nouveau' | 'classique' | 'sport' | 'epure' | 'points';
+// Effet 3D au défilement de l'accueil (voir hooks/useScrollTilt.ts) : la carte tout en bas de l'écran s'éloigne.
+export type ScrollTilt = 'off' | 'recul' | 'balancoire';
 // Style « Points » : même interface que « Nouveau », mais le texte important et les
 // icônes sont dessinés en petits points lumineux (voir components/DotEngine.tsx).
 export type DotDensity = 'minimal' | 'complet';
@@ -349,6 +351,7 @@ plateHelperEnabled: boolean;
 // « epure » (noir et blanc, sans cadres, une seule police).
 // Réglages → Apparence.
 uiStyle: UiStyle;
+scrollTilt: ScrollTilt;
 dotDensity: DotDensity;
 dotSize: DotSize;
 dotAnimation: DotAnimation;
@@ -469,6 +472,7 @@ setNavBarTabPinned: (key: NavTabKey, pinned: boolean) => void;
 setGymProfile: (patch: Partial<GymProfile>) => void;
 setPlateHelperEnabled: (enabled: boolean) => void;
 setUiStyle: (style: UiStyle) => void;
+setScrollTilt: (value: ScrollTilt) => void;
 setDotDensity: (d: DotDensity) => void;
 setDotSize: (z: DotSize) => void;
 setDotAnimation: (a: DotAnimation) => void;
@@ -603,6 +607,7 @@ gyms: [{ ...INITIAL_GYM }],
 activeGymId: INITIAL_GYM.id,
 plateHelperEnabled: true,
 uiStyle: 'nouveau',
+scrollTilt: 'recul',
 dotDensity: 'minimal',
 dotSize: 'l',
 dotAnimation: 'pulse',
@@ -1212,6 +1217,7 @@ setShakeToValidateEnabled: (enabled) => set({ shakeToValidateEnabled: enabled })
 
 setPlateHelperEnabled: (enabled) => set({ plateHelperEnabled: enabled }),
 setUiStyle: (style) => set({ uiStyle: style }),
+setScrollTilt: (value) => set({ scrollTilt: value }),
 setDotDensity: (dotDensity) => set({ dotDensity }),
 setDotSize: (dotSize) => set({ dotSize }),
 setDotAnimation: (dotAnimation) => set({ dotAnimation }),
@@ -1429,6 +1435,7 @@ gyms: state.gyms,
 activeGymId: state.activeGymId,
 plateHelperEnabled: state.plateHelperEnabled,
 uiStyle: state.uiStyle,
+scrollTilt: state.scrollTilt,
 dotDensity: state.dotDensity,
 dotSize: state.dotSize,
 dotAnimation: state.dotAnimation,
@@ -1575,6 +1582,9 @@ merged.weightUnit = p.weightUnit ?? 'kg';
     merged.weightUnitToggleStyle = p.weightUnitToggleStyle ?? 'toast';
 merged.simplicityMode = p.simplicityMode ?? false;
 merged.trainingProfile = p.trainingProfile ?? null;
+// Effet au défilement : arrivé après coup, activé par défaut (style « recul »). La
+// valeur est vérifiée car elle voyage aussi par la synchro cloud.
+merged.scrollTilt = p.scrollTilt === 'off' || p.scrollTilt === 'balancoire' ? p.scrollTilt : 'recul';
 
 return merged;
 },

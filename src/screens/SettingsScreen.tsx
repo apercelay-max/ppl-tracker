@@ -243,6 +243,8 @@ const ultraAnimationsEnabled = useWorkoutStore((s) => s.ultraAnimationsEnabled);
 const setUltraAnimationsEnabled = useWorkoutStore((s) => s.setUltraAnimationsEnabled);
 const uiStyle = useWorkoutStore((s) => s.uiStyle);
 const setUiStyle = useWorkoutStore((s) => s.setUiStyle);
+const scrollTilt = useWorkoutStore((s) => s.scrollTilt);
+const setScrollTilt = useWorkoutStore((s) => s.setScrollTilt);
 const ultraAnimationStyle = useWorkoutStore((s) => s.ultraAnimationStyle);
 const setUltraAnimationStyle = useWorkoutStore((s) => s.setUltraAnimationStyle);
 const ultraTransitionStyle = useWorkoutStore((s) => s.ultraTransitionStyle);
@@ -1299,6 +1301,41 @@ boxShadow: uiStyle === opt.id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
 S'applique à l'accueil et à l'écran de séance.
 </p>
 {uiStyle === 'points' && <DotSettings />}
+
+{/* Effet au défilement : la carte tout en bas de l'écran s'éloigne vers le fond
+    (hooks/useScrollTilt.ts). Masqué en mode simplifié, c'est un réglage de
+    personnalisation ; le style « Recul » reste actif par défaut. */}
+{!simplicityMode && (
+<>
+<p style={{ ...subLabel, marginTop: 20 }}>EFFET AU DÉFILEMENT</p>
+<LiquidPill style={themeModePill} role="group" aria-label="Effet au défilement">
+{([
+{ id: 'off', label: 'Aucun', hint: 'Cartes à plat' },
+{ id: 'recul', label: 'Recul', hint: 'La carte du bas s’éloigne' },
+{ id: 'balancoire', label: 'Balançoire', hint: 'Le haut avance, le bas s’enfonce' },
+] as const).map((opt) => (
+<button
+key={opt.id}
+onClick={() => setScrollTilt(opt.id)}
+aria-pressed={scrollTilt === opt.id}
+title={opt.hint}
+style={{
+...themeModeBtn,
+background: scrollTilt === opt.id ? 'var(--bg-base)' : 'transparent',
+color: scrollTilt === opt.id ? 'var(--text-primary)' : 'var(--text-dim)',
+boxShadow: scrollTilt === opt.id ? '0 1px 3px rgba(0,0,0,0.25)' : 'none',
+}}
+>
+<span style={{ fontSize: 12, fontWeight: 700 }}>{opt.label}</span>
+<span style={{ fontSize: 10, fontWeight: 500, opacity: 0.8 }}>{opt.hint}</span>
+</button>
+))}
+</LiquidPill>
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 6, lineHeight: '15px' }}>
+Sur l’accueil, la carte qui arrive tout en bas de l’écran s’éloigne vers le fond. Désactivé si ton appareil réduit les animations.
+</p>
+</>
+)}
 
 {!simplicityMode && (
 <>

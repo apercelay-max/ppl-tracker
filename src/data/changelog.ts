@@ -14,6 +14,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-20-defilement-3d',
+    title: 'Un défilement en profondeur',
+    items: [
+      'Sur l’accueil, la carte qui arrive tout en bas de l’écran s’éloigne vers le fond, puis se redresse à plat en remontant. Elle reste collée à la carte du dessus.',
+      'Deux styles au choix dans Réglages → Style de l’interface : « Recul » (la carte rapetisse et pâlit en s’éloignant) et « Balançoire » (le haut avance pendant que le bas s’enfonce). Tu peux aussi le désactiver.',
+    ],
+  },
+  {
     id: '2026-11-15-accueil-ipad',
     title: 'Un accueil pensé pour l’iPad',
     items: [

@@ -24,6 +24,7 @@ import { markNudgesSeen, sendNudge } from '../lib/binome';
 import { ProgressRings } from '../components/ProgressRings';
 import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconGauge, IconLightbulb, IconMoon, IconPMark, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
 import { GoalNumber } from '../components/GoalNumber';
+import { useScrollTilt } from '../hooks/useScrollTilt';
 
 const CARDIO_TYPES: CardioActivityType[] = ['velo', 'marche', 'course', 'autre'];
 
@@ -123,6 +124,7 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
   const theme = useWorkoutStore((s) => s.theme);
   const setThemeMode = useWorkoutStore((s) => s.setThemeMode);
   const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
+  const scrollTilt = useWorkoutStore((s) => s.scrollTilt);
   const wakeLockEnabled = useWorkoutStore((s) => s.wakeLockEnabled);
   const setWakeLockEnabled = useWorkoutStore((s) => s.setWakeLockEnabled);
   const homeSections = useWorkoutStore((s) => s.homeSections);
@@ -924,9 +926,15 @@ export const HomeScreenClassic: React.FC<HomeScreenProps> = ({ onOpenSummary, on
     </button>
   );
 
+  // La carte qui entre par le bas de l'écran s'éloigne vers le fond (Réglages → Effet au défilement).
+  // Suspendu pendant la personnalisation de l'accueil, où les flèches ▲▼ déplacent les blocs.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Les blocs de l'accueil, et chaque carte de la liste « Séances » plutôt que le bloc entier.
+  useScrollTilt(scrollRef, scrollTilt, '[data-block], .workout-card', !homeEditMode);
+
   return (
     <div className="screen-ambient" style={container}>
-      <div style={{ ...scroll, maxWidth: wideLayout ? 1500 : 480, paddingBottom: navBarEnabled ? 112 : 80 }}>
+      <div ref={scrollRef} style={{ ...scroll, maxWidth: wideLayout ? 1500 : 480, paddingBottom: navBarEnabled ? 112 : 80 }}>
 
         {/* Header */}
         <div style={headerSection}>

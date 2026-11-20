@@ -22,6 +22,7 @@ import { markNudgesSeen, sendNudge } from '../lib/binome';
 import { ProgressRings } from '../components/ProgressRings';
 import { IconActivity, IconBarChart, IconBattery, IconClock, IconClose, IconGauge, IconLightbulb, IconMoon, IconScale, IconSettings, IconSun, IconTarget, IconTrendingUp, IconTrophy, IconUtensils } from '../components/Icons';
 import { useFlip } from '../hooks/useFlip';
+import { useScrollTilt } from '../hooks/useScrollTilt';
 import { GoalNumber } from '../components/GoalNumber';
 import { formatReps, sentenceCase, shortExerciseName } from '../utils/homeProgram';
 
@@ -122,6 +123,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
   const theme = useWorkoutStore((s) => s.theme);
   const setThemeMode = useWorkoutStore((s) => s.setThemeMode);
   const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
+  const scrollTilt = useWorkoutStore((s) => s.scrollTilt);
   const wakeLockEnabled = useWorkoutStore((s) => s.wakeLockEnabled);
   const setWakeLockEnabled = useWorkoutStore((s) => s.setWakeLockEnabled);
   const homeSections = useWorkoutStore((s) => s.homeSections);
@@ -1106,6 +1108,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
   // du mode édition) ou qu'on déplie « Tout voir », au lieu de sauter d'un coup.
   const scrollRef = useRef<HTMLDivElement>(null);
   useFlip(scrollRef, shownKeys.join(','));
+  // La carte qui entre par le bas de l'écran s'éloigne vers le fond (Réglages → Effet au défilement).
+  // Suspendu pendant la personnalisation de l'accueil, où les flèches ▲▼ déplacent les blocs.
+  // Les blocs de l'accueil, et chaque carte de la liste « Séances » plutôt que le bloc entier.
+  useScrollTilt(scrollRef, scrollTilt, '[data-flip], .workout-card', !homeEditMode);
 
   return (
     <div className={isSport ? 'home-v2 ui-sport' : isEpure ? 'home-v2 ui-epure' : 'home-v2'} style={container}>
