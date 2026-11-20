@@ -70,7 +70,8 @@ onStartSession?: () => void;
 hasSessionInProgress?: boolean;
 }
 
-const TABS: { id: NavView; label: string }[] = [
+// Exportés pour que la barre d'onglets du haut (TopNav.tsx) montre les mêmes onglets, dans le même ordre.
+export const TABS: { id: NavView; label: string }[] = [
 { id: 'home', label: 'Accueil' },
 { id: 'objectifs', label: 'Objectifs' },
 { id: 'historique', label: 'Historique' },
@@ -119,7 +120,7 @@ settings: 'Apparence, barre de menus…',
 // épaisseurs incohérentes entre eux), ce qui donnait une barre "pas propre".
 // Ces icônes partagent le même trait et la même taille partout, et ont
 // chacune une variante "filled" (voir plus bas, présentation façon Apple).
-const TAB_ICONS: Record<NavView, React.FC<{ size?: number; filled?: boolean }>> = {
+export const TAB_ICONS: Record<NavView, React.FC<{ size?: number; filled?: boolean }>> = {
 home: HomeIcon,
 objectifs: TargetIcon,
 historique: CalendarIcon,

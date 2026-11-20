@@ -259,6 +259,8 @@ const weeklySessionGoal = useWorkoutStore((s) => s.weeklySessionGoal);
 const setWeeklySessionGoal = useWorkoutStore((s) => s.setWeeklySessionGoal);
 const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
 const setNavBarEnabled = useWorkoutStore((s) => s.setNavBarEnabled);
+const navBarPosition = useWorkoutStore((s) => s.navBarPosition);
+const setNavBarPosition = useWorkoutStore((s) => s.setNavBarPosition);
 const navBarTabsEnabled = useWorkoutStore((s) => s.navBarTabsEnabled);
 const setNavBarTabEnabled = useWorkoutStore((s) => s.setNavBarTabEnabled);
 const navBarPinned = useWorkoutStore((s) => s.navBarPinned);
@@ -1556,8 +1558,41 @@ justifyContent: navBarEnabled ? 'flex-end' : 'flex-start',
 
 {navBarEnabled && (
 <div style={{ marginTop: 8 }}>
+{/* Où se range la barre : capsule en bas, ou onglets en haut (deux présentations). */}
+<p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Position</p>
+<div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+{([
+{ id: 'bottom', label: 'En bas' },
+{ id: 'ruban', label: 'Haut · Ruban' },
+{ id: 'sommaire', label: 'Haut · Sommaire' },
+] as const).map((opt) => {
+const on = navBarPosition === opt.id;
+return (
+<button
+key={opt.id}
+onClick={() => setNavBarPosition(opt.id)}
+aria-pressed={on}
+style={{
+...restBtn,
+flex: 1, width: 'auto', padding: '9px 6px', fontSize: 12, fontWeight: on ? 700 : 500,
+color: on ? 'var(--brand-1)' : 'var(--text-muted)',
+borderColor: on ? 'var(--brand-1)' : undefined,
+}}
+>
+{opt.label}
+</button>
+);
+})}
+</div>
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 14, lineHeight: '15px' }}>
+{navBarPosition === 'bottom'
+? 'La capsule flottante en bas de l’écran.'
+: 'Une barre fine en haut de l’écran : touche « Onglets : » pour la déplier, avec une icône par onglet.'}
+</p>
 <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
-Choisis les onglets affichés dans la barre. Pour chaque onglet actif, choisis s'il reste épinglé directement dans la barre ou s'il passe dans le bouton + (pratique quand la barre est trop chargée). Réglages reste toujours accessible, quoi qu'il arrive.
+{navBarPosition === 'bottom'
+? 'Choisis les onglets affichés dans la barre. Pour chaque onglet actif, choisis s’il reste épinglé directement dans la barre ou s’il passe dans le bouton + (pratique quand la barre est trop chargée). Réglages reste toujours accessible, quoi qu’il arrive.'
+: 'Choisis les onglets affichés dans la liste. Réglages reste toujours accessible, quoi qu’il arrive.'}
 </p>
 {NAV_TAB_META.map((tab) => {
 const enabled = navBarTabsEnabled[tab.id];
@@ -1567,7 +1602,7 @@ return (
 <div style={{ flex: 1 }}>
 <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}><tab.Icon size={13} /> {tab.label}</p>
 </div>
-{enabled && (
+{enabled && navBarPosition === 'bottom' && (
 <button
 onClick={() => setNavBarTabPinned(tab.id, !pinned)}
 style={{

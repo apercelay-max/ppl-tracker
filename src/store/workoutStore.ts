@@ -84,6 +84,9 @@ export type BeepTone = 'doux' | 'classique' | 'urgent' | 'melodique' | 'cloche';
  *  passent en 'court' — d'où le réglage. */
 export type VoiceVerbosity = 'court' | 'complet';
 export type UiStyle = 'nouveau' | 'classique' | 'sport' | 'epure' | 'points';
+// Où se range la barre de navigation : capsule en bas (historique), ou barre d'onglets
+// en haut — « ruban » (une ligne qui défile) ou « sommaire » (panneau qui descend).
+export type NavBarPosition = 'bottom' | 'ruban' | 'sommaire';
 // Effet 3D au défilement de l'accueil (voir hooks/useScrollTilt.ts) : la carte tout en bas de l'écran s'éloigne.
 export type ScrollTilt = 'off' | 'recul' | 'balancoire';
 // Style « Points » : même interface que « Nouveau », mais le texte important et les
@@ -335,6 +338,7 @@ cardioKcalPerHour: Record<CardioActivityType, number>;
 weeklySessionGoal: number;
 homeSectionColors: Partial<Record<HomeSectionKey, string>>;
 navBarEnabled: boolean;
+navBarPosition: NavBarPosition;
 navBarTabsEnabled: Record<NavTabKey, boolean>;
 navBarPinned: Record<NavTabKey, boolean>;
 // Salles enregistrées (Réglages → Mes salles). Il y en a toujours au moins
@@ -467,6 +471,7 @@ setCardioKcalPerHour: (type: CardioActivityType, value: number) => void;
 setWeeklySessionGoal: (value: number) => void;
 setHomeSectionColor: (key: HomeSectionKey, hex: string | null) => void;
 setNavBarEnabled: (enabled: boolean) => void;
+setNavBarPosition: (position: NavBarPosition) => void;
 setNavBarTabEnabled: (key: NavTabKey, enabled: boolean) => void;
 setNavBarTabPinned: (key: NavTabKey, pinned: boolean) => void;
 setGymProfile: (patch: Partial<GymProfile>) => void;
@@ -601,6 +606,7 @@ cardioKcalPerHour: { ...DEFAULT_CARDIO_KCAL_PER_HOUR },
 weeklySessionGoal: 4,
 homeSectionColors: {},
 navBarEnabled: false,
+navBarPosition: 'bottom',
 navBarTabsEnabled: { ...DEFAULT_NAV_TABS_ENABLED },
 navBarPinned: { ...DEFAULT_NAV_TABS_PINNED },
 gyms: [{ ...INITIAL_GYM }],
@@ -1196,6 +1202,7 @@ if (hex) next[key] = hex; else delete next[key];
 return { homeSectionColors: next };
 }),
 setNavBarEnabled: (enabled) => set({ navBarEnabled: enabled }),
+setNavBarPosition: (position) => set({ navBarPosition: position }),
 setNavBarTabEnabled: (key, enabled) => {
 set((state) => ({ navBarTabsEnabled: { ...state.navBarTabsEnabled, [key]: enabled } }));
 },
@@ -1429,6 +1436,7 @@ cardioKcalPerHour: state.cardioKcalPerHour,
 weeklySessionGoal: state.weeklySessionGoal,
 homeSectionColors: state.homeSectionColors,
 navBarEnabled: state.navBarEnabled,
+navBarPosition: state.navBarPosition,
 navBarTabsEnabled: state.navBarTabsEnabled,
 navBarPinned: state.navBarPinned,
 gyms: state.gyms,
@@ -1507,6 +1515,9 @@ merged.homeSectionOrder = [...savedOrder, ...missingKeys];
 // pour les téléphones qui ont déjà une sauvegarde, pas disparaître.
 merged.navBarTabsEnabled = { ...DEFAULT_NAV_TABS_ENABLED, ...(p.navBarTabsEnabled ?? {}) };
 merged.navBarPinned = { ...DEFAULT_NAV_TABS_PINNED, ...(p.navBarPinned ?? {}) };
+// Position de la barre : réglage ajouté après coup, « bas » par défaut. Valeur vérifiée
+// car elle voyage aussi par la synchro cloud.
+merged.navBarPosition = p.navBarPosition === 'ruban' || p.navBarPosition === 'sommaire' ? p.navBarPosition : 'bottom';
 merged.activeProgramId = p.activeProgramId ?? 'strict-v10';
 // Profil de salle : mergé clé par clé pour qu'un réglage ajouté plus tard
 // arrive avec sa valeur par défaut au lieu de rester undefined.

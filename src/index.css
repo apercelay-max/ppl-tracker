@@ -2049,3 +2049,130 @@ html[data-points="on"] .pr-svg {
 
 /* Classique : la carte des anneaux prend l'arrondi des autres cartes de ce style. */
 .home-masonry > .pr { border-radius: 26px; }
+
+/* ─── Barre d'onglets du haut (Ruban / Sommaire) — voir TopNav.tsx ─────────── */
+/* Écriture très fine (graisse 200-300) et icônes au trait fin : la barre se fait
+   oublier. Les durées et courbes viennent de --m-* comme le reste de l'appli.
+   Pas de tailles en dur côté React : tout ce qui bouge est ici. */
+.topnav-bar {
+  position: fixed; top: max(10px, env(safe-area-inset-top)); left: 0; right: 0; z-index: 50;
+  display: flex; justify-content: center; pointer-events: none;
+}
+.topnav-row-wrap { display: flex; align-items: flex-start; gap: 10px; width: calc(100% - 24px); max-width: 460px; }
+.topnav-row-wrap > * { pointer-events: auto; }
+/* :where() pour que ce « reset » ne pèse rien face aux classes .topnav-* plus bas. */
+:where(.topnav button) { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; }
+.topnav button:focus-visible { outline: 2px solid var(--brand-1); outline-offset: 2px; }
+
+.topnav-scrim { position: fixed; inset: 0; z-index: 47; pointer-events: none; }
+.topnav[data-open="true"] .topnav-scrim { pointer-events: auto; }
+
+.topnav-lbl {
+  position: relative; z-index: 3; display: flex; align-items: center; flex: none; height: 44px;
+  padding: 0 12px 0 16px; font-size: 13px; font-weight: 300; letter-spacing: 0.02em; white-space: nowrap;
+  color: var(--text-muted);
+}
+.topnav-cur {
+  display: grid; grid-template-columns: 1fr; margin-left: 7px;
+  transition: grid-template-columns var(--m-slow) var(--m-out), opacity 0.25s ease, margin var(--m-slow) var(--m-out);
+}
+.topnav-cur > span { overflow: hidden; min-width: 0; color: var(--text-primary); font-weight: 400; }
+.topnav-chev { flex: none; margin-left: 5px; color: var(--text-dim); display: flex; transition: transform 0.5s var(--m-spring); }
+.topnav[data-open="true"] .topnav-chev { transform: rotate(180deg); }
+
+.topnav-go {
+  flex: none; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; color: #fff;
+  background: linear-gradient(150deg, var(--brand-1), var(--brand-2));
+  box-shadow: 0 10px 26px rgba(var(--brand-1-rgb), 0.45), inset 0 1px 0 rgba(255,255,255,0.3);
+  transition: transform 0.18s var(--m-spring);
+}
+.topnav-go:active { transform: scale(0.9); }
+
+/* ── Ruban : la liste sort du « : » et défile sur une ligne ── */
+.topnav-glass {
+  position: relative; overflow: hidden; border-radius: 23px; border: 1px solid var(--glass-border);
+  display: flex; align-items: center; flex: 0 0 auto; height: 46px; transition: flex-grow 0.6s var(--m-out);
+}
+.topnav-ruban[data-open="true"] .topnav-glass { flex-grow: 1; }
+.topnav-ruban[data-open="true"] .topnav-cur { grid-template-columns: 0fr; opacity: 0; margin-left: 0; }
+.topnav-ribbon {
+  position: relative; flex: 1 1 0; min-width: 0; align-self: stretch; contain: inline-size; overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 28px), transparent 100%);
+}
+.topnav-track {
+  position: absolute; inset: 0; display: flex; align-items: center; gap: 2px; padding: 0 30px 0 10px;
+  overflow-x: auto; overscroll-behavior-x: contain; touch-action: pan-x; scrollbar-width: none;
+}
+.topnav-track::-webkit-scrollbar { display: none; }
+.topnav-tab {
+  position: relative; z-index: 1; flex: none; display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 13px;
+  border-radius: 17px; font-size: 13px; font-weight: 300; letter-spacing: 0.01em; white-space: nowrap; color: var(--text-secondary);
+  opacity: 0; transform: translateX(-14px); transition: opacity 0.15s ease, transform 0.2s ease, color 0.25s ease;
+}
+.topnav-ruban[data-open="true"] .topnav-tab {
+  opacity: 1; transform: none;
+  transition: opacity 0.32s ease calc(150ms + var(--d, 0ms)), transform 0.55s var(--m-out) calc(150ms + var(--d, 0ms)), color 0.25s ease;
+}
+.topnav-tab.on { color: var(--brand-1); }
+.topnav-bubble {
+  position: absolute; top: 50%; left: 0; width: 0; height: 34px; margin-top: -17px; border-radius: 17px; opacity: 0;
+  background: rgba(var(--brand-1-rgb), 0.14);
+  box-shadow: inset 0 0 0 1px rgba(var(--brand-1-rgb), 0.38), inset 0 1px 0 rgba(255,255,255,0.14);
+  transition: left 0.6s var(--m-spring), width 0.6s var(--m-spring), opacity 0.3s ease;
+}
+.topnav-ruban[data-open="true"] .topnav-bubble { opacity: 1; }
+/* Le temps du choix, le rond rouge s'efface : le ruban gagne sa largeur et montre plus d'onglets. */
+.topnav-ruban .topnav-go { overflow: hidden; transition: transform 0.18s var(--m-spring), width 0.6s var(--m-out), margin-left 0.6s var(--m-out), opacity 0.3s ease; }
+.topnav-ruban[data-open="true"] .topnav-go { width: 0; margin-left: -10px; opacity: 0; pointer-events: none; }
+
+/* ── Sommaire : le texte « Onglets : » ouvre un panneau qui descend ── */
+.topnav-sommaire .topnav-scrim { background: rgba(0,0,0,0.42); opacity: 0; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); transition: opacity 0.4s ease, backdrop-filter 0.4s ease, -webkit-backdrop-filter 0.4s ease; }
+[data-theme="light"] .topnav-sommaire .topnav-scrim { background: rgba(28,32,30,0.30); }
+.topnav-sommaire[data-open="true"] .topnav-scrim { opacity: 1; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.topnav-fade {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 45; pointer-events: none;
+  height: calc(max(10px, env(safe-area-inset-top)) + 96px);
+  background: linear-gradient(180deg, var(--bg-base) 0%, var(--bg-base) 55%, transparent 100%);
+}
+.topnav-head { flex: 1; min-width: 0; display: flex; align-items: center; height: 46px; }
+.topnav-sommaire .topnav-lbl { height: 46px; padding: 0 6px; }
+.topnav-sommaire .topnav-lbl-t { font-size: 11px; font-weight: 300; letter-spacing: 0.14em; text-transform: uppercase; }
+.topnav-sommaire .topnav-cur { margin-left: 10px; }
+.topnav-sommaire .topnav-cur > span { font-size: 26px; line-height: 1; font-weight: 200; letter-spacing: 0.005em; }
+.topnav-plus {
+  flex: none; margin-left: 12px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  border: 1px solid var(--border-strong); color: var(--text-muted);
+  transition: transform 0.5s var(--m-spring), background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+.topnav-sommaire[data-open="true"] .topnav-plus {
+  transform: rotate(135deg); background: rgba(var(--brand-1-rgb), 0.14); color: var(--brand-1); border-color: rgba(var(--brand-1-rgb), 0.45);
+}
+.topnav-sheet {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 48; pointer-events: none;
+  padding: calc(max(10px, env(safe-area-inset-top)) + 58px) 20px 24px; border-radius: 0 0 30px 30px;
+  background: color-mix(in srgb, var(--bg-base) 90%, transparent);
+  backdrop-filter: blur(22px) saturate(150%); -webkit-backdrop-filter: blur(22px) saturate(150%);
+  clip-path: inset(0 0 100% 0 round 0 0 30px 30px); transition: clip-path 0.65s var(--m-out);
+}
+.topnav-sommaire[data-open="true"] .topnav-sheet { clip-path: inset(0 0 0 0 round 0 0 30px 30px); pointer-events: auto; }
+.topnav-idx {
+  max-width: 460px; margin: 0 auto; display: grid; grid-auto-flow: column; grid-template-rows: repeat(6, auto);
+  grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px;
+}
+.topnav-row {
+  display: flex; align-items: center; gap: 11px; height: 52px; font-size: 20px; font-weight: 200; letter-spacing: 0.005em; color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle); opacity: 0; transform: translateY(16px);
+  transition: opacity 0.15s ease, transform 0.2s ease, color 0.25s ease;
+}
+.topnav-row svg { flex: none; color: var(--text-dim); transition: color 0.25s ease; }
+.topnav-sommaire[data-open="true"] .topnav-row {
+  opacity: 1; transform: none;
+  transition: opacity 0.35s ease calc(170ms + var(--d, 0ms)), transform 0.6s var(--m-out) calc(170ms + var(--d, 0ms)), color 0.25s ease;
+}
+.topnav-row.on { color: var(--brand-1); font-weight: 300; }
+.topnav-row.on svg { color: var(--brand-1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .topnav *, .topnav *::before, .topnav-sheet { transition-duration: 0.01ms !important; transition-delay: 0s !important; }
+}

@@ -14,6 +14,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-20-barre-du-haut',
+    title: 'Une barre d’onglets en haut',
+    items: [
+      'Nouveau choix dans Réglages → Barre de menus → Position : garder la capsule en bas, ou passer à une barre fine en haut de l’écran.',
+      'Deux présentations : « Ruban » (touche « Onglets : » et la liste défile sur une ligne) ou « Sommaire » (un panneau qui descend, en deux colonnes). Une icône au trait fin par onglet, écriture très légère.',
+    ],
+  },
+  {
     id: '2026-11-20-defilement-3d',
     title: 'Un défilement en profondeur',
     items: [

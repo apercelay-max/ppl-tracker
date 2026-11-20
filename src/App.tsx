@@ -19,6 +19,7 @@ import { ProfilScreen } from './screens/ProfilScreen';
 import { TableurScreen } from './screens/TableurScreen';
 import { AuthScreen } from './screens/AuthScreen';
 import { NavBar } from './components/NavBar';
+import { TopNav } from './components/TopNav';
 import type { NavView } from './components/NavBar';
 import { SplashScreen } from './components/SplashScreen';
 import { DailySummarySheet } from './components/DailySummarySheet';
@@ -87,6 +88,7 @@ const fontScale = useWorkoutStore((s) => s.fontScale);
 const iconShape = useWorkoutStore((s) => s.iconShape);
 const highContrast = useWorkoutStore((s) => s.highContrast);
 const navBarEnabled = useWorkoutStore((s) => s.navBarEnabled);
+const navBarPosition = useWorkoutStore((s) => s.navBarPosition);
 const ultraAnimationsEnabled = useWorkoutStore((s) => s.ultraAnimationsEnabled);
 const ultraTransitionStyle = useWorkoutStore((s) => s.ultraTransitionStyle);
 const uiStyle = useWorkoutStore((s) => s.uiStyle);
@@ -375,6 +377,9 @@ lastSyncedAt={sync.lastSyncedAt}
 const NAV_VIEWS: View[] = ['home', 'objectifs', 'historique', 'cardio', 'exercices', 'catalogue', 'poids', 'dashboard', 'coach', 'profil', 'tableur', 'settings'];
 const showNavBar = navBarEnabled && NAV_VIEWS.includes(view);
 const activeNavTab: NavView = (NAV_VIEWS.includes(view) ? view : 'home') as NavView;
+// Barre du haut (Ruban / Sommaire) : elle remplace la capsule du bas. Les écrans se
+// décalent de sa hauteur (46 px + 12 px d'air) pour que leur titre ne passe pas dessous.
+const topNavVariant = showNavBar && navBarPosition !== 'bottom' ? navBarPosition : null;
 
 // Classe de transition d'écran : en mode Ultra animations, on pioche parmi
 // plusieurs styles réglables (Réglages → Personnalisation) au lieu du seul
@@ -392,10 +397,19 @@ const transitionClass = !ultraAnimationsEnabled
 return (
 <>
 <DotEngine />
-<div key={view} className={transitionClass} style={{ height: '100%' }}>
+<div key={view} className={transitionClass} style={{ height: '100%', paddingTop: topNavVariant ? 58 : undefined }}>
 {screen}
 </div>
-{showNavBar && (
+{topNavVariant && (
+<TopNav
+variant={topNavVariant}
+active={activeNavTab}
+onNavigate={handleNavigate}
+onStartSession={handleStartFromNav}
+hasSessionInProgress={!!session && !session.isComplete}
+/>
+)}
+{showNavBar && !topNavVariant && (
 <NavBar
 active={activeNavTab}
 onNavigate={handleNavigate}
