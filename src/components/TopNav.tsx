@@ -2,11 +2,15 @@ import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from 're
 import { useWorkoutStore } from '../store/workoutStore';
 import { TABS, TAB_ICONS } from './NavBar';
 import type { NavView } from './NavBar';
+import { NAV_GROUPS, groupOfView, type NavGroup } from '../data/navGroups';
 
 // Barre d'onglets du haut : l'autre choix possible à la place de la capsule du bas
-// (Réglages → Barre de menus → Position). Deux présentations, même contenu :
-//  - « ruban »   : une capsule fine ; « Onglets : » la déplie en une ligne qui défile ;
-//  - « sommaire » : le texte « Onglets : » ouvre un panneau qui descend, en deux colonnes.
+// (Réglages → Barre de menus → Position). Deux présentations :
+//  - « ruban »    : une capsule fine ; « Onglets : » la déplie en une ligne qui défile
+//                   (toujours les 12 écrans pour l'instant) ;
+//  - « sommaire » : les 5 onglets de la barre du bas (data/navGroups.ts) sur UNE seule ligne.
+//                   L'onglet ouvert porte une petite flèche : la toucher la fait tourner vers
+//                   le bas et déplie, sous la ligne, la liste de ses rubriques.
 // Écriture volontairement très fine (graisse 200-300) et icônes au trait fin : l'idée est
 // que la barre se fasse oublier. Les animations sont dans index.css (.topnav-*).
 
@@ -18,17 +22,13 @@ interface TopNavProps {
   hasSessionInProgress?: boolean;
 }
 
-const ChevronIcon: React.FC = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+// Un chevron (une barre pliée en deux, sans tige) dessiné vers le BAS. La CSS le tourne
+// d'un quart de tour pour le montrer fermé (il pointe alors vers la droite), puis le
+// laisse revenir vers le bas à l'ouverture : voir .topnav-arrow dans index.css.
+const ChevronIcon: React.FC<{ size?: number }> = ({ size = 15 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
     strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M6 9l6 6 6-6" />
-  </svg>
-);
-
-const PlusThin: React.FC = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth={1.8} strokeLinecap="round" aria-hidden="true">
-    <path d="M12 5v14M5 12h14" />
   </svg>
 );
 
@@ -36,14 +36,18 @@ export const TopNav: React.FC<TopNavProps> = ({ variant, active, onNavigate, onS
   const navBarTabsEnabled = useWorkoutStore((s) => s.navBarTabsEnabled);
   // « Réglages » reste toujours là, comme dans la capsule : sans lui on ne pourrait plus
   // rallumer les autres onglets. Ici tout tient dans la liste, donc pas de notion d'épinglé.
+  // (Ne sert plus qu'au ruban : le sommaire a ses 5 onglets fixes.)
   const tabs = useMemo(
     () => TABS.filter((t) => t.id === 'settings' || navBarTabsEnabled[t.id]),
     [navBarTabsEnabled],
   );
   const current = tabs.find((t) => t.id === active) ?? tabs[0];
+  // Sommaire : l'onglet qui contient l'écran ouvert (le Catalogue allume « Coach »).
+  const activeGroup = groupOfView(active);
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<number | undefined>(undefined);
   const trackRef = useRef<HTMLDivElement>(null);
+  const lineRef = useRef<HTMLDivElement>(null);
   const bubbleRef = useRef<HTMLSpanElement>(null);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const bubbleReady = useRef(false);
@@ -100,11 +104,30 @@ export const TopNav: React.FC<TopNavProps> = ({ variant, active, onNavigate, onS
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [variant, open, active]);
 
+  // Sommaire : sur un écran très étroit les 5 onglets ne tiennent pas tous, la ligne défile ;
+  // on garde alors l'onglet ouvert au centre. Sans effet quand tout tient (cas courant).
+  useEffect(() => {
+    if (variant !== 'sommaire') return;
+    const line = lineRef.current;
+    const el = line?.querySelector<HTMLElement>('.topnav-t.on');
+    if (!line || !el) return;
+    line.scrollTo({ left: Math.max(0, el.offsetLeft - (line.clientWidth - el.offsetWidth) / 2), behavior: 'smooth' });
+  }, [variant, activeGroup.id]);
+
   const choose = (id: NavView) => {
     onNavigate(id);
     window.clearTimeout(closeTimer.current);
     // On laisse voir la pastille arriver avant de refermer.
     closeTimer.current = window.setTimeout(() => setOpen(false), variant === 'ruban' ? 700 : 380);
+  };
+
+  // Sommaire : un autre onglet s'ouvre sur son premier écran (celui qu'on veut voir en
+  // arrivant) ; toucher l'onglet DÉJÀ ouvert fait tourner sa flèche et déplie ses rubriques.
+  const pressGroup = (group: NavGroup) => {
+    window.clearTimeout(closeTimer.current);
+    if (group.id === activeGroup.id) { setOpen((v) => !v); return; }
+    setOpen(false);
+    onNavigate(group.items[0].view);
   };
 
   const label = (
@@ -117,9 +140,7 @@ export const TopNav: React.FC<TopNavProps> = ({ variant, active, onNavigate, onS
     >
       <span className="topnav-lbl-t">Onglets :</span>
       <span className="topnav-cur"><span>{current.label}</span></span>
-      {variant === 'ruban'
-        ? <span className="topnav-chev"><ChevronIcon /></span>
-        : <span className="topnav-plus"><PlusThin /></span>}
+      <span className="topnav-chev"><ChevronIcon /></span>
     </button>
   );
 
@@ -144,24 +165,26 @@ export const TopNav: React.FC<TopNavProps> = ({ variant, active, onNavigate, onS
       {variant === 'sommaire' && <div className="topnav-fade" aria-hidden="true" />}
 
       {variant === 'sommaire' && (
-        <div className="topnav-sheet" role="menu" aria-hidden={!open}>
-          <div className="topnav-idx">
-            {tabs.map((tab, i) => {
-              const on = tab.id === active;
-              const Icon = TAB_ICONS[tab.id];
+        <div className="topnav-sheet" role="menu" aria-hidden={!open} aria-label={`Rubriques : ${activeGroup.label}`}>
+          <div className="topnav-sub">
+            {/* Ce que l'utilisateur vient chercher dans cet onglet, en petit, comme l'ancien « Onglets : ». */}
+            <p className="topnav-cap">{activeGroup.tagline}</p>
+            {activeGroup.items.map((item, i) => {
+              const on = item.view === active;
+              const Icon = TAB_ICONS[item.view];
               return (
                 <button
-                  key={tab.id}
+                  key={item.view}
                   type="button"
                   role="menuitem"
                   tabIndex={open ? 0 : -1}
                   className={`topnav-row${on ? ' on' : ''}`}
-                  style={{ '--d': `${(i % 6) * 34 + Math.floor(i / 6) * 70}ms` } as React.CSSProperties}
+                  style={{ '--d': `${i * 42}ms` } as React.CSSProperties}
                   aria-current={on ? 'page' : undefined}
-                  onClick={() => choose(tab.id)}
+                  onClick={() => choose(item.view)}
                 >
                   <Icon size={18} filled={on} />
-                  <span>{tab.label}</span>
+                  <span>{item.label}</span>
                 </button>
               );
             })}
@@ -200,7 +223,29 @@ export const TopNav: React.FC<TopNavProps> = ({ variant, active, onNavigate, onS
               </div>
             </div>
           ) : (
-            <div className="topnav-head">{label}</div>
+            <div className="topnav-head">
+              <nav className="topnav-line" ref={lineRef} aria-label="Onglets">
+                {NAV_GROUPS.map((group) => {
+                  const on = group.id === activeGroup.id;
+                  return (
+                    <button
+                      key={group.id}
+                      type="button"
+                      className={`topnav-t${on ? ' on' : ''}`}
+                      aria-current={on ? 'page' : undefined}
+                      aria-haspopup={on ? 'menu' : undefined}
+                      aria-expanded={on ? open : undefined}
+                      aria-label={on ? `${group.label} : voir les rubriques` : group.label}
+                      onClick={() => pressGroup(group)}
+                    >
+                      <span>{group.label}</span>
+                      {/* Visible seulement sur l'onglet ouvert (voir .topnav-arrow). */}
+                      <span className="topnav-arrow" aria-hidden="true"><ChevronIcon size={12} /></span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
           )}
           {startBtn}
         </div>

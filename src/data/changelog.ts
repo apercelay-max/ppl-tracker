@@ -19,6 +19,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     items: [
       'La barre du bas passe de 12 onglets à 5 : Accueil, Séances, Progrès, Coach et Profil. Chaque onglet s’ouvre sur ce que tu veux voir en premier (ta séance du jour, tes séances passées, tes stats…).',
       'Touche l’onglet déjà ouvert pour voir la liste de ses rubriques : par exemple Progrès → Stats, Exercices, Poids, Objectifs. Réglages est dans Profil.',
+      'La barre « Sommaire » (en haut) suit la même organisation : les 5 onglets tiennent sur une seule ligne, et la flèche de l’onglet ouvert tourne vers le bas pour déplier ses rubriques.',
     ],
   },
   {

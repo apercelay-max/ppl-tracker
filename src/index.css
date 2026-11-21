@@ -2126,7 +2126,7 @@ html[data-points="on"] .pr-svg {
 .topnav-ruban .topnav-go { overflow: hidden; transition: transform 0.18s var(--m-spring), width 0.6s var(--m-out), margin-left 0.6s var(--m-out), opacity 0.3s ease; }
 .topnav-ruban[data-open="true"] .topnav-go { width: 0; margin-left: -10px; opacity: 0; pointer-events: none; }
 
-/* ── Sommaire : le texte « Onglets : » ouvre un panneau qui descend ── */
+/* ── Sommaire : les 5 onglets sur une ligne ; la flèche de l'onglet ouvert déplie ses rubriques ── */
 .topnav-sommaire .topnav-scrim { background: rgba(0,0,0,0.42); opacity: 0; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); transition: opacity 0.4s ease, backdrop-filter 0.4s ease, -webkit-backdrop-filter 0.4s ease; }
 [data-theme="light"] .topnav-sommaire .topnav-scrim { background: rgba(28,32,30,0.30); }
 .topnav-sommaire[data-open="true"] .topnav-scrim { opacity: 1; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
@@ -2136,18 +2136,36 @@ html[data-points="on"] .pr-svg {
   background: linear-gradient(180deg, var(--bg-base) 0%, var(--bg-base) 55%, transparent 100%);
 }
 .topnav-head { flex: 1; min-width: 0; display: flex; align-items: center; height: 46px; }
-.topnav-sommaire .topnav-lbl { height: 46px; padding: 0 6px; }
-.topnav-sommaire .topnav-lbl-t { font-size: 11px; font-weight: 300; letter-spacing: 0.14em; text-transform: uppercase; }
-.topnav-sommaire .topnav-cur { margin-left: 10px; }
-.topnav-sommaire .topnav-cur > span { font-size: 26px; line-height: 1; font-weight: 200; letter-spacing: 0.005em; }
-.topnav-plus {
-  flex: none; margin-left: 12px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
-  border: 1px solid var(--border-strong); color: var(--text-muted);
-  transition: transform 0.5s var(--m-spring), background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+/* Les 5 onglets sur UNE ligne, répartis sur la largeur. La taille suit l'écran pour que tout
+   tienne dès 375 px (les iPhone courants) ; sur un écran plus étroit (320 px), « Profil » dépasse
+   et la ligne défile (voir TopNav.tsx). */
+.topnav-sommaire .topnav-head { container-type: inline-size; }
+.topnav-line {
+  position: relative; flex: 1; min-width: 0; height: 46px; display: flex; align-items: center; justify-content: space-between;
+  gap: 6px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
 }
-.topnav-sommaire[data-open="true"] .topnav-plus {
-  transform: rotate(135deg); background: rgba(var(--brand-1-rgb), 0.14); color: var(--brand-1); border-color: rgba(var(--brand-1-rgb), 0.45);
+.topnav-line::-webkit-scrollbar { display: none; }
+/* Taille d'écriture calculée sur la largeur réellement disponible (cqw = 1 % de la largeur de
+   .topnav-head, donc ce qui reste à côté du bouton rouge) : les 5 libellés + la flèche tiennent
+   sur la ligne dès 375 px. La 1re valeur sert aux navigateurs qui ne connaissent pas cqw. */
+.topnav-t {
+  flex: none; display: flex; align-items: center; height: 46px; padding: 0 2px;
+  font-size: 13px; font-size: clamp(12px, calc(5.6cqw - 3.4px), 16px);
+  font-weight: 300; letter-spacing: 0.005em; white-space: nowrap; color: var(--text-secondary);
+  transition: color 0.25s ease, font-weight 0.25s ease;
 }
+.topnav-t.on { color: var(--brand-1); font-weight: 400; }
+/* La flèche (une barre pliée en deux) n'existe que sur l'onglet ouvert : sa largeur passe de 0 à
+   sa taille, donc les autres onglets glissent pour lui faire de la place. Fermée, elle pointe vers
+   la droite ; à l'ouverture elle fait un quart de tour et pointe vers le bas, avec un petit
+   rebond, pendant que la liste des rubriques descend. */
+.topnav-arrow {
+  display: flex; align-items: center; width: 0; height: 16px; margin-left: 0; opacity: 0; overflow: hidden;
+  transition: width 0.45s var(--m-out), margin-left 0.45s var(--m-out), opacity 0.25s ease;
+}
+.topnav-t.on .topnav-arrow { width: 12px; margin-left: 3px; opacity: 1; }
+.topnav-arrow svg { flex: none; transform: rotate(-90deg); transition: transform 0.6s var(--m-spring); }
+.topnav-sommaire[data-open="true"] .topnav-t.on .topnav-arrow svg { transform: translateY(1px); }
 .topnav-sheet {
   position: fixed; top: 0; left: 0; right: 0; z-index: 48; pointer-events: none;
   padding: calc(max(10px, env(safe-area-inset-top)) + 58px) 20px 24px; border-radius: 0 0 30px 30px;
@@ -2156,10 +2174,13 @@ html[data-points="on"] .pr-svg {
   clip-path: inset(0 0 100% 0 round 0 0 30px 30px); transition: clip-path 0.65s var(--m-out);
 }
 .topnav-sommaire[data-open="true"] .topnav-sheet { clip-path: inset(0 0 0 0 round 0 0 30px 30px); pointer-events: auto; }
-.topnav-idx {
-  max-width: 460px; margin: 0 auto; display: grid; grid-auto-flow: column; grid-template-rows: repeat(6, auto);
-  grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px;
+.topnav-sub { max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; }
+/* Ce que l'on vient chercher dans l'onglet : petit, en capitales fines, comme l'ancien « Onglets : ». */
+.topnav-cap {
+  margin: 0 0 4px; font-size: 11px; font-weight: 300; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted);
+  opacity: 0; transition: opacity 0.15s ease;
 }
+.topnav-sommaire[data-open="true"] .topnav-cap { opacity: 1; transition: opacity 0.4s ease 150ms; }
 .topnav-row {
   display: flex; align-items: center; gap: 11px; height: 52px; font-size: 20px; font-weight: 200; letter-spacing: 0.005em; color: var(--text-secondary);
   border-bottom: 1px solid var(--border-subtle); opacity: 0; transform: translateY(16px);

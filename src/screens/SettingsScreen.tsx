@@ -1585,11 +1585,13 @@ borderColor: on ? 'var(--brand-1)' : undefined,
 <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 14, lineHeight: '15px' }}>
 {navBarPosition === 'bottom'
 ? 'La capsule flottante en bas de l’écran.'
+: navBarPosition === 'sommaire'
+? 'Les 5 onglets sur une ligne fine, en haut de l’écran. Touche l’onglet ouvert : sa flèche tourne vers le bas et ses rubriques descendent.'
 : 'Une barre fine en haut de l’écran : touche « Onglets : » pour la déplier, avec une icône par onglet.'}
 </p>
-{navBarPosition === 'bottom' ? (
+{navBarPosition !== 'ruban' ? (
 <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
-La barre du bas a 5 onglets fixes : Accueil, Séances, Progrès, Coach et Profil. Touche l’onglet déjà ouvert pour voir la liste de ses rubriques (Réglages est dans Profil).
+La barre a 5 onglets fixes : Accueil, Séances, Progrès, Coach et Profil. Touche l’onglet déjà ouvert pour voir la liste de ses rubriques (Réglages est dans Profil).
 </p>
 ) : (
 <>
