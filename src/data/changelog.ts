@@ -14,6 +14,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-21-cinq-onglets',
+    title: 'Une barre plus simple : 5 onglets',
+    items: [
+      'La barre du bas passe de 12 onglets à 5 : Accueil, Séances, Progrès, Coach et Profil. Chaque onglet s’ouvre sur ce que tu veux voir en premier (ta séance du jour, tes séances passées, tes stats…).',
+      'Touche l’onglet déjà ouvert pour voir la liste de ses rubriques : par exemple Progrès → Stats, Exercices, Poids, Objectifs. Réglages est dans Profil.',
+    ],
+  },
+  {
     id: '2026-11-20-barre-du-haut',
     title: 'Une barre d’onglets en haut',
     items: [

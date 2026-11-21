@@ -263,11 +263,9 @@ const navBarPosition = useWorkoutStore((s) => s.navBarPosition);
 const setNavBarPosition = useWorkoutStore((s) => s.setNavBarPosition);
 const navBarTabsEnabled = useWorkoutStore((s) => s.navBarTabsEnabled);
 const setNavBarTabEnabled = useWorkoutStore((s) => s.setNavBarTabEnabled);
-const navBarPinned = useWorkoutStore((s) => s.navBarPinned);
 const shakeToValidateEnabled = useWorkoutStore((s) => s.shakeToValidateEnabled);
 const setShakeToValidateEnabled = useWorkoutStore((s) => s.setShakeToValidateEnabled);
 const [shakeError, setShakeError] = useState<string | null>(null);
-const setNavBarTabPinned = useWorkoutStore((s) => s.setNavBarTabPinned);
 const activeProgramId = useWorkoutStore((s) => s.activeProgramId);
 const setActiveProgram = useWorkoutStore((s) => s.setActiveProgram);
 const customPrograms = useWorkoutStore((s) => s.customPrograms);
@@ -1589,35 +1587,22 @@ borderColor: on ? 'var(--brand-1)' : undefined,
 ? 'La capsule flottante en bas de l’écran.'
 : 'Une barre fine en haut de l’écran : touche « Onglets : » pour la déplier, avec une icône par onglet.'}
 </p>
+{navBarPosition === 'bottom' ? (
 <p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
-{navBarPosition === 'bottom'
-? 'Choisis les onglets affichés dans la barre. Pour chaque onglet actif, choisis s’il reste épinglé directement dans la barre ou s’il passe dans le bouton + (pratique quand la barre est trop chargée). Réglages reste toujours accessible, quoi qu’il arrive.'
-: 'Choisis les onglets affichés dans la liste. Réglages reste toujours accessible, quoi qu’il arrive.'}
+La barre du bas a 5 onglets fixes : Accueil, Séances, Progrès, Coach et Profil. Touche l’onglet déjà ouvert pour voir la liste de ses rubriques (Réglages est dans Profil).
+</p>
+) : (
+<>
+<p style={{ color: 'var(--text-dim)', fontSize: 11, marginBottom: 10, lineHeight: '15px' }}>
+Choisis les onglets affichés dans la liste. Réglages reste toujours accessible, quoi qu’il arrive.
 </p>
 {NAV_TAB_META.map((tab) => {
 const enabled = navBarTabsEnabled[tab.id];
-const pinned = navBarPinned[tab.id];
 return (
 <div key={tab.id} style={toggleRow}>
 <div style={{ flex: 1 }}>
 <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}><tab.Icon size={13} /> {tab.label}</p>
 </div>
-{enabled && navBarPosition === 'bottom' && (
-<button
-onClick={() => setNavBarTabPinned(tab.id, !pinned)}
-style={{
-...restBtn,
-flex: '0 0 auto',
-width: 'auto',
-padding: '6px 10px',
-fontSize: 11,
-color: pinned ? 'var(--text-muted)' : 'var(--brand-1)',
-}}
-title={pinned ? "Dans la barre — appuie pour mettre dans le +" : "Dans le + — appuie pour épingler dans la barre"}
->
-{pinned ? 'Barre' : 'Dans le +'}
-</button>
-)}
 <button
 onClick={() => setNavBarTabEnabled(tab.id, !enabled)}
 data-switch data-on={String(!!(enabled))}
@@ -1632,6 +1617,8 @@ justifyContent: enabled ? 'flex-end' : 'flex-start',
 </div>
 );
 })}
+</>
+)}
 </div>
 )}
 

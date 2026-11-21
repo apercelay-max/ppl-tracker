@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
-import { useWorkoutStore } from '../store/workoutStore';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import type { NavTabKey } from '../data/types';
+import { NAV_GROUPS, groupOfView, type NavGroup, type NavGroupId } from '../data/navGroups';
 import {
 HomeIcon, TargetIcon, CalendarIcon, HeartPulseIcon,
-DumbbellIcon, ScaleIcon, ChartIcon, UserIcon, SlidersIcon, PlusIcon,
+DumbbellIcon, ScaleIcon, ChartIcon, UserIcon, SlidersIcon,
 } from './NavIcons';
 
 // Étincelles du Coach IA. Définie ici comme BookIcon plus bas : elle ne sert
@@ -43,19 +43,11 @@ strokeWidth={filled ? 2 : 1.7} strokeLinecap="round" strokeLinejoin="round" aria
 </svg>
 );
 
-// Petite coche affichée à droite de la ligne active dans le menu "Plus".
+// Petite coche affichée à droite de la rubrique ouverte dans la liste.
 const CheckIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
 <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
 strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
 <path d="M5 13l4 4L19 7" />
-</svg>
-);
-
-// Croix du bandeau "barre trop chargée" (bouton ignorer).
-const CloseIcon: React.FC<{ size?: number }> = ({ size = 14 }) => (
-<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-strokeWidth={2.2} strokeLinecap="round" aria-hidden="true">
-<path d="M6 6l12 12M18 6L6 18" />
 </svg>
 );
 
@@ -70,7 +62,9 @@ onStartSession?: () => void;
 hasSessionInProgress?: boolean;
 }
 
-// Exportés pour que la barre d'onglets du haut (TopNav.tsx) montre les mêmes onglets, dans le même ordre.
+// Les 12 écrans, dans l'ordre d'avant. Exportés pour la barre d'onglets du haut
+// (TopNav.tsx), qui garde pour l'instant la liste complète. La barre du bas,
+// elle, ne montre plus que les 5 onglets de data/navGroups.ts.
 export const TABS: { id: NavView; label: string }[] = [
 { id: 'home', label: 'Accueil' },
 { id: 'objectifs', label: 'Objectifs' },
@@ -86,40 +80,12 @@ export const TABS: { id: NavView; label: string }[] = [
 { id: 'settings', label: 'Réglages' },
 ];
 
-// Une phrase courte par onglet, affichée sous le libellé dans le menu "Plus".
-// Le menu en liste laisse la place pour ça (la grille d'icônes, non), et ça
-// évite d'avoir à deviner ce que contient un onglet qu'on ouvre rarement.
-// En mode simple, la barre ne garde que ces destinations (Réglages s'y
-// ajoute toujours, voir pinnedTabs). Les autres ne disparaissent pas : elles
-// basculent dans le menu « Plus » qui existe déjà juste en dessous, et
-// repasser en mode perso les remet exactement où elles étaient.
-//
-// Deux seulement, pas trois : avec Réglages et le bouton « Plus » ça fait
-// quatre emplacements, soit exactement ce que la barre peut tenir à côté du
-// bouton de lancement sur un écran de 375 px. À cinq, le bandeau « barre trop
-// chargée » se déclenchait — une alerte dans le mode censé être le plus calme.
-const SIMPLE_PINNED_TABS: NavView[] = ['home', 'dashboard'];
-
-const TAB_HINTS: Record<NavView, string> = {
-home: 'Ta séance du jour',
-objectifs: 'Objectifs et schéma corporel',
-historique: 'Toutes tes séances passées',
-cardio: 'Course, vélo, rameur…',
-exercices: 'Tes exercices et tes records',
-catalogue: 'Tous les mouvements',
-poids: 'Suivi du poids de corps',
-dashboard: 'Volume, progression, graphiques',
-coach: 'Ton bilan analysé par l’IA',
-profil: 'Ton résumé, tes records et tes badges',
-tableur: 'Tes séances en grille façon Excel',
-settings: 'Apparence, barre de menus…',
-};
-
 // Icônes ligne dessinées à la main (voir NavIcons.tsx) plutôt que des emojis :
 // les emojis rendent différemment selon la plateforme (tailles, styles,
 // épaisseurs incohérentes entre eux), ce qui donnait une barre "pas propre".
 // Ces icônes partagent le même trait et la même taille partout, et ont
 // chacune une variante "filled" (voir plus bas, présentation façon Apple).
+// Une icône par écran : elles servent dans la liste des rubriques, et à la barre du haut.
 export const TAB_ICONS: Record<NavView, React.FC<{ size?: number; filled?: boolean }>> = {
 home: HomeIcon,
 objectifs: TargetIcon,
@@ -135,15 +101,15 @@ tableur: TableIcon,
 settings: SlidersIcon,
 };
 
-// Largeur minimale confortable pour un onglet de la barre (icône 22px +
-// libellé de 9px sur une ligne). En dessous, les libellés se touchent ou se
-// coupent : c'est ce seuil qui déclenche le bandeau "barre trop chargée".
-const MIN_TAB_WIDTH = 54;
-// Padding horizontal total du verre (6 + 6) — retiré de la largeur mesurée.
-const GLASS_PADDING = 12;
-const TAB_GAP = 3;
-
-const DISMISS_KEY = 'ppl-navbar-crowded-dismissed';
+// Une icône par onglet de la barre (et non par écran) : on reconnaît l'onglet
+// à un coup d'œil, sans avoir à deviner que « Séances » s'ouvre sur un calendrier.
+const GROUP_ICONS: Record<NavGroupId, React.FC<{ size?: number; filled?: boolean }>> = {
+accueil: HomeIcon,
+seances: DumbbellIcon,
+progres: ChartIcon,
+coach: SparklesIcon,
+profil: UserIcon,
+};
 
 // Le vrai "liquid glass" (distorsion du fond, façon loupe) utilise un filtre
 // SVG (feDisplacementMap) appliqué en backdrop-filter. Seuls les navigateurs
@@ -171,6 +137,21 @@ encodeURIComponent(
 "<rect width='100%' height='100%' filter='url(%23n)'/></svg>"
 );
 
+// Petit chevron sous l'onglet ouvert : il dit « touche encore pour voir la
+// liste ». Il remplace l'ancien point. Il se retourne quand la liste est ouverte.
+// Il garde la même hauteur que le point d'avant (5 px) pour ne pas changer la barre.
+const ChevronMark: React.FC<{ shown: boolean; open?: boolean }> = ({ shown, open }) => (
+<span
+style={{ ...tabMark, opacity: shown ? 1 : 0, transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+aria-hidden="true"
+>
+<svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor"
+strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+<path d="M1.5 4.8L5 1.4l3.5 3.4" />
+</svg>
+</span>
+);
+
 // Barre de navigation "liquid glass" (façon iOS 26) : flotte au-dessus du
 // contenu, fond translucide + flou + reflet spéculaire en haut, distorsion
 // réelle du fond en bonus sur Chrome desktop. Uniquement affichée quand le
@@ -182,49 +163,38 @@ encodeURIComponent(
 // par un state React — donc sans re-render à chaque mouvement) et un léger
 // "rebond" au clic (scale 0.98 → 1) pour un rendu plus proche du vrai verre.
 //
-// Ajouts (août 2026) : le menu "+" est passé d'une grille d'icônes serrée à
-// un vrai panneau en liste (icône + libellé + description courte + coche sur
-// l'onglet actif), et la barre se surveille elle-même : quand il y a trop
-// d'onglets épinglés pour la largeur de l'écran, un bandeau propose de
-// ranger les onglets en trop dans le "+" en un seul appui.
+// Refonte (novembre 2026) : 12 onglets, c'était trop (bouton « Plus », onglets à
+// épingler, bandeau « barre trop chargée »…). La barre n'a plus que 5 onglets
+// fixes (voir data/navGroups.ts). Toucher un onglet ouvre son premier écran ;
+// toucher l'onglet DÉJÀ ouvert déplie la liste de ses rubriques, au-dessus de la barre.
 export const NavBar: React.FC<NavBarProps> = ({ active, onNavigate, onStartSession, hasSessionInProgress }) => {
 const [refraction, setRefraction] = useState(false);
 useEffect(() => { setRefraction(supportsLiquidRefraction()); }, []);
-const navBarTabsEnabled = useWorkoutStore((s) => s.navBarTabsEnabled);
-const simplicityMode = useWorkoutStore((s) => s.simplicityMode);
-const navBarPinned = useWorkoutStore((s) => s.navBarPinned);
-const setNavBarTabPinned = useWorkoutStore((s) => s.setNavBarTabPinned);
-const [moreOpen, setMoreOpen] = useState(false);
+const [menuOpen, setMenuOpen] = useState(false);
 const glassRef = useRef<HTMLDivElement>(null);
 const [pressed, setPressed] = useState(false);
 const [barWidth, setBarWidth] = useState(0);
-const [dismissedSig, setDismissedSig] = useState<string | null>(() => {
-try { return localStorage.getItem(DISMISS_KEY); } catch { return null; }
-});
 
-// "Réglages" reste toujours affiché, même désactivé — sinon on n'a plus
-// aucun moyen de rallumer les autres onglets depuis la barre.
-const visibleTabs = TABS.filter((tab) => tab.id === 'settings' || navBarTabsEnabled[tab.id]);
-// Parmi les onglets visibles, certains restent épinglés directement dans la
-// barre ; les autres passent derrière le bouton + (voir Réglages →
-// Apparence → Barre de menus), pratique quand la barre est trop chargée.
-// "Réglages" reste toujours épinglé — sinon on perdrait l'accès au réglage
-// qui permet justement de gérer cette répartition.
-// Le mode simple court-circuite la répartition manuelle : dix onglets dans
-// une barre de 375 px, ça fait 37 px chacun. Il en reste quatre, le reste
-// passe derrière « Plus » sans rien perdre.
-const isPinned = (tab: { id: NavView }) =>
-simplicityMode ? SIMPLE_PINNED_TABS.includes(tab.id) : navBarPinned[tab.id];
-const pinnedTabs = visibleTabs.filter((tab) => tab.id === 'settings' || isPinned(tab));
-const overflowTabs = visibleTabs.filter((tab) => tab.id !== 'settings' && !isPinned(tab));
-const isOverflowActive = overflowTabs.some((tab) => tab.id === active);
+// L'onglet qui contient l'écran ouvert est celui qui est allumé, même quand on
+// est sur l'une de ses rubriques (le Catalogue allume « Coach »).
+const activeGroup = groupOfView(active);
+const activeSlot = NAV_GROUPS.indexOf(activeGroup);
 
-useEffect(() => { setMoreOpen(false); }, [active]);
+// Tout changement d'écran (par la barre ou autrement) referme la liste.
+useEffect(() => { setMenuOpen(false); }, [active]);
 
-// Mesure la largeur réelle du verre pour savoir combien d'onglets tiennent
-// vraiment à l'écran. ResizeObserver plutôt qu'un listener "resize" : ça
-// couvre aussi la rotation de l'iPhone et le clavier qui s'ouvre, et ça se
-// déclenche une fois au montage (donc pas besoin de mesure initiale).
+// Échap referme la liste (clavier d'iPad, ordinateur).
+useEffect(() => {
+if (!menuOpen) return;
+const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
+window.addEventListener('keydown', onKey);
+return () => window.removeEventListener('keydown', onKey);
+}, [menuOpen]);
+
+// Mesure la largeur réelle du verre : la bulle (plus bas) est placée d'après la
+// position mesurée des onglets, donc elle doit suivre un changement de largeur.
+// ResizeObserver plutôt qu'un listener "resize" : ça couvre aussi la rotation
+// de l'iPhone et le clavier qui s'ouvre, et ça se déclenche une fois au montage.
 useEffect(() => {
 const el = glassRef.current;
 if (!el || typeof ResizeObserver === 'undefined') return;
@@ -236,73 +206,27 @@ ro.observe(el);
 return () => ro.disconnect();
 }, []);
 
-// Nombre de "cases" occupées : les onglets épinglés + le bouton "+" s'il
-// existe. Puis nombre de cases qui tiennent réellement dans la largeur.
-const slotCount = pinnedTabs.length + (overflowTabs.length > 0 ? 1 : 0);
-const fittingSlots = barWidth > 0
-? Math.max(1, Math.floor((barWidth - GLASS_PADDING + TAB_GAP) / (MIN_TAB_WIDTH + TAB_GAP)))
-: slotCount;
-const crowded = barWidth > 0 && slotCount > fittingSlots;
-
-// Signature de la config actuelle : si Léo ignore le bandeau puis rajoute
-// des onglets plus tard, le bandeau revient (la signature a changé).
-const pinnedSig = useMemo(() => pinnedTabs.map((t) => t.id).join(','), [pinnedTabs]);
-const showCrowdedBanner = crowded && !moreOpen && dismissedSig !== pinnedSig;
-
-const dismissBanner = () => {
-setDismissedSig(pinnedSig);
-try { localStorage.setItem(DISMISS_KEY, pinnedSig); } catch { /* stockage indisponible */ }
-};
-
-// Range les onglets en trop derrière le "+" : on garde épinglés les
-// premiers de la liste (ordre de TABS) + "Réglages" (jamais dépinglable) +
-// l'onglet actif, et on réserve une case pour le bouton "+".
-const tidyIntoMore = () => {
-const keepSlots = Math.max(1, fittingSlots - 1); // une case réservée au "+"
-// Les onglets les plus utiles restent en premier (Historique, Stats, Coach
-// avant Cardio, Catalogue…), plutôt que l'ordre brut de la barre.
-const KEEP_PRIORITY: NavView[] = ['home', 'historique', 'dashboard', 'coach'];
-const rank = (id: NavView) => { const i = KEEP_PRIORITY.indexOf(id); return i === -1 ? KEEP_PRIORITY.length : i; };
-const others = pinnedTabs.filter((t) => t.id !== 'settings').sort((a, b) => rank(a.id) - rank(b.id));
-// "Réglages" prend une case, et l'onglet ouvert en ce moment en prend une
-// autre (il reste épinglé quoi qu'il arrive) : on retire les deux du budget
-// avant de décider qui reste, sinon on dépasse à nouveau la largeur.
-const activeIsOther = others.some((t) => t.id === active);
-const budget = Math.max(0, keepSlots - 1 - (activeIsOther ? 1 : 0));
-let used = 0;
-others.forEach((tab) => {
-if (tab.id === active) return; // gardé d'office
-if (used < budget) { used += 1; return; }
-setNavBarTabPinned(tab.id, false);
-});
-try { localStorage.removeItem(DISMISS_KEY); } catch { /* stockage indisponible */ }
-setDismissedSig(null);
-};
-
 // ── Bulle mobile avec lentille ────────────────────────────────────────────
 // Une seule bulle glisse derrière l'onglet ouvert. À l'intérieur, une copie
 // agrandie des icônes (la « lentille ») glisse en sens inverse pour rester
 // alignée avec la vraie barre : on voit les icônes grossies à travers le verre.
 // C'est la seule façon d'avoir une déformation sur iPhone, où le filtre SVG
 // de backdrop-filter n'existe pas. La position est mesurée (et non calculée)
-// parce que la largeur des onglets dépend de leur nombre.
+// pour rester juste quelle que soit la largeur de l'écran.
 const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 const bubbleRef = useRef<HTMLDivElement>(null);
 const prevSlot = useRef<number | null>(null);
 const [geo, setGeo] = useState<{ x: number; y: number; w: number; h: number; cw: number; ch: number } | null>(null);
 const [bubbleReady, setBubbleReady] = useState(false);
-const plusSlot = overflowTabs.length > 0 ? pinnedTabs.length : -1;
-const pinnedActive = pinnedTabs.findIndex((t) => t.id === active);
-const activeSlot = pinnedActive !== -1 ? pinnedActive : (plusSlot !== -1 && (moreOpen || isOverflowActive)) ? plusSlot : -1;
 // Une fois la bulle posée au bon endroit, on active ses transitions : sans ça
 // elle glisserait depuis le coin à l'ouverture de l'appli.
 useLayoutEffect(() => {
   const cap = glassRef.current;
-  const btn = activeSlot >= 0 ? tabRefs.current[activeSlot] : null;
+  const btn = tabRefs.current[activeSlot];
   if (!cap || !btn) return;
   const OVER = 3; // la bulle déborde de l'onglet pour paraître plus grosse (sans être rognée par la capsule)
   setGeo({ x: btn.offsetLeft - OVER, y: btn.offsetTop - 4, w: btn.offsetWidth + OVER * 2, h: btn.offsetHeight + 8, cw: cap.clientWidth, ch: cap.clientHeight });
-}, [activeSlot, barWidth, pinnedSig, slotCount]);
+}, [activeSlot, barWidth]);
 useEffect(() => {
   if (!geo || bubbleReady) return;
   const id = requestAnimationFrame(() => setBubbleReady(true));
@@ -314,7 +238,7 @@ useEffect(() => {
   const prev = prevSlot.current;
   prevSlot.current = activeSlot;
   const el = bubbleRef.current;
-  if (!el || prev === null || prev < 0 || activeSlot < 0 || prev === activeSlot) return;
+  if (!el || prev === null || prev === activeSlot) return;
   if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
   const stretch = Math.min(0.5, 0.16 * Math.abs(activeSlot - prev));
   el.animate(
@@ -328,9 +252,17 @@ useEffect(() => {
   );
 }, [activeSlot]);
 
-const handleNavigate = (view: NavView) => {
-setMoreOpen(false);
-onNavigate(view);
+// Un autre onglet : on ouvre son premier écran (celui que l'utilisateur veut voir en
+// arrivant). Le même onglet : on déplie (ou replie) la liste de ses rubriques.
+const handleTabPress = (group: NavGroup) => {
+if (group.id === activeGroup.id) { setMenuOpen((v) => !v); return; }
+setMenuOpen(false);
+onNavigate(group.items[0].view);
+};
+
+const handlePick = (view: NavView) => {
+setMenuOpen(false);
+if (view !== active) onNavigate(view);
 };
 
 // Met à jour la position du halo directement en CSS var (perf : évite un
@@ -345,27 +277,39 @@ el.style.setProperty('--gx', `${x}%`);
 el.style.setProperty('--gy', `${y}%`);
 }, []);
 
+// La liste sort de l'onglet touché : son animation part du centre de cet onglet
+// (même gauche que la capsule, la liste et la rangée ont la même largeur).
+const listOriginX = geo ? geo.x + geo.w / 2 : null;
+
 return (
 <div style={wrapper}>
-{moreOpen && overflowTabs.length > 0 && (
+{menuOpen && (
 <>
-{/* Fond invisible pour fermer le tiroir en touchant en dehors */}
-<div style={backdrop} onClick={() => setMoreOpen(false)} />
+{/* Fond invisible pour fermer la liste en touchant en dehors */}
+<div style={backdrop} onClick={() => setMenuOpen(false)} />
 {/* Le panneau est centré par un conteneur flex plutôt que par un
 translateX(-50%) : ça libère la propriété transform pour
 l'animation d'ouverture (sinon les deux se marchent dessus). */}
 <div style={drawerLayer}>
-<div className="navbar-glass nav-drawer-in" style={drawer} role="menu">
+<div
+className="navbar-glass nav-drawer-in"
+style={listOriginX === null ? drawer : { ...drawer, transformOrigin: `${listOriginX}px bottom` }}
+role="menu"
+aria-label={`Rubriques : ${activeGroup.label}`}
+>
 <div style={drawerHandle} aria-hidden="true" />
-<div style={drawerTitle}>Plus</div>
+<div style={drawerHead}>
+<span style={drawerTitle}>{activeGroup.label}</span>
+<span style={drawerTagline}>{activeGroup.tagline}</span>
+</div>
 <div style={drawerList}>
-{overflowTabs.map((tab, i) => {
-const isActive = tab.id === active;
-const Icon = TAB_ICONS[tab.id];
+{activeGroup.items.map((item, i) => {
+const isActive = item.view === active;
+const Icon = TAB_ICONS[item.view];
 return (
 <button
-key={tab.id}
-onClick={() => handleNavigate(tab.id)}
+key={item.view}
+onClick={() => handlePick(item.view)}
 className="nav-drawer-row"
 role="menuitem"
 style={{
@@ -373,7 +317,7 @@ style={{
 background: isActive ? 'rgba(var(--brand-1-rgb),0.14)' : 'transparent',
 animationDelay: `${Math.min(i, 8) * 28}ms`,
 }}
-aria-label={tab.label}
+aria-label={item.label}
 aria-current={isActive ? 'page' : undefined}
 >
 {/* Icône dans une pastille discrète : sur une ligne, le simple
@@ -390,9 +334,9 @@ background: isActive ? 'rgba(var(--brand-1-rgb),0.16)' : 'var(--glass-highlight)
 </span>
 <span style={drawerTexts}>
 <span style={{ ...drawerLabel, color: isActive ? 'var(--brand-1)' : 'var(--text-primary)' }}>
-{tab.label}
+{item.label}
 </span>
-<span style={drawerHint}>{TAB_HINTS[tab.id]}</span>
+<span style={drawerHint}>{item.hint}</span>
 </span>
 {isActive && (
 <span style={{ color: 'var(--brand-1)', display: 'flex' }}>
@@ -406,26 +350,6 @@ background: isActive ? 'rgba(var(--brand-1-rgb),0.16)' : 'var(--glass-highlight)
 </div>
 </div>
 </>
-)}
-
-{/* Bandeau "barre trop chargée" : n'apparaît que quand les onglets
-épinglés ne tiennent réellement plus dans la largeur mesurée. */}
-{showCrowdedBanner && (
-<div style={bannerLayer}>
-<div className="navbar-glass nav-drawer-in" style={banner} role="status">
-<span style={bannerText}>
-La barre est trop chargée pour ton écran ({slotCount} onglets pour {fittingSlots} places).
-</span>
-<div style={bannerActions}>
-<button onClick={tidyIntoMore} style={bannerPrimary}>
-Ranger dans le +
-</button>
-<button onClick={dismissBanner} style={bannerGhost} aria-label="Ignorer">
-<CloseIcon size={14} />
-</button>
-</div>
-</div>
-</div>
 )}
 
 <div style={barRow}>
@@ -454,44 +378,41 @@ willChange: 'transform',
 <div
 ref={bubbleRef}
 className={`nav-bubble${bubbleReady ? ' is-ready' : ''}`}
-style={{ '--nb-x': `${geo.x}px`, '--nb-y': `${geo.y}px`, '--nb-w': `${geo.w}px`, '--nb-h': `${geo.h}px`, '--nb-cw': `${geo.cw}px`, '--nb-ch': `${geo.ch}px`, opacity: activeSlot >= 0 ? 1 : 0 } as React.CSSProperties}
+style={{ '--nb-x': `${geo.x}px`, '--nb-y': `${geo.y}px`, '--nb-w': `${geo.w}px`, '--nb-h': `${geo.h}px`, '--nb-cw': `${geo.cw}px`, '--nb-ch': `${geo.ch}px` } as React.CSSProperties}
 aria-hidden="true"
 >
 <div className="nav-lens">
 <div className="nav-lens-zoom" style={{ ...lensRow }}>
-{pinnedTabs.map((tab) => {
-const Icon = TAB_ICONS[tab.id];
+{NAV_GROUPS.map((group, idx) => {
+const Icon = GROUP_ICONS[group.id];
 return (
-<span key={tab.id} style={lensTab}>
+<span key={group.id} style={lensTab}>
 <span style={{ ...iconWrap, color: 'var(--brand-1)' }}><Icon size={22} filled /></span>
-<span style={{ ...tabLabel, color: 'var(--brand-1)', fontWeight: 700 }}>{tab.label}</span>
-<span style={{ ...tabDot, background: 'var(--brand-1)' }} />
+<span style={{ ...tabLabel, color: 'var(--brand-1)', fontWeight: 700 }}>{group.label}</span>
+{/* La bulle cache l'onglet d'origine : c'est donc cette copie qu'on voit,
+et c'est elle qui doit montrer le chevron retourné quand la liste est ouverte. */}
+<span style={{ color: 'var(--brand-1)', display: 'flex' }}><ChevronMark shown open={idx === activeSlot && menuOpen} /></span>
 </span>
 );
 })}
-{overflowTabs.length > 0 && (
-<span style={lensTab}>
-<span style={{ ...iconWrap, color: 'var(--brand-1)' }}><PlusIcon size={22} /></span>
-<span style={{ ...tabLabel, color: 'var(--brand-1)', fontWeight: 700 }}>Plus</span>
-<span style={{ ...tabDot, background: 'transparent' }} />
-</span>
-)}
 </div>
 </div>
 </div>
 )}
 
-{pinnedTabs.map((tab, idx) => {
-const isActive = tab.id === active;
-const Icon = TAB_ICONS[tab.id];
+{NAV_GROUPS.map((group, idx) => {
+const isActive = idx === activeSlot;
+const Icon = GROUP_ICONS[group.id];
 return (
 <button
-key={tab.id}
+key={group.id}
 ref={(el) => { tabRefs.current[idx] = el; }}
-onClick={() => handleNavigate(tab.id)}
+onClick={() => handleTabPress(group)}
 style={tabBtn}
-aria-label={tab.label}
+aria-label={isActive ? `${group.label} : voir les rubriques` : group.label}
 aria-current={isActive ? 'page' : undefined}
+aria-haspopup={isActive ? 'menu' : undefined}
+aria-expanded={isActive ? menuOpen : undefined}
 >
 {/* Présentation façon Apple (tab bar iOS / SF Symbols) : pas de
 pastille colorée, pas d'agrandissement — juste l'icône qui passe
@@ -502,24 +423,12 @@ Réglages, Musique ou l'App Store sur iPhone. */}
 <Icon size={22} filled={isActive} />
 </span>
 <span style={{ ...tabLabel, color: isActive ? 'var(--brand-1)' : 'var(--text-secondary)', fontWeight: isActive ? 700 : 600 }}>
-{tab.label}
+{group.label}
 </span>
-<span style={{ ...tabDot, background: isActive ? 'var(--brand-1)' : 'transparent' }} aria-hidden="true" />
+<span style={{ color: 'var(--brand-1)', display: 'flex' }}><ChevronMark shown={isActive} open={isActive && menuOpen} /></span>
 </button>
 );
 })}
-
-{overflowTabs.length > 0 && (
-<button ref={(el) => { tabRefs.current[pinnedTabs.length] = el; }} onClick={() => setMoreOpen((v) => !v)} style={tabBtn} aria-label="Plus d'options" aria-expanded={moreOpen}>
-<span style={{ ...iconWrap, color: (moreOpen || isOverflowActive) ? 'var(--brand-1)' : 'var(--text-secondary)', transform: moreOpen ? 'rotate(45deg)' : 'rotate(0deg)' }}>
-<PlusIcon size={22} />
-</span>
-<span style={{ ...tabLabel, color: (moreOpen || isOverflowActive) ? 'var(--brand-1)' : 'var(--text-secondary)', fontWeight: (moreOpen || isOverflowActive) ? 700 : 600 }}>
-Plus
-</span>
-<span style={{ ...tabDot, background: isOverflowActive ? 'var(--brand-1)' : 'transparent' }} aria-hidden="true" />
-</button>
-)}
 </div>
 
 {onStartSession && (
@@ -614,10 +523,11 @@ const lensRow: React.CSSProperties = {
 position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', gap: 3, padding: '6px 6px',
 };
 
-// Point sous l'onglet ouvert (variante « dock » du labo).
-const tabDot: React.CSSProperties = {
-width: 4, height: 4, borderRadius: '50%', marginTop: 1,
-transition: 'background 0.15s ease',
+// Chevron sous l'onglet ouvert. Même emprise que l'ancien point (4 px + 1 px d'écart).
+const tabMark: React.CSSProperties = {
+width: 10, height: 5, marginTop: 1,
+display: 'flex', alignItems: 'center', justifyContent: 'center',
+transition: 'opacity 0.15s ease, transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1)',
 };
 
 // Reflet du dessus : bande lumineuse fine collée au bord haut du verre, comme
@@ -704,9 +614,8 @@ zIndex: 3,
 pointerEvents: 'none',
 };
 
-// Panneau en liste (façon menu iOS) : une ligne par onglet, beaucoup plus
-// lisible que l'ancienne grille 4 colonnes d'icônes minuscules, et qui
-// s'allonge proprement quand il y a beaucoup d'onglets rangés dans le "+".
+// Panneau en liste (façon menu iOS) : une ligne par rubrique, beaucoup plus
+// lisible qu'une grille d'icônes minuscules.
 const drawer: React.CSSProperties = {
 pointerEvents: 'auto',
 display: 'flex',
@@ -728,14 +637,26 @@ margin: '2px auto 8px',
 flexShrink: 0,
 };
 
+// En-tête de la liste : le nom de l'onglet, puis ce que l'on vient y chercher.
+const drawerHead: React.CSSProperties = {
+display: 'flex',
+alignItems: 'baseline',
+gap: 8,
+padding: '0 10px 6px',
+flexShrink: 0,
+};
+
 const drawerTitle: React.CSSProperties = {
 fontSize: 10,
 fontWeight: 700,
 letterSpacing: 1.1,
 textTransform: 'uppercase',
+color: 'var(--brand-1)',
+};
+
+const drawerTagline: React.CSSProperties = {
+fontSize: 11,
 color: 'var(--text-dim)',
-padding: '0 10px 6px',
-flexShrink: 0,
 };
 
 const drawerList: React.CSSProperties = {
@@ -785,64 +706,4 @@ lineHeight: 1.15,
 whiteSpace: 'nowrap',
 overflow: 'hidden',
 textOverflow: 'ellipsis',
-};
-
-// Bandeau "barre trop chargée" — même calque/centrage que le panneau, juste
-// au-dessus de la barre.
-const bannerLayer: React.CSSProperties = {
-position: 'fixed',
-left: 0, right: 0,
-bottom: 'calc(max(10px, env(safe-area-inset-bottom)) + 74px)',
-display: 'flex',
-justifyContent: 'center',
-zIndex: 3,
-pointerEvents: 'none',
-};
-
-const banner: React.CSSProperties = {
-pointerEvents: 'auto',
-display: 'flex',
-alignItems: 'center',
-gap: 10,
-padding: '10px 10px 10px 14px',
-borderRadius: 20,
-maxWidth: 460,
-width: 'calc(100% - 24px)',
-background: 'var(--glass-bg)',
-border: '1px solid var(--glass-border)',
-boxShadow: '0 -1px 0 var(--glass-highlight) inset, 0 10px 30px rgba(0,0,0,0.4)',
-};
-
-const bannerText: React.CSSProperties = {
-flex: 1,
-minWidth: 0,
-fontSize: 11.5,
-lineHeight: 1.25,
-color: 'var(--text-secondary)',
-};
-
-const bannerActions: React.CSSProperties = {
-display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
-};
-
-const bannerPrimary: React.CSSProperties = {
-padding: '7px 12px',
-borderRadius: 12,
-border: '1px solid rgba(var(--brand-1-rgb),0.4)',
-background: 'rgba(var(--brand-1-rgb),0.18)',
-color: 'var(--brand-1)',
-fontSize: 11.5,
-fontWeight: 700,
-whiteSpace: 'nowrap',
-cursor: 'pointer',
-};
-
-const bannerGhost: React.CSSProperties = {
-display: 'flex', alignItems: 'center', justifyContent: 'center',
-width: 28, height: 28,
-borderRadius: 10,
-border: 'none',
-background: 'var(--glass-highlight)',
-color: 'var(--text-muted)',
-cursor: 'pointer',
 };
