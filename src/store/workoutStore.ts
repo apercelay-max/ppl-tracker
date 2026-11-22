@@ -170,6 +170,7 @@ if (!document.hidden && wakeLockSentinel === null && useWorkoutStore.getState().
 }
 
 export interface HomeSectionsVisible {
+aiCoach: boolean;
 coach: boolean;
 cycle: boolean;
 nutrition: boolean;
@@ -187,11 +188,11 @@ plateau: boolean;
 }
 
 export type HomeSectionKey =
-| 'coach' | 'cycle' | 'seances' | 'nutrition' | 'supersetRule' | 'muscleAlert' | 'cardio' | 'weeklyGoal' | 'nextSession'
+| 'aiCoach' | 'coach' | 'cycle' | 'seances' | 'nutrition' | 'supersetRule' | 'muscleAlert' | 'cardio' | 'weeklyGoal' | 'nextSession'
 | 'lastSession' | 'weeklyStats' | 'bodyWeight' | 'personalRecord' | 'exerciseProgress' | 'plateau';
 
 const DEFAULT_HOME_ORDER: HomeSectionKey[] = [
-'coach', 'nextSession', 'lastSession', 'weeklyStats', 'cycle', 'weeklyGoal', 'seances', 'muscleAlert', 'cardio', 'nutrition', 'supersetRule',
+'coach', 'nextSession', 'aiCoach', 'lastSession', 'weeklyStats', 'cycle', 'weeklyGoal', 'seances', 'muscleAlert', 'cardio', 'nutrition', 'supersetRule',
 'bodyWeight', 'personalRecord', 'exerciseProgress', 'plateau',
 ];
 
@@ -209,7 +210,7 @@ const DEFAULT_HOME_ORDER: HomeSectionKey[] = [
 // chaque ouverture. Le coach ne coûte rien les premiers jours : il s'efface
 // déjà tout seul tant qu'aucune séance n'est terminée.
 const DEFAULT_HOME_ESSENTIALS: Record<HomeSectionKey, boolean> = {
-coach: true, nextSession: true, weeklyGoal: true,
+aiCoach: true, coach: true, nextSession: true, weeklyGoal: true,
 cycle: false, seances: false, lastSession: false, weeklyStats: false,
 nutrition: false, supersetRule: false, muscleAlert: false, cardio: false,
 bodyWeight: false, personalRecord: false, exerciseProgress: false, plateau: false,
@@ -577,6 +578,9 @@ homeSections: {
 // séance. Il ne s'affiche de toute façon qu'une fois une séance
 // terminée — avant, il n'a rien à dire.
 coach: true,
+// Le coach IA (résumé du jour) : même logique, il ne s'affiche qu'une fois
+// qu'il y a un historique à commenter.
+aiCoach: true,
 cycle: true, nutrition: true, supersetRule: true, muscleAlert: true, cardio: true, weeklyGoal: true, nextSession: true,
 // Les 2 widgets demandés en priorité (séance précédente, stats de la
 // semaine) sont visibles par défaut. Les 3 autres (poids du corps,
@@ -1510,8 +1514,17 @@ merged.homeEssentials = { ...current.homeEssentials, ...(p.homeEssentials ?? {})
 // d'une autre version, cloud) faisait planter l'accueil (HOME_SECTION_META[key] undefined).
 const savedOrder = (p.homeSectionOrder ?? current.homeSectionOrder)
 .filter((k, i, a) => current.homeSectionOrder.includes(k) && a.indexOf(k) === i);
-const missingKeys = current.homeSectionOrder.filter((k) => !savedOrder.includes(k));
-merged.homeSectionOrder = [...savedOrder, ...missingKeys];
+// Une carte ajoutée après coup se glisse à sa place d'origine (juste après la carte qui la
+// précède dans l'ordre par défaut) au lieu de finir tout en bas : sinon une carte pensée pour
+// la tête de l'accueil resterait cachée sous les autres sur tous les téléphones qui ont déjà
+// une sauvegarde.
+const order = [...savedOrder];
+current.homeSectionOrder.forEach((key, idx) => {
+if (order.includes(key)) return;
+const before = current.homeSectionOrder.slice(0, idx).reverse().find((k) => order.includes(k));
+order.splice(before ? order.indexOf(before) + 1 : 0, 0, key);
+});
+merged.homeSectionOrder = order;
 // Même logique pour les onglets de la nav bar : un nouvel onglet
 // ajouté plus tard (ex: Profil) doit apparaître actif par défaut
 // pour les téléphones qui ont déjà une sauvegarde, pas disparaître.

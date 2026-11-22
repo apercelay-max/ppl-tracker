@@ -110,8 +110,8 @@ const closeIntro = () => {
 try { localStorage.setItem(INTRO_SEEN_KEY, '1'); } catch { /* ignoré */ }
 setIntroSeen(true);
 };
-// Résumé du jour (Gemini) : préparé en arrière-plan dès l'ouverture, affiché
-// en touchant le prénom sur l'accueil.
+// Résumé du jour (écrit par l'IA) : préparé en arrière-plan dès l'ouverture, affiché
+// en touchant le « Bonjour <prénom> » (et sa grosse flèche) ou la carte Coach IA de l'accueil.
 const [summaryOpen, setSummaryOpen] = useState(false);
 
 // Synchro cloud (Supabase) — se met en route toute seule dès qu'un
@@ -365,7 +365,7 @@ lastSyncedAt={sync.lastSyncedAt}
 {
   // Réglages → Personnalisation → Style de l'interface.
   const Home = uiStyle === 'classique' ? HomeScreenClassic : HomeScreen;
-  screen = <Home onOpenSummary={() => setSummaryOpen(true)} onSelectDay={handleSelectDay} onOpenDashboard={handleOpenDashboard} onOpenSettings={() => handleOpenSettings()} onOpenSettingsCategory={handleOpenSettings} />;
+  screen = <Home onOpenSummary={() => setSummaryOpen(true)} onSelectDay={handleSelectDay} onOpenDashboard={handleOpenDashboard} onOpenSettings={() => handleOpenSettings()} onOpenSettingsCategory={handleOpenSettings} dailyBrief={dailyBrief} onOpenCoach={() => handleNavigate('coach')} />;
 }
 }
 

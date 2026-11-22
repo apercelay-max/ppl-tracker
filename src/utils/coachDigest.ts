@@ -206,12 +206,25 @@ export interface CoachAiRequest {
   previousInteractionId?: string;
   /** Contexte du résumé du jour, mode « daily » seulement. */
   daily?: DailyContext;
-  /** Clé d'API saisie dans l'appli (Coach → Clé d'API). Quand elle est là,
-   *  elle prime sur celle du serveur : c'est un geste explicite de
-   *  l'utilisateur, il doit voir son effet. Sinon, le serveur utilise la
-   *  sienne (variable d'environnement GEMINI_API_KEY sur Vercel). */
+  /** Les derniers messages de la conversation (mode « chat »). Google garde l'historique de son côté
+   *  (previousInteractionId), mais Groq n'en garde aucun : sans ça, il répondrait à chaque question
+   *  comme si c'était la première. */
+  history?: CoachChatTurn[];
+  /** Clé d'API saisie dans l'appli (Coach → Clé d'API), Groq (« gsk_… ») ou Google. Quand elle est là,
+   *  elle prime sur celles du serveur : c'est un geste explicite de l'utilisateur, il doit voir son
+   *  effet. Sinon, le serveur utilise les siennes (variables d'environnement GROQ_API_KEY et
+   *  GEMINI_API_KEY sur Vercel). */
   apiKey?: string;
 }
+
+/** Un message de la conversation, tel qu'il est renvoyé au serveur. */
+export interface CoachChatTurn {
+  role: 'moi' | 'coach';
+  text: string;
+}
+
+/** Qui a écrit la réponse. */
+export type CoachAiProvider = 'groq' | 'gemini';
 
 /** Ce que l'appli a déjà calculé pour le résumé du jour : le modèle le
  *  commente, il ne recalcule rien (charges comprises). */
@@ -281,10 +294,10 @@ export type CoachAiErrorCode =
   | 'ERREUR_MODELE';
 
 export type CoachAiResponse =
-  | { ok: true; mode: 'brief'; model: string; brief: CoachAiBrief }
-  | { ok: true; mode: 'daily'; model: string; daily: CoachAiDaily }
+  | { ok: true; mode: 'brief'; model: string; provider?: CoachAiProvider; brief: CoachAiBrief }
+  | { ok: true; mode: 'daily'; model: string; provider?: CoachAiProvider; daily: CoachAiDaily }
   | {
-      ok: true; mode: 'chat'; model: string; reponse: string; interactionId?: string;
+      ok: true; mode: 'chat'; model: string; provider?: CoachAiProvider; reponse: string; interactionId?: string;
       /** Modification de programme suggérée. BRUTE : rien n'est validé à ce
        *  stade — il faut la passer par `validateProposal` avant de l'afficher,
        *  et ne jamais l'appliquer sans accord de l'utilisateur. */

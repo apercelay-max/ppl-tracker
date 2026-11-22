@@ -115,6 +115,24 @@ const screenClass = useScreenClass();
   // reste affiché sous le bilan IA — c'est lui qui parle pendant la séance.
   const localBrief = useMemo(() => getCoachBrief(history, getWorkout), [history]);
 
+  // Questions rapides tirées des données : un plateau s'il y en a un, la régularité si l'objectif
+  // n'est pas tenu, puis des valeurs sûres. Quatre au plus : davantage, ce serait un menu, pas un raccourci.
+  const quickQuestions = useMemo(() => {
+    const qs: string[] = [];
+    const plateau = digest.plateaus[0];
+    if (plateau) {
+      const name = plateau.name.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+      qs.push(`Pourquoi mon « ${name} » stagne depuis ${plateau.weeksStuck} semaines ?`);
+    }
+    qs.push('Que dois-je faire à ma prochaine séance ?');
+    if (digest.consistency.weeklyGoal && digest.consistency.weeksBelowGoal > 0) {
+      qs.push('Comment tenir mon objectif de séances par semaine ?');
+    }
+    qs.push('Est-ce que je travaille bien tous mes muscles ?');
+    qs.push('Comment mieux récupérer entre les séances ?');
+    return qs.slice(0, 4);
+  }, [digest]);
+
   const staleBrief = cached !== null && cached.sessions !== history.length;
 
   const handleResponse = (response: CoachAiResponse): boolean => {
@@ -155,8 +173,10 @@ const screenClass = useScreenClass();
     }
   };
 
-  const ask = async () => {
-    const clean = question.trim();
+  // `override` : une question rapide (les pastilles sous la conversation) part tout de suite, sans
+  // passer par le champ de texte, qu'on laisse tel quel s'il contenait un brouillon.
+  const ask = async (override?: string) => {
+    const clean = (override ?? question).trim();
     if (!clean || asking) return;
 
     // Le message part à l'écran tout de suite : attendre la réponse pour
@@ -164,12 +184,17 @@ const screenClass = useScreenClass();
     const mineAt = Date.now();
     const epoch = chatEpoch.current;
     const previousInteractionId = chatRef.current.interactionId;
+    // Les derniers messages AVANT cette question : Groq, qui ne garde aucun historique, en a besoin
+    // pour suivre la conversation (Google, lui, la garde de son côté).
+    const history = chatRef.current.messages.slice(-6).map((m) => ({ role: m.role, text: m.text }));
     commitChat((prev) => ({
       ...prev,
       messages: [...prev.messages, { role: 'moi', text: clean, at: mineAt }],
     }));
-    setQuestion('');
-    chatInputRef.current?.focus();
+    if (override === undefined) {
+      setQuestion('');
+      chatInputRef.current?.focus();
+    }
     setAsking(true);
     setError(null);
 
@@ -178,6 +203,7 @@ const screenClass = useScreenClass();
         digest,
         question: clean,
         previousInteractionId,
+        history,
         apiKey: apiKey || undefined,
         program: programView,
         catalog: catalogIndex,
@@ -365,7 +391,7 @@ const screenClass = useScreenClass();
           <div>
             <h1 style={title}>Coach</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>
-              Un vrai bilan de tes stats, écrit par Gemini
+              Un vrai bilan de tes stats, écrit par l’IA (Groq ou Gemini)
             </p>
           </div>
         </div>
@@ -405,7 +431,7 @@ const screenClass = useScreenClass();
           <div style={card}>
             <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: 1.5 }}>
               Aucun bilan pour l'instant. L'appli envoie un résumé chiffré de tes {history.length} séances
-              enregistrées ({digestKo} Ko, jamais ton historique complet) et Gemini le commente.
+              enregistrées ({digestKo} Ko, jamais ton historique complet) et l’IA le commente.
             </p>
           </div>
         )}
@@ -593,6 +619,18 @@ const screenClass = useScreenClass();
             </div>
           )}
 
+          {/* Questions rapides, tirées de TES données : un tap et la question part (avec Groq la réponse
+              arrive en une ou deux secondes). */}
+          {history.length > 0 && (
+            <div style={chipRow} role="group" aria-label="Questions rapides">
+              {quickQuestions.map((q) => (
+                <button key={q} type="button" onClick={() => { void ask(q); }} disabled={asking} style={{ ...chipBtn, opacity: asking ? 0.5 : 1 }}>
+                  {q}
+                </button>
+              ))}
+            </div>
+          )}
+
           <textarea
             ref={chatInputRef}
             value={question}
@@ -603,7 +641,7 @@ const screenClass = useScreenClass();
           />
           <button
             type="button"
-            onClick={ask}
+            onClick={() => { void ask(); }}
             disabled={asking || !question.trim()}
             style={{ ...primaryBtn, marginTop: 8, opacity: asking || !question.trim() ? 0.55 : 1 }}
           >
@@ -711,8 +749,10 @@ const screenClass = useScreenClass();
           {keyOpen ? (
             <>
               <p style={{ color: 'var(--text-muted)', fontSize: 12.5, lineHeight: 1.45, marginBottom: 10 }}>
-                Colle ici une clé Gemini créée sur <strong style={{ color: 'var(--text-primary)' }}>aistudio.google.com/apikey</strong>.
-                Elle reste sur ce téléphone et n'est envoyée qu'à la fonction du site au moment d'un bilan.
+                Colle ici une clé <strong style={{ color: 'var(--text-primary)' }}>Groq</strong> (elle commence par gsk_, créée sur{' '}
+                <strong style={{ color: 'var(--text-primary)' }}>console.groq.com/keys</strong> : c'est la plus rapide) ou une clé{' '}
+                <strong style={{ color: 'var(--text-primary)' }}>Gemini</strong> (aistudio.google.com/apikey).
+                Elle reste sur ce téléphone et n'est envoyée qu'à la fonction du site au moment d'une demande au coach.
                 Tu peux laisser ce champ vide : l'appli fournit déjà une clé par défaut.
               </p>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -720,7 +760,7 @@ const screenClass = useScreenClass();
                   type="password"
                   value={keyDraft}
                   onChange={(e) => setKeyDraft(e.target.value)}
-                  placeholder={apiKey ? maskApiKey(apiKey) : 'AIza…'}
+                  placeholder={apiKey ? maskApiKey(apiKey) : 'gsk_… ou AIza…'}
                   autoComplete="off"
                   spellCheck={false}
                   style={inputStyle}
@@ -872,6 +912,11 @@ const refuseBtn: React.CSSProperties = {
   flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
   borderRadius: 10, padding: '10px 12px', color: 'var(--text-muted)',
   fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+};
+const chipRow: React.CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 };
+const chipBtn: React.CSSProperties = {
+  background: 'rgba(var(--brand-1-rgb), 0.10)', border: '1px solid rgba(var(--brand-1-rgb), 0.35)', borderRadius: 999,
+  padding: '8px 13px', color: 'var(--text-primary)', fontSize: 12.5, lineHeight: 1.25, cursor: 'pointer', textAlign: 'left',
 };
 const suggestBtn: React.CSSProperties = {
   width: '100%', marginTop: 8, background: 'transparent',

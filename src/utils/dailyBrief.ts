@@ -1,7 +1,7 @@
 // ─── Résumé du jour (préparé en arrière-plan) ──────────────────────────────
 //
 // Même répartition des rôles que le bilan du Coach : l'appli calcule (séance
-// conseillée, charges, stats de la semaine), Gemini rédige. Le résumé est
+// conseillée, charges, stats de la semaine), l'IA (Groq ou Gemini) rédige. Le résumé est
 // préparé au démarrage et gardé pour la journée, pour qu'un tap sur le
 // prénom l'ouvre instantanément.
 

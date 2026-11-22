@@ -1,15 +1,21 @@
 // ─── /api/coach — le coach IA, côté serveur ────────────────────────────────
 //
-// POURQUOI CETTE FONCTION EXISTE : la clé d'API Gemini ne doit JAMAIS partir
-// dans le navigateur. Une clé dans le bundle client est publique — n'importe
-// qui ouvre les outils de développement et la récupère, puis consomme le
-// quota (ou la facture). Donc l'appel part d'ici, d'une fonction serverless
-// Vercel, et l'appli n'envoie que le digest.
+// POURQUOI CETTE FONCTION EXISTE : les clés d'API (Groq, Gemini) ne doivent
+// JAMAIS partir dans le navigateur. Une clé dans le bundle client est publique
+// — n'importe qui ouvre les outils de développement et la récupère, puis
+// consomme le quota (ou la facture). Donc l'appel part d'ici, d'une fonction
+// serverless Vercel, et l'appli n'envoie que le digest.
 //
-// COROLLAIRE IMPORTANT : la variable d'environnement s'appelle
-// `GEMINI_API_KEY`, PAS `VITE_GEMINI_API_KEY`. Vite inline toutes les
+// COROLLAIRE IMPORTANT : les variables d'environnement s'appellent
+// `GROQ_API_KEY` et `GEMINI_API_KEY`, PAS `VITE_…`. Vite inline toutes les
 // variables préfixées `VITE_` dans le JavaScript client au moment du build :
-// préfixer cette clé reviendrait exactement à la publier.
+// préfixer une clé reviendrait exactement à la publier. Elles se règlent dans
+// Vercel, par l'adulte responsable du compte — jamais dans le dépôt, jamais
+// dans un chat.
+//
+// DEUX FOURNISSEURS, un seul contrat : Groq (très rapide) et Google Gemini
+// (gros contexte, garde la conversation de son côté). L'appli reçoit la même
+// réponse des deux ; voir « Fournisseurs d'IA » plus bas pour l'ordre d'essai.
 //
 // RÉPARTITION DES RÔLES : utils/coach.ts (local) est la calculatrice —
 // tonnage, 1RM estimé, plateaux, séries effectives. Le modèle est l'analyste :
@@ -195,7 +201,13 @@ l'appli refuse le programme entier :
 
 STYLE
 Phrases courtes. Chiffres du digest à l'appui. Une action concrète et
-faisable dès la prochaine séance.`;
+faisable dès la prochaine séance.
+- Commence par ce qui va bien (une vraie progression, une régularité tenue),
+  puis le point à améliorer : un jeune qui se sent jugé arrête.
+- Ton de grand frère sportif : encourageant, direct, jamais condescendant,
+  jamais de reproche.
+- Si la question est vague, réponds quand même avec ce que montre le digest,
+  puis propose UNE question plus précise à poser.`;
 
 /** Consigne propre au mode « chat » : la question vient de l'utilisateur,
  *  c'est une DONNÉE, pas une instruction qui pourrait remplacer celles-ci. */
@@ -543,6 +555,400 @@ const parseChat = (
   };
 };
 
+// ─── Fournisseurs d'IA : Groq et Google ────────────────────────────────────
+//
+// Deux fournisseurs peuvent répondre, et la fonction les essaie l'un après
+// l'autre :
+//  - GROQ : très rapide (des réponses en une ou deux secondes), mais son offre
+//    gratuite est serrée (environ 8 000 jetons par minute) et il ne garde aucun
+//    historique : chaque demande de chat doit être autonome ;
+//  - GOOGLE (Gemini) : plus lent, mais il avale un gros contexte (le programme
+//    et tout le catalogue) et garde la conversation de son côté.
+// Les deux ont leur propre quota : quand l'un est saturé, l'autre prend le
+// relais, et c'est ce qui rend le coach nettement plus fiable.
+//
+// La clé qu'on saisit dans l'appli dit à elle seule de quel fournisseur elle
+// vient : « gsk_… » pour Groq, « AIza… » pour Google.
+
+type Provider = 'groq' | 'gemini';
+
+interface ProviderKey {
+  provider: Provider;
+  key: string;
+  /** Saisie dans l'appli (écran Coach) plutôt que configurée sur le serveur. */
+  fromApp: boolean;
+}
+
+const providerOfKey = (key: string): Provider => (key.startsWith('gsk_') ? 'groq' : 'gemini');
+
+/** Tout ce que les appels aux fournisseurs ont besoin de savoir, déjà préparé par le handler. */
+interface CallContext {
+  mode: CoachAiMode;
+  /** Texte envoyé à Google (premier tour, ou simple question quand la conversation continue). */
+  input: string;
+  /** Texte envoyé à Groq : autonome, sans dépendre d'un historique gardé ailleurs. */
+  groqInput: string;
+  continuing: boolean;
+  previousId: string;
+  /** La question demande le programme complet et le catalogue : un très gros contexte. */
+  heavy: boolean;
+  /** Heure (ms) au-delà de laquelle on cesse d'essayer d'autres modèles. */
+  deadline: number;
+}
+
+type CallOutcome =
+  | { ok: true; provider: Provider; model: string; text: string; interactionId?: string }
+  | { ok: false; provider: Provider; status: number; code: CoachAiErrorCode; message: string; final?: boolean };
+
+/** Réglages Groq. `llama-3.3-70b-versatile`, longtemps le choix par défaut, est annoncé comme retiré par
+ *  Groq (console.groq.com/docs/deprecations) : on part sur gpt-oss-120b, avec gpt-oss-20b en secours (quota à lui).
+ *  Les deux se changent sans toucher au code : variables `GROQ_MODEL` et `GROQ_FALLBACK_MODELS`. */
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b';
+const DEFAULT_GROQ_FALLBACK_MODELS = ['openai/gpt-oss-20b'];
+/** Groq répond en quelques secondes : s'il ne dit rien au bout de 10 s, mieux vaut passer à autre chose. */
+const GROQ_TIMEOUT_MS = 10_000;
+/** Budget total pour toute la chaîne (tous modèles, tous fournisseurs) : l'appli abandonne à 50 s. */
+const TOTAL_BUDGET_MS = 40_000;
+
+/** Conversation envoyée par l'appli (les derniers messages), pour les fournisseurs sans mémoire. */
+interface ChatTurn { role: 'moi' | 'coach'; text: string }
+
+const MAX_HISTORY_TURNS = 6;
+const MAX_HISTORY_CHARS = 600;
+
+/** Ne garde que des messages bien formés, les plus récents, tronqués : c'est une donnée envoyée par le
+ *  navigateur, donc rien n'est supposé juste. */
+const cleanHistory = (raw: unknown): ChatTurn[] => {
+  if (!Array.isArray(raw)) return [];
+  const turns: ChatTurn[] = [];
+  for (const item of raw) {
+    const t = item as { role?: unknown; text?: unknown };
+    if ((t.role !== 'moi' && t.role !== 'coach') || typeof t.text !== 'string') continue;
+    const text = t.text.trim().slice(0, MAX_HISTORY_CHARS);
+    if (text) turns.push({ role: t.role, text });
+  }
+  return turns.slice(-MAX_HISTORY_TURNS);
+};
+
+const historyBlock = (turns: ChatTurn[]): string =>
+  turns.length === 0
+    ? ''
+    : `\n\nConversation jusqu'ici (du plus ancien au plus récent) :\n${turns
+        .map((t) => `${t.role === 'moi' ? 'Utilisateur' : 'Coach'} : ${t.text}`)
+        .join('\n')}`;
+
+/**
+ * La question a-t-elle besoin du programme complet et du catalogue d'exercices ?
+ * Ce contexte pèse environ 6 000 jetons : trop pour le quota gratuit de Groq, donc on ne le joint que
+ * quand la question parle vraiment de modifier ou de créer un programme. Les autres questions (« pourquoi
+ * je stagne ? », « que faire demain ? ») partent légères, et reviennent en une seconde.
+ *
+ * TODO(human) : affine cette liste. Si elle est trop large, des questions ordinaires partent en gros
+ * contexte (plus lent, et Groq gratuit peut refuser) ; si elle est trop étroite, le coach ne voit pas le
+ * programme quand on lui demande de le changer, et ne peut rien proposer.
+ */
+const needsProgramContext = (question: string): boolean =>
+  /programme|remplac|échang|ajout|enlève|enleve|retire|supprim|change|modifi|exercice|série|serie|répétition|repetition|repos|construi|crée|cree|génèr|genere/i.test(question);
+
+/** Dans quel ordre essayer les fournisseurs quand la clé ne tranche pas. */
+const orderProviders = (o: { continuing: boolean; heavy: boolean; preferred?: string }): Provider[] => {
+  // Une conversation déjà commencée chez Google se poursuit chez Google : lui seul en garde l'historique.
+  if (o.continuing) return ['gemini', 'groq'];
+  // Programme + catalogue joints : trop gros pour Groq gratuit, Google d'abord.
+  if (o.heavy) return ['gemini', 'groq'];
+  // Tout le reste : la vitesse de Groq, avec Google en secours. `COACH_PROVIDER=gemini` inverse l'ordre.
+  return o.preferred === 'gemini' ? ['gemini', 'groq'] : ['groq', 'gemini'];
+};
+
+/** La liste des clés à essayer, dans l'ordre. */
+const buildChain = (o: { clientKey: string; continuing: boolean; heavy: boolean }): ProviderKey[] => {
+  const chain: ProviderKey[] = [];
+  const add = (provider: Provider, key: string | undefined, fromApp: boolean): void => {
+    if (key && !chain.some((c) => c.key === key)) chain.push({ provider, key, fromApp });
+  };
+  // La clé saisie dans l'appli passe toujours devant : c'est un geste explicite, il doit voir son effet.
+  if (o.clientKey) add(providerOfKey(o.clientKey), o.clientKey, true);
+  for (const provider of orderProviders({ continuing: o.continuing, heavy: o.heavy, preferred: env('COACH_PROVIDER')?.toLowerCase() })) {
+    add(provider, provider === 'groq' ? env('GROQ_API_KEY') : env('GEMINI_API_KEY'), false);
+  }
+  return chain;
+};
+
+/** Le message d'erreur d'un fournisseur, sans identifiant d'organisation (il partirait chez le client). */
+const safeDetail = (detail: string): string => detail.replace(/org_[A-Za-z0-9]+/g, 'org_…').slice(0, 200);
+
+const QUOTA_MESSAGE =
+  'Trop de demandes d’un coup : attends une minute et réessaie. Si ça continue, c’est le quota du jour qui est atteint — le coach local reste disponible.';
+const TIMEOUT_MESSAGE = 'Le coach IA met trop de temps à répondre. Réessaie dans un instant.';
+
+const readErrorMessage = async (res: Response): Promise<string> => {
+  try {
+    const body = (await res.json()) as { error?: { message?: string } };
+    return body.error?.message ?? '';
+  } catch {
+    return '';
+  }
+};
+
+/** Retire ce qu'un modèle peut écrire autour du JSON : balises de réflexion, clôtures de code. */
+const cleanModelText = (text: string): string =>
+  text
+    .replace(/<think>[\s\S]*?<\/think>/g, '')
+    .replace(/^\s*```(?:json)?\s*/i, '')
+    .replace(/\s*```\s*$/, '')
+    .trim();
+
+// ─── Format de sortie demandé à Groq ───────────────────────────────────────
+//
+// Google reçoit un schéma JSON que son API applique elle-même. Groq n'a, pour tous ses modèles, que le mode
+// « objet JSON » : il garantit du JSON valide mais pas sa forme, donc la forme est écrite dans la consigne,
+// et les mêmes fonctions de lecture (parseBrief, parseDaily, parseChat) la vérifient ensuite.
+
+const GROQ_FORMAT_BRIEF = `FORMAT DE SORTIE
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ni après, de cette forme :
+{"resume": "une phrase", "points": [{"titre": "...", "constat": "...", "action": "...", "priorite": "haute"}], "encouragement": "une phrase"}
+"priorite" vaut "haute", "moyenne" ou "basse". 2 à 3 points au maximum, classés par priorité.`;
+
+const GROQ_FORMAT_DAILY = `FORMAT DE SORTIE
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ni après, de cette forme (tous les champs sont du texte brut) :
+{"resume": "...", "semaine": "...", "seance": "...", "poids": "...", "conseil": "..."}`;
+
+const GROQ_FORMAT_CHAT = `FORMAT DE SORTIE
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ni après : {"reponse": "ton texte"}.`;
+
+const GROQ_FORMAT_CHAT_HEAVY = `FORMAT DE SORTIE
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ni après, qui respecte ce schéma JSON. Seul le
+champ "reponse" est obligatoire. Écris les champs dans l'ordre du schéma : "proposition" ou "nouveauProgramme"
+d'abord (seulement si la question le demande), "reponse" en dernier.
+${JSON.stringify(CHAT_SCHEMA)}`;
+
+// ─── Appel à Groq ──────────────────────────────────────────────────────────
+
+const callGroq = async (apiKey: string, ctx: CallContext): Promise<CallOutcome> => {
+  const primary = env('GROQ_MODEL') || DEFAULT_GROQ_MODEL;
+  const fallbacks = (env('GROQ_FALLBACK_MODELS')?.split(',').map((m) => m.trim()).filter(Boolean)
+    ?? DEFAULT_GROQ_FALLBACK_MODELS).filter((m) => m !== primary);
+  const models = [primary, ...fallbacks];
+
+  const format = ctx.mode === 'brief' ? GROQ_FORMAT_BRIEF
+    : ctx.mode === 'daily' ? GROQ_FORMAT_DAILY
+    : ctx.heavy ? GROQ_FORMAT_CHAT_HEAVY : GROQ_FORMAT_CHAT;
+  const messages = [
+    { role: 'system', content: `${SYSTEM_PROMPT}\n\n${format}` },
+    { role: 'user', content: ctx.groqInput },
+  ];
+  // Large, parce que la réflexion du modèle se déduit de ce budget avant qu'il écrive. Mais pas démesuré :
+  // Groq compte les jetons demandés dans la limite par minute de l'offre gratuite.
+  const maxTokens = ctx.mode === 'chat' ? (ctx.heavy ? 4000 : 1600) : ctx.mode === 'brief' ? 2200 : 1800;
+
+  let failure: Extract<CallOutcome, { ok: false }> = {
+    ok: false, provider: 'groq', status: 502, code: 'ERREUR_MODELE', message: 'Impossible de joindre le coach IA. Vérifie ta connexion et réessaie.',
+  };
+
+  for (const model of models) {
+    let jsonMode = true;
+    // Deuxième essai, une seule fois, sans le mode JSON si le modèle le refuse.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (Date.now() > ctx.deadline) return failure;
+      const body: Record<string, unknown> = { model, messages, temperature: 0.4, max_completion_tokens: maxTokens };
+      if (jsonMode) body.response_format = { type: 'json_object' };
+      // Les modèles gpt-oss réfléchissent avant de répondre : on les garde brefs, la vitesse est la raison d'être de Groq.
+      if (model.startsWith('openai/gpt-oss')) body.reasoning_effort = 'low';
+
+      const controller = new AbortController();
+      const timer: ReturnType<typeof setTimeout> = setTimeout(
+        () => controller.abort(),
+        Math.max(1500, Math.min(GROQ_TIMEOUT_MS, ctx.deadline - Date.now()))
+      );
+      let res: Response;
+      try {
+        res = await fetch(GROQ_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+      } catch (error) {
+        clearTimeout(timer);
+        failure = (error as { name?: string })?.name === 'AbortError'
+          ? { ok: false, provider: 'groq', status: 504, code: 'DELAI_DEPASSE', message: TIMEOUT_MESSAGE }
+          : { ok: false, provider: 'groq', status: 502, code: 'ERREUR_MODELE', message: 'Impossible de joindre le coach IA. Vérifie ta connexion et réessaie.' };
+        break; // modèle suivant
+      }
+      clearTimeout(timer);
+
+      if (res.ok) {
+        let parsed: unknown;
+        try {
+          parsed = await res.json();
+        } catch {
+          failure = { ok: false, provider: 'groq', status: 502, code: 'REPONSE_VIDE', message: 'Le coach IA a renvoyé une réponse illisible. Réessaie.' };
+          break;
+        }
+        const content = (parsed as { choices?: Array<{ message?: { content?: unknown } }> })?.choices?.[0]?.message?.content;
+        const text = typeof content === 'string' ? cleanModelText(content) : '';
+        if (text === '') {
+          // Le budget de jetons a été épuisé par la réflexion, ou un filtre a coupé la réponse.
+          failure = { ok: false, provider: 'groq', status: 502, code: 'REPONSE_VIDE', message: 'Le coach IA n’a rien répondu cette fois. Réessaie.' };
+          break;
+        }
+        return { ok: true, provider: 'groq', model, text };
+      }
+
+      const detail = await readErrorMessage(res);
+      if (res.status === 400 && jsonMode && /response_format|json/i.test(detail)) {
+        jsonMode = false;
+        continue;
+      }
+      if (res.status === 401 || res.status === 403) {
+        return {
+          ok: false, provider: 'groq', status: 502, code: 'CLE_INVALIDE', final: false,
+          message: 'Cette clé est refusée par Groq. Vérifie celle de l’écran Coach, ou GROQ_API_KEY dans les réglages Vercel.',
+        };
+      }
+      if (res.status === 413) {
+        failure = { ok: false, provider: 'groq', status: 502, code: 'ERREUR_MODELE', message: 'Cette demande est trop grosse pour le quota gratuit de Groq. Pose une question plus courte.' };
+      } else if (res.status === 429) {
+        failure = { ok: false, provider: 'groq', status: 429, code: 'QUOTA_DEPASSE', message: QUOTA_MESSAGE };
+      } else if (res.status === 408 || res.status === 504) {
+        failure = { ok: false, provider: 'groq', status: 504, code: 'DELAI_DEPASSE', message: TIMEOUT_MESSAGE };
+      } else {
+        failure = { ok: false, provider: 'groq', status: 502, code: 'ERREUR_MODELE', message: `Le coach IA a renvoyé une erreur${detail ? ` : ${safeDetail(detail)}` : ''}.` };
+      }
+      break; // modèle suivant
+    }
+  }
+  return failure;
+};
+
+// ─── Appel à Google (Gemini) ───────────────────────────────────────────────
+
+const callGemini = async (apiKey: string, ctx: CallContext): Promise<CallOutcome> => {
+  const primaryModel = env('GEMINI_MODEL') || DEFAULT_MODEL;
+  const fallbackModels = (env('GEMINI_FALLBACK_MODELS')?.split(',').map((m) => m.trim()).filter(Boolean)
+    ?? DEFAULT_FALLBACK_MODELS).filter((m) => m !== primaryModel);
+  const models = [primaryModel, ...fallbackModels];
+
+  const payload: Record<string, unknown> = {
+    model: primaryModel,
+    input: ctx.input,
+    generation_config: {
+      // Bas mais pas nul : on veut des formulations naturelles, pas de la
+      // créativité sur des chiffres.
+      temperature: 0.4,
+      // Large, et ce n'est pas du gaspillage : les jetons de RÉFLEXION du
+      // modèle se déduisent de ce budget avant qu'il écrive quoi que ce soit.
+      // Mesuré sur un vrai digest : 1 460 jetons de réflexion pour 469 de
+      // texte. À 900, la réponse revenait coupée en plein JSON
+      // (`status: "incomplete"`), donc impossible à relire → « réponse vide ».
+      max_output_tokens: ctx.mode === 'chat' ? 5000 : 4000,
+    },
+  };
+  if (ctx.continuing) {
+    payload.previous_interaction_id = ctx.previousId;
+    // Pas de system_instruction ici : elle fait partie de l'échange initial,
+    // que l'API rejoue toute seule. La renvoyer la dupliquerait.
+  } else {
+    payload.system_instruction = SYSTEM_PROMPT;
+  }
+  if (ctx.mode === 'brief') {
+    payload.response_format = { type: 'text', mime_type: 'application/json', schema: BRIEF_SCHEMA };
+  } else if (ctx.mode === 'daily') {
+    payload.response_format = { type: 'text', mime_type: 'application/json', schema: DAILY_SCHEMA };
+  } else {
+    payload.response_format = { type: 'text', mime_type: 'application/json', schema: CHAT_SCHEMA };
+  }
+
+  // ── Appel, avec bascule sur un modèle de secours en cas de forte demande ──
+  let upstream: Response | undefined;
+  let model = primaryModel;
+  let timedOut = false;
+  for (let i = 0; i < models.length; i++) {
+    model = models[i];
+    payload.model = model;
+    const last = i === models.length - 1;
+    const controller = new AbortController();
+    const timer: ReturnType<typeof setTimeout> = setTimeout(
+      () => controller.abort(),
+      Math.max(1500, Math.min(TIMEOUT_MS, ctx.deadline - Date.now()))
+    );
+    try {
+      upstream = await fetch(GEMINI_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+          'Api-Revision': API_REVISION,
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      clearTimeout(timer);
+      upstream = undefined;
+      timedOut = (error as { name?: string })?.name === 'AbortError';
+      if (last || Date.now() > ctx.deadline) break;
+      continue;
+    }
+    clearTimeout(timer);
+    if (upstream.ok || last || !RETRYABLE_STATUS.has(upstream.status) || Date.now() > ctx.deadline) break;
+  }
+
+  if (!upstream) {
+    if (timedOut) {
+      return { ok: false, provider: 'gemini', status: 504, code: 'DELAI_DEPASSE', message: TIMEOUT_MESSAGE };
+    }
+    return { ok: false, provider: 'gemini', status: 502, code: 'ERREUR_MODELE', message: 'Impossible de joindre le coach IA. Vérifie ta connexion et réessaie.' };
+  }
+
+  // ── Erreurs renvoyées par Google ──
+  if (!upstream.ok) {
+    // Le corps d'erreur de l'API a la forme { error: { code, message, status } }.
+    const detail = await readErrorMessage(upstream);
+
+    if (ctx.continuing && (upstream.status === 400 || upstream.status === 403 || upstream.status === 404)) {
+      // L'échange précédent a expiré ou n'existe plus. Le client repart d'une
+      // conversation neuve avec le digest, sans rien demander à l'utilisateur.
+      return { ok: false, provider: 'gemini', status: 409, code: 'CONVERSATION_PERDUE', message: 'La conversation précédente a expiré. On repart de zéro.', final: true };
+    }
+    if (upstream.status === 400 || upstream.status === 401 || upstream.status === 403) {
+      return { ok: false, provider: 'gemini', status: 502, code: 'CLE_INVALIDE', message: 'Cette clé est refusée par Google. Vérifie celle de l’écran Coach, ou GEMINI_API_KEY dans les réglages Vercel.' };
+    }
+    if (upstream.status === 429) {
+      // Mesuré : ce 429 est le plus souvent la limite PAR MINUTE, pas le
+      // quota du jour — une requête normale repasse quelques dizaines de
+      // secondes plus tard. Le message ne doit donc pas annoncer une panne
+      // jusqu'à demain.
+      return { ok: false, provider: 'gemini', status: 429, code: 'QUOTA_DEPASSE', message: QUOTA_MESSAGE };
+    }
+    if (upstream.status === 504) {
+      return { ok: false, provider: 'gemini', status: 504, code: 'DELAI_DEPASSE', message: TIMEOUT_MESSAGE };
+    }
+    return {
+      ok: false, provider: 'gemini', status: 502, code: 'ERREUR_MODELE',
+      message: `Le coach IA a renvoyé une erreur${detail ? ` : ${safeDetail(detail)}` : ''}.`,
+    };
+  }
+
+  // ── Lecture de la réponse ──
+  let parsedUpstream: unknown;
+  try {
+    parsedUpstream = await upstream.json();
+  } catch {
+    return { ok: false, provider: 'gemini', status: 502, code: 'REPONSE_VIDE', message: 'Le coach IA a renvoyé une réponse illisible. Réessaie.' };
+  }
+
+  const text = extractText(parsedUpstream);
+  if (text === '') {
+    // Arrive quand le modèle s'est arrêté sur un filtre de sécurité ou a
+    // épuisé son budget de jetons avant d'écrire quoi que ce soit.
+    return { ok: false, provider: 'gemini', status: 502, code: 'REPONSE_VIDE', message: 'Le coach IA n’a rien répondu cette fois. Réessaie.' };
+  }
+  const interactionId = (parsedUpstream as { id?: unknown })?.id;
+  return { ok: true, provider: 'gemini', model, text, interactionId: typeof interactionId === 'string' ? interactionId : undefined };
+};
+
 // ─── Handler ───────────────────────────────────────────────────────────────
 
 export default async function handler(req: ApiRequest, res: ApiResponse): Promise<void> {
@@ -572,7 +978,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
   // ── Validation ──
   const body = (req.body ?? {}) as {
     mode?: unknown; digest?: unknown; question?: unknown; apiKey?: unknown; previousInteractionId?: unknown;
-    program?: unknown; catalog?: unknown; daily?: unknown;
+    program?: unknown; catalog?: unknown; daily?: unknown; history?: unknown;
   };
   const mode = body.mode as CoachAiMode | undefined;
   if (mode !== 'brief' && mode !== 'chat' && mode !== 'daily') {
@@ -605,39 +1011,52 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
   }
   const continuing = mode === 'chat' && previousId !== '';
 
-  // ── Clé d'API ──
-  // Elle n'existe pas encore le temps que Léo la crée : on répond proprement
-  // au lieu de planter, pour que l'UI puisse afficher « pas encore branché »
+  // ── Clés d'API ──
+  // Elles n'existent pas forcément encore (le temps que quelqu'un les crée) : on répond
+  // proprement au lieu de planter, pour que l'UI puisse afficher « pas encore branché »
   // plutôt qu'une erreur 500 illisible.
   // Deux sources possibles, dans cet ordre :
-  //   1. la clé saisie dans l'appli (écran Coach), envoyée dans le corps ;
-  //   2. la variable d'environnement du serveur (Vercel).
-  // La clé de l'appli passe devant : quand l'utilisateur en saisit une, il
-  // doit voir son effet immédiatement, sans redéploiement. Elle n'est ni
-  // journalisée, ni renvoyée, ni stockée côté serveur — juste relayée à
-  // Google le temps de la requête.
+  //   1. la clé saisie dans l'appli (écran Coach), envoyée dans le corps — Groq si elle
+  //      commence par « gsk_ », Google sinon ;
+  //   2. les variables d'environnement du serveur (Vercel) : GROQ_API_KEY et GEMINI_API_KEY.
+  // La clé de l'appli passe devant : quand l'utilisateur en saisit une, il doit voir son
+  // effet immédiatement, sans redéploiement. Elle n'est ni journalisée, ni renvoyée, ni
+  // stockée côté serveur — juste relayée au fournisseur le temps de la requête.
   const clientKey = typeof body.apiKey === 'string' ? body.apiKey.trim() : '';
   if (clientKey && (clientKey.length > 200 || /\s/.test(clientKey))) {
     fail(res, 400, 'REQUETE_INVALIDE', 'La clé d’API envoyée n’a pas une forme valide.');
     return;
   }
-  const apiKey = clientKey || env('GEMINI_API_KEY');
-  if (!apiKey) {
+
+  // La conversation en cours, pour les fournisseurs qui n'en gardent aucune (Groq).
+  const turns = cleanHistory(body.history);
+  const heavy = mode === 'chat' && needsProgramContext(question);
+
+  const chain = buildChain({ clientKey, continuing, heavy });
+  if (chain.length === 0) {
     fail(
       res,
       503,
       'CLE_MANQUANTE',
-      'Le coach IA n’est pas encore activé : colle ta clé Gemini dans l’écran Coach, ou configure GEMINI_API_KEY sur Vercel.'
+      'Le coach IA n’est pas encore activé : colle ta clé Groq ou Gemini dans l’écran Coach, ou configure GROQ_API_KEY / GEMINI_API_KEY sur Vercel.'
     );
     return;
   }
-  const primaryModel = env('GEMINI_MODEL') || DEFAULT_MODEL;
-  const fallbackModels = (env('GEMINI_FALLBACK_MODELS')?.split(',').map(m => m.trim()).filter(Boolean)
-    ?? DEFAULT_FALLBACK_MODELS).filter(m => m !== primaryModel);
-  const models = [primaryModel, ...fallbackModels];
 
-  // ── Construction de la requête ──
+  // ── Construction de la demande ──
   const digestJson = JSON.stringify(body.digest);
+  // Le programme n'est joint qu'au premier tour, comme le digest : les
+  // tours suivants s'appuient sur l'échange gardé par Google.
+  const programJson = body.program && typeof body.program === 'object'
+    ? `\n\nProgramme actuel (identifiants à utiliser tels quels) :\n${JSON.stringify(body.program)}`
+    : '';
+  // Catalogue des exercices disponibles, au format « identifiant|Nom ». Le
+  // coach doit choisir DANS cette liste : un nom libre ne serait pas
+  // retrouvable de façon fiable côté appli.
+  const catalogJson = Array.isArray(body.catalog) && body.catalog.length > 0
+    ? `\n\nExercices disponibles, au format identifiant|Nom (choisis dedans, par identifiant) :\n${(body.catalog as unknown[]).join('\n')}`
+    : '';
+
   let input: string;
   if (mode === 'brief') {
     input = `Voici le résumé d'entraînement (chiffres déjà calculés par l'application) :\n${digestJson}\n\n`
@@ -651,164 +1070,52 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
       + '"semaine" (2 phrases sur les stats de la semaine : séances faites, objectif, tonnage comparé à la semaine précédente), '
       + '"seance" (1 à 2 phrases : pourquoi cette séance aujourd\'hui, d\'après le temps de récupération), '
       + '"poids" (1 à 2 phrases sur les charges conseillées ; cite uniquement les "suggestedKg" fournis, ne calcule aucune charge), '
-      + '"conseil" (1 conseil concret pour aujourd\'hui). Ne cite que des chiffres présents dans ces données.';
+      + '"conseil" (1 seul conseil concret pour aujourd\'hui, 140 caractères au maximum : il s\'affiche seul sur l\'écran d\'accueil). '
+      + 'Ne cite que des chiffres présents dans ces données.';
   } else if (continuing) {
-    // Suite de conversation : le digest et les consignes sont déjà dans
-    // l'échange que Google a gardé. Les renvoyer coûterait des jetons à
+    // Suite de conversation chez Google : le digest et les consignes sont déjà
+    // dans l'échange qu'il a gardé. Les renvoyer coûterait des jetons à
     // chaque message pour rien.
     input = question;
   } else {
-    // Le programme n'est joint qu'au premier tour, comme le digest : les
-    // tours suivants s'appuient sur l'échange gardé par Google.
-    const programJson = body.program && typeof body.program === 'object'
-      ? `\n\nProgramme actuel (identifiants à utiliser tels quels) :\n${JSON.stringify(body.program)}`
-      : '';
-    // Catalogue des exercices disponibles, au format « identifiant|Nom ». Le
-    // coach doit choisir DANS cette liste : un nom libre ne serait pas
-    // retrouvable de façon fiable côté appli.
-    const catalogJson = Array.isArray(body.catalog) && body.catalog.length > 0
-      ? `\n\nExercices disponibles, au format identifiant|Nom (choisis dedans, par identifiant) :\n${(body.catalog as unknown[]).join('\n')}`
-      : '';
     input = `${CHAT_GUARD}\n\nRésumé d'entraînement (chiffres déjà calculés par l'application) :\n${digestJson}${programJson}${catalogJson}\n\n`
       + `Question de l'utilisateur :\n${question}`;
   }
 
-  const payload: Record<string, unknown> = {
-    model: primaryModel,
-    input,
-    generation_config: {
-      // Bas mais pas nul : on veut des formulations naturelles, pas de la
-      // créativité sur des chiffres.
-      temperature: 0.4,
-      // Large, et ce n'est pas du gaspillage : les jetons de RÉFLEXION du
-      // modèle se déduisent de ce budget avant qu'il écrive quoi que ce soit.
-      // Mesuré sur un vrai digest : 1 460 jetons de réflexion pour 469 de
-      // texte. À 900, la réponse revenait coupée en plein JSON
-      // (`status: "incomplete"`), donc impossible à relire → « réponse vide ».
-      max_output_tokens: mode === 'chat' ? 5000 : 4000,
-    },
+  // Groq ne garde rien : chaque demande de chat embarque le digest et les derniers messages. Le
+  // programme et le catalogue (gros) ne sont joints que si la question en a besoin.
+  const groqInput = mode === 'chat'
+    ? `${CHAT_GUARD}\n\nRésumé d'entraînement (chiffres déjà calculés par l'application) :\n${digestJson}${heavy ? `${programJson}${catalogJson}` : ''}`
+      + `${historyBlock(turns)}\n\nQuestion de l'utilisateur :\n${question}`
+    : input;
+
+  const ctx: CallContext = {
+    mode, input, groqInput, continuing, previousId, heavy, deadline: Date.now() + TOTAL_BUDGET_MS,
   };
-  if (continuing) {
-    payload.previous_interaction_id = previousId;
-    // Pas de system_instruction ici : elle fait partie de l'échange initial,
-    // que l'API rejoue toute seule. La renvoyer la dupliquerait.
-  } else {
-    payload.system_instruction = SYSTEM_PROMPT;
-  }
-  if (mode === 'brief') {
-    payload.response_format = { type: 'text', mime_type: 'application/json', schema: BRIEF_SCHEMA };
-  } else if (mode === 'daily') {
-    payload.response_format = { type: 'text', mime_type: 'application/json', schema: DAILY_SCHEMA };
-  } else {
-    payload.response_format = { type: 'text', mime_type: 'application/json', schema: CHAT_SCHEMA };
-  }
 
-  // ── Appel, avec bascule sur un modèle de secours en cas de forte demande ──
-  let upstream: Response | undefined;
-  let model = primaryModel;
-  let timedOut = false;
-  for (let i = 0; i < models.length; i++) {
-    model = models[i];
-    payload.model = model;
-    const last = i === models.length - 1;
-    const controller = new AbortController();
-    const timer: ReturnType<typeof setTimeout> = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    try {
-      upstream = await fetch(GEMINI_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-          'Api-Revision': API_REVISION,
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-    } catch (error) {
-      clearTimeout(timer);
-      upstream = undefined;
-      timedOut = (error as { name?: string })?.name === 'AbortError';
-      if (last) break;
-      continue;
-    }
-    clearTimeout(timer);
-    if (upstream.ok || last || !RETRYABLE_STATUS.has(upstream.status)) break;
+  // ── Appel : le premier fournisseur qui répond gagne ──
+  let outcome: CallOutcome | undefined;
+  for (const link of chain) {
+    outcome = link.provider === 'groq' ? await callGroq(link.key, ctx) : await callGemini(link.key, ctx);
+    if (outcome.ok) break;
+    // Deux cas où l'on s'arrête net : la conversation Google a expiré (le client repart de zéro), ou la
+    // clé saisie dans l'appli est refusée — on le dit, au lieu de basculer discrètement sur celle du serveur.
+    if (outcome.final || (link.fromApp && outcome.code === 'CLE_INVALIDE')) break;
+    if (Date.now() > ctx.deadline) break;
   }
-
-  if (!upstream) {
-    if (timedOut) {
-      fail(res, 504, 'DELAI_DEPASSE', 'Le coach IA met trop de temps à répondre. Réessaie dans un instant.');
-      return;
-    }
-    fail(res, 502, 'ERREUR_MODELE', 'Impossible de joindre le coach IA. Vérifie ta connexion et réessaie.');
+  if (!outcome || !outcome.ok) {
+    const failed = outcome as Extract<CallOutcome, { ok: false }> | undefined;
+    fail(res, failed?.status ?? 502, failed?.code ?? 'ERREUR_MODELE', failed?.message ?? 'Impossible de joindre le coach IA.');
     return;
   }
 
-  // ── Erreurs renvoyées par Google ──
-  if (!upstream.ok) {
-    // Le corps d'erreur de l'API a la forme { error: { code, message, status } }.
-    let detail = '';
-    try {
-      const errorBody = (await upstream.json()) as { error?: { message?: string } };
-      detail = errorBody.error?.message ?? '';
-    } catch {
-      detail = '';
-    }
-
-    if (continuing && (upstream.status === 400 || upstream.status === 403 || upstream.status === 404)) {
-      // L'échange précédent a expiré ou n'existe plus. Le client repart d'une
-      // conversation neuve avec le digest, sans rien demander à l'utilisateur.
-      fail(res, 409, 'CONVERSATION_PERDUE', 'La conversation précédente a expiré. On repart de zéro.');
-      return;
-    }
-    if (upstream.status === 400 || upstream.status === 401 || upstream.status === 403) {
-      fail(res, 502, 'CLE_INVALIDE', 'Cette clé est refusée par Google. Vérifie celle de l’écran Coach, ou GEMINI_API_KEY dans les réglages Vercel.');
-      return;
-    }
-    if (upstream.status === 429) {
-      // Mesuré : ce 429 est le plus souvent la limite PAR MINUTE, pas le
-      // quota du jour — une requête normale repasse quelques dizaines de
-      // secondes plus tard. Le message ne doit donc pas annoncer une panne
-      // jusqu'à demain.
-      fail(res, 429, 'QUOTA_DEPASSE', 'Trop de demandes d’un coup : attends une minute et réessaie. Si ça continue, c’est le quota du jour qui est atteint — le coach local reste disponible.');
-      return;
-    }
-    if (upstream.status === 504) {
-      fail(res, 504, 'DELAI_DEPASSE', 'Le coach IA met trop de temps à répondre. Réessaie dans un instant.');
-      return;
-    }
-    fail(
-      res,
-      502,
-      'ERREUR_MODELE',
-      `Le coach IA a renvoyé une erreur${detail ? ` : ${detail.slice(0, 200)}` : ''}.`
-    );
-    return;
-  }
-
-  // ── Lecture de la réponse ──
-  let parsedUpstream: unknown;
-  try {
-    parsedUpstream = await upstream.json();
-  } catch {
-    fail(res, 502, 'REPONSE_VIDE', 'Le coach IA a renvoyé une réponse illisible. Réessaie.');
-    return;
-  }
-
-  const text = extractText(parsedUpstream);
-  if (text === '') {
-    // Arrive quand le modèle s'est arrêté sur un filtre de sécurité ou a
-    // épuisé son budget de jetons avant d'écrire quoi que ce soit.
-    fail(res, 502, 'REPONSE_VIDE', 'Le coach IA n’a rien répondu cette fois. Réessaie.');
-    return;
-  }
+  const { text, model, provider } = outcome;
 
   if (mode === 'chat') {
-    const interactionId = (parsedUpstream as { id?: unknown })?.id;
     const { reponse, proposition, nouveauProgramme } = parseChat(text);
     const answer: CoachAiResponse = {
-      ok: true, mode: 'chat', model, reponse, proposition, nouveauProgramme,
-      interactionId: typeof interactionId === 'string' ? interactionId : undefined,
+      ok: true, mode: 'chat', model, provider, reponse, proposition, nouveauProgramme,
+      interactionId: outcome.interactionId,
     };
     res.status(200).json(answer);
     return;
@@ -820,7 +1127,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
       fail(res, 502, 'REPONSE_VIDE', 'Le résumé du jour est revenu incomplet. Réessaie.');
       return;
     }
-    const answer: CoachAiResponse = { ok: true, mode: 'daily', model, daily };
+    const answer: CoachAiResponse = { ok: true, mode: 'daily', model, provider, daily };
     res.status(200).json(answer);
     return;
   }
@@ -830,6 +1137,6 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
     fail(res, 502, 'REPONSE_VIDE', 'Le bilan est revenu incomplet (réponse coupée). Réessaie ; si ça recommence, c’est le budget de jetons qu’il faut remonter.');
     return;
   }
-  const answer: CoachAiResponse = { ok: true, mode: 'brief', model, brief };
+  const answer: CoachAiResponse = { ok: true, mode: 'brief', model, provider, brief };
   res.status(200).json(answer);
 }

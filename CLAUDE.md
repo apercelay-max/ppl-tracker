@@ -34,7 +34,10 @@ chaque ordinateur : tout ce qui doit être partagé va dans ce fichier.
 - Aucun secret (clé, token, mot de passe, `.env`) ni donnée personnelle (santé, e-mail, adresse) dans le code,
   les commentaires, les messages de commit ou les PR.
 - Les clés se règlent directement dans Vercel ou Supabase, par l'adulte responsable du compte — **jamais via le
-  chat**. `GEMINI_API_KEY` ne doit **jamais** être préfixée `VITE_` : Vite publierait la clé dans le navigateur.
+  chat**. `GEMINI_API_KEY` et `GROQ_API_KEY` (coach IA, `api/coach.ts` : l'une, l'autre ou les deux) ne doivent
+  **jamais** être préfixées `VITE_` : Vite publierait la clé dans le navigateur. Le coach IA envoie un résumé chiffré
+  de l'entraînement (et le prénom, pour le résumé du jour) à Groq et/ou à Google : créer un compte chez un
+  fournisseur et accepter ses conditions est l'affaire de l'adulte responsable, pas du code.
 - Supabase : pour les données partagées entre utilisateurs (binôme), les tables sont fermées (RLS activé) et
   tout passe par des fonctions SQL — ne pas assouplir. Les migrations (`supabase/migrations/`) s'exécutent à la
   main (SQL Editor ou `supabase db push`), les fonctions Edge avec `supabase functions deploy <nom>` : ne pas le

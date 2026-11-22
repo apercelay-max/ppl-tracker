@@ -15,6 +15,8 @@ import {
 import { computeTrainingStatus, STATUS_LABEL } from '../utils/trainingStatus';
 import { getCoachBrief, getNutritionAdvice } from '../utils/coach';
 import type { CoachTone } from '../utils/coach';
+import { AiCoachCard, GreetingButton, TodayLoads } from '../components/HomeExtras';
+import type { DailyBriefState } from '../hooks/useDailyBrief';
 import type { CardioActivityType } from '../data/types';
 import { WeeklyRecapCard } from '../components/WeeklyRecapCard';
 import { refreshBinome, useBinome } from '../hooks/useBinome';
@@ -92,6 +94,7 @@ const COACH_TONE_STYLE: Record<CoachTone, { color: string; bg: string; border: s
 // même si "seances" n'y apparaît jamais (non retirable, donc jamais dans
 // availableKeys) : le Record doit rester exhaustif pour rester typé.
 const WIDGET_PICKER_ICONS: Record<HomeSectionKey, React.ReactNode> = {
+  aiCoach: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.288L3 12l5.8 1.9a2 2 0 0 1 1.288 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.288L21 12l-5.8-1.9a2 2 0 0 1-1.288-1.287Z" /></svg>,
   coach: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.5 8.5 0 0 1 8.5 8.5Z" /><path d="M9 11h6M9 14.5h3.5" /></svg>,
   seances: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="5.5" width="16" height="14" rx="2.2" /><line x1="4" y1="9.5" x2="20" y2="9.5" /></svg>,
   lastSession: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>,
@@ -109,9 +112,15 @@ const WIDGET_PICKER_ICONS: Record<HomeSectionKey, React.ReactNode> = {
   plateau: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3.5 17a9 9 0 1 1 17 0" /><path d="m12 13 4-3.5" /><circle cx="12" cy="14" r="1.4" /></svg>,
 };
 
-interface HomeScreenProps { onOpenSummary?: () => void; onSelectDay: (dayId: string) => void; onOpenDashboard: () => void; onOpenSettings: () => void; onOpenSettingsCategory?: (category: 'donnees') => void; }
+interface HomeScreenProps {
+  onOpenSummary?: () => void; onSelectDay: (dayId: string) => void; onOpenDashboard: () => void; onOpenSettings: () => void; onOpenSettingsCategory?: (category: 'donnees') => void;
+  /** Résumé du jour préparé par l'IA (voir hooks/useDailyBrief.ts) : alimente la carte « Coach IA » et les charges du jour. */
+  dailyBrief?: DailyBriefState;
+  /** Ouvre l'écran Coach (là où l'on branche une clé d'IA). */
+  onOpenCoach?: () => void;
+}
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectDay, onOpenDashboard, onOpenSettings, onOpenSettingsCategory }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectDay, onOpenDashboard, onOpenSettings, onOpenSettingsCategory, dailyBrief, onOpenCoach }) => {
   const firstName = useWorkoutStore((s) => s.trainingProfile?.firstName?.trim());
   const currentWeek = useWorkoutStore((s) => s.currentWeek);
   const setCurrentWeek = useWorkoutStore((s) => s.setCurrentWeek);
@@ -709,6 +718,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
             {splitGroups(nextWorkout.muscleGroups).map((g) => <span key={g}>{g}</span>)}
           </div>
           <p className="home-small">{nextWorkout.exercises.length} exercices{nextWorkout.estimatedDuration ? ` · ${nextWorkout.estimatedDuration}` : ''}</p>
+          {/* Téléphone : les charges du jour, pour savoir quoi mettre sur la barre dès l'entrée en salle.
+              Sur grand écran c'est la liste « Au programme » qui prend cette place. */}
+          {!showProgram && !isSport && dailyBrief && <TodayLoads exercises={dailyBrief.plan.exercises} />}
         </div>
         <div className="home-hero-foot">
           <button className="home-start" style={homeSectionColors.nextSession ? { background: nextColor } : undefined} onClick={() => onSelectDay(nextWorkout.id)}>
@@ -717,6 +729,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
           <span className="home-hero-last">{lastSessionLine}</span>
         </div>
       </div>
+      {/* Style Sport : le bouton GO occupe le côté de la carte, les charges passent dessous, sur toute la largeur. */}
+      {!showProgram && isSport && dailyBrief && (
+        <div style={{ gridColumn: '1 / -1', borderTop: '1px solid var(--h-line)', paddingTop: 14 }}>
+          <TodayLoads exercises={dailyBrief.plan.exercises} />
+        </div>
+      )}
       {showProgram && nextWorkout.exercises.length > 0 && (
         <div className="home-prog">
           <span className="home-eyebrow">Au programme</span>
@@ -1032,7 +1050,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
     );
   })();
 
+  // ── Coach IA : le conseil du jour écrit par l'IA, avec la grosse flèche vers le résumé ──
+  // Rien à commenter avant la première séance, comme pour le coach local.
+  const aiCoachSection = homeSections.aiCoach && history.length > 0 && dailyBrief && onOpenSummary && (
+    <AiCoachCard key="aiCoach" brief={dailyBrief} onOpenSummary={onOpenSummary} onOpenCoach={onOpenCoach ?? onOpenSummary} />
+  );
+
   const SECTION_MAP: Record<string, React.ReactNode> = {
+    aiCoach: aiCoachSection,
     coach: coachSection,
     cycle: cycleSection,
     seances: seancesSection,
@@ -1086,6 +1111,36 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
     .map((m) => ({ group: sentenceCase(m.group), pct: getRecoveryPct(m) }))
     .sort((a, b) => a.pct - b.pct)
     .slice(0, 4);
+  // Reprise d'une séance en cours : prend la place de la séance du jour.
+  const resumeBlock = resumeWorkout && (
+    <section key="resume" className="glass-card glass-red home-hero" aria-label="Séance en cours">
+      <div className="home-hero-left">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="home-hero-head">
+            <span className="home-eyebrow amber-pulse" style={{ color: 'var(--brand-1)' }}>Séance en cours</span>
+          </div>
+          <h2 className="home-hero-title">{resumeWorkout.name}</h2>
+          <div className="home-chips">
+            {splitGroups(resumeWorkout.muscleGroups).map((g) => <span key={g}>{g}</span>)}
+          </div>
+        </div>
+        <div className="home-hero-foot">
+          <button className="home-start" onClick={() => onSelectDay(resumeWorkout.id)}>
+            {playIcon}Reprendre la séance
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+  // Téléphone (ni cockpit, ni mode édition) : la séance en cours ou du jour, puis le coach IA,
+  // remontent juste sous le « Bonjour », avant les anneaux : c'est ce qu'on vient chercher en
+  // ouvrant l'appli. En mode édition tout reste dans la liste, pour pouvoir le déplacer ou le retirer.
+  // Ils gardent leur ordre relatif de la liste : réorganiser les blocs en mode édition a donc un effet ici aussi.
+  const topKeys: HomeSectionKey[] = !cockpit && !homeEditMode ? shownKeys.filter((k) => k === 'nextSession' || k === 'aiCoach') : [];
+  const topNodes = [
+    !cockpit && !homeEditMode && resumeBlock,
+    ...topKeys.map((k) => <div key={k} data-flip={k} style={{ position: 'relative' }}>{SECTION_MAP[k]}</div>),
+  ].filter(Boolean);
   const availableKeys = homeSectionOrder.filter((key) => {
     const meta = HOME_SECTION_META[key];
     return meta.toggleable && !homeSections[key as keyof typeof homeSections];
@@ -1122,13 +1177,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
           <div style={logoRow}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
               <span className="home-eyebrow">{todayLabel}</span>
-              {firstName && onOpenSummary ? (
-                <h1 className="home-title">
-                  <button onClick={onOpenSummary} aria-label="Ouvrir le résumé du jour" style={greetingBtn}>Bonjour {firstName}</button>
-                </h1>
-              ) : (
-                <h1 className="home-title">PPL Tracker</h1>
-              )}
+              {/* Avec un prénom, le « Bonjour » passe sur sa propre ligne, pleine largeur, sous cette rangée. */}
+              {!(firstName && onOpenSummary) && <h1 className="home-title">PPL Tracker</h1>}
               <p className="home-small" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeProgram.focusLabel}</p>
               {isSport && history.length > 0 && (
                 <span className="sp-chip" style={{ marginTop: 4 }}>
@@ -1188,7 +1238,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
               </button>
             </div>
           </div>
+          {/* « Bonjour <prénom> » en grand ; la grosse flèche ouvre le résumé du jour écrit par l'IA. */}
+          {firstName && onOpenSummary && (
+            <h1 className="home-title" style={{ marginTop: 14 }}>
+              <GreetingButton firstName={firstName} onOpen={onOpenSummary} fresh={!!dailyBrief?.cached} />
+            </h1>
+          )}
         </div>
+
+        {/* Téléphone : ce qu'on vient faire (séance en cours ou du jour), puis le coach IA, passent AVANT les anneaux. */}
+        {topNodes.length > 0 && <div className="home-stack" style={{ marginBottom: 12 }}>{topNodes}</div>}
 
         {/* Dans le cockpit, anneaux et résumés vivent dans la colonne de droite (voir plus bas). */}
         {!homeEditMode && !cockpit && history.length > 0 && <ProgressRings history={history} cardioHistory={cardioHistory} weeklySessionGoal={weeklySessionGoal} variant={uiStyle} />}
@@ -1246,28 +1305,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
               <span className="home-eyebrow" style={loadStatus.level === 'spike' ? { color: 'var(--h-bad)' } : undefined}>{loadStatus.label}</span>
               <p className="home-note">{loadStatus.detail}</p>
             </div>
-          );
-
-          // Reprise d'une séance en cours : prend la place de la séance du jour.
-          const resumeBlock = resumeWorkout && (
-            <section key="resume" className="glass-card glass-red home-hero" aria-label="Séance en cours">
-              <div className="home-hero-left">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div className="home-hero-head">
-                    <span className="home-eyebrow amber-pulse" style={{ color: 'var(--brand-1)' }}>Séance en cours</span>
-                  </div>
-                  <h2 className="home-hero-title">{resumeWorkout.name}</h2>
-                  <div className="home-chips">
-                    {splitGroups(resumeWorkout.muscleGroups).map((g) => <span key={g}>{g}</span>)}
-                  </div>
-                </div>
-                <div className="home-hero-foot">
-                  <button className="home-start" onClick={() => onSelectDay(resumeWorkout.id)}>
-                    {playIcon}Reprendre la séance
-                  </button>
-                </div>
-              </div>
-            </section>
           );
 
           const editBanner = homeEditMode && (
@@ -1382,9 +1419,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
             <div className="home-stack">
               {recoveryBlock}
               {loadBlock}
-              {resumeBlock}
+              {homeEditMode && resumeBlock}
               {editBanner}
-              {shownKeys.map((k, idx) => renderBlock(k, idx))}
+              {shownKeys.filter((k) => !topKeys.includes(k)).map((k, idx) => renderBlock(k, idx))}
               {showAllButton}
               {addWidgetButton}
             </div>
@@ -1435,7 +1472,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenSummary, onSelectD
 // dans index.css : c'est lui qui donne quelque chose à filtrer au verre des cartes.
 const container: React.CSSProperties = { height: '100dvh', overflowY: 'auto' };
 const scroll: React.CSSProperties = { maxWidth: 480, margin: '0 auto', padding: '0 16px 80px' };
-const greetingBtn: React.CSSProperties = { all: 'inherit', cursor: 'pointer', textAlign: 'left', padding: 0 };
 
 const headerSection: React.CSSProperties = {
   paddingTop: 'max(24px, env(safe-area-inset-top))',

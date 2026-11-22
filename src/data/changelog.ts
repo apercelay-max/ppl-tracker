@@ -14,12 +14,23 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-22-accueil-coach-ia',
+    title: 'Un accueil plus clair, un coach IA plus rapide',
+    items: [
+      '« Bonjour » avec ton prénom est bien plus gros, avec une grosse flèche qui ouvre ton résumé du jour écrit par l’IA.',
+      'Ce que tu viens chercher passe en premier : ta séance du jour avec les charges conseillées et le bouton pour la commencer, puis la nouvelle carte « Coach IA » avec le conseil du jour. Les anneaux et la récupération viennent juste après.',
+      'Le coach IA sait maintenant parler avec Groq, très rapide (la réponse arrive en une ou deux secondes), et bascule tout seul sur Gemini quand l’un des deux est saturé. Dans Coach → Clé d’API, tu peux coller une clé Groq (gsk_…) ou Gemini.',
+      'Dans Coach, de nouvelles questions rapides, tirées de tes données (par exemple l’exercice qui stagne), partent d’un seul tap.',
+    ],
+  },
+  {
     id: '2026-11-21-cinq-onglets',
     title: 'Une barre plus simple : 5 onglets',
     items: [
       'La barre du bas passe de 12 onglets à 5, rangés selon ce que tu veux faire : Accueil (ta séance du jour, le cardio), Séances (ton historique, tes exercices), Progrès (stats, objectifs, poids), Coach (le coach IA, le catalogue) et Profil (ton résumé, les réglages).',
       'Chaque onglet s’ouvre sur ce que tu veux voir en premier (ta séance du jour, ton historique, tes stats…). Touche l’onglet déjà ouvert pour voir la liste de ses rubriques. Réglages est dans Profil.',
       'La barre « Sommaire » (en haut) suit la même organisation : les 5 onglets tiennent sur une seule ligne, et la flèche de l’onglet ouvert tourne vers le bas pour déplier ses rubriques.',
+      'Le mode « Tableur » est retiré. Tes séances restent dans l’Historique, et tu peux toujours exporter ton historique en CSV depuis les Réglages.',
     ],
   },
   {
@@ -28,7 +39,6 @@ export const CHANGELOG: ChangelogEntry[] = [
     items: [
       'Nouveau choix dans Réglages → Barre de menus → Position : garder la capsule en bas, ou passer à une barre fine en haut de l’écran.',
       'Deux présentations : « Ruban » (touche « Onglets : » et la liste défile sur une ligne) ou « Sommaire » (un panneau qui descend, en deux colonnes). Une icône au trait fin par onglet, écriture très légère.',
-      'Le mode « Tableur » est retiré. Tes séances restent dans l’Historique, et tu peux toujours exporter ton historique en CSV depuis les Réglages.',
     ],
   },
   {

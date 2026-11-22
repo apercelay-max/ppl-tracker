@@ -22,7 +22,7 @@ const agoLabel = (ts: number): string => {
 
 // Résumé du jour, en plein écran comme le démarrage : stats de la semaine,
 // récupération, dernière séance, séance conseillée avec les charges du jour.
-// Les chiffres et les charges viennent de l'appli ; les textes, de Gemini
+// Les chiffres et les charges viennent de l'appli ; les textes, de l'IA (Groq ou Gemini)
 // (préparés en arrière-plan — voir hooks/useDailyBrief.ts).
 export const DailySummarySheet: React.FC<DailySummarySheetProps> = ({ firstName, state, onClose }) => {
   const unit = useWorkoutStore((s) => s.weightUnit);

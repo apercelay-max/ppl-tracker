@@ -14,6 +14,8 @@ export interface DailyBriefState {
   plan: DailyPlan;
   loading: boolean;
   error: string | null;
+  /** Vrai quand l'échec vient d'une clé absente ou refusée : l'accueil propose alors de la brancher. */
+  needsKey: boolean;
   refresh: () => void;
 }
 
@@ -34,6 +36,7 @@ export const useDailyBrief = (enabled: boolean): DailyBriefState => {
   const [cached, setCached] = useState<CachedDaily | null>(readCachedDaily);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsKey, setNeedsKey] = useState(false);
   const inFlight = useRef(false);
   const retried = useRef(false);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -85,8 +88,10 @@ export const useDailyBrief = (enabled: boolean): DailyBriefState => {
         setCached(fresh);
         writeCachedDaily(fresh);
         retried.current = false;
+        setNeedsKey(false);
       } else if (!response.ok) {
         setError(response.message);
+        setNeedsKey(response.code === 'CLE_MANQUANTE' || response.code === 'CLE_INVALIDE');
         // Tous les modèles étaient occupés (le serveur a déjà essayé les modèles
         // de secours) : une seule nouvelle tentative, un peu plus tard.
         if (!retried.current && response.code !== 'CLE_MANQUANTE' && response.code !== 'CLE_INVALIDE') {
@@ -127,5 +132,5 @@ export const useDailyBrief = (enabled: boolean): DailyBriefState => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, history.length, plan.workoutId]);
 
-  return { cached: cached?.day === todayKey() ? cached : null, plan, loading, error, refresh: () => { void generate(); } };
+  return { cached: cached?.day === todayKey() ? cached : null, plan, loading, error, needsKey, refresh: () => { void generate(); } };
 };

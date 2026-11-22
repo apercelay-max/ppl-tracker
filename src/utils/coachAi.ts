@@ -10,7 +10,7 @@
 
 import { buildCoachDigest } from './coachDigest';
 import type {
-  CoachAiBrief, CoachAiRequest, CoachAiResponse, CoachDigest, CoachDigestInput,
+  CoachAiBrief, CoachAiRequest, CoachAiResponse, CoachChatTurn, CoachDigest, CoachDigestInput,
 } from './coachDigest';
 import type { CoachPatchOp, CoachProgramView, NewProgramPreview, PatchChange } from './coachPatch';
 import type { Program } from '../data/programs';
@@ -28,7 +28,12 @@ export const COACH_AI_ENDPOINT = '/api/coach';
 // C'est acceptable pour SA clé sur SON téléphone (c'est le même niveau de
 // protection que les mots de passe enregistrés par le navigateur), mais ce
 // n'est pas un coffre-fort. En cas de doute, on la supprime ici et on en
-// recrée une sur AI Studio.
+// recrée une (aistudio.google.com/apikey pour Gemini, console.groq.com/keys
+// pour Groq).
+//
+// Une seule case pour les deux fournisseurs : le serveur reconnaît Groq à son
+// préfixe « gsk_ ». Le nom « gemini » est celui d'avant Groq ; on le garde tel
+// quel pour que les clés déjà saisies sur les téléphones ne disparaissent pas.
 const KEY_STORAGE = 'ppl-gemini-key';
 const BRIEF_STORAGE = 'ppl-coach-ai-brief';
 const CHAT_STORAGE = 'ppl-coach-chat';
@@ -167,6 +172,10 @@ export const requestCoachAi = async (request: CoachAiRequest): Promise<CoachAiRe
 // deuxième message d'une conversation coûte quelques dizaines de jetons au
 // lieu de plus de mille.
 //
+// Groq, lui, ne garde RIEN : quand c'est lui qui répond, la réponse n'a pas
+// d'identifiant d'échange, et c'est le serveur qui reconstitue la conversation
+// avec les derniers messages (`history`, envoyés à chaque tour).
+//
 // Conséquence à connaître : l'identifiant peut expirer côté Google. Dans ce
 // cas la fonction répond CONVERSATION_PERDUE, et `sendChatMessage` repart
 // tout seul sur une conversation neuve avec le digest — l'utilisateur ne voit
@@ -265,6 +274,8 @@ interface SendChatOptions {
   digest: CoachDigest;
   question: string;
   previousInteractionId?: string;
+  /** Les derniers messages AVANT cette question : Groq, qui ne garde aucun historique, en a besoin. */
+  history?: CoachChatTurn[];
   apiKey?: string;
   /** Programme actuel : joint uniquement quand la conversation démarre, sinon
    *  on le renverrait à chaque message pour rien. Sans lui, le coach ne peut
@@ -278,10 +289,10 @@ interface SendChatOptions {
 /** Envoie un message de la conversation. Repart d'une conversation neuve, une
  *  seule fois, si Google a oublié l'échange précédent. */
 export const sendChatMessage = async (options: SendChatOptions): Promise<CoachAiResponse> => {
-  const { digest, question, previousInteractionId, apiKey, program, catalog } = options;
+  const { digest, question, previousInteractionId, history, apiKey, program, catalog } = options;
 
   const first = await requestCoachAi({
-    mode: 'chat', digest, question, previousInteractionId, apiKey,
+    mode: 'chat', digest, question, previousInteractionId, history, apiKey,
     // Premier tour seulement.
     program: previousInteractionId ? undefined : program,
     catalog: previousInteractionId ? undefined : catalog,
@@ -290,7 +301,7 @@ export const sendChatMessage = async (options: SendChatOptions): Promise<CoachAi
   if (!first.ok && first.code === 'CONVERSATION_PERDUE') {
     // Conversation neuve : le programme repart avec, sinon le coach perdrait
     // la capacité de proposer des modifications au milieu d'une discussion.
-    return requestCoachAi({ mode: 'chat', digest, question, apiKey, program, catalog });
+    return requestCoachAi({ mode: 'chat', digest, question, history, apiKey, program, catalog });
   }
   return first;
 };
