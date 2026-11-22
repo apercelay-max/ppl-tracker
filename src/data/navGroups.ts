@@ -3,26 +3,39 @@ import type { NavTabKey } from './types';
 // Les 5 onglets de la barre du bas et, pour chacun, la liste des rubriques qui
 // s'ouvre quand on re-touche l'onglet déjà ouvert (voir components/NavBar.tsx).
 //
-// Le classement répond à une seule question : « que veut voir l'utilisateur en
-// arrivant dans cet onglet ? ». Le premier écran de chaque liste est donc celui
+// Le classement répond à une seule question : « que veut faire ou voir l'utilisateur
+// en arrivant dans cet onglet ? ». Le premier écran de chaque liste est donc celui
 // qui s'ouvre d'office quand on touche l'onglet.
 //
-//   Accueil → FAIRE        « Qu'est-ce que je fais aujourd'hui ? »   → la séance du jour
-//   Séances → REVOIR       « Qu'est-ce que j'ai déjà fait ? »        → l'historique
-//   Progrès → MESURER      « Est-ce que j'avance ? »                 → les stats
-//   Coach   → SE GUIDER    « Que me conseille-t-on ? »               → le bilan du coach
-//   Profil  → RÉGLER       « Moi et mon appli »                      → le profil
+//   Accueil → FAIRE        « Qu'est-ce que je fais aujourd'hui ? »   → la séance du jour, un cardio
+//   Séances → REVOIR       « Qu'est-ce que j'ai déjà fait ? »        → l'historique, puis les exercices
+//   Progrès → MESURER      « Est-ce que j'avance ? »                 → les stats, puis objectifs et poids
+//   Coach   → SE GUIDER    « Que faire pour progresser ? »           → le bilan du coach, puis le catalogue
+//   Profil  → RÉGLER       « Moi et mon appli »                      → le profil, puis les réglages
 //
-// Les 12 écrans d'avant n'ont pas changé : ils sont seulement rangés autrement,
-// chacun dans un seul onglet. Les clés (`view`) sont celles de l'ancienne barre.
+// Les 11 écrans de l'appli sont les mêmes qu'avant : chacun est rangé dans UN seul
+// onglet (aucun perdu, aucun en double) et garde sa clé (`view`). Chaque onglet a au
+// moins 2 rubriques : une liste d'une seule ligne n'aurait aucun sens. Les rangements
+// qui ont demandé un choix :
+//  - Cardio est dans Accueil : on y LANCE une sortie (vélo, course, marche) ou on la
+//    note ; la liste des sorties passées n'est que le bas de la page. C'est du « faire »,
+//    comme « Aujourd'hui ».
+//  - Exercices et Catalogue : même mot, deux choses. Exercices = TON passé, exercice par
+//    exercice (records, courbes) → Séances. Catalogue = la bibliothèque (fiches d'exercices,
+//    programmes, générateur) qui sert à préparer la suite → Coach.
+//  - Objectifs décrit (la semaine, les muscles en retard, la récupération, les records)
+//    mais ne dit pas quoi faire : c'est un état des lieux → Progrès. Conseiller, c'est le
+//    travail du Coach.
+//  - Stats mesure (volume, charge) ; Profil récompense (résumé à vie, badges) et reste
+//    avec Réglages, sous « Toi et ton appli ».
 
 export type NavGroupId = 'accueil' | 'seances' | 'progres' | 'coach' | 'profil';
 
 export interface NavSubTab {
-  /** L'écran ouvert (même clé que dans l'ancienne barre à 12 onglets). */
+  /** L'écran ouvert (même clé que dans l'ancienne barre). */
   view: NavTabKey;
   label: string;
-  /** Une phrase courte, affichée sous le libellé dans la liste. */
+  /** Une phrase courte (40 caractères environ), affichée sous le libellé dans la liste. */
   hint: string;
 }
 
@@ -40,10 +53,10 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     id: 'accueil',
     label: 'Accueil',
-    tagline: 'Ta séance du jour',
+    tagline: 'Ce que tu fais aujourd’hui',
     items: [
       { view: 'home', label: 'Aujourd’hui', hint: 'Ta séance du jour et ta semaine' },
-      { view: 'cardio', label: 'Cardio', hint: 'Course, vélo, marche…' },
+      { view: 'cardio', label: 'Cardio', hint: 'Vélo, course, marche : lance ou note' },
     ],
   },
   {
@@ -51,8 +64,8 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Séances',
     tagline: 'Ce que tu as fait',
     items: [
-      { view: 'historique', label: 'Historique', hint: 'Toutes tes séances passées' },
-      { view: 'tableur', label: 'Tableur', hint: 'Tes séances en grille, façon Excel' },
+      { view: 'historique', label: 'Historique', hint: 'Tes séances, jour par jour' },
+      { view: 'exercices', label: 'Exercices', hint: 'Tes records et courbes, par exercice' },
     ],
   },
   {
@@ -60,19 +73,18 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Progrès',
     tagline: 'Est-ce que tu avances ?',
     items: [
-      { view: 'dashboard', label: 'Stats', hint: 'Volume, progression, graphiques' },
-      { view: 'exercices', label: 'Exercices', hint: 'Tes exercices et tes records' },
-      { view: 'poids', label: 'Poids', hint: 'Suivi du poids de corps' },
-      { view: 'objectifs', label: 'Objectifs', hint: 'Ce que tu vises, où tu en es' },
+      { view: 'dashboard', label: 'Stats', hint: 'Volume, charge, graphiques' },
+      { view: 'objectifs', label: 'Objectifs', hint: 'Ta semaine, tes muscles, ta récupération' },
+      { view: 'poids', label: 'Poids', hint: 'Ton poids de corps et sa courbe' },
     ],
   },
   {
     id: 'coach',
     label: 'Coach',
-    tagline: 'Tes conseils',
+    tagline: 'Tes conseils et ton programme',
     items: [
       { view: 'coach', label: 'Coach IA', hint: 'Ton bilan analysé par l’IA' },
-      { view: 'catalogue', label: 'Catalogue', hint: 'Tous les mouvements' },
+      { view: 'catalogue', label: 'Catalogue', hint: 'Programmes et fiches d’exercices' },
     ],
   },
   {
@@ -80,8 +92,8 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Profil',
     tagline: 'Toi et ton appli',
     items: [
-      { view: 'profil', label: 'Profil', hint: 'Ton résumé, tes records et tes badges' },
-      { view: 'settings', label: 'Réglages', hint: 'Apparence, barre de menus, compte…' },
+      { view: 'profil', label: 'Profil', hint: 'Ton résumé et tes badges' },
+      { view: 'settings', label: 'Réglages', hint: 'Séance, apparence, compte, données' },
     ],
   },
 ];

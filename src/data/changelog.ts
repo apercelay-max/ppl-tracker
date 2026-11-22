@@ -17,8 +17,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     id: '2026-11-21-cinq-onglets',
     title: 'Une barre plus simple : 5 onglets',
     items: [
-      'La barre du bas passe de 12 onglets à 5 : Accueil, Séances, Progrès, Coach et Profil. Chaque onglet s’ouvre sur ce que tu veux voir en premier (ta séance du jour, tes séances passées, tes stats…).',
-      'Touche l’onglet déjà ouvert pour voir la liste de ses rubriques : par exemple Progrès → Stats, Exercices, Poids, Objectifs. Réglages est dans Profil.',
+      'La barre du bas passe de 12 onglets à 5, rangés selon ce que tu veux faire : Accueil (ta séance du jour, le cardio), Séances (ton historique, tes exercices), Progrès (stats, objectifs, poids), Coach (le coach IA, le catalogue) et Profil (ton résumé, les réglages).',
+      'Chaque onglet s’ouvre sur ce que tu veux voir en premier (ta séance du jour, ton historique, tes stats…). Touche l’onglet déjà ouvert pour voir la liste de ses rubriques. Réglages est dans Profil.',
       'La barre « Sommaire » (en haut) suit la même organisation : les 5 onglets tiennent sur une seule ligne, et la flèche de l’onglet ouvert tourne vers le bas pour déplier ses rubriques.',
     ],
   },
@@ -28,6 +28,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     items: [
       'Nouveau choix dans Réglages → Barre de menus → Position : garder la capsule en bas, ou passer à une barre fine en haut de l’écran.',
       'Deux présentations : « Ruban » (touche « Onglets : » et la liste défile sur une ligne) ou « Sommaire » (un panneau qui descend, en deux colonnes). Une icône au trait fin par onglet, écriture très légère.',
+      'Le mode « Tableur » est retiré. Tes séances restent dans l’Historique, et tu peux toujours exporter ton historique en CSV depuis les Réglages.',
     ],
   },
   {

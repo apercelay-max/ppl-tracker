@@ -34,15 +34,6 @@ fill={filled ? 'currentColor' : 'none'} fillOpacity={filled ? 0.2 : 0} />
 </svg>
 );
 
-// Grille façon tableur, pour l'onglet « Tableur ». Même trait que les autres, avec sa variante "filled".
-const TableIcon: React.FC<{ size?: number; filled?: boolean }> = ({ size = 22, filled }) => (
-<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-strokeWidth={filled ? 2 : 1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-<rect x="3" y="4" width="18" height="16" rx="2" fill={filled ? 'currentColor' : 'none'} fillOpacity={filled ? 0.2 : 0} />
-<path d="M3 10h18M3 15h18M9 4v16" />
-</svg>
-);
-
 // Petite coche affichée à droite de la rubrique ouverte dans la liste.
 const CheckIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
 <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -62,7 +53,7 @@ onStartSession?: () => void;
 hasSessionInProgress?: boolean;
 }
 
-// Les 12 écrans, dans l'ordre d'avant. Exportés pour la barre d'onglets du haut
+// Les 11 écrans, dans l'ordre d'avant. Exportés pour la barre d'onglets du haut
 // (TopNav.tsx), qui garde pour l'instant la liste complète. La barre du bas,
 // elle, ne montre plus que les 5 onglets de data/navGroups.ts.
 export const TABS: { id: NavView; label: string }[] = [
@@ -76,7 +67,6 @@ export const TABS: { id: NavView; label: string }[] = [
 { id: 'dashboard', label: 'Stats' },
 { id: 'coach', label: 'Coach' },
 { id: 'profil', label: 'Profil' },
-{ id: 'tableur', label: 'Tableur' },
 { id: 'settings', label: 'Réglages' },
 ];
 
@@ -97,7 +87,6 @@ poids: ScaleIcon,
 dashboard: ChartIcon,
 coach: SparklesIcon,
 profil: UserIcon,
-tableur: TableIcon,
 settings: SlidersIcon,
 };
 

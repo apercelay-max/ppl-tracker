@@ -237,12 +237,14 @@ autre: { label: 'Autre', icon: 'other' },
 // individuellement dans les Réglages — "settings" reste toujours affiché (voir
 // NavBar.tsx) pour ne jamais bloquer l'accès aux réglages.
 export const NAV_TAB_ORDER: NavTabKey[] = [
-'home', 'objectifs', 'historique', 'cardio', 'exercices', 'catalogue', 'poids', 'dashboard', 'profil', 'tableur', 'settings',
+'home', 'objectifs', 'historique', 'cardio', 'exercices', 'catalogue', 'poids', 'dashboard', 'profil', 'settings',
 ];
 
+// L'onglet « tableur » a été retiré (nov. 2026). Une sauvegarde plus ancienne peut encore
+// contenir cette clé : le merge plus bas la garde telle quelle, elle n'est plus lue nulle part.
 const DEFAULT_NAV_TABS_ENABLED: Record<NavTabKey, boolean> = {
 home: true, objectifs: true, historique: true, cardio: true,
-exercices: true, catalogue: true, poids: true, dashboard: true, coach: true, profil: true, tableur: true, settings: true,
+exercices: true, catalogue: true, poids: true, dashboard: true, coach: true, profil: true, settings: true,
 };
 
 // Parmi les onglets activés, ceux qui restent épinglés directement dans la
@@ -255,7 +257,7 @@ const DEFAULT_NAV_TABS_PINNED: Record<NavTabKey, boolean> = {
 // écran de 375 px. Le reste est dans le menu « Plus », à épingler dans
 // Réglages si voulu. Les sauvegardes existantes gardent leur répartition.
 home: true, historique: true, dashboard: true, settings: true,
-objectifs: false, cardio: false, exercices: false, catalogue: false, poids: false, profil: false, coach: false, tableur: false,
+objectifs: false, cardio: false, exercices: false, catalogue: false, poids: false, profil: false, coach: false,
 };
 
 // Matériel de la salle — sert au calcul des disques (« 2×10 + 2,5 par côté »)

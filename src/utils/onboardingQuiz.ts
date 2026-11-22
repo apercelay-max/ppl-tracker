@@ -303,10 +303,10 @@ export const whyLines = (p: TrainingProfile): WhyLine[] => {
 
   if (p.breath === 'faible' || p.wantsCardio) {
     lines.push({
-      title: 'Cardio à noter dans l\'onglet Cardio',
+      title: 'Cardio à noter dans Accueil → Cardio',
       detail: p.breath === 'faible'
         ? 'Tu t\'essouffles vite : 2 sorties vélo ou marche par semaine feront plus pour ton souffle que n\'importe quel réglage de séries. L\'appli les compte à part.'
-        : 'Tu veux du cardio en plus : l\'onglet Cardio enregistre vélo, marche et course, sans toucher au programme de muscu.',
+        : 'Tu veux du cardio en plus : la rubrique Cardio (onglet Accueil) enregistre vélo, marche et course, sans toucher au programme de muscu.',
     });
   }
 
